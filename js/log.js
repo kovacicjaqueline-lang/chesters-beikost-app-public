@@ -203,7 +203,7 @@ function openLog(plan) {
   pendingLog.__mealContext = mealContext;
   pendingLog.__legacyEntryType = legacyEntryType;
   pendingLog.__originalMeal = originalMeal;
-  pendingLog.__legacyTextureUnknown = !!pendingLog.editId && logTextureStage(plan) === null;
+  pendingLog.__legacyTextureUnknown = !!pendingLog.editId && logTextureStage(plan) === null && logPositiveOutcome(plan, outcomeForFood);
   pendingLog.foodRoles = { ...foodRolesFor(roles.ids, roles.bases, roles.samples), ...(pendingLog.foodRoles || {}) };
   pendingLog.foodOutcomes = { ...(pendingLog.foodOutcomes || {}) };
   pendingLog.individualRatings = !!pendingLog.individualRatings;

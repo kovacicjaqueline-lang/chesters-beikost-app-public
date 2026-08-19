@@ -1,0 +1,45 @@
+name: Wrangler deploy check
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'package.json'
+      - 'wrangler.jsonc'
+      - '.wrangler/deploy/config.json'
+      - '.assetsignore'
+      - '.gitignore'
+      - '.github/workflows/wrangler-check.yml'
+  pull_request:
+    paths:
+      - 'package.json'
+      - 'wrangler.jsonc'
+      - '.wrangler/deploy/config.json'
+      - '.assetsignore'
+      - '.gitignore'
+      - '.github/workflows/wrangler-check.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  dry-run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Wrangler
+        run: npm install --ignore-scripts
+
+      - name: Validate Wrangler deployment from repository root
+        run: npx wrangler deploy --dry-run
+
+      - name: Validate Wrangler config discovery from nested directory
+        working-directory: js
+        run: npx wrangler deploy --dry-run

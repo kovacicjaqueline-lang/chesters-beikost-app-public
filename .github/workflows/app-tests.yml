@@ -1,0 +1,60 @@
+name: App regression tests
+
+on:
+  push:
+    branches-ignore: [main]
+    paths:
+      - 'index.html'
+      - '**/*.css'
+      - 'sw.js'
+      - 'sw-core.js'
+      - 'app.js'
+      - 'js/**'
+      - 'data/**'
+      - 'tests/**'
+      - 'browser-tests/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/app-tests.yml'
+  pull_request:
+    paths:
+      - 'index.html'
+      - '**/*.css'
+      - 'sw.js'
+      - 'sw-core.js'
+      - 'app.js'
+      - 'js/**'
+      - 'data/**'
+      - 'tests/**'
+      - 'browser-tests/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/app-tests.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run regression tests
+        run: npm test
+
+      - name: Install WebKit
+        run: npx playwright install --with-deps webkit
+
+      - name: Run WebKit UI regression
+        run: npm run test:browser

@@ -109,7 +109,7 @@ test('sichtbare FOOD-Namen enthalten keine Slash-Kombinationen; Alternativnamen 
   }
 });
 
-test('alle 34 neuen Datensätze besitzen Pflichtfelder ohne erfundene Alters-, Phasen- oder Saisonregeln', () => {
+test('alle 34 neuen Datensätze besitzen Pflichtfelder ohne erfundene Alters- oder Phasenregeln', () => {
   const context = loadRuntime({ policy: false });
   const foods = json(context.__foods);
   const required = ['id','name','category','priority','active','allergenGroup','ironRich','ph','alias','meals','safeForm','prep','seasonMonths','count100','manualStatus','notes','autoPlan'];
@@ -121,7 +121,6 @@ test('alle 34 neuen Datensätze besitzen Pflichtfelder ohne erfundene Alters-, P
     assert.equal(food.autoPlan, true, id);
     assert.equal(food.manualStatus, 'auto', id);
     assert.ok(Array.isArray(food.meals) && food.meals.length > 0, `${id}:meals`);
-    assert.deepEqual(food.seasonMonths, [], `${id}:seasonMonths`);
     assert.equal(Object.hasOwn(food, 'minPhase'), false, `${id}:minPhase`);
     assert.equal(Object.hasOwn(food, 'minAgeMonths'), false, `${id}:minAgeMonths`);
   }

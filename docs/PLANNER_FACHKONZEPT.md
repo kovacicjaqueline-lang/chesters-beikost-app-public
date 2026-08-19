@@ -360,21 +360,27 @@ Die konkrete Gewichtung von Vorrat gegenüber anderen gleich geeigneten Kandidat
 
 # 12. Saison und Reisepriorisierung
 
-## 12.1 Datengetriebene Saisonpriorität ✅ Consumer auf main
+## 12.1 Datengetriebene Saisonpriorität 🟡 Branch/Integrations-PR
 
 Der Planner liest ausschließlich `seasonMonths` aus den FOOD-Daten.
 
 Wenn Saisonpriorisierung aktiv ist:
 
-- FOOD in Saison wird bevorzugt;
-- FOOD mit definierter Saison außerhalb seiner Saison wird nachgereiht;
-- FOOD ohne `seasonMonths` erhält keine erfundene Planner-Sonderregel.
+- FOOD in Saison wird bevorzugt (`-3` bestehender Score);
+- FOOD mit definierter Saison außerhalb seiner Saison wird nachgereiht (`+6` bestehender Score);
+- `seasonMonths: []` bleibt bewusst neutral und erhält weder Saisonbonus noch Outside-Season-Nachreihung.
 
-## 12.2 Vollständige Saisonmatrix 🔴 fachlich offen
+Auf `main` bestand beim Audit noch der Consumer-Gap, dass `isSeason()` leere `seasonMonths` als saisonal behandelt und dadurch einen ungewollten Bonus auslösen konnte. PR #6 schließt diesen Gap durch die zusätzliche Voraussetzung `f.seasonMonths?.length` vor dem Saisonbonus. Im `phMode === "travel"` greift die Österreich-Saisonwertung weiterhin nicht.
 
-Der vollständige österreichische `seasonMonths`-Audit ist separat fachlich zu klären.
+## 12.2 Vollständige Saisonmatrix 🟡 Branch/Integrations-PR
 
-Der Planner soll daraus **keine neue Sonderlogik** ableiten, sondern weiterhin nur die Daten konsumieren.
+Der vollständige österreichische `seasonMonths`-Audit ist fachlich abgeschlossen. Verbindliche Modellierungsentscheidung:
+
+**`regional aus Lagerung` zählt bei `seasonMonths` mit.**
+
+Die exakte Matrix und die bewusst neutralen `seasonMonths: []`-Fälle sind in `docs/FOOD_SEASONMONTHS_AT_AUDIT.md` dokumentiert und in PR #6 datengetrieben umgesetzt. Die Regression prüft den gesamten physischen FOOD-Stamm exakt gegen diese Matrix; Runtime-Policy-Ergänzungen ohne eigene freigegebene Österreich-Matrix bleiben neutral.
+
+Der Planner leitet daraus **keine neue Sonderlogik** ab, sondern konsumiert weiterhin ausschließlich die Daten. Bis zum Merge von PR #6 gilt dieser Block technisch 🟡; nach Merge desselben getesteten Change-Sets ohne weitere fachliche Änderung ✅ main.
 
 ## 12.3 Philippinen-/Reisepriorität 🟠 Bestandsverhalten
 
@@ -477,10 +483,9 @@ Die dynamisch geladene Handling-Contract-/Runtime-Schicht wird zusammen mit der 
 
 Aktuell nicht als erledigt behandeln:
 
-1. 🔴 Vollständige österreichische `seasonMonths`-Matrix – Datenaudit, keine neue Planner-Sonderlogik.
-2. 🔴 Einzelprüfung der noch bewusst zurückgestellten SAFETY-REVIEW-/LATER-REVIEW-Rezepte vor Aufnahme in den strukturierten Handling-Contract.
+1. 🔴 Einzelprüfung der noch bewusst zurückgestellten SAFETY-REVIEW-/LATER-REVIEW-Rezepte vor Aufnahme in den strukturierten Handling-Contract.
 
-Die allgemeine Handling-/BLW-Schicht ist **keine offene Fachfrage mehr**. Die Nuss-/Samen-Rollen- und Toppingregel ist ebenfalls fachlich geklärt; ihre technische Integration steht bis zum Merge des zugehörigen Branches auf 🟡.
+Die vollständige österreichische `seasonMonths`-Matrix ist fachlich abgeschlossen und in PR #6 umgesetzt; bis zum Merge bleibt ihr technischer Status 🟡 Branch/Integrations-PR. Die allgemeine Handling-/BLW-Schicht ist **keine offene Fachfrage mehr**. Die Nuss-/Samen-Rollen- und Toppingregel ist ebenfalls fachlich geklärt; ihre technische Integration steht bis zum Merge des zugehörigen Branches auf 🟡.
 
 ## 17.2 Fachlich beschlossen, aber noch nicht vollständig auf main nachgewiesen
 
@@ -513,6 +518,8 @@ Weitere offene FOOD-Datenfragen werden separat im FOOD-Fachregel-Track geklärt 
 - Vorrats-/Recipe-first-Reservierungen;
 - Replan-Semantik;
 - bestehende Follow-up-/Schutzmechanismen;
+- vollständige österreichische `seasonMonths`-Matrix einschließlich bewusst neutraler FOODs;
+- `seasonMonths: []` erhält weder Saisonbonus noch Outside-Season-Nachreihung; PH-Travel ignoriert die Österreich-Saisonwertung;
 - `feedingApproach` verändert nur die Darreichungspräferenz und nicht die fachliche Mahlzeitenauswahl;
 - keine sichere Darreichung wird durch die Präferenz fachlich unzulässig;
 - keine historische Lock-/Log-/`textureStage`-Semantik wird durch Handling umgedeutet;
@@ -541,6 +548,7 @@ Aktuelle Kernquellen:
 - `js/planner-food-role-stability.js`
 - `docs/PLAN-08_COMBINATION_AUDIT.md`
 - `docs/PLAN-08_RECIPE_FIRST.md`
+- `docs/FOOD_SEASONMONTHS_AT_AUDIT.md`
 
 Zentrale Regressionen:
 
@@ -559,6 +567,8 @@ Zentrale Regressionen:
 - `tests/planner-nut-seed-review-fixes.test.cjs`
 - `tests/planner-nut-seed-focus-gate-chain.test.cjs`
 - `tests/todo3-pending-regressions.test.cjs`
+- `tests/food-seasonmonths-at.test.cjs`
+- `tests/food-seasonmonths-runtime.test.cjs`
 
 Handling-Integrationsstand zusätzlich:
 

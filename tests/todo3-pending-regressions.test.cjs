@@ -13,6 +13,8 @@ const root = path.resolve(__dirname, '..');
  * Bereits anderweitig vollständig abgedeckte Alt-Platzhalter werden nicht dupliziert:
  * - MILK-01 -> tests/milk-01-planner.test.cjs (+ adversarial coverage)
  * - FOOD-01 / FOOD-Neuaufnahme -> tests/food-intake-10.1.25.test.cjs
+ * - FOOD-COUNT -> tests/food-count-semantics.test.cjs
+ * - SEASON-AUDIT -> tests/food-seasonmonths-at.test.cjs + tests/food-seasonmonths-runtime.test.cjs
  * - grundlegende Allergen-/Alias-Daten -> tests/food-intake-10.1.25.test.cjs
  * - UI-06 -> tests/ui06-completed-day-card-alignment.test.cjs
  */
@@ -198,14 +200,4 @@ test('TODO3 FOOD-ALIASES-INTEGRATION: Alias-Migration kanonisiert Protokoll und 
   assert.equal(migrated.logs[0].foodOutcomes.aprikose, 'eaten');
   assert.equal(migrated.inventory[0].foodId, 'aprikose');
   assert.equal(migrated.foods.some((food) => food.id === 'legacy-marille'), false);
-});
-
-test.skip('TODO3 SEASON-AUDIT: fachlich saisonale FOODs dürfen nach Freigabe des vollständigen Saison-Audits keine leeren seasonMonths mehr haben', () => {
-  // Die konkrete Liste und Monatsmatrix wird erst aus dem freigegebenen Saison-Audit eingesetzt.
-  assert.fail('Saisonmonate fachlich noch nicht vollständig freigegeben');
-});
-
-test.skip('TODO3 FOOD-COUNT: 100-Lebensmittel-Zählung folgt der noch separat freizugebenden Zählsemantik für Grundstoff und Verarbeitungsform', () => {
-  // Keine Annahme für Sesam/Tahin, Mais/Polenta, Hafer/Haferdrink oder Weizen-Verarbeitungsformen treffen.
-  assert.fail('100-FOOD-Zählsemantik fachlich blockiert');
 });

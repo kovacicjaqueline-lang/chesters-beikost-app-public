@@ -171,7 +171,7 @@ function travelSoon(on) {
 function effectivePriority(f, on) {
   let p = Number(f.priority) || 9999;
   let phMode = state.settings.phMode || (state.settings.travelPrep ? "prepare" : "off");
-  if (phMode !== "travel" && state.settings.seasonal && isSeason(f, on)) p -= 3;
+  if (phMode !== "travel" && state.settings.seasonal && f.seasonMonths?.length && isSeason(f, on)) p -= 3;
   if (phMode !== "travel" && state.settings.seasonal && !isSeason(f, on) && f.seasonMonths?.length) p += 6;
   if (phMode === "prepare" && travelSoon(on) && f.ph) p -= 18;
   if (phMode === "travel") p += f.ph ? -35 : 5;
@@ -1469,4 +1469,3 @@ function followUpEntries() {
       return planB - planA || String(a.dueDate || "9999").localeCompare(String(b.dueDate || "9999")) || refusalsB - refusalsA;
     });
 }
-

@@ -38,11 +38,21 @@ function statisticsFirstPositiveDate(foodId) {
   return dates[0] || "";
 }
 
+function statisticsTextureCounts(logs) {
+  if (typeof logTextureCounts === "function") return logTextureCounts(logs, outcomeForFood);
+  let counts = [0, 0, 0, 0];
+  for (let log of logs || []) {
+    let stage = log?.textureKnown === false ? null : Number(log?.textureStage);
+    if (![1, 2, 3, 4].includes(stage)) continue;
+    if (!(log.foodIds || []).some((id) => statisticsPositiveOutcome(outcomeForFood(log, id)))) continue;
+    counts[stage - 1] += 1;
+  }
+  return counts;
+}
+
 function statisticsSnapshot(range = statisticsRange) {
   let info = statisticsRangeInfo(range);
   let logs = statisticsLogs(range);
-  let mealLogs = logs.filter((log) => inferEntryType(log) !== "sample");
-  let sampleLogs = logs.filter((log) => inferEntryType(log) === "sample");
   let positiveFoodIds = new Set();
   let introducedFoodIds = new Set();
   let outcomeCounts = { eaten: 0, tried: 0, not_accepted: 0, not_offered: 0, reaction: 0 };
@@ -60,9 +70,9 @@ function statisticsSnapshot(range = statisticsRange) {
     }
   }
 
-  let successfulMeals = mealLogs.filter((log) => (log.foodIds || []).some((id) => outcomeForFood(log, id) === "eaten"));
-  let textureCounts = [1, 2, 3, 4].map((stage) => successfulMeals.filter((log) => Number(log.textureStage || state.settings.textureStage) === stage).length);
-  let amounts = successfulMeals
+  let eatenLogs = logs.filter((log) => (log.foodIds || []).some((id) => outcomeForFood(log, id) === "eaten"));
+  let textureCounts = statisticsTextureCounts(logs);
+  let amounts = eatenLogs
     .map((log) => Number(log.amount))
     .filter((amount) => Number.isFinite(amount) && amount > 0);
   let averageAmount = amounts.length ? Math.round(amounts.reduce((sum, amount) => sum + amount, 0) / amounts.length) : 0;
@@ -72,8 +82,9 @@ function statisticsSnapshot(range = statisticsRange) {
     info,
     logs,
     days: new Set(logs.map((log) => log.date).filter(Boolean)).size,
-    mealCount: mealLogs.length,
-    sampleCount: sampleLogs.length,
+    entryCount: logs.length,
+    mealCount: logs.length,
+    sampleCount: 0,
     varietyCount: positiveFoodIds.size,
     introducedCount: introducedFoodIds.size,
     outcomeCounts,
@@ -97,7 +108,7 @@ function statisticsOutcomeRow(key, label, value, total) {
 
 function statisticsTextureRow(stage, value, maxValue) {
   let pct = maxValue ? Math.round(value / maxValue * 100) : 0;
-  return `<div class="statistics-bar-row" data-stat-texture="${stage}"><div class="statistics-bar-head"><span>Stufe ${stage} · ${esc(textureName(stage))}</span><b>${value}</b></div><div class="statistics-bar" aria-label="Konsistenzstufe ${stage}: ${value} gegessene Mahlzeiten"><span style="width:${pct}%"></span></div></div>`;
+  return `<div class="statistics-bar-row" data-stat-texture="${stage}"><div class="statistics-bar-head"><span>Stufe ${stage} · ${esc(textureName(stage))}</span><b>${value}</b></div><div class="statistics-bar" aria-label="Konsistenzstufe ${stage}: ${value} positive Einträge"><span style="width:${pct}%"></span></div></div>`;
 }
 
 function renderStatistics() {
@@ -115,7 +126,7 @@ function renderStatistics() {
   </div>`;
 
   if (!snapshot.logs.length) {
-    body.innerHTML = `${buttons}<div class="empty statistics-empty"><b>Noch keine Einträge in diesem Zeitraum.</b><div class="small">Sobald du Mahlzeiten oder Kostproben protokollierst, wird die Entwicklung hier automatisch zusammengefasst.</div><button class="btn statistics-add-log" type="button">Eintrag anlegen</button></div>`;
+    body.innerHTML = `${buttons}<div class="empty statistics-empty"><b>Noch keine Einträge in diesem Zeitraum.</b><div class="small">Sobald du Essen protokollierst, wird die Entwicklung hier automatisch zusammengefasst.</div><button class="btn statistics-add-log" type="button">Eintrag anlegen</button></div>`;
     bindStatisticsActions();
     return;
   }
@@ -124,8 +135,8 @@ function renderStatistics() {
   let outcomesTotal = Object.values(snapshot.outcomeCounts).reduce((sum, value) => sum + value, 0);
   let textureMax = Math.max(...snapshot.textureCounts, 0);
   let amountHtml = snapshot.amounts.length
-    ? `<div class="statistics-section"><h3>Mengenentwicklung</h3><div class="grid2 statistics-amounts">${statisticsMetric(`${snapshot.averageAmount} g`, "Durchschnitt", `aus ${snapshot.amounts.length} ${snapshot.amounts.length === 1 ? "Mengenangabe" : "Mengenangaben"}`)}${statisticsMetric(`${snapshot.maxAmount} g`, "Höchste Menge", "nur gegessene Mahlzeiten")}</div></div>`
-    : `<div class="notice statistics-amount-note">Für diesen Zeitraum wurden bei gegessenen Mahlzeiten keine Mengen eingetragen. Die übrige Statistik bleibt davon vollständig nutzbar.</div>`;
+    ? `<div class="statistics-section"><h3>Mengenentwicklung</h3><div class="grid2 statistics-amounts">${statisticsMetric(`${snapshot.averageAmount} g`, "Durchschnitt", `aus ${snapshot.amounts.length} ${snapshot.amounts.length === 1 ? "Mengenangabe" : "Mengenangaben"}`)}${statisticsMetric(`${snapshot.maxAmount} g`, "Höchste Menge", "nur gegessene Einträge")}</div></div>`
+    : `<div class="notice statistics-amount-note">Für diesen Zeitraum wurden bei gegessenen Einträgen keine Mengen eingetragen. Die übrige Statistik bleibt davon vollständig nutzbar.</div>`;
 
   body.innerHTML = `${buttons}
     <div class="statistics-progress-block">
@@ -134,7 +145,7 @@ function renderStatistics() {
     </div>
     <div class="grid2 statistics-metrics">
       ${statisticsMetric(snapshot.days, "Tage mit Eintrag")}
-      ${statisticsMetric(snapshot.mealCount, "Mahlzeiten", snapshot.sampleCount ? `+ ${snapshot.sampleCount} ${snapshot.sampleCount === 1 ? "Kostprobe" : "Kostproben"}` : "")}
+      ${statisticsMetric(snapshot.entryCount, "Einträge")}
       ${statisticsMetric(snapshot.varietyCount, "Verschiedene Lebensmittel", "gegessen oder probiert")}
       ${statisticsMetric(snapshot.introducedCount, "Neu kennengelernt", statisticsRange === "all" ? "seit Beikoststart" : "in diesem Zeitraum")}
     </div>
@@ -151,7 +162,7 @@ function renderStatistics() {
     </div>
     <div class="statistics-section">
       <h3>Konsistenzfortschritt</h3>
-      <div class="small statistics-section-copy">Gezählt werden protokollierte Mahlzeiten, bei denen mindestens ein Lebensmittel gegessen wurde.</div>
+      <div class="small statistics-section-copy">Gezählt werden positive Einträge mit ausdrücklich dokumentierter Konsistenz.</div>
       <div class="statistics-bars">
         ${[1, 2, 3, 4].map((stage, index) => statisticsTextureRow(stage, snapshot.textureCounts[index], textureMax)).join("")}
       </div>
@@ -167,9 +178,7 @@ function bindStatisticsActions() {
       renderStatistics();
     };
   });
-  document.querySelector(".statistics-add-log")?.addEventListener("click", () => {
-    openLog({ date: today(), meal: "lunch", focusId: "", foodIds: [], baseFoodIds: [], sampleFoodIds: [], entryType: "meal", foodOutcomes: {} });
-  });
+  document.querySelector(".statistics-add-log")?.addEventListener("click", () => openLog(null));
 }
 
 function resetStatisticsTransientUi() {

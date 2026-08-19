@@ -1,8 +1,8 @@
 "use strict";
 
 /* Protokoll
- * Gemeinsamer Eintragsablauf, reine Kostproben, getrennte Bewertungen, Bearbeitung ohne Duplikate und Folgelogik.
- * Konsolidierter Produktionsstand 10.0.0.
+ * Ein gemeinsamer Essenseintrag mit internen FOOD-Rollen, getrennten Bewertungen,
+ * optionaler Menge und ausdrücklich dokumentierter Konsistenz.
  */
 
 function logMealSortRank(meal) {
@@ -15,7 +15,8 @@ function logOutcomeGridHtml(log) {
   }).join("");
   let meta = [];
   if (log.amount) meta.push(`${esc(log.amount)} g`);
-  meta.push(`Stufe ${Number(log.textureStage || state.settings.textureStage)}`);
+  let stage = logTextureStage(log);
+  meta.push(stage ? `Stufe ${stage} · ${esc(textureName(stage))}` : "Konsistenz nicht dokumentiert");
   return `<div class="log-outcome-grid">${items}</div><div class="small log-entry-meta">${meta.join(" · ")}</div>`;
 }
 function renderLogsCore() {
@@ -51,95 +52,78 @@ function renderLogsCore() {
       renderLogs();
     };
   }
-  let filtered =
-    logMonthFilter === "all"
-      ? all
-      : all.filter((l) => l.date.startsWith(logMonthFilter));
+  let filtered = logMonthFilter === "all" ? all : all.filter((l) => l.date.startsWith(logMonthFilter));
   let shown = filtered.slice(0, logVisibleCount);
   let summaryTitle = document.getElementById("logSummaryTitle");
   if (summaryTitle)
     summaryTitle.textContent = `Protokoll · ${all.length} ${all.length === 1 ? "Eintrag" : "Einträge"}`;
   let count = document.getElementById("logCountSummary");
   if (count)
-    count.textContent =
-      filtered.length === all.length
-        ? "Monatsweise filtern; ältere Einträge bleiben gespeichert."
-        : `${filtered.length} im gewählten Monat`;
+    count.textContent = filtered.length === all.length
+      ? "Monatsweise filtern; ältere Einträge bleiben gespeichert."
+      : `${filtered.length} im gewählten Monat`;
   document.getElementById("logList").innerHTML = shown.length
-    ? shown
-        .map((l) => {
-          let title = dishTitle(l);
-          return `<div class="log-entry" data-log="${l.id}">
-            <div class="log-entry-main">
-              <div>
-                <div class="log-date">${nice(l.date, true)} · ${mealName(l.meal)}</div>
-                <div class="log-foods">${esc(title)}</div>
-                ${logOutcomeGridHtml(l)}
-                ${l.note ? `<details class="log-note-details"><summary>Notiz</summary><div class="small">${esc(l.note)}</div></details>` : ""}
-              </div>
-              <div class="log-entry-actions">
-                <button class="iconbtn editLog" aria-label="Bearbeiten">✎</button>
-                <button class="iconbtn deleteLog" aria-label="Löschen">×</button>
-              </div>
+    ? shown.map((l) => {
+        let title = dishTitle(l);
+        return `<div class="log-entry" data-log="${l.id}">
+          <div class="log-entry-main">
+            <div>
+              <div class="log-date">${nice(l.date, true)}${logHasMealContext(l) ? ` · ${mealName(l.meal)}` : ""}</div>
+              <div class="log-foods">${esc(title)}</div>
+              ${logOutcomeGridHtml(l)}
+              ${l.note ? `<details class="log-note-details"><summary>Notiz</summary><div class="small">${esc(l.note)}</div></details>` : ""}
             </div>
-          </div>`;
-        })
-        .join("")
+            <div class="log-entry-actions">
+              <button class="iconbtn editLog" aria-label="Bearbeiten">✎</button>
+              <button class="iconbtn deleteLog" aria-label="Löschen">×</button>
+            </div>
+          </div>
+        </div>`;
+      }).join("")
     : '<div class="empty">Noch kein tatsächlicher Eintrag in diesem Zeitraum.</div>';
   let more = document.getElementById("logMore");
   if (more) {
     more.style.display = filtered.length > shown.length ? "block" : "none";
     more.textContent = `Weitere anzeigen (${filtered.length - shown.length})`;
-    more.onclick = () => {
-      logVisibleCount += 10;
-      renderLogs();
-    };
+    more.onclick = () => { logVisibleCount += 10; renderLogs(); };
   }
 
-  document.querySelectorAll(".editLog").forEach(
-    (b) =>
-      (b.onclick = () =>
-        editLogEntry(b.closest("[data-log]").dataset.log)),
+  document.querySelectorAll(".editLog").forEach((b) =>
+    b.onclick = () => editLogEntry(b.closest("[data-log]").dataset.log),
   );
-  document.querySelectorAll(".deleteLog").forEach(
-    (b) =>
-      (b.onclick = () => {
-        let id = b.closest("[data-log]").dataset.log;
-        let removed = state.logs.find((log) => log.id === id);
-        if (!removed) return;
-        let stateBefore = clone(state);
-        for (let foodId of removed.foodIds || []) {
-          let item = food(foodId);
-          if (outcomeForFood(removed, foodId) === "reaction" && item?.manualStatus === "Pausiert" && !item.reactionPauseSourceLogId) {
-            item.reactionPausePreviousStatus = "auto";
-            item.reactionPauseSourceLogId = removed.id;
-          }
+  document.querySelectorAll(".deleteLog").forEach((b) =>
+    b.onclick = () => {
+      let id = b.closest("[data-log]").dataset.log;
+      let removed = state.logs.find((log) => log.id === id);
+      if (!removed) return;
+      let stateBefore = clone(state);
+      for (let foodId of removed.foodIds || []) {
+        let item = food(foodId);
+        if (outcomeForFood(removed, foodId) === "reaction" && item?.manualStatus === "Pausiert" && !item.reactionPauseSourceLogId) {
+          item.reactionPausePreviousStatus = "auto";
+          item.reactionPauseSourceLogId = removed.id;
         }
-        state.logs = state.logs.filter((log) => log.id !== id);
-        for (let foodId of new Set(removed.foodIds || [])) rebuildFoodConsequences(foodId);
-        save();
-        renderAll();
-        showToast("Eintrag gelöscht.", () => {
-          state = stateBefore;
-          save();
-          renderAll();
-          showToast("Gelöschter Eintrag wiederhergestellt.");
-        });
-      }),
+      }
+      state.logs = state.logs.filter((log) => log.id !== id);
+      for (let foodId of new Set(removed.foodIds || [])) rebuildFoodConsequences(foodId);
+      save(); renderAll();
+      showToast("Eintrag gelöscht.", () => {
+        state = stateBefore; save(); renderAll();
+        showToast("Gelöschter Eintrag wiederhergestellt.");
+      });
+    },
   );
 }
 
 function editLogEntry(id) {
   let l = state.logs.find((x) => x.id === id);
   if (!l) return;
-  openLog({...l, editId:id});
+  openLog({ ...l, editId: id });
 }
 
 function logFoodCandidates(query) {
   let q = normalizeName(query);
-  let pool = state.foods.filter(
-    (f) => f.active && !selectedLogFoods.has(f.id),
-  );
+  let pool = state.foods.filter((f) => f.active && !selectedLogFoods.has(f.id));
   if (q)
     return pool
       .filter((f) => foodSearchMatches(f, q))
@@ -191,16 +175,33 @@ function requestLogDateChange(nextDate, previousDate) {
 function renderLogs() {
   renderLogsCore();
   let button = document.getElementById("freeLog");
-  if (button) button.onclick = (event) => { event.preventDefault(); toggleEntryChooser(button, today()); };
+  if (button) button.onclick = (event) => { event.preventDefault(); openLog(null); };
+}
+
+function plannedLogContext(input) {
+  if (!input || input.entryType === "sample") return false;
+  if (!LOG_MEAL_KEYS.includes(String(input.meal || ""))) return false;
+  if (input.editId) return logHasMealContext(input);
+  return !!(input.focusId || input.recipeName || (input.foodIds || []).length || input.entryType === "meal");
 }
 
 function openLog(plan) {
-  pendingLog = plan || { date: today(), meal: "lunch", focusId: "", foodIds: [], baseFoodIds: [], sampleFoodIds: [], recipeName: "", recipeInventoryId: "", entryType: "meal" };
+  let input = plan ? { ...plan } : {
+    date: today(), meal: "", focusId: "", foodIds: [], baseFoodIds: [], sampleFoodIds: [],
+    recipeName: "", recipeInventoryId: "", entryType: "food", foodOutcomes: {},
+  };
+  let legacyEntryType = String(input.entryType || "");
+  let mealContext = plannedLogContext(input);
+  if (!mealContext) input.meal = "";
+  pendingLog = input;
   let roles = roleIdsFromPlan(pendingLog);
   pendingLog.foodIds = roles.ids;
   pendingLog.baseFoodIds = roles.bases;
   pendingLog.sampleFoodIds = roles.samples;
-  pendingLog.entryType = inferEntryType(pendingLog);
+  pendingLog.entryType = "food";
+  pendingLog.__mealContext = mealContext;
+  pendingLog.__legacyEntryType = legacyEntryType;
+  pendingLog.__legacyTextureUnknown = !!pendingLog.editId && logTextureStage(plan) === null;
   pendingLog.foodRoles = { ...foodRolesFor(roles.ids, roles.bases, roles.samples), ...(pendingLog.foodRoles || {}) };
   pendingLog.foodOutcomes = { ...(pendingLog.foodOutcomes || {}) };
   pendingLog.individualRatings = !!pendingLog.individualRatings;
@@ -233,7 +234,7 @@ function updateConditionalQuestions() {
 function logFoodResultsHtml() {
   return logFoodCandidates(logFoodQuery).map((f) => {
     let stock = inventoryPortions(f.id);
-    let meta = `${f.category} · ${displayStatus(f)}${stock ? ` · ${stock} im Vorrat` : ""}`;
+    let meta = `${foodCategoryLabel(f.category)} · ${displayStatus(f)}${stock ? ` · ${stock} im Vorrat` : ""}`;
     return `<button class="live-result addLogFoodResult log-food-result" data-food="${f.id}" aria-label="${esc(f.name)} hinzufügen, ${esc(meta)}"><span class="log-result-emoji" aria-hidden="true">${foodEmoji(f)}</span><span class="grow log-result-copy"><b class="log-result-name">${esc(f.name)}</b><span class="small log-result-meta">${esc(meta)}</span></span><span class="log-result-add" aria-hidden="true">＋</span></button>`;
   }).join("");
 }
@@ -241,10 +242,18 @@ function logFoodResultsHtml() {
 function addLogFoodFromResult(id) {
   captureLogDraft();
   let p = pendingLog;
+  let item = food(id);
   selectedLogFoods.add(id);
-  p.foodOutcomes[id] = p.entryType === "sample" ? "tried" : "eaten";
-  if (p.entryType === "sample") p.sampleFoodIds = [...new Set([...(p.sampleFoodIds || []), id])];
-  else p.baseFoodIds = [...new Set([...(p.baseFoodIds || []), id])];
+  let learning = !item || rank(item) < 2;
+  if (learning) {
+    p.sampleFoodIds = [...new Set([...(p.sampleFoodIds || []), id])];
+    p.baseFoodIds = (p.baseFoodIds || []).filter((foodId) => foodId !== id);
+    p.foodOutcomes[id] = item && rank(item) >= 1 ? "eaten" : "tried";
+  } else {
+    p.baseFoodIds = [...new Set([...(p.baseFoodIds || []), id])];
+    p.sampleFoodIds = (p.sampleFoodIds || []).filter((foodId) => foodId !== id);
+    p.foodOutcomes[id] = "eaten";
+  }
   if (!p.focusId) p.focusId = id;
   if (!selectedRecipeInventoryId && inventoryPortions(id) > 0) selectedInventoryFoods.add(id);
   logFoodQuery = "";
@@ -266,47 +275,54 @@ function renderLogFoodResults() {
   bindLogFoodResultActions(results);
 }
 
+function logLearningLabel(id) {
+  let item = food(id);
+  return learningRoleLabel(rank(item), status(item), pendingLog?.type || "");
+}
+
 function renderLogForm() {
   let p = pendingLog;
   let selected = [...selectedLogFoods].map((id) => food(id)).filter(Boolean);
   let sampleIds = [...new Set((p.sampleFoodIds || []).filter((id) => selectedLogFoods.has(id)))];
-  if (p.entryType === "sample" && !sampleIds.length) sampleIds = selected.map((f) => f.id);
+  if (p.__legacyEntryType === "sample" && !sampleIds.length) sampleIds = selected.map((f) => f.id);
   let mainIds = selected.map((f) => f.id).filter((id) => !sampleIds.includes(id));
   p.sampleFoodIds = sampleIds;
   p.baseFoodIds = [...new Set((p.baseFoodIds || []).filter((id) => mainIds.includes(id)))];
   if (!p.baseFoodIds.length) p.baseFoodIds = [...mainIds];
-  let pureSample = p.entryType === "sample" || (selected.length > 0 && mainIds.length === 0);
-  p.entryType = pureSample ? "sample" : "meal";
-  document.getElementById("logTitle").textContent = p.editId ? "Protokolleintrag bearbeiten" : pureSample ? "Kostprobe eintragen" : "Mahlzeit eintragen";
-  document.getElementById("logSubtitle").textContent = `${nice(p.date, true)} · ${mealName(p.meal)}`;
+  p.entryType = "food";
+
+  document.getElementById("logTitle").textContent = p.editId ? "Protokolleintrag bearbeiten" : "Essen eintragen";
+  document.getElementById("logSubtitle").textContent = `${nice(p.date, true)}${p.__mealContext ? ` · ${mealName(p.meal)}` : ""}`;
   let stockedSelected = selected.filter((f) => inventoryPortions(f.id) > 0);
   selectedInventoryFoods = new Set([...selectedInventoryFoods].filter((id) => stockedSelected.some((f) => f.id === id)));
   let recipeItem = selectedRecipeInventoryId ? state.inventory.find((item) => item.id === selectedRecipeInventoryId) : null;
   let outcomeOptions = [["eaten", "Gegessen"], ["tried", "Probiert"], ["not_accepted", "Abgelehnt"], ["reaction", "Reaktion"], ["not_offered", "Nicht angeboten"]];
   let mainDefault = mainIds.map((id) => p.foodOutcomes[id]).find(Boolean) || "eaten";
-  let focusOutcome = p.foodOutcomes[p.focusId] || (pureSample ? (sampleIds.map((id) => p.foodOutcomes[id]).find(Boolean) || "tried") : mainDefault);
-  let mainBlock = pureSample ? "" : `<div class="field"><label>Hauptmahlzeit bewerten</label><div class="grouped-outcome"><div><b>${mainIds.map((id) => esc(food(id)?.name || id)).join(" + ") || "Noch keine Zutaten ausgewählt"}</b><span>gemeinsam bewertet</span></div><select id="mainOutcome">${outcomeOptions.map(([value, title]) => `<option value="${value}" ${mainDefault === value ? "selected" : ""}>${title}</option>`).join("")}</select></div>${mainIds.length > 1 ? `<details class="individual-rating"><summary>Zutaten einzeln bewerten</summary><label class="toggleline compact-toggle"><input class="ds-toggle-input" type="checkbox" id="individualRatings" ${p.individualRatings ? "checked" : ""}><span class="toggle-copy"><b>Einzelne Ergebnisse verwenden</b><span class="small">Nur bei relevanten Unterschieden nötig.</span></span><span class="toggle-state" aria-hidden="true"></span></label><div id="individualOutcomeRows" style="display:${p.individualRatings ? "block" : "none"}">${mainIds.map((id) => `<div class="food-outcome-row"><div class="food-outcome-name"><b>${esc(food(id)?.name || id)}</b><span>Bestandteil</span></div><select data-individual-result="${id}">${outcomeOptions.map(([value, title]) => `<option value="${value}" ${(p.foodOutcomes[id] || mainDefault) === value ? "selected" : ""}>${title}</option>`).join("")}</select><span></span></div>`).join("")}</div></details>` : ""}</div>`;
-  let sampleBlock = sampleIds.length ? `<div class="field"><label>${pureSample ? "Kostprobe bewerten" : "Kostprobe separat bewerten"}</label><div class="sample-outcome-list">${sampleIds.map((id) => `<div class="food-outcome-row"><div class="food-outcome-name"><b>${esc(food(id)?.name || id)}</b>${pureSample ? "" : "<span>Kostprobe</span>"}</div><select data-sample-result="${id}">${outcomeOptions.map(([value, title]) => `<option value="${value}" ${(p.foodOutcomes[id] || "tried") === value ? "selected" : ""}>${title}</option>`).join("")}</select><button class="iconbtn" data-remove-log-food="${id}" aria-label="${esc(food(id)?.name || id)} entfernen">×</button></div>`).join("")}</div></div>` : "";
+  let focusOutcome = p.foodOutcomes[p.focusId] || sampleIds.map((id) => p.foodOutcomes[id]).find(Boolean) || mainDefault || "tried";
+  let mainBlock = mainIds.length ? `<div class="field"><label>${mainIds.length === 1 ? "Lebensmittel bewerten" : "Mahlzeit bewerten"}</label><div class="grouped-outcome"><div><b>${mainIds.map((id) => esc(food(id)?.name || id)).join(" + ")}</b><span>${mainIds.length === 1 ? "Ergebnis" : "gemeinsam bewertet"}</span></div><select id="mainOutcome">${outcomeOptions.map(([value, title]) => `<option value="${value}" ${mainDefault === value ? "selected" : ""}>${title}</option>`).join("")}</select></div>${mainIds.length > 1 ? `<details class="individual-rating"><summary>Zutaten einzeln bewerten</summary><label class="toggleline compact-toggle"><input class="ds-toggle-input" type="checkbox" id="individualRatings" ${p.individualRatings ? "checked" : ""}><span class="toggle-copy"><b>Einzelne Ergebnisse verwenden</b><span class="small">Nur bei relevanten Unterschieden nötig.</span></span><span class="toggle-state" aria-hidden="true"></span></label><div id="individualOutcomeRows" style="display:${p.individualRatings ? "block" : "none"}">${mainIds.map((id) => `<div class="food-outcome-row"><div class="food-outcome-name"><b>${esc(food(id)?.name || id)}</b><span>Bestandteil</span></div><select data-individual-result="${id}">${outcomeOptions.map(([value, title]) => `<option value="${value}" ${(p.foodOutcomes[id] || mainDefault) === value ? "selected" : ""}>${title}</option>`).join("")}</select><span></span></div>`).join("")}</div></details>` : ""}</div>` : "";
+  let sampleBlock = sampleIds.length ? `<div class="field"><label>Einführung und Wiederholung</label><div class="sample-outcome-list">${sampleIds.map((id) => `<div class="food-outcome-row"><div class="food-outcome-name"><b>${esc(food(id)?.name || id)}</b><span>${esc(logLearningLabel(id))}</span></div><select data-sample-result="${id}">${outcomeOptions.map(([value, title]) => `<option value="${value}" ${(p.foodOutcomes[id] || "tried") === value ? "selected" : ""}>${title}</option>`).join("")}</select><button class="iconbtn" data-remove-log-food="${id}" aria-label="${esc(food(id)?.name || id)} entfernen">×</button></div>`).join("")}</div></div>` : "";
+  let mealContext = p.__mealContext ? `<div class="field"><label>Geplante Mahlzeit</label><div class="selected-target"><b>${esc(mealName(p.meal))}</b><div class="small">Wird automatisch aus dem Plan übernommen.</div></div></div>` : "";
+  let currentTexture = logTextureStage(p);
+  let textureValue = p.__textureValue !== undefined ? p.__textureValue : (currentTexture || "");
+
   document.getElementById("logForm").innerHTML = `
-    <div class="grid2 log-date-grid"><div class="field"><label>Datum</label><input type="date" id="logDate" value="${p.date}"></div><div class="field"><label>Mahlzeit</label><select id="logMeal">${["breakfast", "snack", "lunch", "dinner"].map((meal) => `<option value="${meal}" ${p.meal === meal ? "selected" : ""}>${mealName(meal)}</option>`).join("")}</select></div></div>
-    ${p.recipeName ? `<div class="selected-target"><b>${esc(p.recipeName)}</b><div class="small">Hauptmahlzeit gemeinsam, Kostprobe separat.</div></div>` : ""}
+    <div class="${p.__mealContext ? "grid2" : ""} log-date-grid"><div class="field"><label>Datum</label><input type="date" id="logDate" value="${p.date}"></div>${mealContext}</div>
+    ${p.recipeName ? `<div class="selected-target"><b>${esc(p.recipeName)}</b><div class="small">Bekannte Bestandteile gemeinsam, Einführungen und Wiederholungen separat bewerten.</div></div>` : ""}
     ${mainBlock}${sampleBlock}
     <div class="field log-food-picker"><label>Lebensmittel hinzufügen</label><input id="logFoodSearch" value="${esc(logFoodQuery)}" placeholder="Tippen und Treffer auswählen" autocomplete="off"><div class="field-error-message" id="logFoodError" style="display:none"></div><button class="btn secondary smallbtn log-add-custom-food" id="addCustomLogFood" type="button">Eigenes Lebensmittel hinzufügen</button><div class="small log-food-results-label">${logFoodQuery ? "Suchergebnisse" : "Vorschläge aus Plan und Verlauf"}</div><div class="log-food-results">${logFoodResultsHtml()}</div></div>
-    ${pureSample ? "" : `<div class="field"><label>Gesamtmenge in g (optional)</label><input id="logAmount" type="number" min="0" step="1" inputmode="decimal" value="${esc(p.amount || "")}" placeholder="z. B. 40"></div>`}
-    ${pureSample ? "" : `<div class="field"><label>Konsistenz</label><select id="logTexture">${[1, 2, 3, 4].map((n) => `<option value="${n}" ${Number(p.textureStage || state.settings.textureStage) === n ? "selected" : ""}>Stufe ${n} – ${textureName(n)}</option>`).join("")}</select></div>`}
+    <div class="field"><label>Gesamtmenge in g (optional)</label><input id="logAmount" type="number" min="0" step="1" inputmode="decimal" value="${esc(p.amount || "")}" placeholder="z. B. 5"></div>
+    <div class="field"><label>Konsistenz</label><select id="logTexture"><option value="">Bitte auswählen</option>${[1, 2, 3, 4].map((n) => `<option value="${n}" ${String(textureValue) === String(n) ? "selected" : ""}>Stufe ${n} – ${esc(textureName(n))}</option>`).join("")}</select><div class="small" style="margin-top:5px">Bei tatsächlich angebotenem Essen erforderlich. Alte Einträge ohne dokumentierte Konsistenz bleiben unverändert möglich.</div></div>
     ${conditionalQuestionsHtml(focusOutcome)}
-    <details class="accordion"><summary>Notiz ergänzen</summary><div class="field"><label>Notiz / Reaktion</label><textarea id="logNote">${esc(p.note || "")}</textarea></div></details>
-    ${!pureSample && !p.editId && recipeItem ? `<div class="field"><label>Aus dem Rezeptvorrat verwendet</label><label class="toggleline"><input class="ds-toggle-input" type="checkbox" id="useRecipeInventory" checked><span class="toggle-copy"><b>1 ${esc(recipeItem.size || "Portion")} ${esc(recipeItem.recipeName)}</b><span class="small">Eingefroren am ${shortDate(recipeItem.frozenDate)}</span></span><span class="toggle-state" aria-hidden="true"></span></label></div>` : ""}
-    ${!pureSample && !p.editId && !recipeItem && stockedSelected.length ? `<div class="field"><label>Aus dem Gefriervorrat verwendet</label><div class="chips">${stockedSelected.map((f) => `<label class="chip toggle-chip"><input class="ds-toggle-input" type="checkbox" data-inventory-food="${f.id}" ${selectedInventoryFoods.has(f.id) ? "checked" : ""}><span>1 Portion ${esc(f.name)} <small>(${inventoryPortions(f.id)} vorhanden)</small></span></label>`).join("")}</div></div>` : ""}
-    <div class="sticky-form-actions"><div class="ds-actionbar"><button class="btn secondary" id="cancelLog" type="button">Abbrechen</button><button class="btn" id="saveLog">${p.editId ? "Änderungen speichern" : "Eintrag speichern"}</button></div><div class="small" style="margin-top:5px">Rollen und getrennte Bewertungen bleiben beim Bearbeiten erhalten.</div></div>`;
+    <details class="accordion"><summary>Notiz ergänzen</summary><div class="field"><label>Notiz oder Reaktion</label><textarea id="logNote">${esc(p.note || "")}</textarea></div></details>
+    ${!p.editId && recipeItem ? `<div class="field"><label>Aus dem Rezeptvorrat verwendet</label><label class="toggleline"><input class="ds-toggle-input" type="checkbox" id="useRecipeInventory" checked><span class="toggle-copy"><b>1 ${esc(recipeItem.size || "Portion")} ${esc(recipeItem.recipeName)}</b><span class="small">Eingefroren am ${shortDate(recipeItem.frozenDate)}</span></span><span class="toggle-state" aria-hidden="true"></span></label></div>` : ""}
+    ${!p.editId && !recipeItem && stockedSelected.length ? `<div class="field"><label>Aus dem Gefriervorrat verwendet</label><div class="chips">${stockedSelected.map((f) => `<label class="chip toggle-chip"><input class="ds-toggle-input" type="checkbox" data-inventory-food="${f.id}" ${selectedInventoryFoods.has(f.id) ? "checked" : ""}><span>1 Portion ${esc(f.name)} <small>(${inventoryPortions(f.id)} vorhanden)</small></span></label>`).join("")}</div></div>` : ""}
+    <div class="sticky-form-actions"><div class="ds-actionbar"><button class="btn secondary" id="cancelLog" type="button">Abbrechen</button><button class="btn" id="saveLog">${p.editId ? "Änderungen speichern" : "Eintrag speichern"}</button></div><div class="small" style="margin-top:5px">Lebensmittelrollen und getrennte Bewertungen bleiben beim Bearbeiten erhalten.</div></div>`;
   document.querySelectorAll("#logForm select").forEach((select) => select.addEventListener("change", updateConditionalQuestions));
   document.getElementById("logDate").onchange = (event) => requestLogDateChange(event.target.value, p.date);
   document.getElementById("individualRatings")?.addEventListener("change", (event) => { p.individualRatings = event.target.checked; document.getElementById("individualOutcomeRows").style.display = event.target.checked ? "block" : "none"; });
   document.querySelectorAll("[data-remove-log-food]").forEach((button) => button.onclick = () => { captureLogDraft(); let id = button.dataset.removeLogFood; selectedLogFoods.delete(id); selectedInventoryFoods.delete(id); p.sampleFoodIds = (p.sampleFoodIds || []).filter((x) => x !== id); p.baseFoodIds = (p.baseFoodIds || []).filter((x) => x !== id); delete p.foodOutcomes[id]; renderLogForm(); });
   document.getElementById("logFoodSearch").oninput = (event) => {
-    captureLogDraft();
-    logFoodQuery = event.target.value;
-    renderLogFoodResults();
+    captureLogDraft(); logFoodQuery = event.target.value; renderLogFoodResults();
   };
   document.getElementById("addCustomLogFood").onclick = () => {
     captureLogDraft();
@@ -318,8 +334,7 @@ function renderLogForm() {
         pendingLog.sampleFoodIds = [...new Set([...(pendingLog.sampleFoodIds || []), item.id])];
         pendingLog.baseFoodIds = (pendingLog.baseFoodIds || []).filter((id) => id !== item.id);
         if (!pendingLog.focusId) pendingLog.focusId = item.id;
-        logFoodQuery = "";
-        renderLogForm();
+        logFoodQuery = ""; renderLogForm();
       },
     });
   };
@@ -334,9 +349,15 @@ function captureLogDraft(options = {}) {
   if (!pendingLog) return;
   let value = (id) => document.getElementById(id)?.value;
   if (!options.skipDate && value("logDate")) pendingLog.date = value("logDate");
-  if (value("logMeal")) pendingLog.meal = value("logMeal");
   pendingLog.amount = value("logAmount") || "";
-  if (value("logTexture")) pendingLog.textureStage = Number(value("logTexture"));
+  pendingLog.__textureValue = value("logTexture") ?? pendingLog.__textureValue ?? "";
+  if (pendingLog.__textureValue) {
+    pendingLog.textureStage = Number(pendingLog.__textureValue);
+    pendingLog.textureKnown = true;
+  } else {
+    delete pendingLog.textureStage;
+    pendingLog.textureKnown = false;
+  }
   pendingLog.note = value("logNote") || "";
   pendingLog.individualRatings = !!document.getElementById("individualRatings")?.checked;
   if (document.getElementById("mainOutcome")) {
@@ -362,8 +383,8 @@ function saveLog() {
     document.getElementById("logFoodSearch")?.focus();
     return;
   }
+
   let sampleIds = [...new Set((pendingLog.sampleFoodIds || []).filter((id) => ids.includes(id)))];
-  if (pendingLog.entryType === "sample") sampleIds = [...ids];
   let mainIds = ids.filter((id) => !sampleIds.includes(id));
   let mainOutcome = document.getElementById("mainOutcome")?.value || "eaten";
   let individual = !!document.getElementById("individualRatings")?.checked;
@@ -373,30 +394,51 @@ function saveLog() {
   let focus = pendingLog.focusId && ids.includes(pendingLog.focusId) ? pendingLog.focusId : (sampleIds[0] || mainIds[0] || ids[0]);
   let reactionFoodId = ids.find((id) => foodOutcomes[id] === "reaction") || "";
   let overall = foodOutcomes[focus] || Object.values(foodOutcomes)[0] || "tried";
-  let entryType = pendingLog.entryType === "sample" || (sampleIds.length === ids.length && mainIds.length === 0) ? "sample" : "meal";
+  let offered = Object.values(foodOutcomes).some((outcome) => outcome !== "not_offered");
+  let textureValue = document.getElementById("logTexture")?.value || "";
+  let textureRequired = logTextureSelectionRequired({
+    offered,
+    isEdit: !!pendingLog.editId,
+    legacyUnknown: !!pendingLog.__legacyTextureUnknown,
+    textureValue,
+  });
+  let textureField = document.getElementById("logTexture")?.closest(".field");
+  textureField?.classList.remove("field-error");
+  textureField?.querySelector(".unified-texture-error")?.remove();
+  if (textureRequired) {
+    textureField?.classList.add("field-error");
+    textureField?.insertAdjacentHTML("beforeend", '<div class="field-error-message unified-texture-error">Bitte die tatsächlich angebotene Konsistenz auswählen.</div>');
+    document.getElementById("logTexture")?.focus();
+    return;
+  }
+
+  let selectedTexture = offered ? validLogTextureStage(textureValue) : null;
   let newLog = {
     id: pendingLog.editId || `${Date.now()}-${Math.random().toString(36).slice(2)}`,
     date: document.getElementById("logDate").value,
-    meal: document.getElementById("logMeal").value,
+    meal: pendingLog.__mealContext ? String(pendingLog.meal || "") : "",
     foodIds: ids,
     focusId: focus,
     recipeName: pendingLog.recipeName || "",
     outcome: overall,
     foodOutcomes,
-    entryType,
+    entryType: "food",
     baseFoodIds: mainIds,
     sampleFoodIds: sampleIds,
     foodRoles: foodRolesFor(ids, mainIds, sampleIds),
     individualRatings: individual,
-    amount: entryType === "sample" ? "" : (document.getElementById("logAmount")?.value || ""),
+    amount: document.getElementById("logAmount")?.value || "",
     note: document.getElementById("logNote").value,
-    textureStage: Number(document.getElementById("logTexture")?.value || pendingLog.textureStage || state.settings.textureStage || 1),
+    textureKnown: selectedTexture !== null,
     reactionFoodId,
     rejectionStrength: overall === "not_accepted" ? (document.querySelector('input[name="rejectionStrength"]:checked')?.value || "interest") : "",
     notOfferedReason: overall === "not_offered" ? (document.querySelector('input[name="notOfferedReason"]:checked')?.value || "no_opportunity") : "",
     createdAt: pendingLog.createdAt || new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
+  if (selectedTexture !== null) newLog.textureStage = selectedTexture;
+  if (Object.prototype.hasOwnProperty.call(pendingLog, "presentationMode")) newLog.presentationMode = pendingLog.presentationMode;
+
   let isEdit = !!pendingLog.editId;
   let oldLog = isEdit ? clone(state.logs.find((log) => log.id === pendingLog.editId)) : null;
   let stateBefore = clone(state);
@@ -412,7 +454,7 @@ function saveLog() {
     }
   }
 
-  if (!isEdit && Object.values(foodOutcomes).some((outcome) => outcome !== "not_offered")) {
+  if (!isEdit && offered) {
     let useRecipe = document.getElementById("useRecipeInventory")?.checked;
     if (useRecipe && selectedRecipeInventoryId) {
       let item = state.inventory.find((entry) => entry.id === selectedRecipeInventoryId);
@@ -430,10 +472,7 @@ function saveLog() {
   let affectedFoodIds = new Set([...(oldLog?.foodIds || []), ...ids]);
   for (let foodId of affectedFoodIds) rebuildFoodConsequences(foodId);
 
-  save();
-  closeLog();
-  renderAll();
-  showView("more");
+  save(); closeLog(); renderAll(); showView("more");
   let details = document.getElementById("logDetails");
   if (details) details.open = true;
   requestAnimationFrame(() => {
@@ -442,9 +481,7 @@ function saveLog() {
   });
   let inventoryMessage = consumedNames.length ? ` · ${consumedNames.length} Vorratsportion${consumedNames.length === 1 ? "" : "en"} abgezogen` : "";
   showToast(`${isEdit ? "Eintrag geändert" : "Eintrag gespeichert"}${inventoryMessage}.`, () => {
-    state = stateBefore;
-    save();
-    renderAll();
+    state = stateBefore; save(); renderAll();
     showToast("Eintrag und Folgeänderungen rückgängig gemacht.");
   });
 }

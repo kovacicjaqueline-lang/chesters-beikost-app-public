@@ -69,8 +69,24 @@ function installPlannerMealPresentationRuntime() {
   return true;
 }
 
+function loadManualMealFlowRuntime() {
+  if (typeof document === "undefined") return false;
+  if (globalThis.__manualMealFlowRuntimeInstalled) return true;
+  let existing = document.querySelector('script[data-manual-meal-flow="v1"]');
+  if (existing) return true;
+  let script = document.createElement("script");
+  script.src = "js/manual-meal-flow.js?v=10.1.25";
+  script.dataset.manualMealFlow = "v1";
+  script.addEventListener("error", (event) => {
+    console.error("Manueller Mahlzeiten-Flow konnte nicht geladen werden.", event);
+  }, { once: true });
+  document.head.appendChild(script);
+  return true;
+}
+
 if (typeof window !== "undefined" && typeof document !== "undefined") {
   installPlannerMealPresentationRuntime();
+  loadManualMealFlowRuntime();
 }
 
 if (typeof module !== "undefined" && module.exports) {
@@ -79,5 +95,6 @@ if (typeof module !== "undefined" && module.exports) {
     plannerNeutralBreakfastTitle,
     plannerAutomaticComponentTitle,
     installPlannerMealPresentationRuntime,
+    loadManualMealFlowRuntime,
   };
 }

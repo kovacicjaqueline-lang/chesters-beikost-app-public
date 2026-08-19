@@ -21,8 +21,11 @@ const HANDLING_PRECACHE = [
   "./js/handling-readiness.js",
 ];
 
-// Zusätzliche UI-Dateien, die nicht im statischen FILES-Stamm von sw-core.js liegen.
-const UI_PRECACHE = ["./ui-meal-editor-footer.css"];
+// Zusätzliche UI-/Flow-Dateien, die nicht im statischen FILES-Stamm von sw-core.js liegen.
+const UI_PRECACHE = [
+  "./ui-meal-editor-footer.css",
+  "./js/manual-meal-flow.js",
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil((async () => {

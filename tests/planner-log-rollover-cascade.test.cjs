@@ -83,3 +83,39 @@ test('materialization is limited to affected meal types and never replaces store
   assert.equal(data.planLocks['2026-08-19|lunch'].planId, 'existing');
   assert.equal(data.planLocks['2026-08-19|breakfast'], undefined);
 });
+
+test('slot completion follows the primary concrete plan, not another same-type carried plan', () => {
+  const data = state({
+    planLocks: { '2026-08-19|lunch': plan('primary', '2026-08-19') },
+    logs: [{
+      id: 'carried-log',
+      date: '2026-08-19',
+      meal: 'lunch',
+      focusId: 'x',
+      foodIds: ['x'],
+      outcome: 'eaten',
+      foodOutcomes: { x: 'eaten' },
+      plannedMealId: 'carried',
+    }],
+    backupMeta: {
+      plannerLinking: {
+        version: 1,
+        rolloverHandled: {},
+        carriedPlans: { carried: plan('carried', '2026-08-19') },
+      },
+    },
+  });
+
+  assert.equal(cascade.primarySlotCompletion(data, core, '2026-08-19', 'lunch'), null);
+  data.logs.push({
+    id: 'primary-log',
+    date: '2026-08-19',
+    meal: 'lunch',
+    focusId: 'y',
+    foodIds: ['y'],
+    outcome: 'eaten',
+    foodOutcomes: { y: 'eaten' },
+    plannedMealId: 'primary',
+  });
+  assert.equal(cascade.primarySlotCompletion(data, core, '2026-08-19', 'lunch').id, 'primary-log');
+});

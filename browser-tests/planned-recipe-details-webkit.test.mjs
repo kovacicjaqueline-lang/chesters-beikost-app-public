@@ -98,11 +98,11 @@ try {
   await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "domcontentloaded" });
   await waitForApp(page);
 
-  // Heute: Rezeptname selbst ist das Touchziel und öffnet die konkrete Obst-Auswahl.
+  // Heute: Rezeptname selbst ist das Touchziel und öffnet auch eine nicht-erste oneOf-Auswahl korrekt.
   let date = await seedRecipeMeal(
     page,
     "Obst-Hafer-Pancakes",
-    ["hafer", "ei", "banane"],
+    ["hafer", "ei", "apfel"],
     2,
   );
   let homeRecipe = page.locator('#todayCard [data-planned-recipe-name="Obst-Hafer-Pancakes"]');
@@ -110,7 +110,8 @@ try {
   assert.ok((await homeRecipe.boundingBox())?.height >= 44, "Rezepttitel muss auf iPhone mindestens 44px hoch sein");
   await homeRecipe.click();
   await page.locator("#genericModal.open .recipe-card-v2[open]").waitFor();
-  assert.match(await page.locator("#genericBody").innerText(), /Vorausgewählt:\s*Banane/);
+  assert.match(await page.locator("#genericBody").innerText(), /Vorausgewählt:\s*Apfel/);
+  assert.doesNotMatch(await page.locator("#genericBody").innerText(), /Vorausgewählt:\s*Banane/);
   await page.locator("#closeGeneric").click();
 
   // Wochenplan: derselbe direkte Einstieg funktioniert ohne Zusatzbutton.
@@ -122,7 +123,7 @@ try {
   assert.match(await page.locator("#genericBody").innerText(), /Obst-Hafer-Pancakes/);
   await page.locator("#closeGeneric").click();
 
-  // Familienrezept: tatsächliche foodIds bestimmen die geöffnete Variante.
+  // Familienrezept: tatsächliche foodIds bestimmen die geöffnete alternatives-Variante.
   await page.locator('nav button[data-view="home"]').click();
   date = await seedRecipeMeal(
     page,

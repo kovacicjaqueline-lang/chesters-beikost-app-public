@@ -39,8 +39,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: Checkout repository
+      - name: Checkout feature branch
         uses: actions/checkout@v4
+        with:
+          ref: refactor/unified-food-log
+          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -54,7 +57,6 @@ jobs:
         run: npm test
 
       - name: Patch canonical follow-up planning
-        if: github.event_name == 'push'
         shell: python
         run: |
           from pathlib import Path
@@ -124,7 +126,6 @@ jobs:
           path.write_text(source)
 
       - name: Verify and publish canonical follow-up fix
-        if: github.event_name == 'push'
         run: |
           git diff --check
           node --check js/planning.js

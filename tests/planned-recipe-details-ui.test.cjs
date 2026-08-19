@@ -29,14 +29,14 @@ test("erledigte Mahlzeit verlinkt nur das tatsächlich protokollierte Rezept", (
   );
 });
 
-test("Mahlzeitenkontext liefert konkrete Familien- und Auswahlhinweise", () => {
-  const recipe = {
+test("Mahlzeitenkontext liefert konkrete Alternativen-, oneOf- und Milchhinweise", () => {
+  const alternativeRecipe = {
     name: "Familienrezept",
     requires: ["Huhn", "Zucchini"],
     alternatives: [["Pute", "Karotte"]],
     variantLabels: ["Huhn + Zucchini", "Pute + Karotte"],
     legacyNames: ["Huhn-Rezept", "Pute-Rezept"],
-    oneOf: ["Banane", "Apfel"],
+    oneOf: [],
     milkChoices: ["Joghurt", "Milch"],
   };
   const ids = {
@@ -48,15 +48,36 @@ test("Mahlzeitenkontext liefert konkrete Familien- und Auswahlhinweise", () => {
     Apfel: "apfel",
     Joghurt: "joghurt",
     Milch: "milch",
+    Hafer: "hafer",
+    Ei: "ei",
   };
 
   assert.deepEqual(
     feature.recipeContextHints(
-      recipe,
-      ["pute", "karotte", "apfel", "joghurt"],
+      alternativeRecipe,
+      ["pute", "karotte", "joghurt"],
       (name) => ids[name] || "",
     ),
-    ["Pute + Karotte", "Apfel", "Joghurt"],
+    ["Pute + Karotte", "Joghurt"],
+  );
+
+  const oneOfRecipe = {
+    name: "Obst-Hafer-Pancakes",
+    requires: ["Hafer", "Ei"],
+    alternatives: [],
+    variantLabels: ["Banane", "Apfel", "Mango"],
+    legacyNames: ["Banane-Hafer-Pancakes", "Apfel-Hafer-Pancakes", "Mango-Hafer-Pancakes"],
+    oneOf: ["Banane", "Apfel"],
+    milkChoices: [],
+  };
+  assert.deepEqual(
+    feature.recipeContextHints(
+      oneOfRecipe,
+      ["hafer", "ei", "apfel"],
+      (name) => ids[name] || "",
+    ),
+    ["Apfel"],
+    "oneOf-Familien dürfen nicht den ersten variantLabel zusätzlich auswählen",
   );
 });
 

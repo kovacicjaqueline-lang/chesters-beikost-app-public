@@ -64,6 +64,19 @@ jobs:
           script = textwrap.dedent(workflow[start:end])
           script = script.replace("r'\\.map\\(\\(log\\) => `\\$\\{log\\.date\\}\\|\\$\\{log\\.meal\\}`\\)'", "r'\\.map\\(\\(\\) => `\\$\\{log\\.date\\}\\|\\$\\{log\\.meal\\}`\\)'")
           script = script.replace("'.map((log) => typeof logExposureKey === \"function\" ? logExposureKey(log) : `${log.date}|${log.meal}`)'", "'.map(() => typeof logExposureKey === \"function\" ? logExposureKey(log) : `${log.date}|${log.meal}`)'")
+          script += r'''
+# Isolated Planner-Tests laden planning.js teilweise ohne log-core.js. Die Produktionsseite nutzt
+# weiterhin log-core.js; diese Wrapper halten das Modul zusätzlich eigenständig testbar.
+rep_all('js/planning.js', 'logHasMealContext(log)', 'plannerLogHasMealContext(log)')
+rep_all('js/planning.js', '.map(logExposureKey)', '.map(plannerLogExposureKey)')
+rep_all('js/planning.js', 'LOG_MEAL_KEYS.includes(meal)', 'plannerLogMealKeys().includes(meal)')
+rep('js/planning.js',
+    'let role = learningRoleLabel(rank(sample[0]), status(sample[0]), m.type || "");',
+    'let role = plannerLearningRoleLabel(sample[0], m.type || "");')
+planner_marker = 'function successfulMealSlotCount(on = today()) {'
+planner_helpers = '''function plannerLogMealKeys() {\n  return typeof LOG_MEAL_KEYS !== "undefined" ? LOG_MEAL_KEYS : ["breakfast", "snack", "lunch", "dinner"];\n}\nfunction plannerLogHasMealContext(log) {\n  if (typeof logHasMealContext === "function") return logHasMealContext(log);\n  return !!log && log.entryType !== "sample" && plannerLogMealKeys().includes(String(log.meal || ""));\n}\nfunction plannerLogExposureKey(log) {\n  if (typeof logExposureKey === "function") return logExposureKey(log);\n  let date = String(log?.date || "");\n  if (plannerLogHasMealContext(log)) return `${date}|${log.meal}`;\n  let identity = String(log?.id || log?.createdAt || log?.updatedAt || "free");\n  return `${date}|entry:${identity}`;\n}\nfunction plannerLearningRoleLabel(item, type = "") {\n  if (typeof learningRoleLabel === "function") return learningRoleLabel(rank(item), status(item), type);\n  if (status(item) === "Pausiert") return "Pausiert";\n  if (rank(item) === 1 || ["gezielt wiederholen", "Allergen wiederholen", "nach Einführung"].includes(String(type || ""))) return "Wiederholung";\n  return "Einführung";\n}\n'''
+rep('js/planning.js', planner_marker, planner_helpers + planner_marker)
+'''
           Path('/tmp/unified-log-cleanup.py').write_text(script)
           PY
           python3 /tmp/unified-log-cleanup.py

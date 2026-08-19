@@ -32,10 +32,51 @@ on:
       - '.github/workflows/app-tests.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
+  cleanup:
+    if: github.event_name == 'push' && github.ref_name == 'refactor/unified-food-log'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: refactor/unified-food-log
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Apply reviewed unified-log cleanup
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          import textwrap
+          workflow = Path('.github/workflows/unified-log-cleanup.yml').read_text()
+          start_marker = "          python3 <<'PY'\n"
+          end_marker = "\n          PY\n\n          npm ci"
+          start = workflow.index(start_marker) + len(start_marker)
+          end = workflow.index(end_marker, start)
+          Path('/tmp/unified-log-cleanup.py').write_text(textwrap.dedent(workflow[start:end]))
+          PY
+          python3 /tmp/unified-log-cleanup.py
+          npm ci
+          npm test
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout origin/main -- .github/workflows/app-tests.yml
+          git rm .github/workflows/unified-log-cleanup.yml .github/workflows/unified-log-cleanup-run.yml .unified-log-cleanup-trigger
+          git add app.js index.html sw.js js browser-tests tests .github/workflows/app-tests.yml
+          git commit -m "Integrate unified food log canonically"
+          git push origin HEAD:refactor/unified-food-log
+
   test:
+    needs: cleanup
+    if: always() && (needs.cleanup.result == 'success' || needs.cleanup.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

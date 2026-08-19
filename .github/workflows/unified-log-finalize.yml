@@ -1,0 +1,89 @@
+name: Unified log finalizer
+
+on:
+  push:
+    branches:
+      - refactor/unified-food-log
+    paths:
+      - '.github/workflows/unified-log-finalize.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/unified-food-log
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Apply final unified-log review fixes
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              text = p.read_text()
+              if text.count(old) != 1:
+                  raise SystemExit(f"{path}: expected exactly one target, found {text.count(old)}")
+              p.write_text(text.replace(old, new, 1))
+
+          replace_once(
+              'js/log.js',
+              '  pendingLog.__legacyTextureUnknown = !!pendingLog.editId && logTextureStage(plan) === null;',
+              '  pendingLog.__legacyTextureUnknown = !!pendingLog.editId && logTextureStage(plan) === null && logPositiveOutcome(plan, outcomeForFood);',
+          )
+
+          marker = '''  assert.equal(notOffered.foodOutcomes.karotte, "not_offered");
+  assert.equal(notOffered.textureKnown, false);
+  assert.equal(Object.hasOwn(notOffered, "textureStage"), false);
+
+  // 4. Ablehnung und Reaktion: Konsistenz ist optional und zählt nicht als positive Texturerfahrung.
+'''
+          replacement = '''  assert.equal(notOffered.foodOutcomes.karotte, "not_offered");
+  assert.equal(notOffered.textureKnown, false);
+  assert.equal(Object.hasOwn(notOffered, "textureStage"), false);
+
+  // Wird ein solcher Eintrag später tatsächlich zu „Probiert“, ist eine Konsistenz neu erforderlich.
+  await page.evaluate((id) => window.editLogEntry(id), notOffered.id);
+  await page.locator('[data-sample-result="karotte"]').selectOption("tried");
+  await page.locator("#saveLog").click();
+  assert.equal(await page.locator("#logModal").evaluate((node) => node.classList.contains("open")), true);
+  assert.equal(await page.locator(".unified-texture-error").count(), 1);
+  let stillNotOffered = await page.evaluate(() => window.__beikostTest.getState().logs[0]);
+  assert.equal(stillNotOffered.foodOutcomes.karotte, "not_offered");
+  await page.locator("#logTexture").selectOption("2");
+  await page.locator("#saveLog").click();
+  await page.waitForFunction(() => document.getElementById("logModal") && !document.getElementById("logModal").classList.contains("open"));
+  let changedToTried = await page.evaluate(() => window.__beikostTest.getState().logs[0]);
+  assert.equal(changedToTried.foodOutcomes.karotte, "tried");
+  assert.equal(changedToTried.textureKnown, true);
+  assert.equal(changedToTried.textureStage, 2);
+
+  // 4. Ablehnung und Reaktion: Konsistenz ist optional und zählt nicht als positive Texturerfahrung.
+'''
+          replace_once('browser-tests/unified-food-log-webkit.test.mjs', marker, replacement)
+
+          index = Path('index.html')
+          text = index.read_text()
+          text = text.replace('<div class="storage-status" id="storageStatus"></div>', '<div id="storageStatus" class="storage-status"></div>', 1)
+          if not text.endswith('\n'):
+              text += '\n'
+          index.write_text(text)
+          PY
+
+          npm ci
+          npm test
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/unified-log-finalize.yml
+          git add js/log.js browser-tests/unified-food-log-webkit.test.mjs index.html
+          git commit -m "Tighten unified log legacy texture handling"
+          git push origin HEAD:refactor/unified-food-log

@@ -52,20 +52,59 @@ jobs:
           python3 <<'PY'
           from pathlib import Path
 
-          path = Path('js/ui.js')
-          text = path.read_text()
+          def replace_once(path, old, new):
+              p = Path(path)
+              text = p.read_text()
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{path}: expected one occurrence, found {count}: {old}')
+              p.write_text(text.replace(old, new, 1))
+
+          ui = Path('js/ui.js')
+          text = ui.read_text()
           replacements = [
               (': role === "sample" ? "Kostprobe"', ': role === "sample" ? "Einführung"'),
               ('${d.introAssigned ? "Einführung / Wiederholung" : "Bekannter Tag"}', '${d.introAssigned ? "Einführung und Wiederholung" : "Bekannter Tag"}'),
               ('<div class="field"><label>Sichere Form / Notiz</label><textarea id="customSafe"></textarea></div>', '<div class="field"><label>Sichere Form oder Notiz</label><textarea id="customSafe"></textarea></div>'),
-              ('<select id="customCat">${cats.map((c) => `<option>${c}</option>`).join("")}</select>', '<select id="customCat">${cats.map((c) => `<option value="${esc(c)}">${esc(foodCategoryLabel(c))}</option>`).join("")}</select>'),
+              ('<select id="customCat">${cats.map((c) => `<option>${c}</option>`).join("")}</select>', '<select id="customCat">${cats.map((c) => `<option value="${esc(c)}">${esc(uiFoodCategoryDisplayLabel(c))}</option>`).join("")}</select>'),
           ]
           for old, new in replacements:
               count = text.count(old)
               if count != 1:
                   raise SystemExit(f'ui.js: expected one occurrence, found {count}: {old}')
               text = text.replace(old, new, 1)
-          path.write_text(text)
+
+          marker = 'function addCustomFoodForm(options = {}) {'
+          helper = '''function uiFoodCategoryDisplayLabel(category) {\n  if (typeof foodCategoryLabel === "function") return foodCategoryLabel(category);\n  let value = String(category || "");\n  return {\n    "Getreide/Stärke": "Getreide und Stärke",\n    "Kraut/Gewürz": "Kräuter und Gewürze",\n    "Wurzel/Knolle": "Wurzel- und Knollengemüse",\n    "Soja/Tofu": "Soja und Tofu",\n  }[value] || value;\n}\n'''
+          if text.count(marker) != 1:
+              raise SystemExit('ui.js: addCustomFoodForm marker missing or duplicated')
+          text = text.replace(marker, helper + marker, 1)
+          ui.write_text(text)
+
+          replace_once(
+              'tests/manual-meal-flow-regressions.test.cjs',
+              'planningSource.includes("return `${naturalMealFoodTitle(base)} und ${sampleName} als Kostprobe`;")',
+              'planningSource.includes("return `${naturalMealFoodTitle(base)} mit ${sampleName} zur ${role}`;")',
+          )
+          replace_once(
+              'tests/manual-meal-flow-regressions.test.cjs',
+              '"bestehende Mahlzeitenbenennung für Basis + Kostprobe muss erhalten bleiben"',
+              '"bestehende Mahlzeitenbenennung für Basis + Einführung muss erhalten bleiben"',
+          )
+
+          browser = Path('browser-tests/ui-meal-editor-webkit.test.mjs')
+          b = browser.read_text()
+          browser_replacements = [
+              ('/Pfirsich|Kostprobe/', '/Pfirsich|Einführung|Wiederholung/'),
+              ('"Pfirsich muss als Kostprobe geführt werden"', '"Pfirsich muss als Einführung geführt werden"'),
+              ('/Banane.*Pfirsich.*Kostprobe/', '/Banane.*Pfirsich.*Einführung/'),
+              ('"Kartentitel muss Hauptbasis und Kostprobe repräsentieren"', '"Kartentitel muss Hauptbasis und Einführung repräsentieren"'),
+          ]
+          for old, new in browser_replacements:
+              if b.count(old) != 1:
+                  raise SystemExit(f'browser test: expected one occurrence, found {b.count(old)}: {old}')
+              b = b.replace(old, new, 1)
+          browser.write_text(b)
           PY
 
           npm ci
@@ -74,8 +113,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout origin/main -- .github/workflows/app-tests.yml
-          git add js/ui.js .github/workflows/app-tests.yml
-          git commit -m "Remove remaining unified log UI slash labels"
+          git add js/ui.js tests/manual-meal-flow-regressions.test.cjs browser-tests/ui-meal-editor-webkit.test.mjs .github/workflows/app-tests.yml
+          git commit -m "Finish unified food log terminology integration"
           git push origin HEAD:refactor/unified-food-log
 
   test:

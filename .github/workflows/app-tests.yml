@@ -61,7 +61,10 @@ jobs:
           end_marker = "\n          PY\n\n          npm ci"
           start = workflow.index(start_marker) + len(start_marker)
           end = workflow.index(end_marker, start)
-          Path('/tmp/unified-log-cleanup.py').write_text(textwrap.dedent(workflow[start:end]))
+          script = textwrap.dedent(workflow[start:end])
+          script = script.replace("r'\\.map\\(\\(log\\) => `\\$\\{log\\.date\\}\\|\\$\\{log\\.meal\\}`\\)'", "r'\\.map\\(\\(\\) => `\\$\\{log\\.date\\}\\|\\$\\{log\\.meal\\}`\\)'")
+          script = script.replace("'.map((log) => typeof logExposureKey === \"function\" ? logExposureKey(log) : `${log.date}|${log.meal}`)'", "'.map(() => typeof logExposureKey === \"function\" ? logExposureKey(log) : `${log.date}|${log.meal}`)'")
+          Path('/tmp/unified-log-cleanup.py').write_text(script)
           PY
           python3 /tmp/unified-log-cleanup.py
           npm ci

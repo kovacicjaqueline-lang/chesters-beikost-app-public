@@ -92,7 +92,7 @@ test("HANDLING runtime: Alter und fehlende Zutaten bleiben trotz Fingerfood-Migr
 
 test("HANDLING runtime: unmigriertes Rezept bleibt unverändert im Legacy-Stage-Verhalten", () => {
   const original = {
-    name: "Rind-Hafer-Bällchen",
+    name: "Geflügel-Gemüse-Hafer-Bällchen",
     stage: 3,
     ingredientMissing: [],
     requirementMissing: ["Konsistenz: weich-stückig / Fingerfood"],

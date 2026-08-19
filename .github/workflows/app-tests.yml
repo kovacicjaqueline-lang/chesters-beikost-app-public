@@ -32,18 +32,15 @@ on:
       - '.github/workflows/app-tests.yml'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: Checkout feature branch
+      - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          ref: refactor/unified-food-log
-          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -55,87 +52,6 @@ jobs:
 
       - name: Run regression tests
         run: npm test
-
-      - name: Patch canonical follow-up planning
-        shell: python
-        run: |
-          from pathlib import Path
-
-          path = Path("js/planning.js")
-          source = path.read_text()
-
-          old_apply = '''function applyFollowUpPlan(record, requestedDate = "") {
-            if (!record) return { ok: false, message: "Wiedervorlage fehlt." };
-            removeFollowUpPlan(record.foodId);
-            if (record.status !== "scheduled" || isFoodUnavailable(record.foodId)) return { ok: true, date: "" };
-            let date = requestedDate || record.dueDate || record.earliestDate || addDays(today(), 1);
-            let key = planLockKey(date, record.meal || "lunch");
-            if (planSlotProtected(date, record.meal || "lunch")) return { ok: false, message: "Dieser Planplatz ist geschützt oder bereits manuell belegt." };
-            if (!shiftAutomaticSlot(date, record.meal || "lunch")) return { ok: false, message: "Für diesen Planplatz konnte keine sichere Verschiebung gefunden werden." };
-            key = planLockKey(date, record.meal || "lunch");
-            let base = record.baseMode === "none" ? null : food(record.baseFoodId);
-            state.planLocks[key] = {
-              date,
-              meal: record.meal || "lunch",
-          '''
-          new_apply = '''function applyFollowUpPlan(record, requestedDate = "") {
-            if (!record) return { ok: false, message: "Wiedervorlage fehlt." };
-            removeFollowUpPlan(record.foodId);
-            if (record.status !== "scheduled" || isFoodUnavailable(record.foodId)) return { ok: true, date: "" };
-            let meal = plannerLogMealKeys().includes(record.meal) ? record.meal : "";
-            if (!meal) return { ok: true, date: "", unplanned: true };
-            let date = requestedDate || record.dueDate || record.earliestDate || addDays(today(), 1);
-            let key = planLockKey(date, meal);
-            if (planSlotProtected(date, meal)) return { ok: false, message: "Dieser Planplatz ist geschützt oder bereits manuell belegt." };
-            if (!shiftAutomaticSlot(date, meal)) return { ok: false, message: "Für diesen Planplatz konnte keine sichere Verschiebung gefunden werden." };
-            key = planLockKey(date, meal);
-            let base = record.baseMode === "none" ? null : food(record.baseFoodId);
-            state.planLocks[key] = {
-              date,
-              meal,
-          '''
-
-          old_schedule = 'function scheduleFollowUp(foodId, fromDate, meal = "lunch", reason = "rejection", detail = "interest") {'
-          new_schedule = 'function scheduleFollowUp(foodId, fromDate, meal = "", reason = "rejection", detail = "interest") {'
-
-          old_meal = '''function followUpMealForLog(log, foodId) {
-            if (plannerLogHasMealContext(log)) return log.meal;
-            let item = food(foodId);
-            let allowed = (item?.meals || []).filter((meal) => plannerLogMealKeys().includes(meal));
-            let preferred = phaseMealKeys().find((meal) => allowed.includes(meal));
-            return preferred || allowed[0] || "lunch";
-          }
-          '''
-          new_meal = '''function followUpMealForLog(log, foodId) {
-            if (plannerLogHasMealContext(log)) return log.meal;
-            let item = food(foodId);
-            let allowed = (item?.meals || []).filter((meal) => plannerLogMealKeys().includes(meal));
-            return phaseMealKeys().find((meal) => allowed.includes(meal)) || "";
-          }
-          '''
-
-          for old, new, label in [
-              (old_apply, new_apply, "applyFollowUpPlan"),
-              (old_schedule, new_schedule, "scheduleFollowUp"),
-              (old_meal, new_meal, "followUpMealForLog"),
-          ]:
-              if source.count(old) != 1:
-                  raise SystemExit(f"Expected exactly one {label} source block, found {source.count(old)}")
-              source = source.replace(old, new, 1)
-
-          path.write_text(source)
-
-      - name: Verify and publish canonical follow-up fix
-        run: |
-          git diff --check
-          node --check js/planning.js
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout 11450f8f3df89b30c72e954a232a1e0b8a3a9ec2 -- .github/workflows/app-tests.yml
-          git rm -f .github/workflows/apply-unified-followup-fix.yml
-          git add js/planning.js .github/workflows/app-tests.yml
-          git commit -m "Avoid fabricated follow-up meal context"
-          git push origin HEAD:refactor/unified-food-log
 
       - name: Install WebKit
         run: npx playwright install --with-deps webkit

@@ -1305,15 +1305,17 @@ function applyFollowUpPlan(record, requestedDate = "") {
   if (!record) return { ok: false, message: "Wiedervorlage fehlt." };
   removeFollowUpPlan(record.foodId);
   if (record.status !== "scheduled" || isFoodUnavailable(record.foodId)) return { ok: true, date: "" };
+  let meal = plannerLogMealKeys().includes(record.meal) ? record.meal : "";
+  if (!meal) return { ok: true, date: "", unplanned: true };
   let date = requestedDate || record.dueDate || record.earliestDate || addDays(today(), 1);
-  let key = planLockKey(date, record.meal || "lunch");
-  if (planSlotProtected(date, record.meal || "lunch")) return { ok: false, message: "Dieser Planplatz ist geschützt oder bereits manuell belegt." };
-  if (!shiftAutomaticSlot(date, record.meal || "lunch")) return { ok: false, message: "Für diesen Planplatz konnte keine sichere Verschiebung gefunden werden." };
-  key = planLockKey(date, record.meal || "lunch");
+  let key = planLockKey(date, meal);
+  if (planSlotProtected(date, meal)) return { ok: false, message: "Dieser Planplatz ist geschützt oder bereits manuell belegt." };
+  if (!shiftAutomaticSlot(date, meal)) return { ok: false, message: "Für diesen Planplatz konnte keine sichere Verschiebung gefunden werden." };
+  key = planLockKey(date, meal);
   let base = record.baseMode === "none" ? null : food(record.baseFoodId);
   state.planLocks[key] = {
     date,
-    meal: record.meal || "lunch",
+    meal,
     focusId: record.foodId,
     foodIds: base ? [base.id, record.foodId] : [record.foodId],
     baseFoodIds: base ? [base.id] : [],
@@ -1344,7 +1346,7 @@ function followUpStatusText(record) {
   if (record.status === "awaiting_stock") return "Wartet auf Einkauf";
   return "Wieder anbieten";
 }
-function scheduleFollowUp(foodId, fromDate, meal = "lunch", reason = "rejection", detail = "interest") {
+function scheduleFollowUp(foodId, fromDate, meal = "", reason = "rejection", detail = "interest") {
   let f = food(foodId);
   if (!f || status(f) === "Pausiert" || isFoodUnavailable(foodId)) return null;
   let clearCount = refusalHistory(foodId).filter((log) => log.rejectionStrength === "refused").length;
@@ -1426,8 +1428,7 @@ function followUpMealForLog(log, foodId) {
   if (plannerLogHasMealContext(log)) return log.meal;
   let item = food(foodId);
   let allowed = (item?.meals || []).filter((meal) => plannerLogMealKeys().includes(meal));
-  let preferred = phaseMealKeys().find((meal) => allowed.includes(meal));
-  return preferred || allowed[0] || "lunch";
+  return phaseMealKeys().find((meal) => allowed.includes(meal)) || "";
 }
 function rebuildFoodConsequences(foodId) {
   clearLogGeneratedState(foodId);

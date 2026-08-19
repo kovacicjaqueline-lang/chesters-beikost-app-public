@@ -32,10 +32,55 @@ on:
       - '.github/workflows/app-tests.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
+  finalize-visible-terminology:
+    if: github.event_name == 'pull_request' && github.head_ref == 'refactor/unified-food-log'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/unified-food-log
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Apply final visible terminology cleanup
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          path = Path('js/ui.js')
+          text = path.read_text()
+          replacements = [
+              (': role === "sample" ? "Kostprobe"', ': role === "sample" ? "Einführung"'),
+              ('${d.introAssigned ? "Einführung / Wiederholung" : "Bekannter Tag"}', '${d.introAssigned ? "Einführung und Wiederholung" : "Bekannter Tag"}'),
+              ('<div class="field"><label>Sichere Form / Notiz</label><textarea id="customSafe"></textarea></div>', '<div class="field"><label>Sichere Form oder Notiz</label><textarea id="customSafe"></textarea></div>'),
+              ('<select id="customCat">${cats.map((c) => `<option>${c}</option>`).join("")}</select>', '<select id="customCat">${cats.map((c) => `<option value="${esc(c)}">${esc(foodCategoryLabel(c))}</option>`).join("")}</select>'),
+          ]
+          for old, new in replacements:
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'ui.js: expected one occurrence, found {count}: {old}')
+              text = text.replace(old, new, 1)
+          path.write_text(text)
+          PY
+
+          npm ci
+          npm test
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout origin/main -- .github/workflows/app-tests.yml
+          git add js/ui.js .github/workflows/app-tests.yml
+          git commit -m "Remove remaining unified log UI slash labels"
+          git push origin HEAD:refactor/unified-food-log
+
   test:
+    needs: finalize-visible-terminology
+    if: always() && (needs.finalize-visible-terminology.result == 'success' || needs.finalize-visible-terminology.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

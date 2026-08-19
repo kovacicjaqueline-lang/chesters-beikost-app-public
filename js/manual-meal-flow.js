@@ -348,7 +348,7 @@ function installManualMealFlowRuntime() {
 
   let originalMealDisplayTitle = mealDisplayTitle;
   mealDisplayTitle = function manualFlowMealDisplayTitle(meal) {
-    if ((meal?.manualAdded || meal?.lockedMode === "manual") && typeof dishTitle === "function")
+    if (meal?.manualAdded && typeof dishTitle === "function")
       return dishTitle(meal);
     return originalMealDisplayTitle(meal);
   };
@@ -399,18 +399,21 @@ function installManualMealFlowRuntime() {
     let originalSaveLog = saveLog;
     saveLog = function manualFlowSaveLog(...args) {
       let draft = typeof pendingLog !== "undefined" ? pendingLog : null;
-      let preparationKeys = manualMealFlowValidPreparationKeys(
-        draft?.foodPreparationKeys || {},
-        [...new Set(draft?.foodIds || [])],
-      );
+      let rawPreparationKeys = manualMealFlowClone(draft?.foodPreparationKeys || {});
       let editId = draft?.editId || "";
       let existingIds = new Set((state?.logs || []).map((log) => log.id));
+      let existingEditLog = editId ? state.logs?.find((log) => log.id === editId) : null;
       let result = originalSaveLog.apply(this, args);
-      if (!Object.keys(preparationKeys).length) return result;
       let savedLog = editId
         ? state.logs?.find((log) => log.id === editId)
         : state.logs?.find((log) => !existingIds.has(log.id));
-      if (savedLog) {
+      if (!savedLog || (editId && savedLog === existingEditLog)) return result;
+
+      let preparationKeys = manualMealFlowValidPreparationKeys(
+        rawPreparationKeys,
+        [...new Set(savedLog.foodIds || [])],
+      );
+      if (Object.keys(preparationKeys).length) {
         savedLog.foodPreparationKeys = manualMealFlowClone(preparationKeys);
         if (typeof save === "function") save();
       }

@@ -110,13 +110,29 @@ test("explizite FOOD-Darreichung wird in Manual-Lock, Verschieben und Protokoll 
   assert.match(runtimeSource, /savedLog\.foodPreparationKeys/);
 });
 
-test("manuelle Karten verwenden die etablierte dishTitle-Logik inklusive Hauptbasis plus Kostprobe", () => {
+test("Log-Darreichung wird erst nach erfolgreichem Save gegen die tatsächlich gespeicherten Lebensmittel gefiltert", () => {
+  const saveWrapper = runtimeSource.slice(runtimeSource.indexOf("saveLog = function manualFlowSaveLog"));
+  const originalSaveIndex = saveWrapper.indexOf("originalSaveLog.apply(this, args)");
+  const validateIndex = saveWrapper.indexOf("manualMealFlowValidPreparationKeys(");
+  assert.ok(originalSaveIndex >= 0, "bestehender Log-Save muss aufgerufen werden");
+  assert.ok(validateIndex > originalSaveIndex, "Darreichung darf erst nach dem tatsächlichen Log-Save final validiert werden");
+  assert.match(saveWrapper, /rawPreparationKeys/);
+  assert.match(saveWrapper, /new Set\(savedLog\.foodIds \|\| \[\]\)/);
+  assert.match(saveWrapper, /savedLog === existingEditLog/);
+});
+
+test("nur wirklich manuell hinzugefügte Karten verwenden dishTitle; manuelles Sperren allein ändert keinen Titel", () => {
   assert.ok(
     planningSource.includes("return `${naturalMealFoodTitle(base)} und ${sampleName} als Kostprobe`;"),
     "bestehende Mahlzeitenbenennung für Basis + Kostprobe muss erhalten bleiben",
   );
-  assert.match(runtimeSource, /meal\?\.manualAdded\s*\|\|\s*meal\?\.lockedMode\s*===\s*\"manual\"/);
-  assert.match(runtimeSource, /return dishTitle\(meal\)/);
+  const titleWrapper = runtimeSource.slice(
+    runtimeSource.indexOf("mealDisplayTitle = function manualFlowMealDisplayTitle"),
+    runtimeSource.indexOf("if (typeof mealSnapshot", runtimeSource.indexOf("mealDisplayTitle = function manualFlowMealDisplayTitle")),
+  );
+  assert.match(titleWrapper, /meal\?\.manualAdded/);
+  assert.doesNotMatch(titleWrapper, /lockedMode/);
+  assert.match(titleWrapper, /return dishTitle\(meal\)/);
 });
 
 test("Speichern beendet den Tastaturfokus und kehrt deterministisch in den Plan zum Zieltag zurück", () => {

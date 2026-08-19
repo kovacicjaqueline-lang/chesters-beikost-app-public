@@ -156,7 +156,61 @@ try {
   let savedState = await page.evaluate(() => window.__beikostTest.getState());
   assert.ok(savedState.manualMeals[`${dates.today}|lunch`], "neu für heute angelegte Mahlzeit muss unter dem heutigen Schlüssel gespeichert sein");
 
-  // Für die weiteren Rekey-Regressionen wieder einen definierten, freien Ausgangszustand herstellen.
+  // Für die weiteren Review-Regressionen wieder einen definierten Ausgangszustand herstellen.
+  await page.evaluate(() => {
+    window.__beikostTest.reset();
+    const state = window.__beikostTest.getState();
+    state.foods.find((food) => food.id === "banane").manualStatus = "Verträgliche Basis";
+    state.foods.find((food) => food.id === "pfirsich").manualStatus = "auto";
+    window.__beikostTest.setState(state);
+  });
+
+  // Der gemeinsame Editor wird auch für eine bestehende Planner-Mahlzeit verwendet.
+  // Die FOOD-Darreichung muss dort gespeichert werden, das Datum aber unverändert bleiben
+  // und ein bloß manueller Lock darf nicht die spezielle Manual-Card-Titelregel aktivieren.
+  await page.evaluate((today) => {
+    window.__beikostTest.openManualMealSelector(today, "lunch", {
+      meal: "lunch",
+      active: true,
+      focusId: "pfirsich",
+      foodIds: ["banane", "pfirsich"],
+      baseFoodIds: ["banane"],
+      sampleFoodIds: ["pfirsich"],
+      foodRoles: { banane: "base", pfirsich: "sample" },
+      type: "neu",
+    });
+  }, dates.today);
+  assert.equal(await page.locator("#manualMealTargetDate").count(), 0, "bestehender Planner-Slot bekommt keine Datums-Rekey-Steuerung");
+
+  const editedBananaPreparation = page.locator('[data-manual-preparation="banane"]');
+  const editedPeachPreparation = page.locator('[data-manual-preparation="pfirsich"]');
+  await editedBananaPreparation.waitFor();
+  await editedPeachPreparation.waitFor();
+  const editedBananaPreparationKey = await editedBananaPreparation.evaluate((select) =>
+    Array.from(select.options).find((option) => option.value)?.value || "",
+  );
+  const editedPeachPreparationKey = await editedPeachPreparation.evaluate((select) =>
+    Array.from(select.options).find((option) => option.value)?.value || "",
+  );
+  assert.ok(editedBananaPreparationKey && editedPeachPreparationKey, "bestehende Planner-Mahlzeit muss FOOD-Darreichungen anbieten");
+  await editedBananaPreparation.selectOption(editedBananaPreparationKey);
+  await editedPeachPreparation.selectOption(editedPeachPreparationKey);
+  await page.locator("#confirmManualMeal").click();
+
+  await page.waitForFunction((today) => !!window.__beikostTest.getState().planLocks?.[`${today}|lunch`], dates.today);
+  savedState = await page.evaluate(() => window.__beikostTest.getState());
+  assert.equal(savedState.planLocks[`${dates.today}|lunch`].foodPreparationKeys.banane, editedBananaPreparationKey, "bearbeiteter Planner-Lock muss Banane-Darreichung speichern");
+  assert.equal(savedState.planLocks[`${dates.today}|lunch`].foodPreparationKeys.pfirsich, editedPeachPreparationKey, "bearbeiteter Planner-Lock muss Pfirsich-Darreichung speichern");
+  assert.equal(savedState.planLocks[`${dates.today}|lunch`].manualAdded, false, "bearbeiteter Planner-Slot bleibt von einer Zusatzmahlzeit unterscheidbar");
+
+  const lockedPlannerCard = page.locator(".mealbox").filter({
+    has: page.locator(`.replaceMeal[data-date="${dates.today}"][data-meal="lunch"]`),
+  });
+  const lockedPlannerTitle = await lockedPlannerCard.locator(".dish-title").innerText();
+  assert.match(lockedPlannerTitle, /Banane/, "normaler manuell gesperrter Planner-Slot behält den Basistitel");
+  assert.doesNotMatch(lockedPlannerTitle, /Pfirsich|Kostprobe/, "manuelles Sperren allein darf nicht den Manual-Card-Titel erzwingen");
+
+  // Für den eigentlichen Zusatzmahlzeiten-/Rekey-Flow wieder einen freien Zustand herstellen.
   await page.evaluate(() => {
     window.__beikostTest.reset();
     const state = window.__beikostTest.getState();

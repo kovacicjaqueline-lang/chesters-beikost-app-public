@@ -110,6 +110,17 @@ test("explizite FOOD-Darreichung wird in Manual-Lock, Verschieben und Protokoll 
   assert.match(runtimeSource, /savedLog\.foodPreparationKeys/);
 });
 
+test("Darreichung bleibt auch beim manuellen Bearbeiten eines bestehenden Planner-Slots erhalten", () => {
+  const editWrapper = runtimeSource.slice(
+    runtimeSource.indexOf("saveEditedPlanMeal = function manualFlowSaveEditedPlanMeal"),
+    runtimeSource.indexOf("let originalMealDisplayTitle", runtimeSource.indexOf("saveEditedPlanMeal = function manualFlowSaveEditedPlanMeal")),
+  );
+  assert.match(editWrapper, /manualMealFlowValidPreparationKeys/);
+  assert.match(editWrapper, /originalSaveEditedPlanMeal\.call/);
+  assert.match(editWrapper, /foodPreparationKeys:\s*preparationKeys/);
+  assert.match(editWrapper, /manualMealFlowContext\s*=\s*null/);
+});
+
 test("Log-Darreichung wird erst nach erfolgreichem Save gegen die tatsächlich gespeicherten Lebensmittel gefiltert", () => {
   const saveWrapper = runtimeSource.slice(runtimeSource.indexOf("saveLog = function manualFlowSaveLog"));
   const originalSaveIndex = saveWrapper.indexOf("originalSaveLog.apply(this, args)");

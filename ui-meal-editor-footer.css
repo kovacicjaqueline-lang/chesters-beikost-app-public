@@ -72,6 +72,53 @@ body:has(#genericModal.open #cancelManualMeal) > #logModal {
   z-index: auto;
 }
 
+/* Manueller Mahlzeiten-Flow: Der eigene Chevron ersetzt den nativen Details-Marker.
+ * Dadurch beginnt der Karteninhalt auf demselben linken Raster wie andere Mahlzeiten. */
+.manual-meal > summary {
+  list-style: none;
+}
+
+.manual-meal > summary::-webkit-details-marker {
+  display: none;
+}
+
+/* Bestehender Gruppenabstand des Designs wird nun auch auf die beiden unteren
+ * manuellen Kartenaktionen angewendet. */
+.manual-meal-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-group) !important;
+  margin-top: var(--space-related);
+}
+
+.manual-meal-actions > .btn {
+  width: 100%;
+  margin-top: 0 !important;
+}
+
+/* Zieltag und explizite FOOD-Darreichung werden in den vorhandenen Feldstil integriert. */
+#genericModal:has(#cancelManualMeal) .manual-meal-target-date {
+  margin-bottom: var(--space-group);
+}
+
+.manual-role-item .manual-preparation-field {
+  grid-column: 1 / -1;
+  width: 100%;
+  margin-top: var(--space-related);
+}
+
+.manual-preparation-field label {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.manual-preparation-field select {
+  width: 100%;
+  min-height: 42px;
+}
+
 /* UI-06: „Heute erledigt“ bleibt außen exakt im normalen Kartenraster. Der 5px-Akzent
  * liegt ausschließlich innerhalb der Karte. Das Card-Padding wird hier ausdrücklich
  * auf 0 gesetzt, damit Summary/Body genau einmal die normale 16px-Inneneinrückung

@@ -14,18 +14,51 @@ const featureSource = fs.readFileSync(
   "utf8",
 );
 
-test("erledigte Mahlzeit verlinkt nur das tatsächlich protokollierte Rezept", () => {
-  const meal = { recipeName: "Geplantes Rezept" };
+test("gerenderter data-plan-Payload liefert Rezeptname und konkrete foodIds", () => {
+  const payload = encodeURIComponent(JSON.stringify({
+    recipeName: "Obst-Hafer-Pancakes",
+    foodIds: ["hafer", "ei", "apfel", "apfel"],
+  }));
 
-  assert.equal(feature.displayedRecipeName(meal, null), "Geplantes Rezept");
-  assert.equal(
-    feature.displayedRecipeName(meal, { recipeName: "Tatsächlich gegessenes Rezept" }),
-    "Tatsächlich gegessenes Rezept",
+  assert.deepEqual(
+    feature.planPayloadRecipeContext(payload),
+    { recipeName: "Obst-Hafer-Pancakes", foodIds: ["hafer", "ei", "apfel"] },
   );
-  assert.equal(
-    feature.displayedRecipeName(meal, { recipeName: "", foodIds: ["banane", "ei"] }),
-    "",
-    "ein FOOD-Protokoll darf nicht auf das ursprünglich geplante Rezept zurückfallen",
+  assert.deepEqual(
+    feature.planPayloadRecipeContext("kein-json"),
+    { recipeName: "", foodIds: [] },
+  );
+});
+
+test("erledigte Mahlzeit verlinkt ausschließlich das tatsächlich protokollierte Rezept", () => {
+  const logs = [
+    {
+      id: "recipe-log",
+      recipeName: "Tatsächlich gegessenes Rezept",
+      foodIds: ["pute", "karotte"],
+    },
+    {
+      id: "food-log",
+      recipeName: "",
+      foodIds: ["banane", "ei"],
+    },
+  ];
+
+  assert.deepEqual(
+    feature.completedLogRecipeContext("recipe-log", logs),
+    {
+      recipeName: "Tatsächlich gegessenes Rezept",
+      foodIds: ["pute", "karotte"],
+    },
+  );
+  assert.deepEqual(
+    feature.completedLogRecipeContext("food-log", logs),
+    { recipeName: "", foodIds: ["banane", "ei"] },
+    "ein FOOD-Protokoll darf keinen geplanten Rezeptnamen als Fallback erhalten",
+  );
+  assert.deepEqual(
+    feature.completedLogRecipeContext("fehlt", logs),
+    { recipeName: "", foodIds: [] },
   );
 });
 
@@ -129,7 +162,7 @@ test("Rezepttitel wird zugängliches iPhone-Touchziel mit Mahlzeitenkontext", ()
   assert.equal(children.length, 1);
 });
 
-test("Feature nutzt zentrale Rezeptauflösung, wird korrekt geladen und offline vorgecached", () => {
+test("Feature liest nur gerenderten Kontext und baut den Planner nicht erneut auf", () => {
   let uiIndex = indexSource.indexOf('js/ui.js?v=10.1.25');
   let featureIndex = indexSource.indexOf('js/planned-recipe-details.js?v=10.1.25');
   let appIndex = indexSource.indexOf('app.js?v=10.1.25');
@@ -143,9 +176,11 @@ test("Feature nutzt zentrale Rezeptauflösung, wird korrekt geladen und offline 
   );
   assert.match(featureSource, /recipeByName\(storedName\)/);
   assert.doesNotMatch(featureSource, /recipeAliasValuesLocal|storedRecipeRecord/);
+  assert.doesNotMatch(featureSource, /\bbuildDays\s*\(/);
+  assert.doesNotMatch(featureSource, /\bplanDisplayDays\s*\(/);
+  assert.match(featureSource, /querySelector\?\.\("\[data-plan\]"\)/);
+  assert.match(featureSource, /\.editCompletedLog\[data-log\]/);
   assert.match(featureSource, /renderRecipeCard\(recipe\)/);
   assert.match(featureSource, /renderHomeWithPlannedRecipeDetails/);
   assert.match(featureSource, /renderPlanWithPlannedRecipeDetails/);
-  assert.match(featureSource, /\.dish-title, \.manual-meal-title/);
-  assert.match(featureSource, /\.completed-title/);
 });

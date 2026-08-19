@@ -14,34 +14,53 @@ const featureSource = fs.readFileSync(
   "utf8",
 );
 
-test("geplanter Rezeptname löst aktuelle, Legacy- und Suchalias-Namen auf", () => {
-  let canonical = { name: "Aktuelles Rezept" };
-  let recipes = [{
-    name: "Aktuelles Rezept",
-    legacyNames: ["Altes Rezept"],
-    searchAliases: ["Rezept Alias"],
-  }];
-  let states = [canonical];
+test("erledigte Mahlzeit verlinkt nur das tatsächlich protokollierte Rezept", () => {
+  const meal = { recipeName: "Geplantes Rezept" };
 
+  assert.equal(feature.displayedRecipeName(meal, null), "Geplantes Rezept");
   assert.equal(
-    feature.recipeStateForStoredName("Aktuelles Rezept", recipes, states),
-    canonical,
+    feature.displayedRecipeName(meal, { recipeName: "Tatsächlich gegessenes Rezept" }),
+    "Tatsächlich gegessenes Rezept",
   );
   assert.equal(
-    feature.recipeStateForStoredName("Altes Rezept", recipes, states),
-    canonical,
-  );
-  assert.equal(
-    feature.recipeStateForStoredName("Rezept Alias", recipes, states),
-    canonical,
-  );
-  assert.equal(
-    feature.recipeStateForStoredName("Unbekannt", recipes, states),
-    null,
+    feature.displayedRecipeName(meal, { recipeName: "", foodIds: ["banane", "ei"] }),
+    "",
+    "ein FOOD-Protokoll darf nicht auf das ursprünglich geplante Rezept zurückfallen",
   );
 });
 
-test("Rezepttitel wird zugängliches iPhone-Touchziel mit Chevron", () => {
+test("Mahlzeitenkontext liefert konkrete Familien- und Auswahlhinweise", () => {
+  const recipe = {
+    name: "Familienrezept",
+    requires: ["Huhn", "Zucchini"],
+    alternatives: [["Pute", "Karotte"]],
+    variantLabels: ["Huhn + Zucchini", "Pute + Karotte"],
+    legacyNames: ["Huhn-Rezept", "Pute-Rezept"],
+    oneOf: ["Banane", "Apfel"],
+    milkChoices: ["Joghurt", "Milch"],
+  };
+  const ids = {
+    Huhn: "huhn",
+    Zucchini: "zucchini",
+    Pute: "pute",
+    Karotte: "karotte",
+    Banane: "banane",
+    Apfel: "apfel",
+    Joghurt: "joghurt",
+    Milch: "milch",
+  };
+
+  assert.deepEqual(
+    feature.recipeContextHints(
+      recipe,
+      ["pute", "karotte", "apfel", "joghurt"],
+      (name) => ids[name] || "",
+    ),
+    ["Pute + Karotte", "Apfel", "Joghurt"],
+  );
+});
+
+test("Rezepttitel wird zugängliches iPhone-Touchziel mit Mahlzeitenkontext", () => {
   let attributes = {};
   let children = [];
   let classes = new Set();
@@ -72,9 +91,10 @@ test("Rezepttitel wird zugängliches iPhone-Touchziel mit Chevron", () => {
     appendChild(child) { children.push(child); },
   };
 
-  feature.markRecipeTitle(node, "Bananen-Ei-Pancakes");
+  feature.markRecipeTitle(node, "Bananen-Ei-Pancakes", ["banane", "ei"]);
 
   assert.equal(node.dataset.plannedRecipeName, "Bananen-Ei-Pancakes");
+  assert.equal(node.dataset.plannedRecipeFoodIds, "banane,ei");
   assert.equal(attributes.role, "button");
   assert.equal(attributes.tabindex, "0");
   assert.equal(attributes["aria-label"], "Rezept Bananen-Ei-Pancakes öffnen");
@@ -84,11 +104,11 @@ test("Rezepttitel wird zugängliches iPhone-Touchziel mit Chevron", () => {
   assert.equal(children.length, 1);
   assert.equal(children[0].textContent, "›");
 
-  feature.markRecipeTitle(node, "Bananen-Ei-Pancakes");
+  feature.markRecipeTitle(node, "Bananen-Ei-Pancakes", ["banane", "ei"]);
   assert.equal(children.length, 1);
 });
 
-test("Feature wird nach UI und vor App geladen und offline vorgecached", () => {
+test("Feature nutzt zentrale Rezeptauflösung, wird korrekt geladen und offline vorgecached", () => {
   let uiIndex = indexSource.indexOf('js/ui.js?v=10.1.25');
   let featureIndex = indexSource.indexOf('js/planned-recipe-details.js?v=10.1.25');
   let appIndex = indexSource.indexOf('app.js?v=10.1.25');
@@ -100,12 +120,11 @@ test("Feature wird nach UI und vor App geladen und offline vorgecached", () => {
     swSource,
     /const UI_PRECACHE\s*=\s*\[[\s\S]*\.\/js\/planned-recipe-details\.js[\s\S]*\]/,
   );
+  assert.match(featureSource, /recipeByName\(storedName\)/);
+  assert.doesNotMatch(featureSource, /recipeAliasValuesLocal|storedRecipeRecord/);
   assert.match(featureSource, /renderRecipeCard\(recipe\)/);
   assert.match(featureSource, /renderHomeWithPlannedRecipeDetails/);
   assert.match(featureSource, /renderPlanWithPlannedRecipeDetails/);
-  assert.match(
-    featureSource,
-    /\.dish-title, \.manual-meal-title/,
-  );
+  assert.match(featureSource, /\.dish-title, \.manual-meal-title/);
   assert.match(featureSource, /\.completed-title/);
 });

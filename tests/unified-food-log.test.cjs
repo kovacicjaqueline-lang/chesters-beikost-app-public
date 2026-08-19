@@ -10,7 +10,6 @@ const root = path.resolve(__dirname, "..");
 const core = require("../js/log-core.js");
 const migrationSource = fs.readFileSync(path.join(root, "js", "migrations.js"), "utf8");
 const logSource = fs.readFileSync(path.join(root, "js", "log.js"), "utf8");
-const policySource = fs.readFileSync(path.join(root, "js", "unified-food-log-policy.js"), "utf8");
 const indexSource = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const clone = (value) => JSON.parse(JSON.stringify(value));
 
@@ -90,10 +89,10 @@ test("texture progress uses only explicitly documented positive experiences", ()
 });
 
 test("new offered entries require a deliberate texture choice, legacy unknown edits do not", () => {
-  assert.equal(core.logTextureSelectionRequired({ offered: true, textureValue: "" }), true);
-  assert.equal(core.logTextureSelectionRequired({ offered: false, textureValue: "" }), false);
-  assert.equal(core.logTextureSelectionRequired({ offered: true, textureValue: "2" }), false);
-  assert.equal(core.logTextureSelectionRequired({ offered: true, isEdit: true, legacyUnknown: true, textureValue: "" }), false);
+  assert.equal(core.logTextureSelectionRequired({ positiveOutcome: true, textureValue: "" }), true);
+  assert.equal(core.logTextureSelectionRequired({ positiveOutcome: false, textureValue: "" }), false);
+  assert.equal(core.logTextureSelectionRequired({ positiveOutcome: true, textureValue: "2" }), false);
+  assert.equal(core.logTextureSelectionRequired({ positiveOutcome: true, isEdit: true, legacyUnknown: true, textureValue: "" }), false);
 });
 
 test("visible learning role distinguishes first introduction from repetition", () => {
@@ -178,17 +177,26 @@ test("unified log source has no meal selector or current-texture fallback", () =
   assert.equal(logSource.includes("log.textureStage || state.settings.textureStage"), false);
 });
 
-test("integration policy is semantic and does not use a global text MutationObserver", () => {
-  assert.equal(policySource.includes("MutationObserver"), false);
-  assert.equal(policySource.includes("unifiedSuccessfulMealSlotCount"), true);
-  assert.equal(policySource.includes("unifiedFollowUpMealForLog"), true);
-});
-
-test("browser loads canonical log core before migrations and policy before app", () => {
+test("browser loads canonical log core before migrations without a runtime policy", () => {
   const corePos = indexSource.indexOf('src="js/log-core.js');
   const migrationPos = indexSource.indexOf('src="js/migrations.js');
-  const policyPos = indexSource.indexOf('src="js/unified-food-log-policy.js');
-  const appPos = indexSource.indexOf('src="app.js');
   assert.ok(corePos >= 0 && corePos < migrationPos);
-  assert.ok(policyPos >= 0 && policyPos < appPos);
+  assert.equal(indexSource.includes("unified-food-log-policy.js"), false);
+});
+
+
+test("explicitly known historical sample texture survives migration", () => {
+  const source = defaultState();
+  source.foods = [customFood()];
+  source.logs = [{ id: "known-sample", date: "2026-08-10", meal: "lunch", entryType: "sample", foodIds: ["karotte"], focusId: "karotte", sampleFoodIds: ["karotte"], foodOutcomes: { karotte: "tried" }, outcome: "tried", textureKnown: true, textureStage: 3 }];
+  const migrated = clone(migrationContext().__migrateStateCore(source));
+  assert.equal(migrated.logs[0].entryType, "sample");
+  assert.equal(migrated.logs[0].meal, "lunch");
+  assert.equal(migrated.logs[0].textureKnown, true);
+  assert.equal(migrated.logs[0].textureStage, 3);
+});
+
+test("rejection and reaction do not require texture, positive outcomes do", () => {
+  assert.equal(core.logTextureSelectionRequired({ positiveOutcome: false, textureValue: "" }), false);
+  assert.equal(core.logTextureSelectionRequired({ positiveOutcome: true, textureValue: "" }), true);
 });

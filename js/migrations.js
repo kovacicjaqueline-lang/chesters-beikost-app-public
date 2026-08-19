@@ -265,7 +265,7 @@ function migrateStateCore(s) {
     let foodRoles = remapRoleObject(l.foodRoles, sourceFoodIdMap);
     let legacySample = l.entryType === "sample";
     let storedTexture = migrationTextureStage(l.textureStage);
-    let textureKnown = !legacySample && l.textureKnown !== false && storedTexture !== null;
+    let textureKnown = storedTexture !== null && (l.textureKnown === true || (!legacySample && l.textureKnown !== false));
     let migrated = {
       ...l,
       foodIds: ids,
@@ -376,17 +376,13 @@ function migrateStateCore(s) {
     d.logs.push({
       id: "chester-huhn-kostprobe-2026-07-22",
       date: "2026-07-22",
-      meal: "",
+      meal: "lunch",
       foodIds: ["huhn"],
       focusId: "huhn",
       outcome: "tried",
       foodOutcomes: { huhn: "tried" },
-      entryType: "food",
-      baseFoodIds: [],
-      sampleFoodIds: ["huhn"],
-      foodRoles: { huhn: "sample" },
       amount: "",
-      textureKnown: false,
+      textureStage: 1,
       note: "Am von der Nutzerin durchgehend festgehaltenen Hühnerknochen gesaugt; keine gegessene Menge.",
       createdAt: "2026-07-22T12:00:00.000Z",
       sourceKind: "transition-context",
@@ -416,7 +412,7 @@ function upgradeV92State(data) {
       sampleFoodIds,
       baseFoodIds,
       foodRoles,
-      amount: log.amount || "",
+      amount: entryType === "sample" ? "" : (log.amount || ""),
       rejectionStrength: log.rejectionStrength || "",
       notOfferedReason: log.notOfferedReason || "",
     };

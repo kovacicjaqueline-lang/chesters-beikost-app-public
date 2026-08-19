@@ -191,16 +191,18 @@ function openLog(plan) {
     recipeName: "", recipeInventoryId: "", entryType: "food", foodOutcomes: {},
   };
   let legacyEntryType = String(input.entryType || "");
+  let originalMeal = String(input.meal || "");
   let mealContext = plannedLogContext(input);
-  if (!mealContext) input.meal = "";
+  if (!mealContext && !input.editId) input.meal = "";
   pendingLog = input;
   let roles = roleIdsFromPlan(pendingLog);
   pendingLog.foodIds = roles.ids;
   pendingLog.baseFoodIds = roles.bases;
   pendingLog.sampleFoodIds = roles.samples;
-  pendingLog.entryType = "food";
+  pendingLog.entryType = pendingLog.editId ? (legacyEntryType || "food") : "food";
   pendingLog.__mealContext = mealContext;
   pendingLog.__legacyEntryType = legacyEntryType;
+  pendingLog.__originalMeal = originalMeal;
   pendingLog.__legacyTextureUnknown = !!pendingLog.editId && logTextureStage(plan) === null;
   pendingLog.foodRoles = { ...foodRolesFor(roles.ids, roles.bases, roles.samples), ...(pendingLog.foodRoles || {}) };
   pendingLog.foodOutcomes = { ...(pendingLog.foodOutcomes || {}) };
@@ -289,8 +291,6 @@ function renderLogForm() {
   p.sampleFoodIds = sampleIds;
   p.baseFoodIds = [...new Set((p.baseFoodIds || []).filter((id) => mainIds.includes(id)))];
   if (!p.baseFoodIds.length) p.baseFoodIds = [...mainIds];
-  p.entryType = "food";
-
   document.getElementById("logTitle").textContent = p.editId ? "Protokolleintrag bearbeiten" : "Essen eintragen";
   document.getElementById("logSubtitle").textContent = `${nice(p.date, true)}${p.__mealContext ? ` · ${mealName(p.meal)}` : ""}`;
   let stockedSelected = selected.filter((f) => inventoryPortions(f.id) > 0);
@@ -311,7 +311,7 @@ function renderLogForm() {
     ${mainBlock}${sampleBlock}
     <div class="field log-food-picker"><label>Lebensmittel hinzufügen</label><input id="logFoodSearch" value="${esc(logFoodQuery)}" placeholder="Tippen und Treffer auswählen" autocomplete="off"><div class="field-error-message" id="logFoodError" style="display:none"></div><button class="btn secondary smallbtn log-add-custom-food" id="addCustomLogFood" type="button">Eigenes Lebensmittel hinzufügen</button><div class="small log-food-results-label">${logFoodQuery ? "Suchergebnisse" : "Vorschläge aus Plan und Verlauf"}</div><div class="log-food-results">${logFoodResultsHtml()}</div></div>
     <div class="field"><label>Gesamtmenge in g (optional)</label><input id="logAmount" type="number" min="0" step="1" inputmode="decimal" value="${esc(p.amount || "")}" placeholder="z. B. 5"></div>
-    <div class="field"><label>Konsistenz</label><select id="logTexture"><option value="">Bitte auswählen</option>${[1, 2, 3, 4].map((n) => `<option value="${n}" ${String(textureValue) === String(n) ? "selected" : ""}>Stufe ${n} – ${esc(textureName(n))}</option>`).join("")}</select><div class="small" style="margin-top:5px">Bei tatsächlich angebotenem Essen erforderlich. Alte Einträge ohne dokumentierte Konsistenz bleiben unverändert möglich.</div></div>
+    <div class="field"><label>Konsistenz</label><select id="logTexture"><option value="">Bitte auswählen</option>${[1, 2, 3, 4].map((n) => `<option value="${n}" ${String(textureValue) === String(n) ? "selected" : ""}>Stufe ${n} – ${esc(textureName(n))}</option>`).join("")}</select><div class="small" style="margin-top:5px">Bei „Probiert“ oder „Gegessen“ erforderlich. Bei Ablehnung oder Reaktion optional; alte Einträge ohne dokumentierte Konsistenz bleiben unverändert.</div></div>
     ${conditionalQuestionsHtml(focusOutcome)}
     <details class="accordion"><summary>Notiz ergänzen</summary><div class="field"><label>Notiz oder Reaktion</label><textarea id="logNote">${esc(p.note || "")}</textarea></div></details>
     ${!p.editId && recipeItem ? `<div class="field"><label>Aus dem Rezeptvorrat verwendet</label><label class="toggleline"><input class="ds-toggle-input" type="checkbox" id="useRecipeInventory" checked><span class="toggle-copy"><b>1 ${esc(recipeItem.size || "Portion")} ${esc(recipeItem.recipeName)}</b><span class="small">Eingefroren am ${shortDate(recipeItem.frozenDate)}</span></span><span class="toggle-state" aria-hidden="true"></span></label></div>` : ""}
@@ -394,10 +394,12 @@ function saveLog() {
   let focus = pendingLog.focusId && ids.includes(pendingLog.focusId) ? pendingLog.focusId : (sampleIds[0] || mainIds[0] || ids[0]);
   let reactionFoodId = ids.find((id) => foodOutcomes[id] === "reaction") || "";
   let overall = foodOutcomes[focus] || Object.values(foodOutcomes)[0] || "tried";
-  let offered = Object.values(foodOutcomes).some((outcome) => outcome !== "not_offered");
+  let outcomes = Object.values(foodOutcomes);
+  let offered = outcomes.some((outcome) => outcome !== "not_offered");
+  let positiveTextureOutcome = outcomes.some((outcome) => ["eaten", "tried"].includes(outcome));
   let textureValue = document.getElementById("logTexture")?.value || "";
   let textureRequired = logTextureSelectionRequired({
-    offered,
+    positiveOutcome: positiveTextureOutcome,
     isEdit: !!pendingLog.editId,
     legacyUnknown: !!pendingLog.__legacyTextureUnknown,
     textureValue,
@@ -416,13 +418,15 @@ function saveLog() {
   let newLog = {
     id: pendingLog.editId || `${Date.now()}-${Math.random().toString(36).slice(2)}`,
     date: document.getElementById("logDate").value,
-    meal: pendingLog.__mealContext ? String(pendingLog.meal || "") : "",
+    meal: pendingLog.editId
+      ? String(pendingLog.__originalMeal ?? pendingLog.meal ?? "")
+      : (pendingLog.__mealContext ? String(pendingLog.meal || "") : ""),
     foodIds: ids,
     focusId: focus,
     recipeName: pendingLog.recipeName || "",
     outcome: overall,
     foodOutcomes,
-    entryType: "food",
+    entryType: pendingLog.editId ? (pendingLog.__legacyEntryType || "food") : "food",
     baseFoodIds: mainIds,
     sampleFoodIds: sampleIds,
     foodRoles: foodRolesFor(ids, mainIds, sampleIds),

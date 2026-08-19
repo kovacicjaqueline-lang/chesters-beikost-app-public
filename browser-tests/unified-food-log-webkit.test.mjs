@@ -157,8 +157,8 @@ try {
   await page.locator("#saveLog").click();
   await page.waitForFunction(() => document.getElementById("logModal") && !document.getElementById("logModal").classList.contains("open"));
   let savedLegacy = await page.evaluate(() => window.__beikostTest.getState().logs[0]);
-  assert.equal(savedLegacy.entryType, "food");
-  assert.equal(savedLegacy.meal, "");
+  assert.equal(savedLegacy.entryType, "sample");
+  assert.equal(savedLegacy.meal, "lunch");
   assert.equal(savedLegacy.textureKnown, false);
   assert.equal(Object.hasOwn(savedLegacy, "textureStage"), false);
 
@@ -174,7 +174,21 @@ try {
   assert.equal(notOffered.textureKnown, false);
   assert.equal(Object.hasOwn(notOffered, "textureStage"), false);
 
-  // 4. Geplanter Eintrag: Slot wird übernommen und nicht erneut gewählt.
+  // 4. Ablehnung und Reaktion: Konsistenz ist optional und zählt nicht als positive Texturerfahrung.
+  for (const outcome of ["not_accepted", "reaction"]) {
+    await reset(page);
+    await page.evaluate(() => window.openLog(null));
+    await selectFood(page, "Karotte");
+    await page.locator('[data-sample-result="karotte"]').selectOption(outcome);
+    await page.locator("#saveLog").click();
+    await page.waitForFunction(() => window.__beikostTest.getState().logs.length === 1);
+    const saved = await page.evaluate(() => window.__beikostTest.getState().logs[0]);
+    assert.equal(saved.foodOutcomes.karotte, outcome);
+    assert.equal(saved.textureKnown, false);
+    assert.equal(Object.hasOwn(saved, "textureStage"), false);
+  }
+
+  // 5. Geplanter Eintrag: Slot wird übernommen und nicht erneut gewählt.
   await reset(page);
   await page.evaluate(() => window.openLog({
     date: window.__beikostTest.today(),
@@ -198,7 +212,7 @@ try {
   assert.equal(planned.foodRoles.karotte, "base");
   assert.equal(await page.evaluate(() => successfulMealSlotCount(today())), 1);
 
-  // 5. Familienstatus: zwei freie Gaben am selben Tag bleiben zwei Expositionen.
+  // 6. Familienstatus: zwei freie Gaben am selben Tag bleiben zwei Expositionen.
   await reset(page);
   await page.evaluate(() => {
     const state = window.__beikostTest.getState();

@@ -21,8 +21,8 @@ function logTextureStage(log) {
   if (!Object.prototype.hasOwnProperty.call(log, "textureStage")) return null;
   return validLogTextureStage(log.textureStage);
 }
-function logTextureSelectionRequired({ offered = false, isEdit = false, legacyUnknown = false, textureValue = "" } = {}) {
-  if (!offered || String(textureValue || "")) return false;
+function logTextureSelectionRequired({ positiveOutcome = false, isEdit = false, legacyUnknown = false, textureValue = "" } = {}) {
+  if (!positiveOutcome || String(textureValue || "")) return false;
   return !(isEdit && legacyUnknown);
 }
 function logPositiveOutcome(log, outcomeForFoodFn) {

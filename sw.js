@@ -24,7 +24,6 @@ const HANDLING_PRECACHE = [
 // Der einheitliche Essenslog wird vor app.js geladen und bleibt auch offline vollständig verfügbar.
 const UNIFIED_LOG_PRECACHE = [
   "./js/log-core.js",
-  "./js/unified-food-log-policy.js",
 ];
 
 // Zusätzliche UI-Dateien, die nicht im statischen FILES-Stamm von sw-core.js liegen.

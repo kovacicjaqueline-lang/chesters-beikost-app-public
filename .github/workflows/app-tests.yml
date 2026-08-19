@@ -36,7 +36,7 @@ permissions:
 
 jobs:
   cleanup:
-    if: github.event_name == 'push' && github.ref_name == 'refactor/unified-food-log'
+    if: github.event_name == 'pull_request' && github.head_ref == 'refactor/unified-food-log'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository

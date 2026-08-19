@@ -1,14 +1,14 @@
 # FOOD seasonMonths – Österreich-Audit
 
 Stand: 19.08.2026  
-Arbeitsbranch: `audit/food-seasonmonths-at`  
-Prüfbasis: `main` bei `c3de54da3f56567641cc47b534c5daa6cead4895`, App-Version 10.1.25  
-Status: vollständiger Fachaudit; **noch keine Produktdaten geändert**  
+Historische Audit-Prüfbasis: `main` bei `c3de54da3f56567641cc47b534c5daa6cead4895`, App-Version 10.1.25  
+Implementierungsbranch: `fix/food-seasonmonths-at`, PR #6 gegen Public-`main`  
+Status: vollständiger Fachaudit **fachlich freigegeben und in PR #6 implementiert/getestet; noch nicht auf `main` gemergt**  
 Fachfreigabe: **`regional aus Lagerung` zählt bei `seasonMonths` mit** (19.08.2026)
 
 ## 1. Zweck und bestehender Vertrag
 
-Dieser Audit klärt ausschließlich die noch offene österreichische `seasonMonths`-Datenmatrix. Er erfindet keine Planner-Sonderlogik.
+Dieser Audit dokumentiert die fachlich abgeschlossene österreichische `seasonMonths`-Datenmatrix. Er erfindet keine Planner-Sonderlogik.
 
 Verbindlich aus `docs/PLANNER_FACHKONZEPT.md`:
 
@@ -16,8 +16,8 @@ Verbindlich aus `docs/PLANNER_FACHKONZEPT.md`:
 - Ist der aktuelle Monat enthalten, darf die bestehende Saisonpriorisierung greifen.
 - Ist ein explizit saisonal gepflegtes FOOD außerhalb seiner Monate, darf die bestehende Nachreihung greifen.
 - `seasonMonths: []` bleibt **bewusst neutral**: weder Saisonbonus noch Outside-Season-Nachreihung.
-- Der aktuelle Consumer verletzt den letzten Punkt teilweise: `effectivePriority()` vergibt derzeit über `isSeason()` auch bei `seasonMonths: []` den Saisonbonus. Diese bestehende Abweichung muss vor bzw. zusammen mit der Datenumsetzung korrigiert und regressiv abgesichert werden.
-- Dieser Audit verändert weder die Höhe des vorhandenen Scores noch Mahlzeiteneignung, Safety, Allergen-, Phasen-, Rollen- oder Vorratslogik.
+- Der beim Audit festgestellte Consumer-Gap (`isSeason()` behandelt `seasonMonths: []` als saisonal) wird in PR #6 korrigiert, indem der Saisonbonus nur bei tatsächlich vorhandenen Saisonmonaten greift.
+- Dieser Block verändert weder die Höhe des vorhandenen Scores noch Mahlzeiteneignung, Safety, Allergen-, Phasen-, Rollen- oder Vorratslogik.
 
 ## 2. Quellenhierarchie
 
@@ -51,7 +51,7 @@ Zusätzlich verwendete eindeutige Namensauflösungen:
 
 ## 3. Vollständige explizite Österreich-Matrix
 
-Die folgenden kanonischen FOODs sollen eine explizite österreichische Saisoninformation tragen.
+Die folgenden kanonischen FOODs tragen eine explizite österreichische Saisoninformation.
 
 | FOOD-ID | Anzeigename / Quellen-Match | seasonMonths | Quelle |
 |---|---|---:|---|
@@ -149,24 +149,24 @@ Ohne belastbare österreichische regionale Saisonmatrix bleiben z. B. Banane/Sab
 
 ## 5. Abweichungen zu bisher gepflegten Monaten
 
-Der bisherige Bestand ist nicht einfach unvollständig, sondern teilweise auch anders abgegrenzt. Der Audit darf deshalb nicht nur leere Arrays füllen. Unter anderem ändern sich nach der Primärquelle:
+Der bisherige Bestand war nicht einfach unvollständig, sondern teilweise auch anders abgegrenzt. Die Umsetzung ersetzt deshalb die betroffenen Monatslisten exakt nach der freigegebenen Matrix, statt bestehende Werte nur zu ergänzen. Unter anderem wurden geändert:
 
 - `kartoffel`: bisher nur ein Teil des Jahres → regional inkl. Lagerung ganzjährig;
 - `apfel`: bisher nicht ganzjährig → regional inkl. Lagerung ganzjährig;
-- `brokkoli`, `karfiol`, `zucchini`, `kohlrabi`, `kuerbis`, `pfirsich`, `pflaume`, `spinat`, `lauch`, `rosenkohl`, `weisskraut`, `rotkraut`, `erdbeere`, `himbeere` und `aprikose`: bestehende Monatslisten müssen gegen die neue Primärmatrix ersetzt, nicht ergänzt werden;
-- zahlreiche bisher leere österreichische Gemüse-/Obst-FOODs erhalten erstmals explizite Monate.
+- `brokkoli`, `karfiol`, `zucchini`, `kohlrabi`, `kuerbis`, `pfirsich`, `pflaume`, `spinat`, `lauch`, `rosenkohl`, `weisskraut`, `rotkraut`, `erdbeere`, `himbeere` und `aprikose`: bestehende Monatslisten wurden gegen die neue Primärmatrix ersetzt, nicht ergänzt;
+- zahlreiche bisher leere österreichische Gemüse-/Obst-FOODs erhielten erstmals explizite Monate.
 
 Damit ist eine datenweise Regression erforderlich; ein Test nur auf „nicht leer“ wäre fachlich zu schwach.
 
-## 6. Vorgesehene Umsetzung nach fachlicher Freigabe dieses Audits
+## 6. Umsetzung in PR #6
 
-Mit der Freigabe „regional aus Lagerung zählt mit“ ist die Quellen-/Lagersemantik entschieden. Im Implementierungsschritt soll **ohne neue Fachregel**:
+Die fachlich freigegebene Matrix ist im Implementierungsbranch ohne neue Fachregel umgesetzt:
 
-1. der bestehende Consumer-Gap korrigiert werden, sodass `seasonMonths: []` tatsächlich weder `-3` Saisonbonus noch `+6` Outside-Season-Nachreihung erhält;
-2. `data/foods.js` exakt auf die Matrix aus Abschnitt 3 gesetzt werden;
-3. alle in Abschnitt 4 bewusst neutralen Fälle bei `[]` bleiben;
-4. `TODO3 SEASON-AUDIT` in `tests/todo3-pending-regressions.test.cjs` aus dem Skip geholt und als exakte Matrix-/Neutralitätsregression umgesetzt werden;
-5. zusätzlich abgesichert werden, dass Monate weiterhin nur eindeutige Ganzzahlen `1..12` sind;
-6. `docs/PLANNER_FACHKONZEPT.md` erst nach erfolgreicher Implementierung/Testung vom offenen Saison-Audit auf den tatsächlichen Branch-/main-Status aktualisiert werden.
+1. Der Consumer-Gap ist korrigiert: `seasonMonths: []` erhält weder `-3` Saisonbonus noch `+6` Outside-Season-Nachreihung.
+2. `data/foods.js` setzt den gesamten physischen FOOD-Stamm exakt auf die Matrix aus Abschnitt 3; alle übrigen FOODs werden bewusst neutral `[]` geführt.
+3. `tests/food-seasonmonths-at.test.cjs` prüft die vollständige Matrix, eindeutige Ganzzahlmonate `1..12`, neutrale FOODs sowie In-/Out-of-Season und PH-Travel.
+4. `tests/food-seasonmonths-runtime.test.cjs` prüft, dass Runtime-Policy-Ergänzungen die Matrix nicht überschreiben und neu ergänzte FOODs ohne Freigabematrix neutral bleiben.
+5. Der veraltete übersprungene `TODO3 SEASON-AUDIT`-Platzhalter wurde entfernt und auf die dedizierten Saisonregressionen verwiesen.
+6. `docs/PLANNER_FACHKONZEPT.md` wird auf den tatsächlichen Integrationsstatus von PR #6 aktualisiert; vor dem Merge bleibt der Saisonblock 🟡 Branch/Integrations-PR.
 
 Nicht Teil dieses Blocks sind FOOD-COUNT, PHASE-TRANSITION, Rezept-Handling-Reviews oder Änderungen an der Höhe des saisonalen Scores.

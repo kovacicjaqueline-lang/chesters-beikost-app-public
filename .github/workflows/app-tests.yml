@@ -75,7 +75,7 @@ jobs:
             state.planLocks[key] = {
               date,
               meal: record.meal || "lunch",
-'''
+          '''
           new_apply = '''function applyFollowUpPlan(record, requestedDate = "") {
             if (!record) return { ok: false, message: "Wiedervorlage fehlt." };
             removeFollowUpPlan(record.foodId);
@@ -91,7 +91,7 @@ jobs:
             state.planLocks[key] = {
               date,
               meal,
-'''
+          '''
 
           old_schedule = 'function scheduleFollowUp(foodId, fromDate, meal = "lunch", reason = "rejection", detail = "interest") {'
           new_schedule = 'function scheduleFollowUp(foodId, fromDate, meal = "", reason = "rejection", detail = "interest") {'
@@ -103,14 +103,14 @@ jobs:
             let preferred = phaseMealKeys().find((meal) => allowed.includes(meal));
             return preferred || allowed[0] || "lunch";
           }
-'''
+          '''
           new_meal = '''function followUpMealForLog(log, foodId) {
             if (plannerLogHasMealContext(log)) return log.meal;
             let item = food(foodId);
             let allowed = (item?.meals || []).filter((meal) => plannerLogMealKeys().includes(meal));
             return phaseMealKeys().find((meal) => allowed.includes(meal)) || "";
           }
-'''
+          '''
 
           for old, new, label in [
               (old_apply, new_apply, "applyFollowUpPlan"),
@@ -130,7 +130,7 @@ jobs:
           node --check js/planning.js
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout HEAD^ -- .github/workflows/app-tests.yml
+          git checkout 11450f8f3df89b30c72e954a232a1e0b8a3a9ec2 -- .github/workflows/app-tests.yml
           git rm -f .github/workflows/apply-unified-followup-fix.yml
           git add js/planning.js .github/workflows/app-tests.yml
           git commit -m "Avoid fabricated follow-up meal context"

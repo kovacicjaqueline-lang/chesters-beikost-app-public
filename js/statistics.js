@@ -81,7 +81,7 @@ function statisticsSnapshot(range = statisticsRange) {
     amounts,
     averageAmount,
     maxAmount,
-    totalLearned: uniqueTriedCount(),
+    totalLearned: learnedFoods().length,
     targetFoods: Number(state.settings.targetFoods) || 100,
   };
 }

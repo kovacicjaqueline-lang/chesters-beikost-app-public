@@ -4456,3 +4456,69 @@ const FOOD_DB = [
     "autoPlan": true
   }
 ];
+
+/*
+ * Österreichische seasonMonths-Matrix (Audit/Fachfreigabe 19.08.2026).
+ * BMLUK ist Primärquelle; "hat Saison" und "regional aus Lagerung" werden
+ * fachlich freigegeben zusammengeführt. Nicht gelistete FOODs sind bewusst neutral.
+ */
+const FOOD_SEASON_MONTHS_AT = Object.freeze({
+  karotte: [1,2,3,4,5,6,7,8,9,10,11,12],
+  kartoffel: [1,2,3,4,5,6,7,8,9,10,11,12],
+  brokkoli: [6,7,8,9,10],
+  zucchini: [7,8,9,10],
+  gurke: [5,6,7,8,9,10],
+  karfiol: [6,7,8,9,10],
+  "erbsen-tk-moeglich": [6,7,8],
+  "gruene-bohnen": [6,7,8,9],
+  fenchel: [6,7,8,9,10],
+  kohlrabi: [4,5,6,7,8,9,10,11,12],
+  wirsing: [1,2,3,6,7,8,9,10,11,12],
+  rosenkohl: [1,2,3,4,9,10,11,12],
+  weisskraut: [1,2,3,4,5,6,7,8,9,10,11,12],
+  rotkraut: [1,2,3,4,5,6,7,8,9,10,11,12],
+  kuerbis: [1,2,3,4,9,10,11,12],
+  paprika: [6,7,8,9,10],
+  tomate: [6,7,8,9,10],
+  pastinake: [1,2,3,4,9,10,11,12],
+  lauch: [7,8,9,10,11],
+  rettich: [1,2,3,4,8,9,10,11,12],
+  rhabarber: [4,5,6],
+  "rote-ruebe": [1,2,3,4,9,10,11,12],
+  schwarzwurzel: [1,2,10,11,12],
+  sellerie: [9,10,11],
+  spargel: [4,5,6],
+  spinat: [3,4,5,9,10],
+  zwiebel: [1,2,3,4,5,6,7,8,9,10,11,12],
+  aubergine: [7,8,9,10],
+  stangensellerie: [6,7,8,9,10],
+  mangold: [5,6,7,8,9,10,11],
+  chinakohl: [1,2,8,9,10,11,12],
+  rucola: [2,3,4,5,6,7,8,9,10,11],
+  radicchio: [9,10],
+  endivie: [7,8,9,10,11,12],
+  petersilienwurzel: [9,10],
+  topinambur: [1,2,3,10,11,12],
+  knoblauch: [1,2,3,4,5,6,7,8,9,10,11,12],
+  apfel: [1,2,3,4,5,6,7,8,9,10,11,12],
+  birne: [1,2,8,9,10,11,12],
+  brombeere: [6,7],
+  erdbeere: [5,6,7,8],
+  haselnuss: [1,2,3,4,5,6,7,8,9,10,11,12],
+  himbeere: [6,7,8],
+  holunder: [9,10],
+  kirsche: [6,7,8],
+  heidelbeere: [6,7,8,9],
+  aprikose: [7,8],
+  pfirsich: [8,9],
+  preiselbeere: [8,9,10],
+  ribisel: [7,8],
+  walnuss: [1,2,3,4,5,6,7,8,9,10,11,12],
+  traube: [9,10],
+  pflaume: [8,9],
+  quitte: [10],
+});
+
+for (const food of FOOD_DB) {
+  food.seasonMonths = [...(FOOD_SEASON_MONTHS_AT[food.id] || [])];
+}

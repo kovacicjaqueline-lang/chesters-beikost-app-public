@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#f5f1e9">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Beikost">
+<link rel="manifest" href="manifest.webmanifest?v=10.1.25">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=10.1.25">
+<title>Chesters Beikost-App</title>
+<link rel="stylesheet" href="styles.css?v=10.1.25">
+<link rel="stylesheet" href="ui-meal-editor-footer.css?v=10.1.25">
+</head>
+<body>
+<header class="app-header"><div class="brand-orb" aria-hidden="true">C</div><div class="brand-copy"><h1>Chesters Beikost</h1><p>Planen · vorbereiten · entspannt anbieten</p></div></header>
+<main>
+<section id="home" class="view active">
+ <div class="card today-card" id="todayCard"></div>
+ <div class="card phase-card" id="phaseCard"></div>
+ <div class="card texture-coach" id="textureCoachCard"></div>
+ <div class="card compact-progress" id="progressCard"></div>
+ <div class="card" id="recipePreviewCard"><div class="row"><div class="grow"><h3>Was ihr jetzt daraus machen könnt</h3></div><button class="btn secondary smallbtn" id="openRecipes">Alle Rezepte</button></div><div id="recipePreview"></div></div>
+</section>
+<section id="plan" class="view">
+ <div class="card plan-toolbar">
+  <div class="plan-heading">
+   <div class="grow">
+    <div class="eyebrow">WOCHENPLAN</div>
+    <h2>7 Tage im Blick</h2>
+   </div>
+   <button class="btn secondary smallbtn plan-today" id="planToday">Heute</button>
+  </div>
+  <div class="plan-controls">
+   <div class="field plan-date-field">
+    <label>Plan ab</label>
+    <input type="date" id="planFrom">
+   </div>
+   <button class="btn secondary plan-recalculate" id="planRecalculate">Neu planen</button>
+  </div>
+  <div class="plan-lock-strip" id="planLockSummary"></div>
+  <details class="plan-secondary-actions"><summary>Weitere Planaktionen</summary><button class="btn secondary smallbtn" id="planRebuildAll">Sichtbare Woche vollständig neu planen</button></details>
+  <div class="notice" id="planQuality" style="display:none;margin:10px 0 0"></div>
+ </div>
+ <div id="blockPlan"></div>
+</section>
+<section id="prep" class="view">
+ <div class="card">
+  <div class="row"><div class="grow"><h2>Meal Prep</h2><div class="small">Ganze Lebensmittel sinnvoll verarbeiten – keine unnötig kleinen Kochmengen.</div></div><button class="btn secondary smallbtn" id="addInventory">+ Vorrat</button></div>
+  <div class="prep-metrics" id="prepSummary" style="margin-top:11px"></div>
+  <div class="prep-section-head"><div><h3>Jetzt vorbereiten</h3><div class="small">Nur Aufgaben für heute oder morgen.</div></div></div>
+  <div id="prepNow"></div>
+  <details class="prep-group" id="prepFreshGroup">
+   <summary><span><b>Frisch bei der Mahlzeit</b><small id="prepFreshCount">Keine Aufgabe für jetzt</small></span></summary>
+   <div id="prepFresh" class="panel-body"></div>
+  </details>
+  <details class="prep-group" id="prepCoveredGroup">
+   <summary><span><b>Durch Vorrat gedeckt</b><small id="prepCoveredCount">Keine Reservierung</small></span></summary>
+   <div id="prepCovered" class="panel-body"></div>
+  </details>
+  <details class="accordion" id="batchCalculator">
+   <summary>Portionsrechner nach Gewicht</summary>
+   <div style="margin-top:10px">
+    <div class="field"><label>Lebensmittel</label><select id="batchFood"></select></div>
+    <div class="grid2">
+     <div class="field"><label>Rohgewicht in g</label><input id="batchRaw" type="number" min="1" step="1" inputmode="decimal" placeholder="z. B. 340"><div class="small" style="margin-top:4px">Verwendbarer roher Anteil – nach Schälen/Putzen, falls nötig.</div></div>
+     <div class="field"><label>Fertiges Gesamtgewicht in g (optional)</label><input id="batchCooked" type="number" min="1" step="1" inputmode="decimal" placeholder="nach Garen/Pürieren"><div class="small" style="margin-top:4px">Für ein genaues Ergebnis nach dem Garen und nach tatsächlich zugegebenem Wasser wiegen.</div></div>
+    </div>
+    <div class="field"><label>Portionsgröße</label><select id="batchPortion"><option value="5">5 g</option><option value="10">10 g</option><option value="20">20 g</option><option value="35">35 g</option></select><div class="small" style="margin-top:4px">Standardgrößen für den Vorrat; kleine Restmengen werden separat gekennzeichnet.</div></div>
+    <button class="btn secondary" id="calculateBatch">Portionen berechnen</button>
+    <div id="batchResult" class="notice olive" style="display:none;margin-top:10px"></div>
+   </div>
+  </details>
+ </div>
+ <div class="card"><div class="row"><div class="grow"><h3>Einkauf für 7 Tage</h3><div class="small">Aus Plan und eingetragenem Gefriervorrat. Abhaken bedeutet: bereits zu Hause.</div></div></div><div id="shoppingList"></div></div>
+ <div class="card"><div class="row"><div class="grow"><h3>Aus bekannten Zutaten kochen</h3><div class="small">Einfache Ideen aus den bereits vertragenen Lebensmitteln.</div></div><button class="btn secondary smallbtn" id="prepOpenRecipes">Alle</button></div><div id="cookNow"></div></div>
+ <div class="card freezer-recipes-card">
+  <div class="row"><div class="grow"><div class="eyebrow">FÜR DEN GEFRIERSCHRANK</div><h3>Rezepte auf Vorrat</h3><div class="small">Nur Rezepte, die sich sinnvoll portionsweise einfrieren lassen.</div></div><button class="btn secondary smallbtn" id="prepOpenFreezerRecipes">Alle</button></div>
+  <div id="freezerRecipes"></div>
+ </div>
+ <div class="card collapsible-card"><details class="panel-details"><summary><span><b>Stärken richtig vorbereiten</b><small>Reis, Hafer, Hirse, Polenta & mehr</small></span></summary><div class="panel-body"><div id="starchGuide" class="guide-grid"></div></div></details></div>
+ <div class="card"><div class="row"><div class="grow"><h3>Gefriervorrat</h3><div class="small">Älteste Portionen werden zuerst verbraucht.</div></div></div><div id="inventoryList"></div><details class="accordion"><summary>Sicher abkühlen, einfrieren und auftauen</summary><p class="small">Gekochtes rasch in kleine Portionen teilen und innerhalb von etwa 1–2 Stunden kühlen oder einfrieren; Reis innerhalb einer Stunde. Pur einfrieren; Muttermilch, Pre und Öl erst nach dem Erwärmen ergänzen. Aufgetautes innerhalb von 24 Stunden verwenden und nicht erneut einfrieren.</p></details></div>
+</section>
+<section id="foods" class="view">
+ <div class="card">
+  <div class="row food-header">
+   <div class="grow"><h2>Lebensmittel</h2><div class="small" id="foodCountText"></div></div>
+   <div class="row wrap food-head-actions"><button class="btn secondary smallbtn" id="addFood">＋ Hinzufügen</button><button class="btn secondary smallbtn" id="toggleFoodOrder">↕ Reihenfolge</button></div>
+  </div>
+  <div class="notice olive" id="foodReorderHint" style="display:none;margin-top:10px"><b>Reihenfolge in diesem Tab ändern</b><br>Am Griff ziehen. Am oberen oder unteren Bildschirmrand scrollt die Liste automatisch mit.</div>
+  <div class="field" style="margin-top:12px"><label>Suchen</label><input id="foodSearch" placeholder="z. B. Erbsen, Fisch, Philippinen"></div>
+  <div class="seg" id="foodFilters"><button data-filter="all">Alle</button><button class="active" data-filter="open">Offen</button><button data-filter="allergen">Allergene</button><button data-filter="ph">Philippinen</button><button data-filter="iron">Eisenreich</button><button data-filter="paused">Pause</button><button data-filter="inactive" id="inactiveFoodFilter">Deaktiviert</button></div>
+  <div id="foodList"></div>
+ </div>
+</section>
+<section id="more" class="view">
+ <div class="card collapsible-card log-card" id="logSection">
+  <details class="panel-details" id="logDetails">
+   <summary><span><b id="logSummaryTitle">Protokoll</b><small id="logCountSummary">Ältere Einträge bleiben vollständig gespeichert.</small></span></summary>
+   <div class="panel-body compact-log-body">
+    <div class="compact-log-head"><div class="small">Neueste Tage · Abendessen zuerst</div><button class="btn smallbtn" id="freeLog">+ Eintrag</button></div>
+    <div class="log-toolbar"><div class="field"><label>Zeitraum</label><select id="logMonthFilter"><option value="all">Alle Monate</option></select></div></div>
+    <div id="logList"></div>
+    <button class="btn secondary full" id="logMore" style="display:none">Weitere Einträge anzeigen</button>
+   </div>
+  </details>
+ </div>
+ <div class="card collapsible-card statistics-card" id="statisticsSection">
+  <details class="panel-details" id="statisticsDetails">
+   <summary><span><b>Statistik</b><small id="statisticsSummary">7 Tage · 0 Einträge</small></span></summary>
+   <div class="panel-body" id="statisticsBody"></div>
+  </details>
+ </div>
+ <div class="card allergen-card"><div class="eyebrow">ALLERGENE</div><h3>Allergene planen</h3><div id="allergenModule"></div></div>
+ <div class="card collapsible-card recipes-card" id="recipesSection">
+  <details class="panel-details" id="recipesDetails">
+   <summary><span><b>Rezepte & Fingerfood</b><small id="recipeCount">Passend zu Status und Konsistenz.</small></span></summary>
+   <div class="panel-body">
+    <div class="field recipe-search"><label>Rezept suchen</label><input id="recipeSearch" placeholder="z. B. Lachs, Zucchini, Pancakes"></div>
+    <div class="field recipe-filter-field"><label>Kategorie</label><div class="seg recipe-filters" id="recipeFilter" role="group" aria-label="Rezeptkategorie"><button class="active" type="button" data-recipe-filter="available">Jetzt passend</button><button type="button" data-recipe-filter="almost">Fast passend</button><button type="button" data-recipe-filter="all">Alle</button><button type="button" data-recipe-filter="pantry">Mit Vorrat</button><button type="button" data-recipe-filter="freezer">Einfrierbar</button><button type="button" data-recipe-filter="porridge">Brei & Löffelgerichte</button><button type="button" data-recipe-filter="pancakes">Pancakes</button><button type="button" data-recipe-filter="balls">Bällchen, Taler & Fingerfood</button><button type="button" data-recipe-filter="family">Familiengerichte</button><button type="button" data-recipe-filter="philippines">Philippinen</button><button type="button" data-recipe-filter="baking">Backen</button><button type="button" data-recipe-filter="snack">Snack</button></div></div>
+    <div id="recipeList"></div>
+   </div>
+  </details>
+ </div>
+ <div class="card collapsible-card settings-card"><details class="panel-details"><summary><span><b>Einstellungen</b><small>Plan, Konsistenz, Allergene & Reise</small></span></summary><div class="panel-body settings-groups">
+  <details class="settings-group"><summary>Baby und Beikoststart</summary><div class="settings-group-body gridwide">
+   <div class="field"><label>Geburtsdatum</label><input type="date" id="birthDate"></div>
+   <div class="field"><label>Tatsächlicher Beikoststart</label><input type="date" id="startDate"></div>
+  </div></details>
+  <details class="settings-group" open><summary>Phase und Tagesablauf</summary><div class="settings-group-body gridwide">
+   <div class="field"><label>Beikostphase</label><div id="settingsPhaseSummary" class="notice olive"></div><div class="small" style="margin-top:5px">Die Phase wird auf „Heute“ bewusst gewechselt. Sie steuert die automatischen Mahlzeitenslots, nicht die gegessene Grammmenge.</div></div>
+  </div></details>
+  <details class="settings-group" open><summary>Planung und Wiederholungen</summary><div class="settings-group-body gridwide">
+   <div class="field"><label>Allergene wiederholen nach Tagen</label><input type="number" min="3" id="allergenDays"></div>
+   <div class="field"><label>Neues Lebensmittel frühestens alle</label><select id="newFoodEvery"><option value="1">1 Tag (täglich)</option><option value="2">2 Tage</option><option value="3">3 Tage</option><option value="4">4 Tage</option></select></div>
+   <label class="toggleline"><input class="ds-toggle-input" type="checkbox" id="seasonal"><span class="toggle-copy"><b>Saisonale Lebensmittel in Österreich bevorzugen</b><span class="small">Im Philippinen-Modus „vor Ort“ automatisch ohne Einfluss.</span></span><span class="toggle-state" aria-hidden="true"></span></label>
+   <label class="toggleline"><input class="ds-toggle-input" type="checkbox" id="preferInventoryInPlan"><span class="toggle-copy"><b>Gefriervorrat bei der Planung bevorzugen</b><span class="small">Passende ältere Portionen werden reserviert, ohne Einführungen oder Abwechslung zu verdrängen.</span></span><span class="toggle-state" aria-hidden="true"></span></label>
+  </div></details>
+  <details class="settings-group" open><summary>Mengenorientierung und Konsistenz</summary><div class="settings-group-body gridwide">
+   <div class="field"><label>Mengenorientierung</label><select id="amountSelected"><option value="taste">Kost- und Miniportion (&lt;20 g)</option><option value="small">Kleine Portion (20–49 g)</option><option value="building">Mahlzeit im Aufbau (50–99 g)</option><option value="established">Mahlzeit etabliert (ab 100 g)</option></select><div class="small" style="margin-top:5px">Nur Orientierung für Planung und Vorbereitung. Sie steuert weder die Beikostphase noch, wie viel Chester essen soll.</div></div>
+   <div class="field"><label>Konsistenzstufe</label><select id="textureStage"><option value="1">1 – glatt / fein zerdrückt</option><option value="2">2 – dick püriert / weich zerdrückt</option><option value="3">3 – weich-stückig / Fingerfood</option><option value="4">4 – weiche Familienkost</option></select><div class="small" style="margin-top:5px">Unabhängig von der Menge. Der Coach auf „Heute“ schlägt den nächsten Schritt vor, ändert aber nie automatisch.</div></div>
+   <div class="field"><label>Tiefkühl-Zielfrist</label><input type="number" min="14" id="freezerDays"></div>
+  </div></details>
+  <details class="settings-group"><summary>Reise und weitere Einstellungen</summary><div class="settings-group-body gridwide">
+   <div class="field"><label>Philippinen-Modus</label><select id="phMode"><option value="off">Aus</option><option value="prepare">Vor der Reise kennenlernen</option><option value="travel">Vor Ort auf Panay</option></select><div class="small" style="margin-top:5px">Vor Ort werden typische, verfügbare Lebensmittel bevorzugt; österreichische Saison wird nicht gewichtet.</div></div>
+   <div class="field"><label>Philippinenreise</label><input type="date" id="travelDate"></div>
+  </div></details>
+  <div class="settings-actionbar ds-actionbar" id="settingsActionbar"><button class="btn secondary" id="discardSettings" type="button">Änderungen verwerfen</button><button class="btn" id="saveSettings" type="button">Einstellungen speichern</button></div>
+ </div></details></div>
+
+ <div class="card collapsible-card help-card">
+  <details class="panel-details" id="helpDetails">
+   <summary><span><b>Hilfe & Begriffe</b><small>Plan, Vorrat, Status und Sicherheit</small></span></summary>
+   <div class="panel-body help-body">
+    <details class="help-topic">
+     <summary>Plan und Schlösser</summary>
+     <div class="small">
+      <p><b>Geschlossenes Schloss:</b> Die Mahlzeit bleibt bei einer automatischen Neuberechnung unverändert.</p>
+      <p><b>Offenes Schloss:</b> Bei einer Neuberechnung darf die App die Mahlzeit anpassen.</p>
+      <p>Manuelle Änderungen wie Zutaten wechseln, verschieben oder protokollieren bleiben immer möglich. „Neu planen“ löst nur Mahlzeiten, die die App fest eingeplant hat; manuell geschützte Mahlzeiten bleiben bestehen.</p>
+     </div>
+    </details>
+    <details class="help-topic">
+     <summary>Lebensmittelstatus</summary>
+     <div class="small">
+      <p><b>Probiert:</b> Kontakt mit dem Lebensmittel, aber noch keine normale Freigabe für Kombinationen.</p>
+      <p><b>Kombinierbar:</b> einmal problemlos gegessen.</p>
+      <p><b>Verträgliche Basis:</b> zweimal problemlos gegessen.</p>
+      <p><b>Regelmäßig:</b> mindestens dreimal problemlos gegessen.</p>
+      <p>Deaktivierte Lebensmittel bleiben gespeichert, werden aber nicht neu automatisch eingeplant.</p>
+     </div>
+    </details>
+    <details class="help-topic">
+     <summary>Kostprobe und Hauptmahlzeit</summary>
+     <div class="small">
+      <p>Eine neue oder unsichere Zutat wird als kleine Kostprobe separat oder in 1–2 Löffeln einer verträglichen Basis angeboten.</p>
+      <p>Hauptmahlzeit und Kostprobe werden getrennt protokolliert. „Probiert“ bestätigt nur den Kontakt; erst tatsächlich gegessene Zutaten werden für normale Kombinationen und Rezepte freigegeben.</p>
+     </div>
+    </details>
+    <details class="help-topic">
+     <summary>Milch, Joghurt und Buttermilch</summary>
+     <div class="small">
+      <p>Pasteurisierte Kuhmilch, ungesüßter Naturjoghurt oder ungesüßte Buttermilch werden ab dem 6. Lebensmonat als Zutat für einen Milch-Getreide-Brei geführt, nicht als normales Getränk.</p>
+      <p>Eine volle Milch-/Joghurt-/Buttermilchmahlzeit wird höchstens einmal täglich geplant und nicht automatisch mit Fleisch oder einer anderen eisenreichen Mahlzeit kombiniert. Kleine Mengen in Gebäck zählen nicht pauschal als volle Milchmahlzeit.</p>
+     </div>
+    </details>
+    <details class="help-topic">
+     <summary>Phase, Mengenorientierung und Konsistenz</summary>
+     <div class="small">
+      <p>Die Beikostphase steuert nur die vorgesehenen Mahlzeitenslots: Kennenlernen = Mittag; Mahlzeitenaufbau = Frühstück + Mittag; Drei Hauptmahlzeiten = Frühstück + Mittag + Abend; Familienkost = drei Hauptmahlzeiten + automatisch geplanter Snack.</p>
+      <p>Die Mengenorientierung bleibt davon getrennt. Hunger- und Sättigungssignale sind wichtiger als starre Grammvorgaben.</p>
+      <p>Die Konsistenzstufe ist ebenfalls unabhängig. Der Coach zeigt nur eine Orientierung und ändert die Stufe niemals automatisch.</p>
+     </div>
+    </details>
+    <details class="help-topic">
+     <summary>Vorrat und Reservierungen</summary>
+     <div class="small">
+      <p>Passende Gefrierportionen können für geplante Mahlzeiten reserviert werden. Abgezogen wird der Vorrat erst beim Protokollieren.</p>
+      <p>Bei mehreren Batches wird der älteste passende Batch zuerst verwendet. Rezeptvorrat wie Bananenbrot bleibt getrennt von einzelnen Lebensmitteln.</p>
+     </div>
+    </details>
+    <details class="help-topic">
+     <summary>Meal Prep</summary>
+     <div class="small">
+      <p><b>Jetzt vorbereiten:</b> tatsächliche Aufgaben für fehlende Portionen.</p>
+      <p><b>Frisch bei der Mahlzeit:</b> Lebensmittel wie Ei oder kleine Haferportionen, die erst kurz vor dem Essen zubereitet werden.</p>
+      <p><b>Durch Vorrat gedeckt:</b> Für die Planung sind bereits passende Portionen vorhanden.</p>
+     </div>
+    </details>
+    <details class="help-topic">
+     <summary>Allergene</summary>
+     <div class="small">
+      <p>„Morgen“ ist nur die praktische Voreinstellung der App. Über „Anderes Datum“ kann die Einführung oder Wiederholung frei geplant werden.</p>
+      <p>Neue Allergene werden mit einer bekannten Basis kombiniert und nach guter Verträglichkeit regelmäßig wieder angeboten.</p>
+     </div>
+    </details>
+    <details class="help-topic">
+     <summary>Sicherheitsgrundsätze</summary>
+     <div class="small">
+      <p>Kein Salz, Zucker, Honig oder Süßungsmittel. Honig erst ab 12 Monaten.</p>
+      <p>Ganze Nüsse, harte rohe Stücke, runde feste Lebensmittel, Knochen und Gräten vermeiden. Chester sitzt wach und aufrecht und wird beim Essen beaufsichtigt.</p>
+      <p>Bei einer deutlichen allergischen Reaktion medizinisch abklären; bei Atemnot sofort den örtlichen Notruf wählen.</p>
+     </div>
+    </details>
+   </div>
+  </details>
+ </div>
+ <div class="card collapsible-card data-card"><details class="panel-details"><summary><span><b>Daten & Sicherung</b><small>Backup, Wiederherstellung und Zurücksetzen</small></span></summary><div class="panel-body"><div id="backupReminder" class="notice warn" style="display:none"><b>Externes Backup empfohlen.</b> Das letzte Backup ist älter als 14 Tage oder fehlt.</div><div id="storageError" class="notice warn" style="display:none"></div><div id="storageStatus" class="storage-status"></div><div class="backup-actions"><button class="btn secondary" id="exportData">Backup in Dateien sichern</button><label class="btn secondary" style="display:inline-flex;align-items:center;margin:0">Backup laden<input type="file" id="importData" accept=".json,application/json" hidden></label><button class="btn secondary" id="showSnapshots">Zwischenstände</button><button class="btn danger" id="resetData">Zurücksetzen</button></div><p class="small">Safari und die Home-Bildschirm-App können getrennte Speicherbereiche verwenden. Ein externes Backup in der Dateien-App schützt zusätzlich.</p><p class="small"><b>App-Version <span id="appVersion">10.1.25</span></b><br>Die Daten werden lokal auf diesem Gerät gespeichert; ein zusätzliches Backup in der Dateien-App bleibt empfohlen.</p>
+<details class="version-details"><summary>Was ist neu?</summary><div class="small">Neu: Statistik unter „Mehr“ mit 7 Tagen, 30 Tagen und dem gesamten Zeitraum seit Beikoststart. Sie zeigt 100-Lebensmittel-Fortschritt, Vielfalt, neue Lebensmittel, Protokollergebnisse, Konsistenz und – wenn vorhanden – dokumentierte Mengen. Alle Werte werden direkt aus dem bestehenden Protokoll berechnet; es gibt keine neue Datenhaltung.</div></details></div></details></div>
+
+</section>
+</main>
+<nav>
+<button class="active" data-view="home" aria-label="Heute"><svg viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13v-9.5"/><path d="M9.5 20v-5h5v5"/></svg>Heute</button>
+<button data-view="plan" aria-label="Plan"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M7.5 3.5v3M16.5 3.5v3M3.5 9h17M8 13h2M14 13h2M8 16.5h2"/></svg>Plan</button>
+<button data-view="prep" aria-label="Meal Prep"><svg viewBox="0 0 24 24"><path d="M4 8h16v11H4z"/><path d="M7 5h10v3M8 12h8M8 15h5"/></svg>Prep</button>
+<button data-view="foods" aria-label="Lebensmittel"><svg viewBox="0 0 24 24"><path d="M5 6h14M5 12h14M5 18h14"/><circle cx="3" cy="6" r=".5"/><circle cx="3" cy="12" r=".5"/><circle cx="3" cy="18" r=".5"/></svg>Lebensmittel</button>
+<button data-view="more" aria-label="Mehr"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>Mehr</button>
+</nav>
+<div class="toast" id="toast"><div class="grow" id="toastText"></div><button id="toastUndo">Rückgängig</button></div>
+<div class="modal" id="logModal"><div class="sheet log-sheet"><div class="sheethead row"><div class="grow"><h2 id="logTitle">Protokollieren</h2><div class="small" id="logSubtitle"></div></div><button class="iconbtn" id="closeLog">×</button></div><div id="logForm"></div></div></div>
+<div class="modal" id="genericModal"><div class="sheet"><div class="sheethead row"><div class="grow"><h2 id="genericTitle"></h2></div><button class="iconbtn" id="closeGeneric">×</button></div><div id="genericBody"></div></div></div>
+ <!-- Version 10.1.25: Recipe-V2 R01–R10 (100 freigegebene Rezeptillustrationen) integriert; Joghurt-Zutatenwürfel entfernt; Food-V2 164/164 sowie Funktionalität unverändert. -->
+<script src="data/foods.js?v=10.1.25"></script>
+<script src="data/recipes.js?v=10.1.25"></script>
+<script src="js/icons.js?v=10.1.25"></script>
+<script src="js/state.js?v=10.1.25"></script>
+<script src="js/utils.js?v=10.1.25"></script>
+<script src="js/migrations.js?v=10.1.25"></script>
+<script src="js/storage.js?v=10.1.25"></script>
+<script src="js/model.js?v=10.1.25"></script>
+<script src="js/planning.js?v=10.1.25"></script>
+<script src="js/log.js?v=10.1.25"></script>
+<script src="js/foods.js?v=10.1.25"></script>
+<script src="js/recipes.js?v=10.1.25"></script>
+<script src="js/prep.js?v=10.1.25"></script>
+<script src="js/statistics.js?v=10.1.25"></script>
+<script src="js/ui.js?v=10.1.25"></script>
+<script src="app.js?v=10.1.25"></script>
+</body></html>

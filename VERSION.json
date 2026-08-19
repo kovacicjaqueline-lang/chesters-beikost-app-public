@@ -1,0 +1,11 @@
+{
+  "app": "Chesters Beikost-App",
+  "version": "10.1.25",
+  "releaseDate": "2026-08-17",
+  "channel": "test",
+  "schemaCompatibility": "bestehende Backups und lokale Daten aus Version 9.3 bis 10.1.23 bleiben kompatibel; alte Mengenstufen werden als separate Mengenorientierung übernommen und konservativ in Phasenmodell-v2 migriert; keine Speicher-Schemaerhöhung",
+  "contents": "FOOD-Aufnahme-/Korrekturblock: 34 freigegebene Lebensmittel zentral im FOOD-Stamm, alternative Bezeichnungen ausschließlich als Aliase, korrigierte Allergenzuordnungen, FOOD-01 Nektarine mit eigenem Food-V2-Asset sowie bestehende allgemeine FOOD-Auto-Eignung unverändert.",
+  "status": "Teststand – FOOD-Aufnahme-/Korrekturblock 10.1.25; stabile IDs und bestehende Nutzerdaten bleiben migrationskompatibel.",
+  "packageType": "vollständiger Projekt- und Teststand",
+  "schemaVersion": 7
+}

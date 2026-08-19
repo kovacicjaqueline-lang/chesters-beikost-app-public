@@ -1,0 +1,10 @@
+.github/
+.git/
+.gitignore
+.assetsignore
+node_modules/
+.wrangler/
+.dev.vars*
+package.json
+package-lock.json
+wrangler.jsonc

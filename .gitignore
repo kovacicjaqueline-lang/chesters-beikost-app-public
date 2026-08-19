@@ -1,0 +1,13 @@
+# Local runtime and release artifacts
+node_modules/
+__pycache__/
+*.pyc
+release/
+*.zip
+
+# Wrangler / Cloudflare local state
+.wrangler/*
+!.wrangler/deploy/
+!.wrangler/deploy/config.json
+.dev.vars*
+!.dev.vars.example

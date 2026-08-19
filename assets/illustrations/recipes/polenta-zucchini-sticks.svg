@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-labelledby="t d">
+<title id="t">Polenta-Zucchini-Sticks</title><desc id="d">Sticks mit den Zutaten Mais/Polenta, Zucchini</desc>
+<circle cx="48" cy="48" r="45" fill="#FFF9EE" stroke="#E5D9BE" stroke-width="2"/>
+<ellipse cx="49" cy="75" rx="25" ry="6" fill="#E9DFC8" opacity=".7"/>
+<rect x="25" y="39" width="11" height="38" rx="5" fill="#F1C832" stroke="#4A584F" stroke-width="2" transform="rotate(-9 30 58)"/><rect x="40" y="39" width="11" height="38" rx="5" fill="#4F9147" stroke="#4A584F" stroke-width="2" transform="rotate(0 45 58)"/><rect x="55" y="39" width="11" height="38" rx="5" fill="#E98D65" stroke="#4A584F" stroke-width="2" transform="rotate(9 60 58)"/><circle cx="29" cy="29" r="9" fill="#F8F1DF" stroke="#4A584F" stroke-width="1.5"/><ellipse cx="27" cy="29" rx="3" ry="6" fill="#F1C832" transform="rotate(-25 27 29)"/><ellipse cx="32" cy="30" rx="3" ry="6" fill="#F1C832" transform="rotate(25 32 30)"/><circle cx="48" cy="29" r="9" fill="#F8F1DF" stroke="#4A584F" stroke-width="1.5"/><path d="M43 32c4-9 11-8 13-4-4 6-8 8-13 4Z" fill="#4F9147"/><circle cx="43" cy="72" r="2.2" fill="#4F9147" opacity=".9"/>
+</svg>

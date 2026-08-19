@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-labelledby="t d">
+<title id="t">Obst-Hirsebrei</title><desc id="d">Brei-Schale mit den Zutaten Hirse</desc>
+<circle cx="48" cy="48" r="45" fill="#FFF9EE" stroke="#E5D9BE" stroke-width="2"/>
+<ellipse cx="49" cy="75" rx="25" ry="6" fill="#E9DFC8" opacity=".7"/>
+<path d="M23 49h50l-7 28H30Z" fill="#B9D0D6" stroke="#4A584F" stroke-width="2.4"/><ellipse cx="48" cy="49" rx="25" ry="10" fill="#D6AF46" stroke="#4A584F" stroke-width="2"/><path d="M33 49c8-5 17-5 29 0" fill="none" stroke="#7FA56A" stroke-width="4" stroke-linecap="round"/><circle cx="29" cy="29" r="9" fill="#F8F1DF" stroke="#4A584F" stroke-width="1.5"/><ellipse cx="27" cy="29" rx="3" ry="6" fill="#D6AF46" transform="rotate(-25 27 29)"/><ellipse cx="32" cy="30" rx="3" ry="6" fill="#D6AF46" transform="rotate(25 32 30)"/><circle cx="47" cy="76" r="2.2" fill="#D6AF46" opacity=".9"/>
+</svg>

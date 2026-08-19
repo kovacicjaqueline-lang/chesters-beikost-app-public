@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-labelledby="t d">
+<title id="t">Süßkartoffel-Rote-Linsen-Brei</title><desc id="d">Brei-Schale mit den Zutaten Süßkartoffel, Rote Linsen</desc>
+<circle cx="48" cy="48" r="45" fill="#FFF9EE" stroke="#E5D9BE" stroke-width="2"/>
+<ellipse cx="49" cy="75" rx="25" ry="6" fill="#E9DFC8" opacity=".7"/>
+<path d="M23 49h50l-7 28H30Z" fill="#B9D0D6" stroke="#4A584F" stroke-width="2.4"/><ellipse cx="48" cy="49" rx="25" ry="10" fill="#A85E3F" stroke="#4A584F" stroke-width="2"/><path d="M33 49c8-5 17-5 29 0" fill="none" stroke="#C8614D" stroke-width="4" stroke-linecap="round"/><circle cx="29" cy="29" r="9" fill="#F8F1DF" stroke="#4A584F" stroke-width="1.5"/><circle cx="29" cy="29" r="5" fill="#A85E3F"/><circle cx="48" cy="29" r="9" fill="#F8F1DF" stroke="#4A584F" stroke-width="1.5"/><circle cx="48" cy="29" r="5" fill="#C8614D"/><circle cx="48" cy="73" r="2.2" fill="#C8614D" opacity=".9"/>
+</svg>

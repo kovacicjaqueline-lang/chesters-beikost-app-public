@@ -1,1 +1,0 @@
-# -chesters-beikost-app-public

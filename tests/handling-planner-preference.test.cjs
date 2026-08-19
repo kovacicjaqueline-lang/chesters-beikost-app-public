@@ -1,0 +1,176 @@
+"use strict";
+
+const test = require("node:test");
+const assert = require("node:assert/strict");
+
+const handling = require("../js/handling-readiness.js");
+const {
+  FOOD_HANDLING_CONTRACT,
+  RECIPE_HANDLING_CONTRACT,
+} = require("../data/food-handling.js");
+
+function settings(feedingApproach) {
+  return { feedingApproach, textureStage: 1 };
+}
+
+function autoDay() {
+  return {
+    date: "2026-08-18",
+    meals: [
+      {
+        meal: "lunch",
+        active: true,
+        focusId: "karotte",
+        foodIds: ["karotte", "kartoffel"],
+        baseFoodIds: ["kartoffel"],
+        sampleFoodIds: [],
+        recipeName: "",
+        type: "bekannt",
+      },
+    ],
+  };
+}
+
+function withoutPresentationMode(value) {
+  return JSON.parse(JSON.stringify(value, (key, item) =>
+    key === "presentationMode" ? undefined : item,
+  ));
+}
+
+test("feedingApproach: neue Auto-Planung behält bei spoon/fingerfood exakt dieselben Kandidaten", () => {
+  const spoonDay = autoDay();
+  const fingerDay = autoDay();
+
+  handling.applyPresentationModesToDay(
+    spoonDay,
+    settings("spoon"),
+    FOOD_HANDLING_CONTRACT,
+    RECIPE_HANDLING_CONTRACT,
+  );
+  handling.applyPresentationModesToDay(
+    fingerDay,
+    settings("fingerfood"),
+    FOOD_HANDLING_CONTRACT,
+    RECIPE_HANDLING_CONTRACT,
+  );
+
+  assert.deepEqual(
+    withoutPresentationMode(spoonDay),
+    withoutPresentationMode(fingerDay),
+    "feedingApproach darf Fokus, Komponenten, Rollen oder Rezeptidentität nicht verändern",
+  );
+  assert.equal(spoonDay.meals[0].presentationMode, "spoon-smooth");
+  assert.equal(fingerDay.meals[0].presentationMode, "finger-graspable");
+});
+
+test("feedingApproach: Preference entfernt keine bereits sichere Darreichungsform", () => {
+  const mixed = handling.foodHandlingEligibility(
+    "karotte",
+    settings("mixed"),
+    FOOD_HANDLING_CONTRACT,
+  );
+  const spoon = handling.foodHandlingEligibility(
+    "karotte",
+    settings("spoon"),
+    FOOD_HANDLING_CONTRACT,
+  );
+  const finger = handling.foodHandlingEligibility(
+    "karotte",
+    settings("fingerfood"),
+    FOOD_HANDLING_CONTRACT,
+  );
+
+  assert.deepEqual(spoon.eligibleModes, mixed.eligibleModes);
+  assert.deepEqual(finger.eligibleModes, mixed.eligibleModes);
+  assert.deepEqual(spoon.preferredModes, [
+    "spoon-smooth",
+    "spoon-mashed",
+    "finger-graspable",
+  ]);
+  assert.deepEqual(finger.preferredModes, [
+    "finger-graspable",
+    "spoon-smooth",
+    "spoon-mashed",
+  ]);
+});
+
+const SAFETY_REVIEW = [
+  "Rind-Hafer-Bällchen",
+  "Geflügel-Gemüse-Hafer-Bällchen",
+  "Lachs-Kartoffel-Bällchen",
+  "Bangus-Kartoffel-Taler",
+  "Eier-Finger",
+  "Ei-Champignon-Cups",
+  "Hummus mit weichen Gemüsesticks",
+  "Fleisch-Gemüse-Bällchen",
+];
+
+const LATER_REVIEW = [
+  "Obst-Hafer-Muffins",
+  "Gemüse-Hafer-Muffins",
+  "Kürbis-Hirse-Muffins",
+  "Joghurt-Hafer-Waffeln",
+  "Weiche Joghurt-Fladen",
+  "Gemüse-Joghurt-Mini-Muffins",
+  "Huhn-Gemüse-Muffins",
+  "Süßkartoffel-Linsen-Muffins",
+];
+
+test("feedingApproach: SAFETY-REVIEW und LATER-REVIEW bleiben unter fingerfood unmigriert", () => {
+  for (const name of [...SAFETY_REVIEW, ...LATER_REVIEW]) {
+    assert.equal(
+      Object.prototype.hasOwnProperty.call(RECIPE_HANDLING_CONTRACT, name),
+      false,
+      `${name} darf nicht pauschal in den Handling-Contract aufgenommen werden`,
+    );
+    const state = handling.mergeRecipeHandlingState(
+      {
+        name,
+        requirementMissing: ["Konsistenz: Stufe 3 erforderlich"],
+        ingredientMissing: [],
+        missing: ["Konsistenz: Stufe 3 erforderlich"],
+        unlocked: false,
+      },
+      settings("fingerfood"),
+      RECIPE_HANDLING_CONTRACT,
+    );
+    assert.equal(state.handlingMigrated, false, `${name} muss Legacy-Stage-Fallback behalten`);
+    assert.equal(state.unlocked, false, `${name} darf durch Präferenz nicht freigeschaltet werden`);
+    assert.deepEqual(state.requirementMissing, ["Konsistenz: Stufe 3 erforderlich"]);
+  }
+});
+
+test("feedingApproach: PLAN-08-Rezeptidentität bleibt unverändert", () => {
+  const recipeMeal = {
+    meal: "breakfast",
+    active: true,
+    focusId: "banane",
+    foodIds: ["banane", "hafer", "ei"],
+    baseFoodIds: ["hafer", "ei"],
+    sampleFoodIds: [],
+    recipeName: "Obst-Hafer-Pancakes",
+    type: "bekannt",
+  };
+  const mixedMeal = structuredClone(recipeMeal);
+  const fingerMeal = structuredClone(recipeMeal);
+
+  handling.applyPresentationModeToAutomaticMeal(
+    mixedMeal,
+    settings("mixed"),
+    FOOD_HANDLING_CONTRACT,
+    RECIPE_HANDLING_CONTRACT,
+  );
+  handling.applyPresentationModeToAutomaticMeal(
+    fingerMeal,
+    settings("fingerfood"),
+    FOOD_HANDLING_CONTRACT,
+    RECIPE_HANDLING_CONTRACT,
+  );
+
+  assert.equal(mixedMeal.recipeName, "Obst-Hafer-Pancakes");
+  assert.equal(fingerMeal.recipeName, "Obst-Hafer-Pancakes");
+  assert.deepEqual(mixedMeal.foodIds, recipeMeal.foodIds);
+  assert.deepEqual(fingerMeal.foodIds, recipeMeal.foodIds);
+  assert.equal(mixedMeal.presentationMode, "finger-graspable");
+  assert.equal(fingerMeal.presentationMode, "finger-graspable");
+});

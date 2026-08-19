@@ -1,0 +1,123 @@
+/* UI hotfix: Der manuelle Mahlzeit-Editor nutzt auf iPhone denselben nativen
+ * Sheet-Scroll wie der funktionierende Protokoll-Dialog. Dadurch bleibt Safari beim
+ * Tastatur-Fokus im normalen Visual-Viewport-Verhalten, statt einen separaten inneren
+ * Scroll-/Layout-Kontext zu fokussieren. Die Aktionsleiste belegt echten Layoutplatz.
+ */
+
+/* Die iOS-Tastatur samt Eingabe-Navigationsleiste ist teilweise transparent und kann
+ * Bereiche unterhalb des von Safari verkleinerten Viewports sichtbar machen.
+ * Deshalb bleibt die App im DOM an ihrer Position, wird hinter dem manuellen Editor
+ * aber vollständig unsichtbar. So kann dort nur die einheitliche Body-Fläche durchscheinen.
+ */
+body:has(#genericModal.open #cancelManualMeal) > .app-header,
+body:has(#genericModal.open #cancelManualMeal) > main,
+body:has(#genericModal.open #cancelManualMeal) > nav,
+body:has(#genericModal.open #cancelManualMeal) > .toast,
+body:has(#genericModal.open #cancelManualMeal) > #logModal {
+  visibility: hidden;
+}
+
+#genericModal:has(#cancelManualMeal) {
+  overscroll-behavior: contain;
+}
+
+#genericModal:has(#mealSelectorSearch:focus) {
+  background: #9e988f;
+}
+
+/* Kein eigener flex-/innerer Scroll-Viewport mehr: Das Sheet selbst scrollt wie beim
+ * Protokollieren. Gerade auf iOS vermeidet das Fokus-Panning in einem verschachtelten
+ * Scrollcontainer und hält die horizontalen Sheet-Kanten stabil. */
+#genericModal:has(#cancelManualMeal) .sheet {
+  display: block;
+  height: auto;
+  max-height: 92vh;
+  max-height: 92dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 0;
+  scroll-padding-bottom: calc(18px + env(safe-area-inset-bottom));
+}
+
+#genericModal:has(#cancelManualMeal) #genericBody {
+  display: block;
+  min-height: 0;
+  overflow: visible;
+}
+
+/* Mindestens 16 CSS-Pixel verhindert zusätzlich den normalen iOS-Input-Zoom. */
+#genericModal:has(#cancelManualMeal) #mealSelectorSearch {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  font-size: 16px;
+}
+
+#genericModal:has(#cancelManualMeal) .selector-results {
+  max-height: none;
+  overflow: visible;
+}
+
+/* Nicht sticky/überlagernd: Die Leiste ist Teil des normalen Scrollinhalts und kann
+ * deshalb keine Lebensmittel verdecken. Die Safe-Area bleibt trotzdem berücksichtigt. */
+#genericModal:has(#cancelManualMeal) .sticky-form-actions {
+  position: static;
+  margin: 10px -15px 0;
+  padding: 10px 15px calc(10px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line);
+  background: var(--bg) !important;
+  background-image: none !important;
+  z-index: auto;
+}
+
+/* UI-06: „Heute erledigt“ bleibt außen exakt im normalen Kartenraster. Der 5px-Akzent
+ * liegt ausschließlich innerhalb der Karte. Das Card-Padding wird hier ausdrücklich
+ * auf 0 gesetzt, damit Summary/Body genau einmal die normale 16px-Inneneinrückung
+ * erhalten und nicht zusätzlich zum Karten-Padding nach rechts geschoben werden. */
+#blockPlan > .completed-day {
+  border-left: 0;
+  margin-left: 0;
+  padding: 0;
+  box-shadow: inset 5px 0 0 var(--accent), var(--shadow);
+}
+
+#blockPlan > .completed-day > summary,
+#blockPlan > .completed-day > .completed-day-body {
+  padding-left: 16px;
+}
+
+/* UI-08: Kompakter Plan-Kopf */
+#plan .plan-toolbar {
+  padding-bottom: 12px;
+}
+
+#plan .plan-defaults.plan-defaults-compact {
+  display: block;
+  grid-template-columns: none;
+  margin-top: 8px;
+}
+
+#plan .plan-defaults-compact .plan-defaults-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 11px;
+  background: #fffaf3;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+#plan .plan-defaults-compact .plan-defaults-line b {
+  font-size: 12px;
+  color: var(--ink);
+}
+
+#plan .plan-secondary-actions > summary {
+  padding: 8px 0;
+}

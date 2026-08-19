@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-labelledby="t d">
+<title id="t">Avocado-Bananen-Creme</title><desc id="d">Cremeschale mit Avocado-Bananen-Swirl</desc>
+<circle cx="48" cy="48" r="45" fill="#FFF9EE" stroke="#E5D9BE" stroke-width="2"/>
+<ellipse cx="49" cy="75" rx="25" ry="6" fill="#E9DFC8" opacity=".7"/>
+<path d="M27 45h42l-5 27H32Z" fill="#C1D4BD" stroke="#4A584F" stroke-width="2"/><ellipse cx="48" cy="45" rx="21" ry="6" fill="#DDE7D7" stroke="#4A584F" stroke-width="1.6"/><path d="M30 45c8 0 15 1 18 6 3-5 11-6 18-6-2 8-8 13-18 13S33 53 30 45Z" fill="#84B769"/><path d="M39 49c3-2 8-2 11 0 3 2 5 4 10 5-1 1-4 4-12 4-4 0-7-2-10-3 1-2 1-4 1-6Z" fill="#E6CF6D"/><circle cx="29" cy="29" r="9" fill="#F8F1DF" stroke="#4A584F" stroke-width="1.5"/><path d="M29 24c4 0 6 3 6 6 0 4-3 6-6 8-4-2-6-4-6-8 0-3 2-6 6-6Z" fill="#A8C97D" stroke="#4A584F" stroke-width="1"/><ellipse cx="29" cy="32" rx="2" ry="2.6" fill="#8B6B49"/><circle cx="48" cy="29" r="9" fill="#F8F1DF" stroke="#4A584F" stroke-width="1.5"/><path d="M43 30c2 5 8 5 11 0-3 1-7 1-11 0Z" fill="#E9C84B" stroke="#4A584F" stroke-width="1" transform="rotate(-20 48 29)"/></svg>

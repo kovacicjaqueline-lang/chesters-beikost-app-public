@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-labelledby="t d">
+<title id="t">Ube-Bananen-Pancakes</title><desc id="d">Pancake-Stapel mit den Zutaten Ube (violette Yamswurzel), Banane, Hafer</desc>
+<circle cx="48" cy="48" r="45" fill="#FFF9EE" stroke="#E5D9BE" stroke-width="2"/>
+<ellipse cx="49" cy="75" rx="25" ry="6" fill="#E9DFC8" opacity=".7"/>
+<ellipse cx="48" cy="65" rx="25" ry="9" fill="#7A4D88" stroke="#4A584F" stroke-width="2"/><ellipse cx="48" cy="56" rx="23" ry="9" fill="#F3C62F" stroke="#4A584F" stroke-width="2"/><ellipse cx="48" cy="47" rx="21" ry="8" fill="#D7B56C" stroke="#4A584F" stroke-width="2"/><circle cx="29" cy="29" r="9" fill="#F8F1DF" stroke="#4A584F" stroke-width="1.5"/><circle cx="29" cy="29" r="5" fill="#7A4D88"/><circle cx="48" cy="29" r="9" fill="#F8F1DF" stroke="#4A584F" stroke-width="1.5"/><circle cx="48" cy="29" r="5" fill="#F3C62F"/><circle cx="67" cy="29" r="9" fill="#F8F1DF" stroke="#4A584F" stroke-width="1.5"/><ellipse cx="65" cy="29" rx="3" ry="6" fill="#D7B56C" transform="rotate(-25 65 29)"/><ellipse cx="70" cy="30" rx="3" ry="6" fill="#D7B56C" transform="rotate(25 70 30)"/><circle cx="58" cy="70" r="2.2" fill="#D7B56C" opacity=".9"/>
+</svg>

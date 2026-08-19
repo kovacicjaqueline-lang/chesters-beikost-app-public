@@ -1,0 +1,1616 @@
+/* V9.2R: unveränderte Styles aus V9.2, nur technisch ausgelagert. */
+:root{
+  --bg:#f2ece2;--card:#fffdf8;--ink:#302a24;--muted:#776e64;--line:#d8ccbc;
+  --accent:#6d7651;--accent2:#e8e7d8;--terracotta:#a45f46;--terrabg:#f2e1d7;
+  --ochre:#a98043;--ochrebg:#f3e8d2;--ok:#58705a;--okbg:#e5ece2;
+  --shadow:0 5px 18px rgba(63,49,34,.07);--r:20px
+}
+*{box-sizing:border-box}html{background:var(--bg)}body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding-bottom:90px}button,input,select,textarea{font:inherit}button{touch-action:manipulation}header{position:sticky;top:0;z-index:30;background:rgba(242,236,226,.95);backdrop-filter:blur(15px);border-bottom:1px solid var(--line);padding:calc(11px + env(safe-area-inset-top)) 16px 11px}header h1{font-size:21px;margin:0}header p{font-size:12px;color:var(--muted);margin:3px 0 0}main{max-width:800px;margin:auto;padding:15px}.view{display:none}.view.active{display:block}.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:14px;box-shadow:var(--shadow)}.today-card{border-top:5px solid var(--accent)}.phase-card{border-top:5px solid var(--ochre)}h2{font-size:21px;margin:0 0 10px}h3{font-size:17px;margin:0 0 9px}.small{font-size:13px;color:var(--muted)}.tiny{font-size:11px;color:var(--muted)}.row{display:flex;gap:10px;align-items:center}.row.wrap{flex-wrap:wrap}.grow{flex:1;min-width:0}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.pill{display:inline-flex;align-items:center;border-radius:999px;padding:6px 9px;background:var(--accent2);font-size:12px;font-weight:700;white-space:nowrap}.pill.warn{background:var(--terrabg);color:#743b2b}.pill.ok{background:var(--okbg);color:#3b5940}.pill.ph{background:var(--ochrebg);color:#6d5227}.pill.dim{background:#eee7dd;color:#6f675e}.pill.new{background:var(--terrabg);color:#743b2b}.btn{border:0;border-radius:14px;min-height:46px;padding:11px 14px;background:var(--accent);color:#fff;font-weight:750}.btn.secondary{background:var(--accent2);color:var(--ink)}.btn.ochre{background:var(--ochre);color:#fff}.btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}.btn.danger{background:var(--terrabg);color:#773a2b}.btn.smallbtn{min-height:39px;padding:8px 10px}.btn.full{width:100%}.btn:disabled{opacity:.42}.field{margin:0 0 12px}.field label{display:block;font-size:13px;font-weight:750;margin:0 0 5px}input,select,textarea{width:100%;min-height:46px;border:1px solid var(--line);border-radius:13px;background:#fffdf9;color:var(--ink);padding:10px 11px}input[type="date"]{width:168px;max-width:100%;min-width:0;padding-left:8px;padding-right:6px}.prep-card{padding:13px 0;border-top:1px solid var(--line)}.prep-card:first-child{border-top:0}.prep-main{margin-top:8px;padding:10px 11px;border-radius:13px;background:#f5efe5}.prep-main b{display:block;margin-bottom:3px}.prep-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.prep-details{margin-top:8px}.prep-details summary{font-size:13px;font-weight:750;color:var(--accent);cursor:pointer}.stockline{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center}.stockbtn{border:1px solid var(--line);background:#fffdf8;border-radius:11px;min-height:38px;padding:6px 9px;color:var(--ink);font-weight:750}.actionbar{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.whybox{margin-top:9px;padding:10px 11px;border-left:4px solid var(--ochre);background:#f7f1e8;border-radius:0 12px 12px 0}.shopping-row{display:grid;grid-template-columns:26px minmax(0,1fr) auto;gap:8px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}.shopping-row:first-child{border-top:0}.shopping-row input{width:21px;min-height:21px}.shopping-done{text-decoration:line-through;opacity:.58}.guide-grid{display:grid;gap:8px}.guide-item{padding:10px 11px;border:1px solid var(--line);border-radius:13px;background:#fffaf3}.quicknav{display:grid;grid-template-columns:1fr 1fr;gap:8px}.batch-yield{font-weight:800;color:var(--accent)}.subcard{padding:12px;border:1px solid var(--line);border-radius:14px;background:#fffaf3;margin-top:10px}.inline-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}textarea{min-height:82px;resize:vertical}input[type=checkbox]{width:23px;min-height:23px}.notice{padding:11px 12px;border-radius:14px;background:#eee8de;font-size:13px;margin-bottom:11px}.notice.warn{background:var(--terrabg);color:#663326}.notice.olive{background:var(--accent2)}.progress{height:10px;background:#e7ded2;border-radius:999px;overflow:hidden;margin:8px 0}.progress span{display:block;height:100%;background:var(--accent);border-radius:999px}.metric{padding:10px;border:1px solid var(--line);border-radius:14px;background:#fffaf3}.metric b{display:block;font-size:20px}.seg{display:flex;gap:7px;overflow:auto;padding-bottom:4px;margin-bottom:12px}.seg button{border:1px solid var(--line);background:#fffdf8;border-radius:999px;padding:9px 12px;white-space:nowrap;font-weight:700;color:var(--muted)}.seg button.active{background:var(--accent2);color:var(--ink);border-color:#bdc4aa}.block{border-left:5px solid var(--accent)}.mealbox{padding:13px 0;border-top:1px solid var(--line)}
+.mealbox.completed{padding:10px 0;opacity:.92}
+.completed-main{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:9px;align-items:center}
+.completed-check{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--okbg);color:var(--ok);font-weight:900}
+.completed-title{font-weight:800}
+.completed-details{margin:7px 0 0 39px}
+.completed-details summary{font-size:13px;color:var(--accent);font-weight:750;cursor:pointer}
+.completed-body{margin-top:7px;padding:9px 10px;border-radius:12px;background:#f7f1e8}
+.day-complete{background:var(--okbg);color:#3b5940}
+.completed-day{padding:0;overflow:hidden}
+.completed-day>summary{list-style:none;display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:9px;align-items:center;padding:12px 14px;cursor:pointer}
+.completed-day>summary::-webkit-details-marker{display:none}
+.completed-day-icon{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--okbg);color:var(--ok);font-weight:900}
+.completed-day-title{font-weight:800}
+.completed-day-body{padding:0 14px 12px;border-top:1px solid var(--line)}
+.completed-day-chevron{font-size:12px;color:var(--muted)}
+.completed-day[open] .completed-day-chevron{transform:rotate(180deg)}
+.meal-lock{min-width:42px;padding:8px 9px;font-size:17px}
+.meal-lock.locked{background:var(--accent2);color:var(--accent)}
+.lock-label{margin-top:6px}
+.plan-quality-good{background:var(--okbg);color:#3b5940}
+.plan-toolbar{padding:17px}
+.plan-heading{display:flex;align-items:flex-start;gap:12px}
+.eyebrow{font-size:11px;letter-spacing:.09em;font-weight:850;color:var(--accent);margin-bottom:4px}
+.plan-heading h2{font-size:24px;line-height:1.1;margin:0 0 5px}
+.plan-today{flex:0 0 auto;min-width:76px}
+.plan-controls{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:9px;align-items:end;margin-top:15px}
+.plan-date-field{margin:0}
+.plan-date-field input[type="date"]{width:100%;max-width:none}
+.plan-recalculate{min-height:46px;white-space:nowrap}
+.plan-lock-strip{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:12px;padding:10px 11px;border-radius:13px;background:var(--accent2)}
+.plan-lock-text{font-size:12px;color:var(--muted)}
+.plan-help{margin-top:9px;padding-top:8px;border-top:1px solid var(--line)}
+.plan-help summary{font-size:13px;font-weight:750;color:var(--accent);cursor:pointer}
+.plan-help p{margin:8px 0 0}
+.pantry-note{margin-top:8px;padding:9px 10px;border-radius:12px;background:#f7f1e8}
+.pantry-note b{display:block;margin-bottom:3px}
+@media(max-width:480px){
+ .plan-toolbar{padding:15px}
+ .plan-heading h2{font-size:23px}
+ .plan-controls{grid-template-columns:1fr}
+ .plan-recalculate{width:100%}
+ .plan-today{min-height:40px;padding:8px 12px}
+}
+
+.plan-quality-warn{background:#f5e5da;color:#714532}
+.batch-metric{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:8px}
+.batch-metric>div{padding:8px;border:1px solid var(--line);border-radius:11px;background:#fffaf2;text-align:center}
+.batch-metric b{display:block;font-size:18px}
+@media(max-width:380px){.batch-metric{grid-template-columns:1fr 1fr}.batch-metric>div:last-child{grid-column:1/-1}}
+
+.mealbox:first-of-type{border-top:0}.mealname{font-weight:800}.dish-title{font-size:18px;font-weight:800;margin:4px 0 9px}.role-list{display:grid;gap:7px;margin:10px 0}.role-row{display:grid;grid-template-columns:118px minmax(0,1fr);gap:8px;align-items:start;padding:8px 10px;border-radius:12px;background:#f7f1e8}.role-label{font-size:12px;color:var(--muted);font-weight:750}.role-value{font-weight:700}.optional-note{border-left:3px solid var(--ochre);padding-left:9px;margin-top:8px}.phase-controls{display:grid;grid-template-columns:1fr 1.35fr 1fr;gap:8px;margin-top:11px}.compact-progress .progress{margin:7px 0}.status-chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}.chips{display:flex;flex-wrap:wrap;gap:7px}.chip{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);border-radius:999px;padding:7px 10px;background:#fffdf8;font-size:13px}.chip input{width:18px;min-height:18px;margin:0}.foodcard{padding:12px 0;border-top:1px solid var(--line)}
+.foodcard.inactive{margin:4px 0;padding:12px 10px;border:1px dashed #c9b8a4;border-radius:13px;background:#f2eee7;opacity:.88}
+.foodcard.inactive+.foodcard{border-top:0}
+.pill.inactive-pill{background:#e2ddd4;color:#665e54}
+.inactive-note{margin-top:5px;color:#6a6258;font-size:12px}
+.foodcard:first-child{border-top:0}.foodtitle{font-weight:800}.foodmeta{font-size:12px;color:var(--muted);margin-top:3px}.foodedit{margin-top:8px}.foodedit summary{font-size:13px;font-weight:750;color:var(--accent);cursor:pointer}.foodactions{display:grid;grid-template-columns:84px 1fr 48px;gap:8px;margin-top:9px}.foodactions input,.foodactions select{min-height:42px;padding:8px}.iconbtn{border:1px solid var(--line);background:#fffdf8;border-radius:12px;min-height:42px;min-width:42px;font-size:18px;color:var(--ink)}.accordion{border-top:1px solid var(--line);padding:11px 0}.accordion:first-child{border-top:0}.accordion summary{font-weight:780;cursor:pointer}.recipe-meta{display:flex;gap:7px;flex-wrap:wrap;margin:7px 0}.history{padding:11px 0;border-top:1px solid var(--line)}.history:first-child{border-top:0}.statusdot{width:10px;height:10px;border-radius:50%;display:inline-block;background:#bbb;margin-right:5px}.statusdot.good{background:var(--ok)}.statusdot.warn{background:var(--terracotta)}.empty{text-align:center;padding:24px 12px;color:var(--muted)}.checkline{display:flex;align-items:flex-start;gap:9px;padding:9px 0;border-top:1px solid var(--line)}.section-divider{height:1px;background:var(--line);margin:16px 0}.modal{position:fixed;inset:0;z-index:60;background:rgba(42,35,28,.42);display:none;align-items:flex-end}.modal.open{display:flex}.sheet{background:var(--bg);width:100%;max-height:92vh;overflow:auto;border-radius:22px 22px 0 0;padding:15px 15px calc(18px + env(safe-area-inset-bottom));box-shadow:0 -10px 35px rgba(0,0,0,.18)}.sheethead{position:sticky;top:-15px;background:var(--bg);padding:8px 0 10px;z-index:3}.toast{position:fixed;z-index:80;left:14px;right:14px;bottom:calc(82px + env(safe-area-inset-bottom));display:none;background:#332e28;color:#fff;border-radius:14px;padding:11px 13px;align-items:center;gap:10px;box-shadow:0 8px 28px rgba(0,0,0,.2)}.toast.show{display:flex}.toast button{border:0;background:transparent;color:#f3d2a2;font-weight:800;padding:7px}.toast .grow{font-size:14px}nav{position:fixed;z-index:40;left:0;right:0;bottom:0;background:rgba(255,253,248,.98);backdrop-filter:blur(16px);border-top:1px solid var(--line);padding:6px 5px calc(6px + env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(5,1fr)}nav button{border:0;background:transparent;border-radius:12px;padding:7px 2px;color:var(--muted);font-size:10px;font-weight:750}nav button svg{display:block;width:22px;height:22px;margin:0 auto 2px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}nav button.active{color:var(--accent);background:var(--accent2)}@media(max-width:380px){input[type="date"]{width:150px}.role-row{grid-template-columns:102px minmax(0,1fr)}.phase-controls{grid-template-columns:1fr 1fr}.phase-controls .use-suggestion{grid-column:1/-1;grid-row:1}.grid3{grid-template-columns:1fr 1fr}.grid3 .metric:last-child{grid-column:1/-1}}@media(min-width:700px){main{padding:23px}.sheet{max-width:760px;margin:auto;border-radius:22px}.modal{align-items:center}.gridwide{display:grid;grid-template-columns:1fr 1fr;gap:13px}}
+
+/* Visual refresh 7.0 */
+:root{
+ --bg:#f4efe7;--card:#fffdf9;--ink:#2d2925;--muted:#746c63;--line:#ddd3c6;
+ --accent:#6d7851;--accent-dark:#52603c;--accent2:#e9eadb;--terracotta:#a9654e;
+ --terrabg:#f4e3da;--ochre:#af8247;--ochrebg:#f4e8d5;--ok:#56705a;--okbg:#e5eee4;
+ --shadow:0 8px 26px rgba(65,52,38,.075);--shadow-soft:0 3px 12px rgba(65,52,38,.055);--r:22px
+}
+html{background:var(--bg)}
+body{background:radial-gradient(circle at 20% -10%,#fbf7ef 0,#f4efe7 38%,#f1ebe2 100%);font-size:15px}
+.app-header{display:flex;align-items:center;gap:11px;padding:calc(10px + env(safe-area-inset-top)) 17px 10px;background:rgba(248,244,236,.91);border-bottom:1px solid rgba(202,190,175,.75);box-shadow:0 2px 12px rgba(65,52,38,.035)}
+.brand-orb{width:36px;height:36px;border-radius:13px;display:grid;place-items:center;background:linear-gradient(145deg,var(--accent),#8b916d);color:#fff;font-weight:900;font-size:18px;box-shadow:0 5px 14px rgba(83,96,60,.18)}
+.brand-copy{min-width:0}.app-header h1{font-size:19px;letter-spacing:-.02em}.app-header p{font-size:11px;margin-top:2px}
+main{padding:13px 12px 18px}.card{border:1px solid rgba(210,199,184,.9);box-shadow:var(--shadow);padding:15px;border-radius:22px;margin-bottom:12px}
+h2{font-size:22px;letter-spacing:-.025em}h3{font-size:17px;letter-spacing:-.015em}
+.btn{border-radius:13px;box-shadow:none;transition:transform .12s ease,opacity .12s ease}.btn:active{transform:scale(.985)}
+.btn.secondary{background:#e9e8dc}.btn.ghost{background:#fffdfa}.btn.smallbtn{font-size:13px}
+input,select,textarea{border-color:#d9cebf;background:#fffefa;box-shadow:inset 0 1px 0 rgba(255,255,255,.7)}
+.notice{border:1px solid rgba(210,199,184,.65)}
+.today-card{border-top:0;background:linear-gradient(155deg,#fffefa 0,#fbf8ef 100%);position:relative;overflow:hidden}.today-card:before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--accent)}
+.phase-card{border-top:0;background:linear-gradient(155deg,#fffefa 0,#fbf5e9 100%);position:relative;overflow:hidden}.phase-card:before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--ochre)}
+.compact-progress{background:linear-gradient(155deg,#fffefa,#f7faf2)}
+.progress{height:8px}
+.seg{margin-left:-2px;margin-right:-2px;padding:2px 2px 6px;scrollbar-width:none}.seg::-webkit-scrollbar{display:none}.seg button{background:rgba(255,253,249,.78);box-shadow:var(--shadow-soft);border-color:#ded4c8}.seg button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.day-card{border-left:0;padding:13px;background:rgba(255,253,249,.94)}.day-card .day-head{padding:1px 1px 9px}.day-date{font-size:17px;font-weight:850;margin-bottom:7px}.day-card .mealbox{border:1px solid #e0d6c9;background:#fffaf4;border-radius:17px;padding:12px;margin-top:9px}.day-card .mealbox:first-of-type{border-top:1px solid #e0d6c9}.day-card .dish-title{font-size:17px}.day-card .role-row{background:#f5efe6}.day-card .whybox{background:#fbf4e8}.day-card .actionbar .btn{min-height:42px;font-size:13px}
+.completed-day{border-left:5px solid var(--accent);box-shadow:var(--shadow)}
+.plan-toolbar{background:linear-gradient(150deg,#fffefa,#f8f5ea)}.plan-lock-strip{border:1px solid #d9dac7}
+.prep-card{padding:13px;border:1px solid #e2d8cb;border-radius:17px;margin-top:9px;background:#fffaf4}.prep-card:first-child{border-top:1px solid #e2d8cb}.prep-main{background:#f4ede2}.guide-item{box-shadow:var(--shadow-soft);border-color:#e2d6c8}
+.shopping-row{margin:0 -2px;padding:10px 4px}.stock-group{padding:12px;border:1px solid #e2d8cb;border-radius:16px;margin-top:9px;background:#fffaf4}
+.foodcard{margin:0 0 8px;padding:12px;border:1px solid #e2d8cb;border-radius:17px;background:#fffdf9;box-shadow:var(--shadow-soft)}.foodcard:first-child{border-top:1px solid #e2d8cb}.foodtitle{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.foodmeta{font-size:12px}.foodedit{padding-top:2px}.foodcard.inactive{margin-bottom:8px}
+.recipes-card{background:linear-gradient(160deg,#fffefa,#faf7ee)}.recipe-search input{background:#fff}.recipe-card{border:1px solid #e1d7ca;border-radius:16px;padding:0;margin-top:9px;background:#fffaf4;overflow:hidden}.recipe-card:first-child{border-top:1px solid #e1d7ca}.recipe-card summary{padding:12px 13px;display:flex;gap:8px;align-items:center}.recipe-card[open] summary{border-bottom:1px solid #e5dbcf;background:#f8f2e8}.recipe-card>div,.recipe-card>p{margin-left:13px;margin-right:13px}.recipe-card>p:last-child{margin-bottom:13px}.pantry-note{margin:8px 13px;padding:9px 10px;border-radius:12px;background:#f0eee1}.pantry-note b{display:block;margin-bottom:3px}
+.collapsible-card{padding:0;overflow:hidden}.panel-details>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;padding:14px 15px;cursor:pointer}.panel-details>summary::-webkit-details-marker{display:none}.panel-details>summary:after{content:"⌄";font-size:20px;color:var(--muted);transition:transform .15s}.panel-details[open]>summary:after{transform:rotate(180deg)}.panel-details summary span{display:grid;gap:2px}.panel-details summary small{font-size:12px;color:var(--muted);font-weight:500}.panel-body{padding:0 15px 15px;border-top:1px solid var(--line)}
+.audit-card .checkline{padding:7px 0;font-size:13px}.settings-card .gridwide{margin-top:12px}
+nav{background:rgba(255,253,248,.96);border-top-color:#d8cdbf;box-shadow:0 -7px 24px rgba(65,52,38,.07);padding-top:5px}nav button{font-size:10px;padding:7px 2px}nav button.active{background:var(--accent2);color:var(--accent-dark)}nav button.active svg{stroke-width:2.1}
+.empty{padding:22px 10px;background:rgba(249,245,238,.7);border-radius:14px}
+@media(max-width:480px){
+ main{padding-left:10px;padding-right:10px}.card{padding:14px}.plan-toolbar{padding:14px}.row{gap:8px}.pill{font-size:11px;padding:5px 8px}.foodactions{grid-template-columns:68px minmax(0,1fr) 44px}.stockline{grid-template-columns:minmax(0,1fr) auto}.stockline>.row{grid-column:1/-1;justify-content:flex-end}.grid2{gap:8px}
+}
+
+
+/* V7.1 */
+.texture-coach{background:linear-gradient(145deg,#fffdf8 0%,#f1f3e8 100%);border-color:#d9ddca}
+.texture-track{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin:12px 0}
+.texture-step{height:7px;border-radius:999px;background:#dfdbd1}
+.texture-step.done{background:var(--olive)}
+.texture-step.next{background:#c9b685}
+.texture-coach-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.coach-status{padding:10px 11px;border-radius:13px;background:#fffdf8;border:1px solid var(--line);margin-top:10px}
+.log-card h2{margin-bottom:3px}
+.log-toolbar{display:grid;grid-template-columns:minmax(0,220px);margin:12px 0 4px}
+.log-entry{padding:10px 0;border-top:1px solid var(--line)}
+.log-entry-main{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:start}
+.log-entry-actions{display:flex;gap:5px}
+.log-date{font-weight:820}
+.log-foods{margin-top:2px}
+.log-note{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.allergen-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
+.freezer-recipe{padding:11px 0;border-top:1px solid var(--line)}
+.freezer-recipe:first-child{border-top:0}
+.freezer-icon{width:34px;height:34px;border-radius:11px;background:#e6ecde;display:grid;place-items:center;flex:0 0 auto}
+.recipe-option-list{margin-top:6px;color:var(--muted)}
+.food-head-actions{justify-content:flex-end}
+.drag-handle{border:0;background:#ebe8dd;color:var(--accent);border-radius:11px;min-width:42px;min-height:42px;font-size:22px;font-weight:900;touch-action:none;cursor:grab}
+.foodcard.reorderable{border:1px solid #d9d3c5;border-radius:14px;margin:7px 0;padding:10px;background:#fffdf8}
+.foodcard.dragging{position:fixed!important;z-index:1000;margin:0!important;box-shadow:0 18px 42px rgba(54,45,34,.2);pointer-events:none;opacity:.97}
+.food-placeholder{border:2px dashed #a8ad8c;border-radius:14px;background:#eff0e6;margin:7px 0}
+.reorder-mode .foodedit,.reorder-mode .foodInfo{display:none}
+.reorder-mode .foodcard.inactive{opacity:.5}
+.recipe-card-v2{border-top:1px solid var(--line);padding:0}
+.recipe-card-v2>summary{padding:13px 0;list-style:none;cursor:pointer}
+.recipe-card-v2>summary::-webkit-details-marker{display:none}
+.recipe-summary-grid{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
+.recipe-body-v2{padding:0 0 13px}
+.recipe-missing{padding:8px 10px;border-radius:11px;background:#f6e9df;margin-top:8px}
+.recipe-ready{padding:8px 10px;border-radius:11px;background:var(--okbg);margin-top:8px}
+.recipe-freezer-note{padding:8px 10px;border-radius:11px;background:#edf1e7;margin-top:8px}
+@media(max-width:480px){
+ .texture-coach-actions{grid-template-columns:1fr}
+ .food-head-actions{width:100%;margin-top:8px}
+ .food-head-actions .btn{flex:1}
+ .log-entry-main{grid-template-columns:minmax(0,1fr) auto}
+ .log-entry-actions{justify-content:flex-end}
+}
+
+
+@media(max-width:480px){
+ .food-header{display:block}
+ .food-header>.grow{width:100%}
+ .food-header #foodCountText{max-width:none}
+ .food-head-actions{display:grid;grid-template-columns:1fr 1fr;width:100%;margin-top:10px}
+ .food-head-actions .btn{width:100%}
+}
+
+
+/* V8.0 – ruhiger, kompakter und konsequent mobil */
+input,select,textarea{font-size:16px}
+input[type="date"]{width:100%;max-width:100%;min-width:0;letter-spacing:0;font-variant-numeric:tabular-nums}
+.grid2>.field,.gridwide>.field{min-width:0}
+.iconbtn{display:inline-grid;place-items:center}
+.meal-lock{font-size:18px;line-height:1}
+.meal-lock.locked{background:#e3eadf;border-color:#bcc8b2}
+.meal-lock.unlocked{background:#fffdf8;color:#766e63}
+.stock-chip{background:#e4ecdf;color:#3d5940}
+.recipe-stock-chip{background:#e7e3f0;color:#554765}
+.manual-chip{background:#eee5d6;color:#6c5330}
+.manual-meal{border:1px solid #d8cbb8;border-radius:14px;background:#fbf7ef;margin:9px 0;overflow:hidden}
+.manual-meal>summary{list-style:none;padding:11px 12px;cursor:pointer}
+.manual-meal>summary::-webkit-details-marker{display:none}
+.manual-meal-body{padding:0 12px 12px;border-top:1px solid var(--line)}
+.manual-meal-title{font-weight:820}
+.add-meal-row{display:flex;justify-content:center;margin-top:10px}
+.add-meal-btn{min-height:38px;padding:7px 11px}
+.meal-selector-tabs{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:11px}
+.meal-selector-tabs button{min-height:42px;border:1px solid var(--line);border-radius:12px;background:#fffdf8;font-weight:750}
+.meal-selector-tabs button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.selector-results{max-height:46vh;overflow:auto;border:1px solid var(--line);border-radius:14px;background:#fffdf8}
+.selector-row{display:flex;gap:10px;align-items:center;width:100%;text-align:left;padding:11px;border:0;border-bottom:1px solid var(--line);background:transparent;color:var(--ink)}
+.selector-row:last-child{border-bottom:0}
+.selector-row.selected{background:#edf0e5}
+.selector-check{width:24px;height:24px;border-radius:8px;border:1px solid var(--line);display:grid;place-items:center;flex:0 0 auto}
+.selector-row.selected .selector-check{background:var(--accent);color:white;border-color:var(--accent)}
+.manual-role-overview{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:9px 0}
+.manual-role-group{border:1px solid var(--line);border-radius:13px;padding:9px;background:#fffdf8;min-width:0}
+.manual-role-group.component{background:#f3f5ec;border-color:#d5dcc4}
+.manual-role-group.sample{background:#fbf3e8;border-color:#e2cda9}
+.manual-role-heading{font-size:11px;font-weight:850;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:5px}
+.manual-role-item{display:flex;align-items:center;gap:7px;padding:7px 0;border-top:1px solid var(--line)}
+.manual-role-item:first-of-type{border-top:0}
+.manual-role-item .grow{min-width:0}
+.manual-role-item .small{display:block}
+.manual-role-actions{display:flex;align-items:center;gap:5px;flex:0 0 auto}
+.manual-role-actions .iconbtn{min-width:32px;min-height:32px}
+.tinybtn{min-height:32px;padding:5px 7px;font-size:11px}
+.manual-role-none,.manual-role-empty{padding:5px 0;color:var(--muted)}
+.manual-role-warning,.manual-role-ok{margin:9px 0}
+.manual-role-pill{flex:0 0 auto;border-radius:999px;padding:4px 7px;font-size:10px;font-weight:800;background:#edf0e5;color:var(--accent)}
+.manual-role-pill.component{background:#e8eddb;color:#607044}
+.manual-role-pill.sample{background:#f6e6d2;color:#9a582d}
+.manual-role-pill.excluded{background:#f5e4df;color:#984c3c}
+.selected-target{padding:10px 11px;border-radius:13px;background:#edf0e5;border:1px solid #d5dac8;margin:9px 0}
+.live-results{max-height:310px;overflow:auto;border:1px solid var(--line);border-radius:14px;background:#fffdf8;margin-top:7px}
+.live-result{width:100%;display:flex;align-items:center;gap:9px;text-align:left;padding:11px;border:0;border-bottom:1px solid var(--line);background:transparent;color:var(--ink)}
+.live-result:last-child{border-bottom:0}
+.live-result:hover,.live-result:focus{background:#f1f0e7}
+.inventory-kind-tabs{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:12px}
+.inventory-kind-tabs button{min-height:42px;border:1px solid var(--line);border-radius:12px;background:#fffdf8;font-weight:750}
+.inventory-kind-tabs button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.prep-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:15px}
+.prep-metric{padding:10px;border-radius:14px;background:#f4efe6;border:1px solid var(--line)}
+.prep-metric b{display:block;font-size:20px;line-height:1.1}
+.prep-metric span{font-size:11px;color:var(--muted)}
+.prep-section-head{margin:5px 0 4px}
+.prep-section-head h3{margin-bottom:0}
+.prep-group{border-top:1px solid var(--line);padding:11px 0}
+.prep-group>summary{display:flex;justify-content:space-between;align-items:center;cursor:pointer;list-style:none}
+.prep-group>summary::-webkit-details-marker{display:none}
+.prep-group>summary span{display:flex;flex-direction:column;gap:2px}
+.prep-group>summary small{color:var(--muted)}
+.prep-task{padding:11px 0;border-top:1px solid var(--line)}
+.prep-task:first-child{border-top:0}
+.prep-compact-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;padding:9px 0;border-top:1px solid var(--line)}
+.prep-compact-row:first-child{border-top:0}
+.reserve-grid{display:grid;grid-template-columns:repeat(3,auto);gap:7px;margin-top:6px;justify-content:start}
+.reserve-grid span{font-size:11px;color:var(--muted)}
+.reserve-grid b{display:block;color:var(--ink);font-size:13px}
+.compact-log-body{padding-top:4px}
+.compact-log-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px}
+.log-card{padding:0}
+.log-card>.panel-details>summary{padding:14px 15px}
+.log-card .panel-body{padding:0 15px 14px}
+.log-toolbar{margin:5px 0 2px;grid-template-columns:minmax(0,180px)}
+.log-toolbar .field{margin-bottom:6px}
+.log-entry{padding:8px 0}
+.log-entry-actions .iconbtn{min-height:36px;min-width:36px;font-size:16px}
+.summary-action{font-size:12px;color:var(--accent);font-weight:750}
+.stock-group.recipe-group{background:#faf7fc;border-radius:14px;padding:10px;margin:8px 0}
+.stock-source-note{font-size:11px;color:var(--muted);margin-top:3px}
+.date-choice-grid{display:grid;grid-template-columns:1fr;gap:8px}
+@media(max-width:480px){
+ .prep-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .prep-metric{padding:9px 7px}
+ .prep-metric b{font-size:18px}
+ .actionbar{grid-template-columns:1fr 1fr}
+ .manual-meal .actionbar{grid-template-columns:1fr 1fr}
+ .selector-results,.live-results{max-height:42vh}
+}
+
+
+/* V8.2 – mobile refinement and interaction fixes */
+*,*::before,*::after{box-sizing:border-box}
+input,select,textarea,button{max-width:100%;min-width:0}
+input[type="date"]{width:100%;min-width:0;max-width:100%;font-variant-numeric:tabular-nums}
+.sheet .grid2,.sheet .gridwide{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.sheet .field{min-width:0}
+.sheet .btn.full,.sheet .form-actions,.sheet .sticky-form-actions{margin-top:14px}
+.sheet .selected-target+.field,.sheet .live-results+.grid2,.sheet .selector-results+.btn{margin-top:14px}
+.card .actionbar,.card .prep-actions,.card .add-meal-row{margin-top:12px}
+.actionbar{gap:8px}
+.actionbar .btn{min-height:42px}
+.why-details{margin-top:9px;border:1px solid var(--line);border-radius:12px;background:#faf8f1;overflow:hidden}
+.why-details summary{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 11px;cursor:pointer;color:var(--accent);font-weight:780;list-style:none}
+.why-details summary::-webkit-details-marker{display:none}
+.why-details .why-chevron{transition:transform .18s ease}
+.why-details[open] .why-chevron{transform:rotate(180deg)}
+.why-details .why-copy{padding:0 11px 10px}
+.manual-meal>summary{position:relative;padding-right:2px}
+.manual-summary-actions{display:flex;align-items:center;gap:6px}
+.manual-chevron{font-size:17px;color:var(--accent);transition:transform .18s ease}
+.manual-meal[open] .manual-chevron{transform:rotate(180deg)}
+.add-meal-row{text-align:left}
+.add-meal-row .btn{min-height:36px;padding:7px 10px;font-size:12px;background:transparent;border-style:dashed}
+.inactive-plan-warning{margin:10px 0;padding:10px 11px;border-radius:12px;background:#fff1e7;border:1px solid #e6b792}
+.inactive-plan-warning .row{align-items:flex-start}
+.inactive-plan-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
+.log-food-picker{margin-top:5px}
+.log-food-results{max-height:240px;overflow:auto;border:1px solid var(--line);border-radius:13px;background:#fffdf8}
+.log-food-results:empty{display:none}
+.selected-food-chip{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);border-radius:999px;padding:7px 9px;background:#f6f2e9;font-weight:700}
+.selected-food-chip button{border:0;background:transparent;color:var(--muted);font-size:16px;padding:0 1px;line-height:1}
+.sticky-form-actions{position:sticky;bottom:-18px;z-index:4;margin-left:-2px;margin-right:-2px;padding:10px 2px calc(8px + env(safe-area-inset-bottom));background:linear-gradient(to bottom,rgba(255,253,248,0),var(--bg) 18%,var(--bg))}
+.log-sheet{padding-bottom:0}
+.inventory-results-collapsed{display:none}
+.selected-target-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.prep-urgency-title{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);font-weight:850;margin:15px 0 4px}
+.prep-task:first-child .prep-urgency-title{margin-top:0}
+.batch-balance{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:9px}
+.batch-balance span{border:1px solid var(--line);border-radius:10px;padding:7px;text-align:center;font-size:11px;color:var(--muted)}
+.batch-balance b{display:block;font-size:16px;color:var(--ink)}
+.food-sort-actions{display:flex;gap:4px;flex:0 0 auto}
+.food-jump{border:1px solid var(--line);background:#fffdf8;border-radius:10px;min-width:34px;min-height:36px;color:var(--accent);font-weight:850}
+.version-details{margin-top:9px;border-top:1px solid var(--line);padding-top:8px}
+.version-details summary{font-size:13px;color:var(--accent);font-weight:750;cursor:pointer}
+.compact-role-list:empty{display:none}
+@media(max-width:560px){
+ .sheet .grid2,.sheet .gridwide{grid-template-columns:1fr!important}
+ .sheet{padding-left:15px;padding-right:15px}
+ .sheet input,.sheet select,.sheet textarea{width:100%;font-size:16px}
+ .sheet .field{width:100%}
+ .log-sheet .sheethead{margin-bottom:4px}
+ .actionbar{grid-template-columns:1fr 1fr}
+ .batch-balance{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:380px){
+ .actionbar{grid-template-columns:1fr}
+ .batch-balance{grid-template-columns:1fr 1fr 1fr}
+}
+
+
+/* V8.3 – klarere Abstände bei Mahlzeitenaktionen */
+.meal-actions,
+.mealbox .actions,
+.mealbox .meal-actions,
+.manual-meal-actions,
+.plan-meal-actions {
+  row-gap: 12px !important;
+  gap: 12px !important;
+}
+.mealbox .btn + .btn,
+.meal-actions .btn + .btn,
+.plan-meal-actions .btn + .btn,
+.manual-meal-actions .btn + .btn {
+  margin-top: 0 !important;
+}
+.mealbox .btn.full,
+.meal-actions .btn.full,
+.plan-meal-actions .btn.full,
+.manual-meal-actions .btn.full {
+  min-height: 52px;
+}
+@media(max-width:480px){
+  .meal-actions,
+  .mealbox .actions,
+  .mealbox .meal-actions,
+  .manual-meal-actions,
+  .plan-meal-actions {
+    display:grid !important;
+    grid-template-columns:1fr !important;
+    gap:12px !important;
+  }
+}
+
+
+/* V8.5 – kompaktere Plan- und Mahlzeitenkarten */
+#blockPlan>.card{margin-bottom:10px}
+.day-card{padding:10px;border-radius:18px}
+.day-card .day-head{padding:0 0 6px}
+.day-date{font-size:18px;line-height:1.2;margin-bottom:5px}
+.day-card .day-head .status-chips{margin-top:5px;gap:5px}
+.day-card .day-head .pill{
+  padding:4px 7px;
+  font-size:11px;
+  line-height:1.25;
+}
+.day-card .mealbox,
+.today-card .mealbox{
+  border-radius:15px;
+  padding:10px;
+  margin-top:7px;
+}
+.day-card .mealbox>.row:first-child,
+.today-card .mealbox>.row:first-child{
+  align-items:flex-start;
+  gap:8px;
+}
+.mealname{
+  font-size:13px;
+  line-height:1.2;
+}
+.day-card .dish-title,
+.today-card .dish-title{
+  font-size:17px;
+  line-height:1.22;
+  margin:2px 0 4px;
+}
+.day-card .mealbox>.row:first-child>.row,
+.today-card .mealbox>.row:first-child>.row{
+  align-items:center;
+  gap:5px!important;
+}
+.day-card .mealbox>.row:first-child .pill,
+.today-card .mealbox>.row:first-child .pill{
+  padding:5px 8px;
+  font-size:11px;
+}
+.meal-lock{
+  min-width:40px;
+  width:40px;
+  min-height:40px;
+  height:40px;
+  padding:7px;
+  display:grid;
+  place-items:center;
+}
+.lock-svg{
+  width:23px;
+  height:23px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.9;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+.meal-lock.unlocked{
+  background:#fffdf8;
+  color:var(--ochre);
+  border-color:#c8b895;
+}
+.meal-lock.unlocked .lock-svg-open path:nth-of-type(1){
+  stroke-width:2.15;
+}
+.meal-lock.locked{
+  background:var(--accent2);
+  color:var(--accent);
+}
+.mealbox>.status-chips{
+  margin-top:6px;
+  gap:5px;
+}
+.mealbox>.status-chips .pill{
+  padding:4px 7px;
+  font-size:11px;
+}
+.lock-label{
+  margin-top:4px;
+  text-transform:none;
+}
+.role-list{
+  gap:5px;
+  margin:7px 0 0;
+}
+.role-row{
+  grid-template-columns:105px minmax(0,1fr);
+  gap:7px;
+  padding:6px 8px;
+  border-radius:10px;
+  align-items:center;
+  line-height:1.22;
+}
+.role-label{
+  font-size:11px;
+  line-height:1.2;
+}
+.role-value{
+  font-size:14px;
+  line-height:1.25;
+}
+.optional-addon-line{
+  margin:5px 2px 0;
+  color:var(--muted);
+  font-size:11.5px;
+  line-height:1.3;
+}
+.optional-addon-line span{
+  font-weight:800;
+  color:var(--accent);
+}
+.why-details{
+  margin-top:7px;
+  border-radius:11px;
+}
+.why-details summary{
+  padding:7px 9px;
+  font-size:13px;
+}
+.why-details .why-copy{
+  padding:0 9px 8px;
+}
+.day-card .actionbar,
+.today-card .actionbar{
+  grid-template-columns:1fr 1fr!important;
+  gap:8px!important;
+  margin-top:8px;
+}
+.day-card .actionbar .btn,
+.today-card .actionbar .btn{
+  min-height:40px;
+  padding:8px 9px;
+  font-size:13px;
+  border-radius:12px;
+}
+.day-card .logMeal,
+.today-card .homeLog{
+  min-height:44px!important;
+  padding:9px 12px!important;
+  margin-top:8px;
+  border-radius:13px;
+}
+.add-meal-row{
+  margin-top:7px;
+}
+.add-meal-row .btn{
+  min-height:33px;
+  padding:5px 9px;
+  font-size:11.5px;
+}
+.manual-meal{
+  margin-top:7px;
+  padding:9px 10px;
+  border-radius:14px;
+}
+.manual-meal-body{
+  padding-top:7px;
+}
+@media(max-width:359px){
+  .day-card .actionbar,
+  .today-card .actionbar{
+    grid-template-columns:1fr!important;
+  }
+}
+
+
+/* V8.6 – Erklärungen zentral in der Hilfe */
+.plan-toolbar{padding-bottom:12px}
+.plan-lock-strip{
+  margin-top:10px;
+  padding:8px 9px;
+  min-height:0;
+}
+.plan-lock-strip .pill{
+  padding:4px 7px;
+  font-size:11px;
+}
+.help-body{display:grid;gap:0}
+.help-topic{
+  border-top:1px solid var(--line);
+  padding:0;
+}
+.help-topic:first-child{border-top:0}
+.help-topic>summary{
+  list-style:none;
+  cursor:pointer;
+  padding:11px 0;
+  color:var(--accent);
+  font-weight:800;
+}
+.help-topic>summary::-webkit-details-marker{display:none}
+.help-topic>summary::after{
+  content:"⌄";
+  float:right;
+  transition:transform .18s ease;
+}
+.help-topic[open]>summary::after{transform:rotate(180deg)}
+.help-topic .small{
+  padding:0 0 11px;
+}
+.help-topic p{
+  margin:0 0 8px;
+}
+.help-topic p:last-child{margin-bottom:0}
+
+
+/* V8.7 – offene Punkte aus dem mobilen Durchlauf */
+body{padding-bottom:calc(104px + env(safe-area-inset-bottom))}
+main{padding-bottom:28px}
+
+.phase-card,.texture-coach{padding:0!important;overflow:hidden}
+.home-control-details>summary{
+  list-style:none;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:9px;
+  padding:11px 13px;
+  cursor:pointer;
+}
+.home-control-details>summary::-webkit-details-marker{display:none}
+.home-control-details>summary>span:first-child{display:grid;gap:2px;min-width:0}
+.home-control-details>summary small{
+  color:var(--accent);
+  font-size:10px;
+  font-weight:850;
+  letter-spacing:.07em;
+  text-transform:uppercase;
+}
+.home-control-details>summary b{font-size:15px;line-height:1.25}
+.home-control-details>summary::after{
+  content:"⌄";
+  color:var(--muted);
+  font-size:17px;
+  flex:0 0 auto;
+  transition:transform .18s ease;
+}
+.home-control-details[open]>summary::after{transform:rotate(180deg)}
+.home-control-details>summary>.pill{margin-left:auto}
+.home-control-body{padding:9px 13px 12px;border-top:1px solid var(--line)}
+.home-control-body .texture-track{margin:2px 0 8px}
+.home-control-body .phase-controls,
+.home-control-body .texture-coach-actions{display:flex;gap:8px;margin-top:8px}
+.home-control-body .phase-controls .btn,
+.home-control-body .texture-coach-actions .btn{
+  flex:1;
+  min-height:39px;
+  padding:7px 9px;
+  font-size:12px;
+}
+
+.plan-heading h2{margin-bottom:0}
+.plan-controls{
+  grid-template-columns:minmax(0,1fr) auto!important;
+  gap:8px;
+  margin-top:10px;
+}
+.plan-date-field label{font-size:11px;margin-bottom:3px}
+.plan-date-field input[type="date"]{min-height:42px}
+.plan-recalculate{
+  width:auto!important;
+  min-height:42px;
+  padding:8px 12px;
+  align-self:end;
+}
+.plan-lock-strip{margin-top:8px;padding:7px 8px}
+
+#foodFilters{
+  display:flex;
+  width:100%;
+  max-width:100%;
+  overflow-x:auto;
+  overflow-y:hidden;
+  gap:7px;
+  padding:3px 2px 8px;
+  scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior-inline:contain;
+}
+#foodFilters button{
+  flex:0 0 auto!important;
+  min-width:max-content;
+  white-space:nowrap;
+  scroll-snap-align:start;
+}
+#foodFilters button:last-child{margin-right:4px}
+
+#more>.card{margin-bottom:9px}
+#more .collapsible-card .panel-details>summary{padding:11px 13px;min-height:68px}
+#more .panel-details summary b{font-size:15px;line-height:1.2}
+#more .panel-details summary small{font-size:11px;line-height:1.3}
+#more .panel-body{padding:0 13px 13px}
+#more .recipes-card .panel-body{padding-top:11px}
+#more .allergen-card{padding:13px}
+#more .allergen-card h3{margin-bottom:8px}
+.allergen-overview{margin:4px 0 6px}
+.allergen-card .history{padding:9px 0}
+.allergen-card .allergen-actions{margin-top:6px}
+.allergen-card .allergen-actions .btn{min-height:38px;padding:7px 10px;font-size:12px}
+.summary-action{display:none!important}
+
+@media(max-width:480px){
+  .plan-controls{grid-template-columns:minmax(0,1fr) auto!important}
+  .plan-recalculate{white-space:nowrap}
+}
+
+
+/* V9.1 – Übergabe-Auditkorrekturen, iPhone 13 mini */
+.card{padding:13px;margin-bottom:11px}.collapsible-card>.panel-details>summary{padding:12px 13px}.panel-body{padding:0 13px 13px}.mealbox{padding:10px 0}.dish-title{font-size:16px}.compact-role-list{margin-top:7px;border-top:1px solid var(--line)}.compact-role-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line)}.compact-role-row b{min-width:0}.compact-role-row span{font-size:11px;color:var(--muted);white-space:nowrap}.compact-role-row.sample span{color:var(--terracotta);font-weight:800}.why-details{display:none!important}.food-outcome-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(122px,145px) 36px;gap:7px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}.food-outcome-row:first-child{border-top:0}.food-outcome-name{min-width:0;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px}.food-outcome-name b{min-width:0}.food-outcome-name span{font-size:11px;color:var(--muted);text-align:right;white-space:nowrap}.food-outcome-row select{min-height:40px;padding:7px 8px}.food-outcome-row .iconbtn{min-width:36px;min-height:36px}.all-allergens{margin-top:10px;border-top:1px solid var(--line);padding-top:9px}.all-allergens>summary{font-weight:800;color:var(--accent);cursor:pointer}.allergen-group{padding:10px 0;border-top:1px solid var(--line)}.allergen-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line)}.allergen-row:first-of-type{border-top:0}.storage-status{border:1px solid var(--line);border-radius:13px;padding:8px 11px;margin-bottom:10px}.storage-line{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid var(--line);font-size:12px}.storage-line:first-child{border-top:0}.storage-line span{color:var(--muted)}.storage-line b{text-align:right}.backup-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.backup-summary{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}.backup-summary div{padding:10px;border:1px solid var(--line);border-radius:12px;text-align:center}.backup-summary b{display:block;font-size:20px}.backup-summary span{font-size:11px;color:var(--muted)}.snapshot-row{width:100%;display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:11px;border:0;border-top:1px solid var(--line);background:transparent;color:var(--ink)}.snapshot-row span{font-size:12px;color:var(--muted)}.status-chips{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}.status-chips .pill{min-height:25px;padding:4px 7px}.recipe-summary-grid{align-items:start}.more .card{min-height:0}.add-meal-row{justify-content:flex-start}.log-entry-main{gap:8px}.log-entry{scroll-margin-top:80px}
+.food-emoji{display:inline-flex;align-items:center;justify-content:center;width:22px;margin-right:3px;font-size:17px;vertical-align:-2px}.legacy-migration-note{margin-top:8px}.food-next-label b{color:var(--ink)}
+@media(max-width:390px){main{padding:11px}.card{border-radius:17px}.backup-actions{grid-template-columns:1fr}.food-outcome-row{grid-template-columns:minmax(0,1fr) 126px 34px}.food-outcome-row select{font-size:15px}.compact-role-row{grid-template-columns:minmax(0,1fr) auto}.plan-head{gap:6px}.pill{white-space:normal;text-align:center}.recipe-summary-grid{grid-template-columns:minmax(0,1fr)}.status-chips{justify-content:flex-start;margin-top:5px}}
+
+
+.add-choice-grid{display:grid;gap:9px}.add-choice{display:flex;flex-direction:column;align-items:flex-start;gap:4px;width:100%;padding:14px;border:1px solid var(--line);border-radius:14px;background:#fffdf8;color:var(--ink);text-align:left}.add-choice b{font-size:16px}.add-choice span{font-size:12px;color:var(--muted)}.food-next-label{font-size:12px;font-weight:850;text-transform:uppercase;letter-spacing:.05em;color:var(--accent);margin:2px 0 8px}.remaining-foods{margin-top:9px;border-top:1px solid var(--line);padding-top:9px}.remaining-foods>summary{font-weight:800;color:var(--accent);cursor:pointer;padding:7px 0}.log-entry-summary{overflow-wrap:anywhere}.log-entry .small{overflow-wrap:anywhere}
+
+/* V9.2 – iPhone 13 mini */
+.food-head-actions .btn{background:transparent!important;border:0!important;color:var(--accent)!important;box-shadow:none!important;min-height:36px;padding:6px 7px;font-weight:500}
+.plan-defaults{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:9px}.plan-defaults span{display:grid;gap:2px;padding:9px 10px;border:1px solid var(--line);border-radius:12px;background:#fffaf3}.plan-defaults small{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}.plan-defaults b{font-size:12px;line-height:1.25}
+.followup-plan-note{margin:8px 0;padding:9px 10px;border-left:3px solid var(--ochre);border-radius:0 11px 11px 0;background:#f7f1e8;font-size:12px;color:#5e4b2e}
+.entry-chooser{display:grid;grid-template-columns:1fr 1fr;gap:7px;width:100%;margin:8px 0 2px;padding:8px;border:1px solid var(--line);border-radius:14px;background:#fffaf3;box-shadow:var(--shadow)}.entry-chooser button{display:grid;gap:2px;min-height:54px;padding:9px 10px;border:1px solid var(--line);border-radius:11px;background:#fffdf8;color:var(--ink);text-align:left}.entry-chooser button b{font-size:13px}.entry-chooser button span{font-size:10px;color:var(--muted)}
+.log-add-custom-food{width:100%;margin-top:8px}.log-food-results-label{margin:9px 0 5px}.custom-food-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}.custom-food-message{min-height:18px;margin-top:5px;color:var(--terracotta)}.text-button{border:0;background:transparent;color:var(--accent);font:inherit;font-weight:800;text-decoration:underline;padding:2px 0}.custom-food-actions .btn{width:100%}
+.grouped-outcome{display:grid;grid-template-columns:minmax(0,1fr) minmax(120px,145px);gap:8px;align-items:center;padding:10px;border:1px solid var(--line);border-radius:13px;background:#fffaf3}.grouped-outcome>div{display:grid;gap:2px;min-width:0}.grouped-outcome span{font-size:11px;color:var(--muted)}.grouped-outcome select{min-height:40px}.individual-rating{margin-top:8px;border-top:1px solid var(--line);padding-top:8px}.individual-rating>summary{font-size:12px;color:var(--accent);font-weight:750;cursor:pointer}.sample-outcome-list{border:1px solid var(--line);border-radius:13px;padding:0 9px;background:#fffaf3}.conditional-log-questions{padding:11px;border:1px solid #dcc8aa;border-radius:14px;background:#fbf4e8;margin-bottom:12px}.choice-pills{display:grid;grid-template-columns:1fr 1fr;gap:7px}.choice-pills label{margin:0}.choice-pills input{position:absolute;opacity:0;pointer-events:none}.choice-pills span{display:flex;align-items:center;justify-content:center;min-height:43px;padding:8px;border:1px solid var(--line);border-radius:12px;background:#fffdf8;text-align:center;font-size:12px}.choice-pills input:checked+span{border-color:#9fa77f;background:var(--accent2);font-weight:800}.sample-no-grams{font-size:12px}
+.foodcard{transition:background .15s,border-color .15s}.foodcard.status-open{background:#fffdf8}.foodcard.status-tried{background:#fbf5e9}.foodcard.status-tolerated{background:#f1f6ed;border-color:#cfdbc8}.foodcard.status-regular{background:#e8f0e4;border-color:#bfceb8}.foodcard.status-paused{background:#faefea;border-color:#e6cdc3}.food-status-text{font-weight:700}.followup-section{margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid var(--line)}.followup-section-head{margin:3px 0 8px}.followup-section-head h3{margin-bottom:2px}.followup-food-card{background:#fff8eb;border-color:#ddc69d}.return-prompt{margin-top:9px;padding:9px 10px;border-radius:11px;background:#f7efe0}.food-offer-count{margin:7px 0}.shopping-followups{margin-bottom:8px;border-bottom:1px solid var(--line)}.shopping-followup-title{padding:7px 0;font-weight:800;color:var(--accent)}.shopping-priority{background:#fff7eb;border-radius:11px;padding-left:7px;padding-right:7px}.recipe-age-hint{margin:7px 0;padding:7px 8px;border-radius:9px;background:#f7f1e8}.recipe-card-v2 .status-chips{max-width:150px}
+@media(max-width:390px){.plan-defaults{grid-template-columns:1fr}.entry-chooser{grid-template-columns:1fr 1fr}.grouped-outcome{grid-template-columns:1fr 126px}.choice-pills{grid-template-columns:1fr}.food-head-actions{gap:0!important}.food-head-actions .btn{font-size:12px;padding:5px}.recipe-card-v2 .status-chips{max-width:none}.recipe-summary-grid{grid-template-columns:minmax(0,1fr) auto}.recipe-card-v2>summary .status-chips{justify-content:flex-end;margin-top:0}}
+
+/* Kompakte Lebensmittel-Suchergebnisse im Protokoll */
+.log-food-result{display:grid;grid-template-columns:30px minmax(0,1fr) 28px;gap:9px;align-items:center;width:100%;text-align:left}
+.log-result-emoji{font-size:21px;line-height:1;text-align:center}
+.log-result-copy{display:block;min-width:0}
+.log-result-name{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.log-result-meta{display:block;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.log-result-add{font-size:18px;text-align:center}
+@media(max-width:359px){.log-food-result{grid-template-columns:27px minmax(0,1fr) 25px;gap:7px;padding-left:9px;padding-right:9px}.log-result-emoji{font-size:19px}.log-result-meta{font-size:11px}}
+
+
+/* Wiedervorlagen-Editor */
+.followup-card-actions{display:flex;gap:6px;flex-direction:column;align-items:stretch;flex:0 0 auto}
+.followup-alternatives,.followup-preparation{margin-top:4px;line-height:1.35}
+.followup-preparation{font-weight:650;color:var(--ink)}
+.followup-editor-hint{margin-top:6px;line-height:1.4}
+@media(max-width:359px){
+  .followup-food-card>.row{align-items:flex-start}
+  .followup-card-actions{gap:5px}
+  .followup-card-actions .smallbtn{padding:7px 8px;font-size:11px}
+}
+
+@media(max-width:390px){.manual-role-overview{grid-template-columns:1fr}.manual-role-pill{max-width:92px;text-align:center;white-space:normal}}
+
+/* Parallelpaket A Rev. 2: Pausierte Lebensmittel dürfen bewusst nur im manuellen Editor gewählt werden. */
+.manual-paused-food{border-color:#d7b4a7;background:#fff8f4}.manual-role-pill.paused{background:#f5e2da;color:#75483a;border-color:#d9b7aa}
+
+/* Typografie-Hierarchie Variante A
+   Ziel: Feldbeschriftung und Dropdown-Inhalt gleich groß, das Label durch
+   Medium-Gewichtung führend. Kompakte Spezialsteuerungen bleiben erhalten. */
+h3{
+  font-size:18px;
+}
+.field > label:first-child:not(.checkline):not(.chip){
+  font-size:15px;
+  font-weight:600;
+  line-height:1.25;
+}
+select,
+.sheet select{
+  font-size:15px;
+  font-weight:400;
+}
+.btn{
+  font-size:15px;
+}
+.btn.smallbtn{
+  font-size:13px;
+}
+.btn.tinybtn{
+  font-size:11px;
+}
+.tiny{
+  font-size:12px;
+}
+
+/* Chat C – Mobile UI, Typografie und iPhone-Layout */
+/* Datumsfelder bleiben funktionsgerecht kompakt; Buttons werden nicht vergrößert. */
+.plan-controls{
+  grid-template-columns:minmax(142px,168px) auto!important;
+  justify-content:start;
+  column-gap:10px;
+  align-items:end;
+}
+.plan-date-field{width:auto;min-width:0}
+.plan-date-field input[type="date"]{
+  width:158px!important;
+  min-height:42px;
+  height:42px;
+  padding:7px 7px;
+}
+.plan-recalculate{
+  min-height:42px;
+  height:42px;
+  padding-top:8px;
+  padding-bottom:8px;
+  width:auto!important;
+}
+
+/* Das Protokoll-Datum ist bewusst schmaler als Mahlzeit und Suche. */
+.log-date-grid{
+  display:grid;
+  grid-template-columns:minmax(142px,158px) minmax(0,1fr)!important;
+  gap:10px;
+  align-items:end;
+}
+.log-date-grid .field{width:auto!important;min-width:0}
+.log-date-grid input[type="date"]{
+  width:158px!important;
+  min-height:42px;
+  height:42px;
+  padding:7px 7px;
+}
+.log-date-grid select{min-height:42px;height:42px}
+
+/* Lange Mahlzeiten- und Lebensmittelnamen dürfen Aktionsflächen nie verdrängen. */
+.mealbox>.row:first-child,.manual-meal>summary .row{min-width:0}
+.mealbox>.row:first-child>.grow,.manual-meal>summary .grow{min-width:0}
+.mealname{font-size:12px;font-weight:650;color:var(--muted)}
+.day-card .dish-title,.today-card .dish-title,.dish-title{
+  font-size:16px;
+  font-weight:750;
+  line-height:1.22;
+  overflow-wrap:anywhere;
+  word-break:normal;
+}
+.compact-role-row{grid-template-columns:minmax(0,1fr) auto;gap:8px}
+.compact-role-row b{
+  font-size:13px;
+  font-weight:600;
+  line-height:1.25;
+  overflow-wrap:anywhere;
+}
+.compact-role-row span{
+  font-size:10px;
+  font-weight:500;
+  white-space:normal;
+  text-align:right;
+  line-height:1.2;
+}
+.food-outcome-name{grid-template-columns:minmax(0,1fr) auto}
+.food-outcome-name b{
+  font-size:13px;
+  font-weight:600;
+  line-height:1.25;
+  overflow-wrap:anywhere;
+}
+.food-outcome-name span{font-size:10px;font-weight:500}
+.meal-lock{flex:0 0 40px}
+
+/* Gleichbleibende Schlossfläche verhindert Springen beim Statuswechsel. */
+.meal-lock.locked,.meal-lock.unlocked{
+  width:40px;
+  height:40px;
+  min-width:40px;
+  min-height:40px;
+}
+.meal-lock .lock-svg{display:block}
+
+/* Dateiupload-Label verhält sich optisch exakt wie die übrigen Buttons. */
+.backup-actions label.btn{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  min-height:46px;
+  text-align:center;
+  line-height:1.2;
+}
+
+/* Dialoge bleiben auch mit Tastatur und großer Schrift bis zur Aktion scrollbar. */
+.sheet{overscroll-behavior:contain;scroll-padding-bottom:110px}
+.sticky-form-actions{bottom:calc(-18px + env(safe-area-inset-bottom));z-index:5}
+
+@media(max-width:560px){
+  .log-date-grid{
+    grid-template-columns:minmax(142px,158px) minmax(0,1fr)!important;
+  }
+  .log-date-grid .field{width:auto!important}
+  .log-date-grid input[type="date"]{width:158px!important}
+}
+@media(max-width:390px){
+  .plan-controls{grid-template-columns:150px minmax(0,1fr)!important;gap:8px}
+  .plan-date-field input[type="date"]{width:150px!important}
+  .plan-recalculate{padding-left:10px;padding-right:10px;font-size:14px}
+  .log-date-grid{grid-template-columns:150px minmax(0,1fr)!important;gap:8px}
+  .log-date-grid input[type="date"]{width:150px!important}
+  .food-outcome-row{grid-template-columns:minmax(0,1fr) 118px 34px}
+}
+@media(max-width:340px){
+  .plan-controls{grid-template-columns:142px minmax(0,1fr)!important;gap:7px}
+  .plan-date-field input[type="date"]{width:142px!important;font-size:14px}
+  .plan-recalculate{font-size:13px;padding-left:8px;padding-right:8px}
+  .log-date-grid{grid-template-columns:142px minmax(0,1fr)!important;gap:7px}
+  .log-date-grid input[type="date"]{width:142px!important;font-size:14px}
+  .food-outcome-row{grid-template-columns:minmax(0,1fr) 112px 32px;gap:5px}
+}
+
+/* Paket D – Lebensmittel- und Rezeptillustrationen */
+.item-illustration{width:24px;height:24px;display:inline-block;flex:0 0 24px;vertical-align:middle;overflow:visible}.food-illustration{width:22px;height:22px;flex-basis:22px}.recipe-illustration{width:24px;height:24px}.food-emoji{font-size:0}.log-result-emoji{display:flex;align-items:center;justify-content:center}.recipe-heading-with-icon{display:flex;align-items:center;gap:9px;min-width:0}.recipe-heading-with-icon>div{min-width:0}.recipe-summary-grid .recipe-heading-with-icon{align-items:flex-start}.selector-row .recipe-illustration{margin-left:2px}.illustration-missing{display:inline-flex;width:22px;height:22px;align-items:center;justify-content:center;border:2px solid #9B2C2C;border-radius:50%;color:#7A1F1F;background:#FFF1F1;font-weight:800;font-size:14px}.freezer-recipe .recipe-illustration{margin-right:8px}
+
+/* Arbeitspaket E – Visuelle Konsistenz (10.1.0)
+ * Zentrale Design-Tokens und abschließende, ansichtsübergreifende Regeln.
+ */
+:root{
+  --surface:var(--card);
+  --surface-soft:#fffaf3;
+  --surface-subtle:#f7f1e8;
+  --surface-input:#fffdf9;
+  --surface-muted:#eee8de;
+  --surface-inactive:#f2eee7;
+  --text-on-accent:#ffffff;
+  --text-success:#3b5940;
+  --text-warning:#6d5227;
+  --text-danger:#743b2b;
+  --line-strong:#c9b8a4;
+  --overlay:rgba(42,35,28,.42);
+  --header-bg:rgba(242,236,226,.95);
+  --nav-bg:rgba(255,253,248,.98);
+  --shadow-soft:0 3px 12px rgba(65,52,38,.055);
+  --space-card:16px;
+  --space-subcard:12px;
+  --space-card-gap:14px;
+  --space-group:12px;
+  --space-related:8px;
+  --icon-food:25px;
+  --icon-feature:27px;
+  --illustration-circle-bg:var(--surface-soft);
+  --illustration-circle-border:var(--line);
+  --illustration-circle-border-width:1px;
+  --icon-nav:22px;
+  --icon-action:20px;
+  --tap-icon:42px;
+  --tap-icon-small:36px;
+}
+
+/* Farbverwendung */
+header{background:var(--header-bg)}
+nav{background:var(--nav-bg)}
+.modal{background:var(--overlay)}
+input,select,textarea{background:var(--surface-input)}
+.btn{color:var(--text-on-accent)}
+.btn.ghost,.stockbtn,.seg button,.chip,.iconbtn{background:var(--surface)}
+.pill.warn,.pill.new{color:var(--text-danger)}
+.pill.ok,.day-complete,.plan-quality-good{color:var(--text-success)}
+.pill.ph{color:var(--text-warning)}
+.notice{background:var(--surface-muted)}
+.notice.warn{color:var(--text-danger)}
+.prep-main,.whybox,.completed-body,.pantry-note,.role-row{background:var(--surface-subtle)}
+.guide-item,.subcard,.metric,.batch-metric>div{background:var(--surface-soft)}
+.foodcard.inactive{background:var(--surface-inactive);border-color:var(--line-strong)}
+
+/* Einheitliches Kartensystem */
+.card{
+  padding:var(--space-card);
+  margin-bottom:var(--space-card-gap);
+  border-radius:var(--r);
+  background:var(--surface);
+  border-color:var(--line);
+  box-shadow:var(--shadow);
+}
+.subcard,.guide-item,.metric,.storage-status,.backup-summary div{
+  padding:var(--space-subcard);
+  border-color:var(--line);
+}
+#blockPlan>.card,#more>.card{margin-bottom:var(--space-card-gap)}
+.day-card{padding:var(--space-card)}
+.day-card .mealbox{
+  margin-top:var(--space-related);
+  padding:var(--space-subcard);
+  border-color:var(--line);
+  background:var(--surface-soft);
+}
+.foodcard,.foodcard.reorderable{
+  margin:0 0 var(--space-related);
+  padding:var(--space-subcard);
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:var(--surface);
+  box-shadow:var(--shadow-soft);
+}
+.foodcard:first-child,.foodcard.reorderable:first-child{border-top:1px solid var(--line)}
+.mealbox{padding:var(--space-subcard) 0}
+.accordion,.history{padding:var(--space-subcard) 0}
+.checkline{padding:var(--space-related) 0}
+.section-divider{margin:var(--space-card) 0}
+.row{gap:var(--space-related)}
+.grid2{gap:var(--space-related)}
+.grid3,.guide-grid,.quicknav,.actionbar,.backup-actions,.backup-summary{gap:var(--space-related)}
+.inline-actions,.prep-actions,.status-chips,.chips,.recipe-meta{gap:7px}
+
+/* Einheitliche Illustrations- und Icongrößen */
+.item-illustration{
+  width:var(--icon-feature);
+  height:var(--icon-feature);
+  flex:0 0 var(--icon-feature);
+  display:inline-block;
+  vertical-align:middle;
+  overflow:visible;
+}
+.food-illustration{
+  width:var(--icon-food);
+  height:var(--icon-food);
+  flex-basis:var(--icon-food);
+}
+.recipe-illustration{width:var(--icon-feature);height:var(--icon-feature);flex-basis:var(--icon-feature)}
+.food-emoji{
+  width:var(--icon-food);
+  min-width:var(--icon-food);
+  height:var(--icon-food);
+  margin-right:0;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  line-height:1;
+  font-size:0;
+}
+.log-result-emoji{
+  width:var(--icon-food);
+  min-width:var(--icon-food);
+  height:var(--icon-food);
+  font-size:0;
+}
+nav button svg{width:var(--icon-nav);height:var(--icon-nav)}
+.iconbtn{
+  min-width:var(--tap-icon);
+  min-height:var(--tap-icon);
+  display:inline-grid;
+  place-items:center;
+  line-height:1;
+}
+.food-outcome-row .iconbtn,.log-entry-actions .iconbtn,.manual-role-actions .iconbtn{
+  min-width:var(--tap-icon-small);
+  min-height:var(--tap-icon-small);
+}
+.illustration-missing{
+  width:var(--icon-food);
+  height:var(--icon-food);
+  flex:0 0 var(--icon-food);
+}
+.recipe-heading-with-icon{gap:var(--space-related)}
+.foodtitle{gap:6px}
+
+/* Mobile: gleiche Regeln, nur kompakter Seitenrand – keine eigene Kartengeometrie. */
+@media(max-width:390px){
+  main{padding:11px}
+  .card,.day-card{padding:14px;border-radius:17px}
+  .subcard,.guide-item,.metric{padding:11px}
+}
+
+/* 10.1.3 – präzisierte feste SVG-Dateien */
+.item-illustration{object-fit:contain;object-position:center;max-width:100%;}
+
+/* 10.1.4 – kompaktes Protokoll und Entwurfswechsel */
+.log-entry-main>div:first-child{min-width:0}
+.log-entry-actions{align-self:start;white-space:nowrap}
+.log-date{font-size:15px;font-weight:750;line-height:1.35}
+.log-foods{font-size:15px;font-weight:400;line-height:1.35;overflow-wrap:anywhere}
+.log-outcome-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 8px;margin-top:5px}
+.log-outcome-item{min-width:0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px;align-items:baseline;font-size:13px;line-height:1.25;color:var(--muted)}
+.log-outcome-item b{min-width:0;color:var(--muted);font-weight:500;overflow-wrap:anywhere}
+.log-outcome-item span{white-space:nowrap}
+.log-entry-meta{margin-top:4px}
+.draft-day-copy{margin:0 0 12px;color:var(--muted)}
+.draft-day-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media(max-width:359px){.log-outcome-grid{gap:4px 6px}.draft-day-actions{grid-template-columns:1fr}}
+.log-outcome-item:only-child,.log-outcome-item:last-child:nth-child(odd){grid-column:1/-1}
+.log-outcome-item{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:5px;row-gap:1px}
+.log-outcome-item b{white-space:nowrap;overflow-wrap:normal;word-break:normal}
+
+/* Phase 1 – transparentes Illustrations-Rendering V2.
+ * Legacy-SVGs bleiben unverändert als einzelnes img; nur /illustrations-v2/ erhält den App-Kreis.
+ */
+.illustration-icon{
+  width:var(--icon-feature);
+  height:var(--icon-feature);
+  flex:0 0 var(--icon-feature);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  box-sizing:border-box;
+  padding:0;
+  border:var(--illustration-circle-border-width) solid var(--illustration-circle-border);
+  border-radius:50%;
+  background:var(--illustration-circle-bg);
+  overflow:hidden;
+  vertical-align:middle;
+}
+.illustration-icon--food{width:var(--icon-food);height:var(--icon-food);flex-basis:var(--icon-food)}
+.illustration-icon--recipe{width:var(--icon-feature);height:var(--icon-feature);flex-basis:var(--icon-feature)}
+.illustration-icon__asset{
+  width:100%;
+  height:100%;
+  display:block;
+  object-fit:contain;
+  object-position:center;
+}
+
+
+/* UI-/UX-Designsystem v1.0 – verbindliche Integrationsregeln */
+:root{
+  --ds-secondary-border:var(--line-strong,#c9b8a4);
+  --ds-pressed:rgba(109,118,81,.08);
+}
+
+/* Primär / Sekundär */
+.btn.secondary,
+.btn.ghost{
+  background:var(--surface,#fffdf8);
+  color:var(--ink);
+  border:1px solid var(--ds-secondary-border);
+}
+.btn.secondary:active,.btn.ghost:active{background:var(--ds-pressed)}
+
+/* Aktive kleine Auswahl: Akzent + weiße Schrift; keine Häkchen */
+.seg button.active,
+.meal-selector-tabs button.active,
+.inventory-kind-tabs button.active,
+.choice-pills input:checked + span{
+  background:var(--accent)!important;
+  color:var(--text-on-accent,#fff)!important;
+  border-color:var(--accent)!important;
+}
+.seg button:not(.active),
+.meal-selector-tabs button:not(.active),
+.inventory-kind-tabs button:not(.active),
+.choice-pills span{
+  background:var(--surface,#fffdf8);
+  color:var(--ink);
+  border-color:var(--line);
+}
+
+/* Scrollbare Filterleiste: rechts bleibt bewusst ein Folgeteil sichtbar. */
+#foodFilters{
+  padding-right:28px;
+  scroll-padding-inline:0 28px;
+  scrollbar-width:none;
+  -webkit-overflow-scrolling:touch;
+}
+#foodFilters::-webkit-scrollbar{display:none}
+
+/* Auswahlkarten: Inhalt links, Auswahlindikator rechts. */
+.selector-row,.live-result{
+  min-height:54px;
+  border:1px solid var(--line);
+  border-radius:14px;
+  margin:0 0 8px;
+  padding:11px;
+  background:var(--surface,#fffdf8);
+  color:var(--ink);
+  box-shadow:var(--shadow-soft);
+}
+.selector-results,.live-results{
+  border:0;
+  background:transparent;
+  border-radius:0;
+}
+.selector-row:last-child,.live-result:last-child{border-bottom:1px solid var(--line)}
+.selector-row.selected,.live-result.selected{
+  background:var(--accent)!important;
+  border-color:var(--accent)!important;
+  color:var(--text-on-accent,#fff)!important;
+}
+.selector-row.selected .small,.live-result.selected .small,
+.selector-row.selected .manual-role-pill{
+  color:var(--text-on-accent,#fff)!important;
+}
+.selector-row.selected .manual-role-pill{
+  background:rgba(255,255,255,.16)!important;
+  border-color:rgba(255,255,255,.45)!important;
+}
+.selector-check{
+  margin-left:auto;
+  order:99;
+  width:26px;
+  height:26px;
+  border-radius:50%;
+  border:1.5px solid var(--line-strong,#c9b8a4);
+  background:transparent;
+}
+.selector-row.selected .selector-check,.live-result.selected .selector-check{
+  background:#fff;
+  color:var(--ink);
+  border-color:#fff;
+}
+.selector-row:active,.live-result:active{filter:brightness(.97);transform:none}
+
+/* Feste Zwei-Aktions-Leiste für lange Formulare und Sheets. */
+.ds-actionbar{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  align-items:stretch;
+}
+.ds-actionbar .btn{width:100%;min-height:46px}
+
+/* Akkordeons: neutral, komplette Kopfzeile, Chevron rechts. */
+.accordion>summary,
+.prep-details>summary,
+.foodedit>summary,
+.individual-rating>summary,
+.remaining-foods>summary,
+.plan-help>summary,
+.all-allergens>summary{
+  color:var(--ink)!important;
+  font-weight:700;
+}
+.accordion>summary{cursor:pointer}
+
+/* Abschnittsüberschriften: neutral; Akzentfarbe bleibt Interaktionen vorbehalten. */
+h1,h2,h3,.panel-details summary b,.help-topic>summary{color:var(--ink)}
+
+/* Pflicht-/Feldfehler: erst im Fehlerzustand hervorheben. */
+.field-error input,.field-error select,.field-error textarea{border-color:var(--terracotta)}
+.field-error-message{font-size:12px;color:var(--text-danger,#743b2b);margin-top:5px}
+
+@media(max-width:390px){
+  .ds-actionbar{grid-template-columns:1fr 1fr}
+  .selector-row,.live-result{gap:8px;padding:10px}
+}
+
+.settings-groups{display:grid;gap:12px}
+.settings-group{border-top:1px solid var(--line)}
+.settings-group:first-child{border-top:0}
+.settings-group>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 0;cursor:pointer;color:var(--ink);font-weight:750}
+.settings-group>summary::-webkit-details-marker{display:none}
+.settings-group>summary::after{content:"⌄";color:var(--muted);font-size:18px;transition:transform .15s}
+.settings-group[open]>summary::after{transform:rotate(180deg)}
+.settings-group-body{padding:0 0 5px}
+
+
+/* 10.1.13 – finaler UI-/UX-Audit nach Designsystem */
+#recipeFilter{
+  padding-right:32px;
+  scroll-padding-inline:0 32px;
+  scrollbar-width:none;
+  -webkit-overflow-scrolling:touch;
+}
+#recipeFilter::-webkit-scrollbar{display:none}
+.recipe-filter-field{margin-bottom:8px}
+.recipe-filters{margin-bottom:4px}
+
+.mealbox>.row:first-child .dish-title,
+.manual-meal-title{margin:0 0 3px}
+.meal-type-text,.day-type-text,.recipe-type-text{color:var(--muted)}
+.plan-lock-strip{display:block}
+.plan-lock-strip .plan-lock-text{display:block;line-height:1.45}
+.progress-percent{font-size:14px;color:var(--ink);white-space:nowrap}
+.progress-facts{margin-top:6px;line-height:1.4}
+
+.manual-role-type{
+  flex:0 0 auto;
+  max-width:112px;
+  padding:0;
+  border:0;
+  background:transparent;
+  color:var(--muted);
+  font-size:11px;
+  font-weight:700;
+  line-height:1.25;
+  text-align:right;
+}
+.manual-role-type.sample{color:var(--terracotta)}
+.manual-role-type.paused{color:var(--text-danger,#743b2b)}
+.selector-row.selected .manual-role-type{color:var(--text-on-accent,#fff)!important}
+
+.food-detail-type{margin:0 0 7px}
+.food-detail-status{margin-bottom:8px}
+
+.recipe-card-v2>summary{position:relative}
+.recipe-summary-grid{grid-template-columns:minmax(0,1fr) auto;align-items:start}
+.recipe-summary-end{display:flex;align-items:center;gap:7px;padding-top:1px}
+.recipe-chevron{display:inline-flex;align-items:center;justify-content:center;width:25px;height:25px;color:var(--muted);font-size:18px;transition:transform .15s}
+.recipe-card-v2[open] .recipe-chevron{transform:rotate(180deg)}
+.recipe-tech-text{display:block;margin-top:2px;color:var(--muted)}
+.recipe-open-section{padding:11px 0;border-top:1px solid var(--line)}
+.recipe-open-section:first-child{border-top:0;padding-top:2px}
+.recipe-open-section h3{font-size:14px;margin:0 0 5px;color:var(--ink)}
+.recipe-open-section p{margin:0;line-height:1.45}
+.recipe-subsection{border-top:1px solid var(--line)}
+.recipe-subsection>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 0;cursor:pointer;color:var(--ink);font-weight:700}
+.recipe-subsection>summary::-webkit-details-marker{display:none}
+.recipe-subsection>summary::after{content:"⌄";color:var(--muted);font-size:18px;transition:transform .15s}
+.recipe-subsection[open]>summary::after{transform:rotate(180deg)}
+.recipe-subsection>summary:active,.panel-details>summary:active,.settings-group>summary:active,.help-topic>summary:active,.accordion>summary:active,.prep-group>summary:active{background:var(--ds-pressed,rgba(0,0,0,.04))}
+.recipe-subsection-body{padding:0 0 12px}
+.recipe-option-list{margin-top:0}
+.recipe-card-v2 .notice,.recipe-card-v2 .recipe-missing{margin-top:8px;margin-bottom:8px}
+
+@media(max-width:390px){
+  .manual-role-type{max-width:92px;white-space:normal}
+  .recipe-summary-grid{grid-template-columns:minmax(0,1fr) auto}
+  .recipe-summary-end .pill{max-width:96px;white-space:normal}
+}
+
+/* 10.1.13 – Häkchen ausschließlich in Auswahlkarten */
+.completed-main{grid-template-columns:minmax(0,1fr) auto}
+.completed-details{margin-left:0}
+.completed-day>summary{grid-template-columns:minmax(0,1fr) auto}
+
+/* 10.1.13 finaler Audit: Pressed-State für alle bestehenden Aufklappbereiche. */
+.prep-details > summary:active,
+.foodedit > summary:active,
+.individual-rating > summary:active,
+.remaining-foods > summary:active,
+.plan-help > summary:active,
+.all-allergens > summary:active {
+  background: var(--surface-pressed, #f2f0eb);
+}
+
+/* 10.1.13 finaler Audit: alle aufklappbaren Titel neutral und mit Pressed-State. */
+details > summary{
+  color:var(--ink)!important;
+  cursor:pointer;
+}
+details > summary:active{
+  background:var(--ds-pressed,rgba(0,0,0,.04));
+}
+.accordion>summary,
+.prep-details>summary,
+.foodedit>summary,
+.individual-rating>summary,
+.remaining-foods>summary,
+.plan-help>summary,
+.all-allergens>summary,
+.completed-details>summary,
+.log-note-details>summary,
+.plan-secondary-actions>summary,
+.version-details>summary,
+.prep-group>summary{
+  list-style:none;
+}
+.accordion>summary::-webkit-details-marker,
+.prep-details>summary::-webkit-details-marker,
+.foodedit>summary::-webkit-details-marker,
+.individual-rating>summary::-webkit-details-marker,
+.remaining-foods>summary::-webkit-details-marker,
+.plan-help>summary::-webkit-details-marker,
+.all-allergens>summary::-webkit-details-marker,
+.completed-details>summary::-webkit-details-marker,
+.log-note-details>summary::-webkit-details-marker,
+.plan-secondary-actions>summary::-webkit-details-marker,
+.version-details>summary::-webkit-details-marker,
+.prep-group>summary::-webkit-details-marker{display:none}
+.accordion>summary::after,
+.prep-details>summary::after,
+.foodedit>summary::after,
+.individual-rating>summary::after,
+.remaining-foods>summary::after,
+.plan-help>summary::after,
+.all-allergens>summary::after,
+.completed-details>summary::after,
+.log-note-details>summary::after,
+.plan-secondary-actions>summary::after,
+.version-details>summary::after,
+.prep-group>summary::after{
+  content:"⌄";
+  color:var(--muted);
+  float:right;
+  margin-left:8px;
+  transition:transform .15s ease;
+}
+.accordion[open]>summary::after,
+.prep-details[open]>summary::after,
+.foodedit[open]>summary::after,
+.individual-rating[open]>summary::after,
+.remaining-foods[open]>summary::after,
+.plan-help[open]>summary::after,
+.all-allergens[open]>summary::after,
+.completed-details[open]>summary::after,
+.log-note-details[open]>summary::after,
+.plan-secondary-actions[open]>summary::after,
+.version-details[open]>summary::after,
+.prep-group[open]>summary::after{transform:rotate(180deg)}
+
+/* 10.1.13 – visuelle Schlusskorrekturen nach echten Mobile-Renderings */
+/* Rezeptfilter dürfen nie zusammengedrückt werden. */
+#recipeFilter button{
+  flex:0 0 auto!important;
+  min-width:max-content;
+  white-space:nowrap;
+  scroll-snap-align:start;
+}
+#recipeFilter button:last-child{margin-right:4px}
+
+/* Kleine Toggle-Optionen: kein Häkchen; aktiv = Akzentfläche + Weiß. */
+.ds-toggle-input{
+  position:absolute!important;
+  inline-size:1px!important;
+  block-size:1px!important;
+  min-height:0!important;
+  margin:0!important;
+  padding:0!important;
+  opacity:0!important;
+  pointer-events:none!important;
+}
+.toggleline{
+  position:relative;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;
+  gap:10px;
+  padding:10px 0;
+  border-top:1px solid var(--line);
+  cursor:pointer;
+}
+.toggleline:first-child{border-top:0}
+.toggle-copy{display:grid;gap:2px;min-width:0}
+.toggle-state,.shopping-toggle{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:66px;
+  min-height:38px;
+  padding:7px 10px;
+  border:1px solid var(--line-strong);
+  border-radius:12px;
+  background:var(--surface,#fffdf8);
+  color:var(--ink);
+  font-size:12px;
+  font-weight:750;
+  white-space:nowrap;
+}
+.toggle-state::after{content:"Aus"}
+.toggleline .ds-toggle-input:checked ~ .toggle-state{
+  background:var(--accent);
+  border-color:var(--accent);
+  color:#fff;
+}
+.toggleline .ds-toggle-input:checked ~ .toggle-state::after{content:"An"}
+.toggleline:active,.shopping-row:active{background:var(--ds-pressed)}
+.compact-toggle{padding:9px 0}
+
+.shopping-row{
+  position:relative;
+  grid-template-columns:minmax(0,1fr) auto!important;
+  cursor:pointer;
+}
+.shopping-toggle::after{content:"Kaufen"}
+.shopping-row .ds-toggle-input:checked ~ .shopping-toggle{
+  background:var(--accent);
+  border-color:var(--accent);
+  color:#fff;
+}
+.shopping-row .ds-toggle-input:checked ~ .shopping-toggle::after{content:"Da"}
+.shopping-done{text-decoration:none;opacity:1}
+.shopping-done>div{opacity:.64}
+
+.toggle-chip{position:relative;cursor:pointer}
+.toggle-chip>span{display:inline-flex;align-items:baseline;gap:4px}
+.toggle-chip small{font-size:11px;color:var(--muted)}
+.toggle-chip:has(.ds-toggle-input:checked){
+  background:var(--accent)!important;
+  border-color:var(--accent)!important;
+  color:#fff!important;
+}
+.toggle-chip:has(.ds-toggle-input:checked) small{color:#fff!important}
+
+/* Einfache Details/Akkordeons verwenden denselben rechten Chevron wie die Hauptkarten. */
+:is(.accordion,.prep-details,.foodedit,.individual-rating,.remaining-foods,.plan-help,.all-allergens,.completed-details,.version-details,.log-note-details,.plan-secondary-actions,.prep-group) > summary{
+  list-style:none;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  width:100%;
+  padding:10px 0;
+  cursor:pointer;
+  color:var(--ink)!important;
+  font-weight:700;
+}
+:is(.accordion,.prep-details,.foodedit,.individual-rating,.remaining-foods,.plan-help,.all-allergens,.completed-details,.version-details,.log-note-details,.plan-secondary-actions,.prep-group) > summary::-webkit-details-marker{display:none}
+:is(.accordion,.prep-details,.foodedit,.individual-rating,.remaining-foods,.plan-help,.all-allergens,.completed-details,.version-details,.log-note-details,.plan-secondary-actions,.prep-group) > summary::after{
+  content:"⌄";
+  flex:0 0 auto;
+  color:var(--muted);
+  font-size:18px;
+  line-height:1;
+  transition:transform .15s;
+}
+:is(.accordion,.prep-details,.foodedit,.individual-rating,.remaining-foods,.plan-help,.all-allergens,.completed-details,.version-details,.log-note-details,.plan-secondary-actions,.prep-group)[open] > summary::after{transform:rotate(180deg)}
+:is(.accordion,.prep-details,.foodedit,.individual-rating,.remaining-foods,.plan-help,.all-allergens,.completed-details,.version-details,.log-note-details,.plan-secondary-actions,.prep-group) > summary:active{background:var(--ds-pressed)}
+.prep-group>summary span{min-width:0}
+
+/* Kartenhierarchie: Typ, dann höchstens ein Status, danach Technik. */
+.meal-status-text{margin-top:2px;color:var(--ink);font-weight:650}
+.lock-label{margin-top:3px;color:var(--muted)}
+.ds-empty{display:grid;justify-items:center;gap:12px}
+.ds-empty .btn{min-width:190px}
+
+
+/* 10.1.14 – Abschlusskorrekturen aus der visuellen Designsystem-Prüfung */
+.eyebrow,
+.prep-urgency-title,
+.food-next-label,
+.shopping-followup-title{
+  color:var(--ink)!important;
+}
+.settings-actionbar{
+  position:sticky;
+  bottom:calc(74px + env(safe-area-inset-bottom));
+  z-index:12;
+  margin:14px -2px 0;
+  padding:10px 2px;
+  background:linear-gradient(to bottom,rgba(255,253,248,0),var(--card) 24%,var(--card));
+}
+.settings-actionbar .btn{min-width:0}
+@media(max-width:360px){
+  .settings-actionbar{gap:6px}
+  .settings-actionbar .btn{padding-inline:9px;font-size:14px}
+}
+
+/* 10.1.14 – Heute-Karten: kleine Abschnittstitel sind neutrale Überschriften. */
+.home-control-details>summary small{
+  color:var(--ink)!important;
+}
+
+/* 10.1.14 – Lebensmittel-Kopfaktionen nutzen die reguläre Sekundärbutton-Komponente. */
+.food-head-actions{
+  gap:8px!important;
+}
+.food-head-actions .btn{
+  background:var(--surface,#fffdf8)!important;
+  color:var(--ink)!important;
+  border:1px solid var(--ds-secondary-border)!important;
+  box-shadow:none!important;
+  min-height:39px;
+  padding:8px 10px;
+  font-weight:750;
+}
+@media(max-width:390px){
+  .food-head-actions{gap:8px!important}
+  .food-head-actions .btn{font-size:12px;padding:7px 8px}
+}
+
+
+/* 10.1.15 Statistik – rein aus dem bestehenden Protokoll abgeleitet. */
+#statisticsSection{scroll-margin-top:92px}
+.statistics-range{margin-bottom:14px}
+.statistics-range button{flex:0 0 auto}
+.statistics-progress-block{padding:12px;border:1px solid var(--line);border-radius:14px;background:var(--surface-soft);margin-bottom:12px}
+.statistics-progress-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.statistics-progress-head h3{margin-bottom:2px}
+.statistics-progress-head>b{font-size:18px;white-space:nowrap}
+.statistics-progress{margin:9px 0 0}
+.statistics-metrics{margin-bottom:4px}
+.statistics-metric{min-width:0}
+.statistics-metric span{display:block;font-size:12px;font-weight:750;color:var(--ink);margin-top:2px}
+.statistics-metric small{display:block;font-size:11px;color:var(--muted);margin-top:3px;line-height:1.3}
+.statistics-section{margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+.statistics-section h3{margin-bottom:3px}
+.statistics-section-copy{margin-bottom:10px}
+.statistics-bars{display:grid;gap:9px}
+.statistics-bar-row{display:grid;gap:5px}
+.statistics-bar-head{display:flex;justify-content:space-between;gap:10px;align-items:baseline;font-size:13px}
+.statistics-bar-head span{min-width:0}
+.statistics-bar-head b{font-size:13px}
+.statistics-bar{height:8px;background:var(--surface-muted);border-radius:999px;overflow:hidden}
+.statistics-bar span{display:block;height:100%;min-width:0;background:var(--accent);border-radius:999px}
+.statistics-amounts{margin-top:10px}
+.statistics-amount-note{margin-top:16px;margin-bottom:0}
+.statistics-empty{padding:18px 8px 6px}
+.statistics-empty .small{max-width:420px;margin:5px auto 12px}
+.statistics-add-log{min-width:150px}
+@media(max-width:380px){.statistics-progress-head{gap:8px}.statistics-progress-head>b{font-size:16px}.statistics-metric b{font-size:19px}}
+
+
+/* 10.1.20 – Real-iPhone Pre-Deploy-Korrekturen */
+#recipeFilter{display:flex;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;width:100%;max-width:100%;-webkit-overflow-scrolling:touch}
+#recipeFilter>button{flex:0 0 auto;width:auto;min-width:max-content;max-width:none}
+.recipe-card-v2 .recipe-heading-with-icon>.recipe-illustration{width:44px;height:44px;flex:0 0 44px}
+.recipe-card-v2 .recipe-heading-with-icon{gap:10px}
+@media(max-width:380px){.recipe-card-v2 .recipe-heading-with-icon>.recipe-illustration{width:40px;height:40px;flex-basis:40px}}
+
+/* 10.1.21 – Lange Bottom-Navigation bei 320 px entzerren, Touchflächen erhalten. */
+@media(max-width:340px){
+  nav{grid-template-columns:repeat(3,minmax(0,1fr)) minmax(0,1.125fr) minmax(0,.875fr)}
+  nav button[data-view="foods"]{padding-left:0;padding-right:6.875px}
+  nav button[data-view="more"]{padding-left:6.875px;padding-right:0}
+}
+
+/* 10.1.23 – gezielte UI-Regressionen UI-01 bis UI-05 */
+/* Buttons bleiben als komplette Beschriftung innerhalb ihrer Aktionsfläche zentriert. */
+.btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  line-height:1.2;
+}
+
+/* UI-03: Kerninhalt der Plan-Karte hat Vorrang; Vorratsinfo ist sekundäre Metainfo. */
+.day-card .meal-summary-row,
+.today-card .meal-summary-row,
+.mealbox .meal-summary-row{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) 40px;
+  align-items:start!important;
+  gap:8px!important;
+}
+.meal-summary-main{min-width:0}
+.meal-summary-actions{
+  display:flex;
+  align-items:flex-start;
+  justify-content:flex-end;
+  min-width:40px;
+}
+.meal-stock-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:5px;
+  min-width:0;
+  margin-top:5px;
+}
+.meal-stock-row .pill{
+  max-width:100%;
+  white-space:normal;
+  overflow-wrap:break-word;
+  word-break:normal;
+  line-height:1.2;
+}
+.day-card .dish-title,
+.today-card .dish-title,
+.dish-title{
+  overflow-wrap:break-word;
+  word-break:normal;
+  hyphens:none;
+}
+.meal-type-text,.meal-status-text{
+  overflow-wrap:normal;
+  word-break:normal;
+}
+
+/* UI-04: eigenständige Zusatzmahlzeiten-Aktion entspricht der sonstigen Button-Ausrichtung. */
+.add-meal-row{
+  justify-content:center!important;
+  text-align:center;
+}
+.add-meal-row .btn{
+  text-align:center;
+}
+
+/* UI-05: kleine Inline-Aktionen dürfen nicht unter ihre Textbreite schrumpfen. */
+.selected-target-row>div:first-child{
+  flex:1 1 auto;
+  min-width:0;
+}
+.selected-target-row>.btn{
+  flex:0 0 auto;
+  min-width:max-content;
+  white-space:nowrap;
+}
+
+/* UI-02: feste Sheet-Aktionsleisten sind undurchsichtig; Inhalt endet davor. */
+.sticky-form-actions{
+  background:var(--bg)!important;
+  background-image:none!important;
+}
+.inventory-form-note{margin-bottom:0}
+
+/* UI-01: Protokoll, Statistik und Allergene teilen in „Mehr“ dasselbe Innenraster. */
+#more .collapsible-card{
+  padding:0;
+}

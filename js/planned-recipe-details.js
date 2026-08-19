@@ -16,16 +16,21 @@
     if (!plannedIds.size) return [];
     let hints = [];
     let sets = [recipe.requires || [], ...(recipe.alternatives || [])];
-    let variantIndex = sets.findIndex((requirements) =>
-      requirements.length > 0 &&
-      requirements.every((name) => {
-        let id = resolveFoodId(name);
-        return !!id && plannedIds.has(id);
-      })
-    );
-    if (variantIndex >= 0) {
-      let label = recipe.variantLabels?.[variantIndex] || recipe.legacyNames?.[variantIndex] || "";
-      if (label) hints.push(label);
+    let hasSetVariants =
+      (recipe.alternatives || []).length > 0 &&
+      (recipe.variantLabels?.length === sets.length || recipe.legacyNames?.length === sets.length);
+    if (hasSetVariants) {
+      let variantIndex = sets.findIndex((requirements) =>
+        requirements.length > 0 &&
+        requirements.every((name) => {
+          let id = resolveFoodId(name);
+          return !!id && plannedIds.has(id);
+        })
+      );
+      if (variantIndex >= 0) {
+        let label = recipe.variantLabels?.[variantIndex] || recipe.legacyNames?.[variantIndex] || "";
+        if (label) hints.push(label);
+      }
     }
     for (let option of [...(recipe.oneOf || []), ...(recipe.milkChoices || [])]) {
       let id = resolveFoodId(option);

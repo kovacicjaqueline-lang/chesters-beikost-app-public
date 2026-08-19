@@ -78,10 +78,45 @@ function statusSource(f) {
   if (ls.some((l) => outcomeForFood(l, f.id) === "tried")) return "automatisch aus einer Kostprobe";
   return "automatisch – noch ohne Protokoll";
 }
+
+/*
+ * FOOD-COUNT: Für das 100-Lebensmittel-Ziel zählt die ausdrücklich freigegebene
+ * kulinarische Grundstoff-Identität, nicht jede Verarbeitungsform als neues FOOD.
+ * Diese Zuordnung ist absichtlich getrennt von foodFamily/allergenFamily, weil
+ * jene Felder Planner- und Allergenverhalten steuern.
+ */
+const COUNT100_IDENTITY_BY_ID = Object.freeze({
+  sesam: "sesam",
+  tahin: "sesam",
+  mais: "mais",
+  "mais-polenta": "mais",
+  polenta: "mais",
+  hafer: "hafer",
+  haferdrink: "hafer",
+  weizen: "weizen",
+  weizengriess: "weizen",
+  bulgur: "weizen",
+  couscous: "weizen",
+  "nudeln-pasta": "weizen",
+  brot: "weizen",
+});
+function count100Identity(foodOrId, name = "") {
+  let id = typeof foodOrId === "object" ? foodOrId?.id : foodOrId;
+  let foodName = typeof foodOrId === "object" ? foodOrId?.name : name;
+  let canonical = canonicalId(id || "", foodName || "");
+  return COUNT100_IDENTITY_BY_ID[canonical] || canonical;
+}
 function learnedFoods() {
+  let seen = new Set();
   return state.foods
     .filter((f) => f.count100 && rank(f) >= 1)
-    .sort((a, b) => a.priority - b.priority);
+    .sort((a, b) => a.priority - b.priority)
+    .filter((f) => {
+      let identity = count100Identity(f);
+      if (!identity || seen.has(identity)) return false;
+      seen.add(identity);
+      return true;
+    });
 }
 function lastDate(id, okOnly = false) {
   let ls = logsFor(id).filter((l) => !okOnly || outcomeForFood(l, id) === "eaten");

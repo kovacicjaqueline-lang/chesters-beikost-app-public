@@ -414,7 +414,7 @@ function saveLog() {
     return;
   }
 
-  let selectedTexture = offered ? validLogTextureStage(textureValue) : null;
+  let selectedTexture = validLogTextureStage(textureValue);
   let newLog = {
     id: pendingLog.editId || `${Date.now()}-${Math.random().toString(36).slice(2)}`,
     date: document.getElementById("logDate").value,

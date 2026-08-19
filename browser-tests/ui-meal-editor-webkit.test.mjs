@@ -94,7 +94,7 @@ try {
     );
 
     await search.fill("Karo");
-    const carrot = page.locator(".selectFood").filter({ hasText: "Karotte" });
+    const carrot = page.locator('.selectFood[data-food="karotte"]');
     await carrot.waitFor();
 
     const renderedSearch = page.locator("#mealSelectorSearch");
@@ -150,7 +150,7 @@ try {
   await page.locator("#selectorFoods").click();
   let search = page.locator("#mealSelectorSearch");
   await search.fill("Banane");
-  await page.locator(".selectFood").filter({ hasText: "Banane" }).click();
+  await page.locator('.selectFood[data-food="banane"]').click();
   await page.locator("#confirmManualMeal").click();
   await page.locator(`.removeManualMeal[data-date="${dates.today}"][data-meal="lunch"]`).waitFor();
   let savedState = await page.evaluate(() => window.__beikostTest.getState());
@@ -173,10 +173,10 @@ try {
   await page.locator("#selectorFoods").click();
   search = page.locator("#mealSelectorSearch");
   await search.fill("Banane");
-  await page.locator(".selectFood").filter({ hasText: "Banane" }).click();
+  await page.locator('.selectFood[data-food="banane"]').click();
   search = page.locator("#mealSelectorSearch");
   await search.fill("Pfirsich");
-  await page.locator(".selectFood").filter({ hasText: "Pfirsich" }).click();
+  await page.locator('.selectFood[data-food="pfirsich"]').click();
 
   assert.match(await page.locator(".manual-role-group.base").innerText(), /Banane/, "Banane muss Hauptbasis bleiben");
   assert.match(await page.locator(".manual-role-group.sample").innerText(), /Pfirsich/, "Pfirsich muss als Kostprobe geführt werden");
@@ -188,6 +188,14 @@ try {
   );
   assert.ok(preparationKey, "Banane muss vorhandene Darreichungsoptionen anbieten");
   await bananaPreparation.selectOption(preparationKey);
+
+  const peachPreparation = page.locator('[data-manual-preparation="pfirsich"]');
+  await peachPreparation.waitFor();
+  const peachPreparationKey = await peachPreparation.evaluate((select) =>
+    Array.from(select.options).find((option) => option.value)?.value || "",
+  );
+  assert.ok(peachPreparationKey, "Pfirsich muss vorhandene Darreichungsoptionen anbieten");
+  await peachPreparation.selectOption(peachPreparationKey);
 
   await page.locator("#confirmManualMeal").click();
   await page.locator(`.removeManualMeal[data-date="${dates.future}"][data-meal="breakfast"]`).waitFor();
@@ -203,11 +211,13 @@ try {
 
   savedState = await page.evaluate(() => window.__beikostTest.getState());
   assert.equal(savedState.manualMeals[`${dates.future}|breakfast`].foodPreparationKeys.banane, preparationKey);
+  assert.equal(savedState.manualMeals[`${dates.future}|breakfast`].foodPreparationKeys.pfirsich, peachPreparationKey);
   assert.equal(savedState.planLocks[`${dates.future}|breakfast`].mode, "manual", "manueller Eintrag bleibt fest eingeplant");
 
   await manualCard.locator(".replaceMeal").click();
   await page.locator("#manualMealTargetDate").waitFor();
   assert.equal(await page.locator('[data-manual-preparation="banane"]').inputValue(), preparationKey, "Darreichung muss beim erneuten Öffnen erhalten bleiben");
+  assert.equal(await page.locator('[data-manual-preparation="pfirsich"]').inputValue(), peachPreparationKey, "Kostproben-Darreichung muss beim erneuten Öffnen erhalten bleiben");
   await page.locator("#manualMealTargetDate").fill(dates.today);
   await page.locator("#manualMealTargetDate").dispatchEvent("change");
   await page.locator("#confirmManualMeal").click();
@@ -216,6 +226,7 @@ try {
   savedState = await page.evaluate(() => window.__beikostTest.getState());
   assert.equal(savedState.manualMeals[`${dates.future}|breakfast`], undefined, "alter Zukunftsschlüssel muss entfernt werden");
   assert.equal(savedState.manualMeals[`${dates.today}|breakfast`].foodPreparationKeys.banane, preparationKey, "Darreichung muss beim Verschieben auf heute erhalten bleiben");
+  assert.equal(savedState.manualMeals[`${dates.today}|breakfast`].foodPreparationKeys.pfirsich, peachPreparationKey, "Kostproben-Darreichung muss beim Verschieben erhalten bleiben");
 
   manualCard = page.locator(".manual-meal").filter({
     has: page.locator(`.removeManualMeal[data-date="${dates.today}"][data-meal="breakfast"]`),
@@ -237,7 +248,27 @@ try {
   await page.locator(`.removeManualMeal[data-date="${dates.today}"][data-meal="breakfast"]`).waitFor();
   savedState = await page.evaluate(() => window.__beikostTest.getState());
   assert.equal(savedState.manualMeals[`${dates.today}|breakfast`].foodPreparationKeys.banane, preparationKey, "Auf morgen darf die explizite Darreichung nicht verlieren");
+  assert.equal(savedState.manualMeals[`${dates.today}|breakfast`].foodPreparationKeys.pfirsich, peachPreparationKey, "Auf morgen darf die Kostproben-Darreichung nicht verlieren");
   assert.equal(savedState.planLocks[`${dates.today}|breakfast`].mode, "manual", "Auf morgen darf den manuellen Lock nicht verlieren");
+
+  // Review-Regression: Wird im Protokoll ein Lebensmittel entfernt, darf dessen
+  // vorher geplante Darreichung nicht als veralteter Schlüssel im Log verbleiben.
+  manualCard = page.locator(".manual-meal").filter({
+    has: page.locator(`.removeManualMeal[data-date="${dates.today}"][data-meal="breakfast"]`),
+  });
+  await manualCard.evaluate((element) => { element.open = true; });
+  await manualCard.locator(".logMeal").click();
+  await page.locator('[data-remove-log-food="pfirsich"]').waitFor();
+  await page.locator('[data-remove-log-food="pfirsich"]').click();
+  await page.locator("#saveLog").click();
+  await page.locator("#logModal").waitFor({ state: "hidden" });
+
+  savedState = await page.evaluate(() => window.__beikostTest.getState());
+  const savedBreakfastLog = savedState.logs.find((log) => log.date === dates.today && log.meal === "breakfast");
+  assert.ok(savedBreakfastLog, "protokollierte manuelle Mahlzeit muss gespeichert sein");
+  assert.deepEqual(savedBreakfastLog.foodIds, ["banane"], "entfernte Kostprobe darf nicht im Log verbleiben");
+  assert.equal(savedBreakfastLog.foodPreparationKeys?.banane, preparationKey, "Darreichung des tatsächlich protokollierten Lebensmittels bleibt erhalten");
+  assert.equal(savedBreakfastLog.foodPreparationKeys?.pfirsich, undefined, "entfernte Kostprobe darf keine veraltete Darreichung im Log hinterlassen");
 
   await context.close();
 } finally {

@@ -3,11 +3,33 @@
 /* Geplante Rezepte direkt aus Heute und Wochenplan öffnen.
  * Die vorhandene Recipe-V2-Darstellung und die zentrale recipeByName-Auflösung
  * bleiben die einzigen Quellen für Rezeptdetails und Rezeptnamen.
+ *
+ * Wichtig: Dieses UI-Feature baut den Planner nicht erneut auf. Der bereits
+ * gerenderte Mahlzeitenkontext wird ausschließlich aus vorhandenen data-plan-
+ * Payloads beziehungsweise dem tatsächlich gespeicherten Protokoll gelesen.
  */
 (function plannedRecipeDetailsModule(root) {
-  function displayedRecipeName(meal, completed = null) {
-    if (completed) return String(completed.recipeName || "").trim();
-    return String(meal?.recipeName || "").trim();
+  function normalizedRecipeContext(recipeName, foodIds = []) {
+    return {
+      recipeName: String(recipeName || "").trim(),
+      foodIds: [...new Set((foodIds || []).filter(Boolean).map(String))],
+    };
+  }
+
+  function planPayloadRecipeContext(encodedPayload) {
+    if (!encodedPayload) return normalizedRecipeContext("", []);
+    try {
+      let payload = JSON.parse(decodeURIComponent(String(encodedPayload)));
+      return normalizedRecipeContext(payload?.recipeName, payload?.foodIds || []);
+    } catch (_error) {
+      return normalizedRecipeContext("", []);
+    }
+  }
+
+  function completedLogRecipeContext(logId, logs = []) {
+    let log = (logs || []).find((entry) => String(entry?.id || "") === String(logId || ""));
+    if (!log) return normalizedRecipeContext("", []);
+    return normalizedRecipeContext(log.recipeName, log.foodIds || []);
   }
 
   function recipeContextHints(recipe, foodIds = [], resolveFoodId = (name) => name) {
@@ -98,12 +120,49 @@
     return markRecipeTitle(recipeTarget, recipeName, foodIds);
   }
 
+  function recipeContextForMealNode(mealNode, currentState = null) {
+    if (!mealNode) return normalizedRecipeContext("", []);
+    if (mealNode.querySelector?.(".completed-title")) {
+      let edit = mealNode.querySelector?.(".editCompletedLog[data-log]");
+      return completedLogRecipeContext(edit?.dataset?.log || "", currentState?.logs || []);
+    }
+    let planSource = mealNode.querySelector?.("[data-plan]");
+    return planPayloadRecipeContext(planSource?.dataset?.plan || "");
+  }
+
+  function decorateMealRecipeTitle(mealNode, currentState = null) {
+    let context = recipeContextForMealNode(mealNode, currentState);
+    if (!context.recipeName) return null;
+    let completedTitle = mealNode.querySelector?.(".completed-title");
+    if (completedTitle)
+      return markCompletedRecipeTitle(completedTitle, context.recipeName, context.foodIds);
+    return markRecipeTitle(
+      mealNode.querySelector?.(".dish-title, .manual-meal-title"),
+      context.recipeName,
+      context.foodIds,
+    );
+  }
+
+  function decorateRecipeTitles(container, currentState = null) {
+    if (!container?.querySelectorAll) return 0;
+    let decorated = 0;
+    for (let mealNode of container.querySelectorAll(".mealbox, .manual-meal")) {
+      if (decorateMealRecipeTitle(mealNode, currentState)) decorated += 1;
+    }
+    return decorated;
+  }
+
   if (typeof module !== "undefined" && module.exports) {
     module.exports = {
-      displayedRecipeName,
+      normalizedRecipeContext,
+      planPayloadRecipeContext,
+      completedLogRecipeContext,
       recipeContextHints,
       markRecipeTitle,
       markCompletedRecipeTitle,
+      recipeContextForMealNode,
+      decorateMealRecipeTitle,
+      decorateRecipeTitles,
     };
   }
 
@@ -149,52 +208,18 @@
     return true;
   }
 
-  function decorateMealRecipeTitle(mealNode, recipeName, foodIds = []) {
-    if (!mealNode || !recipeName) return;
-    let completedTitle = mealNode.querySelector(".completed-title");
-    if (completedTitle) {
-      markCompletedRecipeTitle(completedTitle, recipeName, foodIds);
-      return;
-    }
-    markRecipeTitle(
-      mealNode.querySelector(".dish-title, .manual-meal-title"),
-      recipeName,
-      foodIds,
+  function decorateHomeRecipeTitles() {
+    return decorateRecipeTitles(
+      document.getElementById("todayCard"),
+      typeof state !== "undefined" ? state : null,
     );
   }
 
-  function decorateHomeRecipeTitles() {
-    let on = today();
-    let day = buildDays(on, 1)[0];
-    let activeMeals = (day?.meals || []).filter((meal) => meal.active && meal.focusId);
-    let mealNodes = [...document.querySelectorAll("#todayCard .mealbox")];
-    activeMeals.forEach((meal, index) => {
-      let completed = typeof completedLog === "function" ? completedLog(on, meal.meal) : null;
-      let recipeName = displayedRecipeName(meal, completed);
-      let foodIds = completed ? completed.foodIds || [] : meal.foodIds || [];
-      decorateMealRecipeTitle(mealNodes[index], recipeName, foodIds);
-    });
-  }
-
   function decoratePlanRecipeTitles() {
-    let days = planDisplayDays(visiblePlanStart(), 7);
-    let dayNodes = [
-      ...document.querySelectorAll("#blockPlan > .day-card, #blockPlan > .completed-day"),
-    ];
-    days.forEach((day, dayIndex) => {
-      let dayNode = dayNodes[dayIndex];
-      if (!dayNode) return;
-      let activeMeals = (day.meals || []).filter((meal) => meal.active);
-      let mealNodes = [...dayNode.querySelectorAll(".mealbox, .manual-meal")];
-      activeMeals.forEach((meal, mealIndex) => {
-        let completed = typeof completedLog === "function"
-          ? completedLog(day.date, meal.meal)
-          : null;
-        let recipeName = displayedRecipeName(meal, completed);
-        let foodIds = completed ? completed.foodIds || [] : meal.foodIds || [];
-        decorateMealRecipeTitle(mealNodes[mealIndex], recipeName, foodIds);
-      });
-    });
+    return decorateRecipeTitles(
+      document.getElementById("blockPlan"),
+      typeof state !== "undefined" ? state : null,
+    );
   }
 
   let originalRenderHome = renderHome;

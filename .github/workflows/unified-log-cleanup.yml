@@ -26,168 +26,49 @@ jobs:
         run: |
           python3 <<'PY'
           from pathlib import Path
-          import re
+          import subprocess
+          import textwrap
 
-          def read(path):
-              return Path(path).read_text()
+          source = subprocess.check_output(
+              ["git", "show", "3422b33222e45d5f2c9685ce63df809fb7a54333:.github/workflows/unified-log-cleanup.yml"],
+              text=True,
+          )
+          start_marker = "          python3 <<'PY'\n"
+          end_marker = "\n          PY\n\n          npm ci"
+          start = source.index(start_marker) + len(start_marker)
+          end = source.index(end_marker, start)
+          script = textwrap.dedent(source[start:end])
 
-          def write(path, text):
-              Path(path).write_text(text)
+          # Der ursprüngliche Patch suchte im Familienzähler nach einer äußeren map(log)-Form;
+          # tatsächlich liegt dort die innere map(() => ...)-Form vor.
+          script = script.replace(
+              "r'\\.map\\(\\(log\\) => `\\$\\{log\\.date\\}\\|\\$\\{log\\.meal\\}`\\)'",
+              "r'\\.map\\(\\(\\) => `\\$\\{log\\.date\\}\\|\\$\\{log\\.meal\\}`\\)'",
+          )
+          script = script.replace(
+              "'.map((log) => typeof logExposureKey === \"function\" ? logExposureKey(log) : `${log.date}|${log.meal}`)'",
+              "'.map(() => typeof logExposureKey === \"function\" ? logExposureKey(log) : `${log.date}|${log.meal}`)'",
+          )
 
-          def rep(path, old, new, count=1):
-              text = read(path)
-              found = text.count(old)
-              if found < count:
-                  raise SystemExit(f"{path}: expected at least {count} occurrence(s), found {found}: {old[:90]!r}")
-              text = text.replace(old, new, count)
-              write(path, text)
+          namespace = {}
+          exec(compile(script, "unified-log-cleanup", "exec"), namespace, namespace)
+          rep = namespace["rep"]
+          rep_all = namespace["rep_all"]
 
-          def rep_all(path, old, new):
-              text = read(path)
-              if old not in text:
-                  raise SystemExit(f"{path}: missing replacement target: {old[:90]!r}")
-              write(path, text.replace(old, new))
-
-          def sub(path, pattern, repl, count=1):
-              text = read(path)
-              new, n = re.subn(pattern, repl, text, count=count, flags=re.S)
-              if n != count:
-                  raise SystemExit(f"{path}: regex replacement expected {count}, got {n}: {pattern[:90]!r}")
-              write(path, new)
-
-          # Shared log rules: only positive experiences require texture.
-          rep('js/log-core.js',
-              'function logTextureSelectionRequired({ offered = false, isEdit = false, legacyUnknown = false, textureValue = "" } = {}) {\n  if (!offered || String(textureValue || "")) return false;\n  return !(isEdit && legacyUnknown);\n}',
-              'function logTextureSelectionRequired({ positiveOutcome = false, isEdit = false, legacyUnknown = false, textureValue = "" } = {}) {\n  if (!positiveOutcome || String(textureValue || "")) return false;\n  return !(isEdit && legacyUnknown);\n}')
-
-          # Log editor: preserve stored legacy identity on edit, but keep one unified UI.
-          rep('js/log.js',
-              '  let legacyEntryType = String(input.entryType || "");\n  let mealContext = plannedLogContext(input);\n  if (!mealContext) input.meal = "";',
-              '  let legacyEntryType = String(input.entryType || "");\n  let originalMeal = String(input.meal || "");\n  let mealContext = plannedLogContext(input);\n  if (!mealContext && !input.editId) input.meal = "";')
-          rep('js/log.js',
-              '  pendingLog.entryType = "food";\n  pendingLog.__mealContext = mealContext;\n  pendingLog.__legacyEntryType = legacyEntryType;',
-              '  pendingLog.entryType = pendingLog.editId ? (legacyEntryType || "food") : "food";\n  pendingLog.__mealContext = mealContext;\n  pendingLog.__legacyEntryType = legacyEntryType;\n  pendingLog.__originalMeal = originalMeal;')
-          rep('js/log.js', '  p.entryType = "food";\n\n  document.getElementById("logTitle")', '  document.getElementById("logTitle")')
-          rep('js/log.js',
-              '  let offered = Object.values(foodOutcomes).some((outcome) => outcome !== "not_offered");\n  let textureValue = document.getElementById("logTexture")?.value || "";\n  let textureRequired = logTextureSelectionRequired({\n    offered,',
-              '  let outcomes = Object.values(foodOutcomes);\n  let offered = outcomes.some((outcome) => outcome !== "not_offered");\n  let positiveTextureOutcome = outcomes.some((outcome) => ["eaten", "tried"].includes(outcome));\n  let textureValue = document.getElementById("logTexture")?.value || "";\n  let textureRequired = logTextureSelectionRequired({\n    positiveOutcome: positiveTextureOutcome,')
-          rep('js/log.js',
-              '    meal: pendingLog.__mealContext ? String(pendingLog.meal || "") : "",\n    foodIds: ids,',
-              '    meal: pendingLog.editId\n      ? String(pendingLog.__originalMeal ?? pendingLog.meal ?? "")\n      : (pendingLog.__mealContext ? String(pendingLog.meal || "") : ""),\n    foodIds: ids,')
-          rep('js/log.js', '    entryType: "food",\n    baseFoodIds: mainIds,', '    entryType: pendingLog.editId ? (pendingLog.__legacyEntryType || "food") : "food",\n    baseFoodIds: mainIds,')
-          rep('js/log.js',
-              'Bei tatsächlich angebotenem Essen erforderlich. Alte Einträge ohne dokumentierte Konsistenz bleiben unverändert möglich.',
-              'Bei „Probiert“ oder „Gegessen“ erforderlich. Bei Ablehnung oder Reaktion optional; alte Einträge ohne dokumentierte Konsistenz bleiben unverändert.')
-
-          # Migration: preserve explicit known texture; do not rewrite legacy sample identity/history.
-          rep('js/migrations.js',
-              '    let textureKnown = !legacySample && l.textureKnown !== false && storedTexture !== null;',
-              '    let textureKnown = storedTexture !== null && (l.textureKnown === true || (!legacySample && l.textureKnown !== false));')
-          sub('js/migrations.js',
-              r'      id: "chester-huhn-kostprobe-2026-07-22",\n      date: "2026-07-22",\n      meal: "",\n      foodIds: \["huhn"\],\n      focusId: "huhn",\n      outcome: "tried",\n      foodOutcomes: \{ huhn: "tried" \},\n      entryType: "food",\n      baseFoodIds: \[\],\n      sampleFoodIds: \["huhn"\],\n      foodRoles: \{ huhn: "sample" \},\n      amount: "",\n      textureKnown: false,',
-              '      id: "chester-huhn-kostprobe-2026-07-22",\n      date: "2026-07-22",\n      meal: "lunch",\n      foodIds: ["huhn"],\n      focusId: "huhn",\n      outcome: "tried",\n      foodOutcomes: { huhn: "tried" },\n      amount: "",\n      textureStage: 1,')
-          rep('js/migrations.js', '      amount: log.amount || "",', '      amount: entryType === "sample" ? "" : (log.amount || ""),')
-
-          # Planner: real meal slots, distinct free exposures, direct terminology and eligible follow-up meal.
-          rep('js/planning.js', '        if (!log?.date || log.date > on || log.entryType === "sample") return false;', '        if (!log?.date || log.date > on || !logHasMealContext(log)) return false;')
-          rep('js/planning.js', '      .map((l) => `${l.date}|${l.meal}`),', '      .map(logExposureKey),')
-          rep('js/planning.js',
-              '    let note = c.type === "neu" ? "Neue Kostprobe separat oder in 1–2 Löffeln der sicheren Basis anbieten." : c.type === "gezielt wiederholen" ? "Kostprobe nach Pause erneut klein und getrennt bewerten." : c.type === "Allergen wiederholen" ? "Allergen mit bekannter Basis gezielt wiederholen." : "Bekannte Lebensmittel sinnvoll rotieren; Vorrat bevorzugt nutzen.";',
-              '    let note = c.type === "neu" ? "Neue Einführung separat oder in kleiner Menge mit der sicheren Basis anbieten." : c.type === "gezielt wiederholen" ? "Wiederholung nach Pause erneut klein und getrennt bewerten." : c.type === "Allergen wiederholen" ? "Allergen mit bekannter Basis gezielt wiederholen." : "Bekannte Lebensmittel sinnvoll rotieren; Vorrat bevorzugt nutzen.";')
-          rep('js/planning.js',
-              '  if (sample.length) {\n    let sampleName = naturalFoodList(sample.map((x) => x.name));\n    if (!base.length) return `${sampleName} als Kostprobe`;\n    return `${naturalMealFoodTitle(base)} und ${sampleName} als Kostprobe`;\n  }',
-              '  if (sample.length) {\n    let sampleName = naturalFoodList(sample.map((x) => x.name));\n    let role = learningRoleLabel(rank(sample[0]), status(sample[0]), m.type || "");\n    if (!base.length) return `${sampleName} zur ${role}`;\n    return `${naturalMealFoodTitle(base)} mit ${sampleName} zur ${role}`;\n  }')
-          rep('js/planning.js', '      : "Schon gegessen / Kombination";', '      : "Bekannte Kombination";')
-          rep_all('js/planning.js', 'Bitte als bekannte Komponente oder Kostprobe kennzeichnen.', 'Bitte als bekannte Komponente oder Einführung kennzeichnen.')
-          rep_all('js/planning.js', 'Bitte als Kostprobe kennzeichnen oder entfernen.', 'Bitte als Einführung kennzeichnen oder entfernen.')
-          rep_all('js/planning.js', 'Nur eine neue oder unsichere Kostprobe gleichzeitig:', 'Nur eine neue oder unsichere Einführung gleichzeitig:')
-          rep('js/planning.js', 'bewusst ohne Basis als kleine Kostprobe erneut anbieten.', 'bewusst ohne Basis als kleine Wiederholung anbieten.')
-          marker = 'function rebuildFoodConsequences(foodId) {'
-          helper = '''function followUpMealForLog(log, foodId) {\n  if (logHasMealContext(log)) return log.meal;\n  let item = food(foodId);\n  let allowed = (item?.meals || []).filter((meal) => LOG_MEAL_KEYS.includes(meal));\n  let preferred = phaseMealKeys().find((meal) => allowed.includes(meal));\n  return preferred || allowed[0] || "lunch";\n}\n'''
-          rep('js/planning.js', marker, helper + marker)
-          rep('js/planning.js',
-              '  if (result === "not_accepted") {\n    scheduleFollowUp(foodId, log.date, log.meal || "lunch", "rejection", log.rejectionStrength || "interest");',
-              '  if (result === "not_accepted") {\n    scheduleFollowUp(foodId, log.date, followUpMealForLog(log, foodId), "rejection", log.rejectionStrength || "interest");')
-          rep('js/planning.js', 'meal: log.meal || "lunch", baseFoodId:', 'meal: followUpMealForLog(log, foodId), baseFoodId:')
-          rep('js/planning.js', '} else scheduleFollowUp(foodId, log.date, log.meal || "lunch", "not_offered", "no_opportunity");', '} else scheduleFollowUp(foodId, log.date, followUpMealForLog(log, foodId), "not_offered", "no_opportunity");')
-
-          # UI: direct source copy/semantics; remove the old two-path chooser entirely.
-          rep('js/ui.js',
-              '    1: "glatt / fein zerdrückt",\n    2: "dick püriert / weich zerdrückt",\n    3: "weich-stückig / Fingerfood",\n    4: "weiche Familienkost",\n  }[Number(stage)] || "glatt / fein zerdrückt";',
-              '    1: "glatt oder fein zerdrückt",\n    2: "dick püriert oder weich zerdrückt",\n    3: "weich stückig",\n    4: "weiche Familienkost",\n  }[Number(stage)] || "glatt oder fein zerdrückt";')
-          sub('js/ui.js',
-              r'function textureSuccessCount\(stage = Number\(state\.settings\.textureStage\)\) \{.*?\n\}',
-              'function textureSuccessCount(stage = Number(state.settings.textureStage)) {\n  return new Set(\n    state.logs\n      .filter((log) => logTextureStage(log) === Number(stage) && logPositiveOutcome(log, outcomeForFood))\n      .map(logExposureKey),\n  ).size;\n}')
-          rep('js/ui.js', '${successes} gut bewältigte Mahlzeit${successes === 1 ? "" : "en"} auf dieser Stufe.', '${successes} positive Texturerfahrung${successes === 1 ? "" : "en"} auf dieser Stufe.')
-          sub('js/ui.js',
-              r'function compactMealRolesHtml\(m\) \{.*?\n\}\nfunction recipeMissingSummary',
-              '''function compactMealRolesHtml(m) {\n  let sample = (m.sampleFoodIds || []).map(food).filter(Boolean);\n  let base = (m.baseFoodIds || []).map(food).filter(Boolean);\n  let all = [...new Map([...(base || []), ...(sample || []), ...(m.foodIds || []).map(food).filter(Boolean)].map((item) => [item.id, item])).values()];\n  if (all.length <= 1 && !m.recipeName) return "";\n  if (sample.length) {\n    let role = learningRoleLabel(rank(sample[0]), status(sample[0]), m?.type || "");\n    return `<div class="compact-role-list">${base.length ? `<div class="compact-role-row"><b>${esc(base.map((x) => x.name).join(" + "))}</b><span>Hauptmahlzeit</span></div>` : ""}<div class="compact-role-row sample"><b>${esc(sample.map((x) => x.name).join(" + "))}</b><span>${esc(role)}</span></div></div>`;\n  }\n  let rows = (m.foodIds || []).map(food).filter(Boolean).map((f, index) => `<div class="compact-role-row"><b>${esc(f.name)}</b><span>${index === 0 ? "Hauptmahlzeit" : "Bestandteil"}</span></div>`).join("");\n  return rows ? `<div class="compact-role-list">${rows}</div>` : "";\n}\nfunction recipeMissingSummary''')
-          sub('js/ui.js',
-              r'function mealTypeText\(m\) \{.*?\n\}',
-              '''function mealTypeText(m) {\n  let sample = (m?.sampleFoodIds || []).map(food).filter(Boolean);\n  if (m?.recipeName) return "Rezept";\n  if (!sample.length) return "Mahlzeit";\n  let role = learningRoleLabel(rank(sample[0]), status(sample[0]), m?.type || "");\n  return (m?.baseFoodIds || []).length ? `Mahlzeit mit ${role}` : role;\n}''')
-          rep('js/ui.js', '＋ Mahlzeit oder Kostprobe', '＋ Eintrag')
-          rep('js/ui.js', '    button.onclick = (event) => { event.preventDefault(); toggleEntryChooser(button, today()); };', '    button.onclick = (event) => { event.preventDefault(); openLog(null); };')
-          rep('js/ui.js', '  document.getElementById("freeLog").onclick = (event) => { event.preventDefault(); toggleEntryChooser(document.getElementById("freeLog"), today()); };', '  document.getElementById("freeLog").onclick = (event) => { event.preventDefault(); openLog(null); };')
-          sub('js/ui.js', r'\nfunction toggleEntryChooser\(anchor, date = today\(\)\) \{.*?\n\}\nfunction renderHome\(\)', '\nfunction renderHome()', count=1)
-          rep_all('js/ui.js', 'Als Kostprobe', 'Als Einführung')
-          rep_all('js/ui.js', 'Hauptbasis und Kostprobe werden getrennt gespeichert.', 'Hauptbasis und Lernrolle werden getrennt gespeichert.')
-          rep_all('js/ui.js', ' · Kostprobe:', ' · Einführung:')
-          rep_all('js/ui.js', 'Kostprobe · pausiert', 'Einführung · pausiert')
-          rep_all('js/ui.js', 'wird Kostprobe', 'wird Einführung')
-          rep_all('js/ui.js', 'group("Kostprobe", validation.samples, "sample")', 'group("Einführung", validation.samples, "sample")')
-          rep('js/ui.js', '// Bekannte Komponenten bleiben bewusst außerhalb von Hauptbasis und Kostprobe.', '// Bekannte Komponenten bleiben bewusst außerhalb von Hauptbasis und Lernrolle.')
-          rep('js/ui.js', '["Reine Kostproben ohne Gramm", state.logs.filter((log) => log.entryType === "sample").every((log) => !log.amount)]', '["Legacy-Einträge bleiben lesbar", state.logs.filter((log) => log.entryType === "sample").every((log) => Array.isArray(log.foodIds))]')
-
-          # Food details: category labels are formatted at their source, not by DOM rewriting.
-          rep('js/foods.js', '<div class="small food-detail-type">${esc(f.category)}', '<div class="small food-detail-type">${esc(foodCategoryLabel(f.category))}')
-
-          # Family exposure count must use the same distinct free-entry key.
-          app = read('app.js')
-          start = app.index('function familySuccessfulExposureCount(')
-          end = app.index('\nfunction familyPlanningRank(', start)
-          if start < 0 or end < 0:
-              raise SystemExit('app.js: familySuccessfulExposureCount not found')
-          block = app[start:end]
-          block2, n = re.subn(r'\.map\(\(log\) => `\$\{log\.date\}\|\$\{log\.meal\}`\)', '.map((log) => typeof logExposureKey === "function" ? logExposureKey(log) : `${log.date}|${log.meal}`)', block)
-          if n != 1:
-              raise SystemExit(f'app.js: expected family exposure key map once, got {n}')
-          write('app.js', app[:start] + block2 + app[end:])
-
-          # Browser wiring / offline precache: keep core only, remove the runtime policy.
-          rep('index.html', '<script src="js/unified-food-log-policy.js?v=10.1.25"></script>\n', '')
-          rep('sw.js', '  "./js/log-core.js",\n  "./js/unified-food-log-policy.js",', '  "./js/log-core.js",')
-
-          # Node regression tests no longer depend on a runtime policy file.
-          t = read('tests/unified-food-log.test.cjs')
-          t = t.replace('const policySource = fs.readFileSync(path.join(root, "js", "unified-food-log-policy.js"), "utf8");\n', '')
-          t = t.replace('logTextureSelectionRequired({ offered: true, textureValue: "" })', 'logTextureSelectionRequired({ positiveOutcome: true, textureValue: "" })')
-          t = t.replace('logTextureSelectionRequired({ offered: false, textureValue: "" })', 'logTextureSelectionRequired({ positiveOutcome: false, textureValue: "" })')
-          t = t.replace('logTextureSelectionRequired({ offered: true, textureValue: "2" })', 'logTextureSelectionRequired({ positiveOutcome: true, textureValue: "2" })')
-          t = t.replace('logTextureSelectionRequired({ offered: true, isEdit: true, legacyUnknown: true, textureValue: "" })', 'logTextureSelectionRequired({ positiveOutcome: true, isEdit: true, legacyUnknown: true, textureValue: "" })')
-          t = t.replace('test("integration policy is semantic and does not use a global text MutationObserver", () => {\n  assert.equal(policySource.includes("MutationObserver"), false);\n  assert.equal(policySource.includes("unifiedSuccessfulMealSlotCount"), true);\n  assert.equal(policySource.includes("unifiedFollowUpMealForLog"), true);\n});\n\n', '')
-          t = t.replace('test("browser loads canonical log core before migrations and policy before app", () => {\n  const corePos = indexSource.indexOf(\'src="js/log-core.js\');\n  const migrationPos = indexSource.indexOf(\'src="js/migrations.js\');\n  const policyPos = indexSource.indexOf(\'src="js/unified-food-log-policy.js\');\n  const appPos = indexSource.indexOf(\'src="app.js\');\n  assert.ok(corePos >= 0 && corePos < migrationPos);\n  assert.ok(policyPos >= 0 && policyPos < appPos);\n});', 'test("browser loads canonical log core before migrations without a runtime policy", () => {\n  const corePos = indexSource.indexOf(\'src="js/log-core.js\');\n  const migrationPos = indexSource.indexOf(\'src="js/migrations.js\');\n  assert.ok(corePos >= 0 && corePos < migrationPos);\n  assert.equal(indexSource.includes("unified-food-log-policy.js"), false);\n});')
-          insert = '''\n\ntest("explicitly known historical sample texture survives migration", () => {\n  const source = defaultState();\n  source.foods = [customFood()];\n  source.logs = [{ id: "known-sample", date: "2026-08-10", meal: "lunch", entryType: "sample", foodIds: ["karotte"], focusId: "karotte", sampleFoodIds: ["karotte"], foodOutcomes: { karotte: "tried" }, outcome: "tried", textureKnown: true, textureStage: 3 }];\n  const migrated = clone(migrationContext().__migrateStateCore(source));\n  assert.equal(migrated.logs[0].entryType, "sample");\n  assert.equal(migrated.logs[0].meal, "lunch");\n  assert.equal(migrated.logs[0].textureKnown, true);\n  assert.equal(migrated.logs[0].textureStage, 3);\n});\n\ntest("rejection and reaction do not require texture, positive outcomes do", () => {\n  assert.equal(core.logTextureSelectionRequired({ positiveOutcome: false, textureValue: "" }), false);\n  assert.equal(core.logTextureSelectionRequired({ positiveOutcome: true, textureValue: "" }), true);\n});\n'''
-          t += insert
-          write('tests/unified-food-log.test.cjs', t)
-
-          term = read('tests/unified-food-log-terminology.test.cjs')
-          term = term.replace('const policySource = fs.readFileSync(path.join(root, "js", "unified-food-log-policy.js"), "utf8");\n', 'const planningSource = fs.readFileSync(path.join(root, "js", "planning.js"), "utf8");\nconst uiSource = fs.readFileSync(path.join(root, "js", "ui.js"), "utf8");\n')
-          term = term.replace('test("Unified Log: Terminologie wird gezielt integriert und nicht global über den DOM ersetzt", () => {\n  assert.equal(policySource.includes("MutationObserver"), false);\n  assert.ok(policySource.includes("Einführung und Wiederholung"));\n  assert.ok(policySource.includes("Hauptbasis und Lernrolle werden getrennt gespeichert."));\n});', 'test("Unified Log: Terminologie ist direkt in Planner und UI integriert", () => {\n  assert.equal(uiSource.includes("toggleEntryChooser("), false);\n  assert.equal(uiSource.includes("Mahlzeit oder Kostprobe"), false);\n  assert.equal(planningSource.includes("Schon gegessen / Kombination"), false);\n  assert.ok(uiSource.includes("Hauptbasis und Lernrolle werden getrennt gespeichert."));\n  assert.ok(planningSource.includes("Neue Einführung separat"));\n});')
-          write('tests/unified-food-log-terminology.test.cjs', term)
-
-          # Browser expectations: legacy identity persists; rejection/reaction may save without texture.
-          b = read('browser-tests/unified-food-log-webkit.test.mjs')
-          b = b.replace('  assert.equal(savedLegacy.entryType, "food");\n  assert.equal(savedLegacy.meal, "");', '  assert.equal(savedLegacy.entryType, "sample");\n  assert.equal(savedLegacy.meal, "lunch");')
-          needle = '  // 4. Geplanter Eintrag: Slot wird übernommen und nicht erneut gewählt.\n'
-          extra = '''  // 4. Ablehnung und Reaktion: Konsistenz ist optional und zählt nicht als positive Texturerfahrung.\n  for (const outcome of ["not_accepted", "reaction"]) {\n    await reset(page);\n    await page.evaluate(() => window.openLog(null));\n    await selectFood(page, "Karotte");\n    await page.locator('[data-sample-result="karotte"]').selectOption(outcome);\n    await page.locator("#saveLog").click();\n    await page.waitForFunction(() => window.__beikostTest.getState().logs.length === 1);\n    const saved = await page.evaluate(() => window.__beikostTest.getState().logs[0]);\n    assert.equal(saved.foodOutcomes.karotte, outcome);\n    assert.equal(saved.textureKnown, false);\n    assert.equal(Object.hasOwn(saved, "textureStage"), false);\n  }\n\n  // 5. Geplanter Eintrag: Slot wird übernommen und nicht erneut gewählt.\n'''
-          if needle not in b:
-              raise SystemExit('browser test planned marker not found')
-          b = b.replace(needle, extra, 1)
-          b = b.replace('  // 5. Familienstatus:', '  // 6. Familienstatus:')
-          write('browser-tests/unified-food-log-webkit.test.mjs', b)
-
-          # Remove runtime override file itself.
-          Path('js/unified-food-log-policy.js').unlink()
+          # Isolierte Planner-Tests laden planning.js teilweise ohne log-core.js.
+          # In der Browser-App bleibt log-core.js die kanonische Quelle; lokale Wrapper halten
+          # planning.js zugleich eigenständig testbar, ohne die Fachlogik zu duplizieren.
+          rep_all('js/planning.js', 'logHasMealContext(log)', 'plannerLogHasMealContext(log)')
+          rep_all('js/planning.js', '.map(logExposureKey)', '.map(plannerLogExposureKey)')
+          rep_all('js/planning.js', 'LOG_MEAL_KEYS.includes(meal)', 'plannerLogMealKeys().includes(meal)')
+          rep(
+              'js/planning.js',
+              'let role = learningRoleLabel(rank(sample[0]), status(sample[0]), m.type || "");',
+              'let role = plannerLearningRoleLabel(sample[0], m.type || "");',
+          )
+          marker = 'function successfulMealSlotCount(on = today()) {'
+          helpers = '''function plannerLogMealKeys() {\n  return typeof LOG_MEAL_KEYS !== "undefined" ? LOG_MEAL_KEYS : ["breakfast", "snack", "lunch", "dinner"];\n}\nfunction plannerLogHasMealContext(log) {\n  if (typeof logHasMealContext === "function") return logHasMealContext(log);\n  return !!log && log.entryType !== "sample" && plannerLogMealKeys().includes(String(log.meal || ""));\n}\nfunction plannerLogExposureKey(log) {\n  if (typeof logExposureKey === "function") return logExposureKey(log);\n  let date = String(log?.date || "");\n  if (plannerLogHasMealContext(log)) return `${date}|${log.meal}`;\n  let identity = String(log?.id || log?.createdAt || log?.updatedAt || "free");\n  return `${date}|entry:${identity}`;\n}\nfunction plannerLearningRoleLabel(item, type = "") {\n  if (typeof learningRoleLabel === "function") return learningRoleLabel(rank(item), status(item), type);\n  if (status(item) === "Pausiert") return "Pausiert";\n  if (rank(item) === 1 || ["gezielt wiederholen", "Allergen wiederholen", "nach Einführung"].includes(String(type || ""))) return "Wiederholung";\n  return "Einführung";\n}\n'''
+          rep('js/planning.js', marker, helpers + marker)
           PY
 
           npm ci

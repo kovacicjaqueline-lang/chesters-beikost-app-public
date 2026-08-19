@@ -115,7 +115,7 @@ test("PLAN-08: sonstige plausible FOOD-Titel bleiben beim bestehenden Planner", 
   );
 });
 
-test("PLAN-08: Kostproben behalten die bestehende Sample-Darstellung", () => {
+test("PLAN-08: Einführung behält die bestehende Sample-Rolle mit neuer sichtbarer Bezeichnung", () => {
   const runtime = createRuntime();
   assert.equal(
     runtime.dishTitle({
@@ -124,7 +124,7 @@ test("PLAN-08: Kostproben behalten die bestehende Sample-Darstellung", () => {
       baseFoodIds: ["hafer"],
       sampleFoodIds: ["banane"],
     }),
-    "Hafer und Banane als Kostprobe",
+    "Hafer mit Banane zur Einführung",
   );
 });
 

@@ -49,11 +49,33 @@ function manualMealFor(date, meal) {
     lockedMode: state.planLocks?.[planLockKey(date, meal)]?.mode || null,
   };
 }
+function plannerLogMealKeys() {
+  return typeof LOG_MEAL_KEYS !== "undefined" ? LOG_MEAL_KEYS : ["breakfast", "snack", "lunch", "dinner"];
+}
+function plannerLogHasMealContext(log) {
+  if (typeof logHasMealContext === "function") return logHasMealContext(log);
+  return !!log && log.entryType !== "sample" && plannerLogMealKeys().includes(String(log.meal || ""));
+}
+function plannerLogExposureKey(log) {
+  if (typeof logExposureKey === "function") return logExposureKey(log);
+  let date = String(log?.date || "");
+  if (plannerLogHasMealContext(log)) return `${date}|${log.meal}`;
+  let identity = String(log?.id || log?.createdAt || log?.updatedAt || "free");
+  return `${date}|entry:${identity}`;
+}
+function plannerLearningRoleLabel(item, type = "") {
+  let itemRank = typeof rank === "function" ? rank(item) : 0;
+  let itemStatus = typeof status === "function" ? status(item) : "";
+  if (typeof learningRoleLabel === "function") return learningRoleLabel(itemRank, itemStatus, type);
+  if (itemStatus === "Pausiert") return "Pausiert";
+  if (itemRank === 1 || ["gezielt wiederholen", "Allergen wiederholen", "nach Einführung"].includes(String(type || ""))) return "Wiederholung";
+  return "Einführung";
+}
 function successfulMealSlotCount(on = today()) {
   return new Set(
     state.logs
       .filter((log) => {
-        if (!log?.date || log.date > on || log.entryType === "sample") return false;
+        if (!log?.date || log.date > on || !plannerLogHasMealContext(log)) return false;
         let sampleIds = new Set(log.sampleFoodIds || []);
         return (log.foodIds || []).some(
           (id) => outcomeForFood(log, id) === "eaten" && !sampleIds.has(id),
@@ -108,7 +130,7 @@ function eatenExposureCount(id) {
           (l.foodIds || []).includes(id) &&
           outcomeForFood(l, id) === "eaten",
       )
-      .map((l) => `${l.date}|${l.meal}`),
+      .map(plannerLogExposureKey),
   ).size;
 }
 function canCombine(f) {
@@ -901,7 +923,7 @@ function buildDay(date, index, ctx) {
     if (!introduction && meal !== "breakfast" && AMOUNT_LEVELS[currentAmountLevel()].rank >= 1 && !mealContainsMilkProduct(ids)) { let oil = food("rapsoel"); if (oil?.active) optionalAddons.push(oil.id); }
     let baseFoodIds = introduction ? companions.map((x) => x.id) : ids.filter((id) => id !== f.id);
     let sampleFoodIds = introduction ? [f.id] : [];
-    let note = c.type === "neu" ? "Neue Kostprobe separat oder in 1–2 Löffeln der sicheren Basis anbieten." : c.type === "gezielt wiederholen" ? "Kostprobe nach Pause erneut klein und getrennt bewerten." : c.type === "Allergen wiederholen" ? "Allergen mit bekannter Basis gezielt wiederholen." : "Bekannte Lebensmittel sinnvoll rotieren; Vorrat bevorzugt nutzen.";
+    let note = c.type === "neu" ? "Neue Einführung separat oder in kleiner Menge mit der sicheren Basis anbieten." : c.type === "gezielt wiederholen" ? "Wiederholung nach Pause erneut klein und getrennt bewerten." : c.type === "Allergen wiederholen" ? "Allergen mit bekannter Basis gezielt wiederholen." : "Bekannte Lebensmittel sinnvoll rotieren; Vorrat bevorzugt nutzen.";
     let generated = applyPlannedMealAmounts({ meal, active: true, focusId: f.id, foodIds: ids, baseFoodIds, sampleFoodIds, optionalAddons, milkMeal: mealContainsMilkProduct(ids) ? (introduction ? "small" : "full") : "", type: c.type, note });
     if (mealMilkLevel(generated) === "full") ctx.fullMilkDates?.add(date);
     reserveMealInventory(generated, ctx); meals.push(generated);
@@ -1009,8 +1031,9 @@ function dishTitle(m) {
   let base = (m.baseFoodIds || []).map(food).filter(Boolean);
   if (sample.length) {
     let sampleName = naturalFoodList(sample.map((x) => x.name));
-    if (!base.length) return `${sampleName} als Kostprobe`;
-    return `${naturalMealFoodTitle(base)} und ${sampleName} als Kostprobe`;
+    let role = plannerLearningRoleLabel(sample[0], m.type || "");
+    if (!base.length) return `${sampleName} zur ${role}`;
+    return `${naturalMealFoodTitle(base)} mit ${sampleName} zur ${role}`;
   }
   let all = (m.foodIds || []).map(food).filter(Boolean);
   if (!all.length) return "Mahlzeit";
@@ -1036,7 +1059,7 @@ function mealRolesHtml(m) {
       !isTrustedBase(f);
     let companionLabel = introduction
       ? "Verträgliche Basis"
-      : "Schon gegessen / Kombination";
+      : "Bekannte Kombination";
     rows += `<div class="role-row"><div class="role-label">${companionLabel}</div><div class="role-value">${companions.map((x) => esc(x.name)).join(" + ")}</div></div>`;
   }
   let addonLine = addons.length
@@ -1157,9 +1180,9 @@ function manualMealValidation(plan, meal, on = today()) {
   if (excludedIds.length) {
     messages.push(`Diese Lebensmittel sind für diesen Planplatz derzeit nicht auswählbar: ${excludedIds.map((id) => food(id)?.name || id).join(", ")}.`);
   }
-  if (unsafeBaseIds.length) messages.push(`Noch nicht als Hauptbasis geeignet: ${unsafeBaseIds.map((id) => food(id)?.name || id).join(", ")}. Bitte als bekannte Komponente oder Kostprobe kennzeichnen.`);
-  if (unsafeComponentIds.length) messages.push(`Noch nicht als bekannte Komponente geeignet: ${unsafeComponentIds.map((id) => food(id)?.name || id).join(", ")}. Bitte als Kostprobe kennzeichnen oder entfernen.`);
-  if (multipleUnsafeIds.length) messages.push(`Nur eine neue oder unsichere Kostprobe gleichzeitig: ${multipleUnsafeIds.map((id) => food(id)?.name || id).join(", ")}.`);
+  if (unsafeBaseIds.length) messages.push(`Noch nicht als Hauptbasis geeignet: ${unsafeBaseIds.map((id) => food(id)?.name || id).join(", ")}. Bitte als bekannte Komponente oder Einführung kennzeichnen.`);
+  if (unsafeComponentIds.length) messages.push(`Noch nicht als bekannte Komponente geeignet: ${unsafeComponentIds.map((id) => food(id)?.name || id).join(", ")}. Bitte als Einführung kennzeichnen oder entfernen.`);
+  if (multipleUnsafeIds.length) messages.push(`Nur eine neue oder unsichere Einführung gleichzeitig: ${multipleUnsafeIds.map((id) => food(id)?.name || id).join(", ")}.`);
   return {
     ok: roles.ids.length > 0 && !excludedIds.length && !unsafeBaseIds.length && !unsafeComponentIds.length && !multipleUnsafeIds.length,
     ...roles,
@@ -1267,7 +1290,7 @@ function followUpPreparationOptions(foodId) {
 function followUpExplanation(record) {
   let f = food(record.foodId), base = food(record.baseFoodId);
   let prep = record.preparationText ? ` Zubereitung: ${record.preparationText}` : "";
-  if (record.baseMode === "none" || !base) return `${f?.name || "Lebensmittel"} bewusst ohne Basis als kleine Kostprobe erneut anbieten.${prep}`;
+  if (record.baseMode === "none" || !base) return `${f?.name || "Lebensmittel"} bewusst ohne Basis als kleine Wiederholung anbieten.${prep}`;
   return `${f?.name || "Lebensmittel"} diesmal mit ${base.name}${(record.previousBaseIds || []).length ? " statt der bisherigen Basis" : " als sichere Basis"}.${prep}`;
 }
 function removeFollowUpPlan(foodId) {
@@ -1399,6 +1422,13 @@ function clearLogGeneratedState(foodId) {
     delete f.reactionPausePreviousStatus;
   }
 }
+function followUpMealForLog(log, foodId) {
+  if (plannerLogHasMealContext(log)) return log.meal;
+  let item = food(foodId);
+  let allowed = (item?.meals || []).filter((meal) => plannerLogMealKeys().includes(meal));
+  let preferred = phaseMealKeys().find((meal) => allowed.includes(meal));
+  return preferred || allowed[0] || "lunch";
+}
 function rebuildFoodConsequences(foodId) {
   clearLogGeneratedState(foodId);
   let log = latestLogForFood(foodId);
@@ -1416,16 +1446,16 @@ function rebuildFoodConsequences(foodId) {
     return;
   }
   if (result === "not_accepted") {
-    scheduleFollowUp(foodId, log.date, log.meal || "lunch", "rejection", log.rejectionStrength || "interest");
+    scheduleFollowUp(foodId, log.date, followUpMealForLog(log, foodId), "rejection", log.rejectionStrength || "interest");
     return;
   }
   if (result === "not_offered") {
     let unavailable = log.focusId === foodId && log.notOfferedReason === "unavailable";
     if (unavailable) {
       state.shoppingHints[foodId] = { foodId, status: "needed", createdAt: new Date().toISOString(), sourceLogId: log.id };
-      state.followUps[foodId] = { id: `${foodId}-${Date.now()}`, foodId, reason: "not_offered", detail: "unavailable", status: "awaiting_stock", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), dueDate: "", meal: log.meal || "lunch", baseFoodId: "", baseMode: "none", alternativeBaseIds: [], previousBaseIds: priorBaseIds(foodId), preparationKey: "standard", preparationText: food(foodId)?.safeForm || "" };
+      state.followUps[foodId] = { id: `${foodId}-${Date.now()}`, foodId, reason: "not_offered", detail: "unavailable", status: "awaiting_stock", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), dueDate: "", meal: followUpMealForLog(log, foodId), baseFoodId: "", baseMode: "none", alternativeBaseIds: [], previousBaseIds: priorBaseIds(foodId), preparationKey: "standard", preparationText: food(foodId)?.safeForm || "" };
       cleanFoodFromAutomaticFuturePlan(foodId);
-    } else scheduleFollowUp(foodId, log.date, log.meal || "lunch", "not_offered", "no_opportunity");
+    } else scheduleFollowUp(foodId, log.date, followUpMealForLog(log, foodId), "not_offered", "no_opportunity");
   }
 }
 function followUpEntries() {

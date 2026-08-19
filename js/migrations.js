@@ -99,7 +99,7 @@ function mergeFoodRecord(target, raw, options = {}) {
     target.reactionPausePreviousStatus = normalizeStatus(raw.reactionPausePreviousStatus || "auto");
   }
   if (options.legacyMilk) {
-    let note = "Aus dem früheren kombinierten Eintrag Kuhmilch/Joghurt übernommen; beide Produkte bitte getrennt bestätigen.";
+    let note = "Aus dem früheren kombinierten Eintrag Kuhmilch und Joghurt übernommen; beide Produkte bitte getrennt bestätigen.";
     if (!String(target.notes || "").includes(note)) target.notes = [target.notes, note].filter(Boolean).join(" · ");
   }
 }
@@ -115,7 +115,6 @@ function mergeFoods(saved) {
     }
     let cid = canonicalId(raw.id, raw.name), target = byId.get(cid);
     if (!target) {
-      let n = normalizeName(raw.name);
       target = result.find((f) => migrationFoodNameMatches(f, raw.name));
       if (target) cid = target.id;
     }
@@ -177,6 +176,16 @@ function remapRoleObject(roles, idMap) {
 function mapFoodId(id, name = "") {
   return canonicalId(id, name);
 }
+function migrationHasMealContext(log) {
+  return typeof logHasMealContext === "function"
+    ? logHasMealContext(log)
+    : !!log && log.entryType !== "sample" && ["breakfast", "snack", "lunch", "dinner"].includes(String(log.meal || ""));
+}
+function migrationTextureStage(value) {
+  if (typeof validLogTextureStage === "function") return validLogTextureStage(value);
+  let stage = Number(value);
+  return Number.isInteger(stage) && stage >= 1 && stage <= 4 ? stage : null;
+}
 function migrateStateCore(s) {
   let d = clone(DEFAULT), source = s || {};
   d.settings = { ...d.settings, ...(source.settings || {}) };
@@ -196,7 +205,7 @@ function migrateStateCore(s) {
     let hadAutomaticDinner = autoLocks.some(([key]) => key.endsWith("|dinner"));
     let hadAutomaticBreakfast = autoLocks.some(([key]) => key.endsWith("|breakfast"));
     let successfulSlots = new Set(logs.filter((log) => {
-      if (log.entryType === "sample") return false;
+      if (!migrationHasMealContext(log)) return false;
       let ids = log.foodIds || [];
       return ids.some((id) => (log.foodOutcomes?.[id] || log.outcome) === "eaten");
     }).map((log) => `${log.date}|${log.meal}`)).size;
@@ -248,13 +257,16 @@ function migrateStateCore(s) {
     }
     let note = l.note || "";
     if (legacyMilk) {
-      let migrationNote = "Aus V8.8 übernommen: Kuhmilch/Joghurt war nicht getrennt; beide Kontakte wurden vorsichtig als ‚Probiert‘ markiert und müssen einzeln bestätigt werden.";
+      let migrationNote = "Aus V8.8 übernommen: Kuhmilch und Joghurt waren nicht getrennt; beide Kontakte wurden vorsichtig als ‚Probiert‘ markiert und müssen einzeln bestätigt werden.";
       if (!note.includes(migrationNote)) note = [note, migrationNote].filter(Boolean).join(" · ");
     }
     let baseFoodIds = [...new Set((l.baseFoodIds || []).flatMap((id) => mapSourceIds(id)).filter(Boolean))];
     let sampleFoodIds = [...new Set((l.sampleFoodIds || []).flatMap((id) => mapSourceIds(id)).filter(Boolean))];
     let foodRoles = remapRoleObject(l.foodRoles, sourceFoodIdMap);
-    return {
+    let legacySample = l.entryType === "sample";
+    let storedTexture = migrationTextureStage(l.textureStage);
+    let textureKnown = storedTexture !== null && (l.textureKnown === true || (!legacySample && l.textureKnown !== false));
+    let migrated = {
       ...l,
       foodIds: ids,
       focusId: mapSourceId(l.focusId || ids[0] || ""),
@@ -266,8 +278,11 @@ function migrateStateCore(s) {
       foodRoles,
       note,
       legacyMilkAmbiguous: legacyMilk || undefined,
-      textureStage: Number(l.textureStage) || Number(d.settings.textureStage) || 1,
+      textureKnown,
     };
+    if (textureKnown) migrated.textureStage = storedTexture;
+    else delete migrated.textureStage;
+    return migrated;
   });
 
   d.inventory = (Array.isArray(source.inventory) ? source.inventory : []).map((i) => {

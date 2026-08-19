@@ -139,7 +139,7 @@
   </div></details>
   <details class="settings-group" open><summary>Mengenorientierung und Konsistenz</summary><div class="settings-group-body gridwide">
    <div class="field"><label>Mengenorientierung</label><select id="amountSelected"><option value="taste">Kost- und Miniportion (&lt;20 g)</option><option value="small">Kleine Portion (20–49 g)</option><option value="building">Mahlzeit im Aufbau (50–99 g)</option><option value="established">Mahlzeit etabliert (ab 100 g)</option></select><div class="small" style="margin-top:5px">Nur Orientierung für Planung und Vorbereitung. Sie steuert weder die Beikostphase noch, wie viel Chester essen soll.</div></div>
-   <div class="field"><label>Konsistenzstufe</label><select id="textureStage"><option value="1">1 – glatt / fein zerdrückt</option><option value="2">2 – dick püriert / weich zerdrückt</option><option value="3">3 – weich-stückig / Fingerfood</option><option value="4">4 – weiche Familienkost</option></select><div class="small" style="margin-top:5px">Unabhängig von der Menge. Der Coach auf „Heute“ schlägt den nächsten Schritt vor, ändert aber nie automatisch.</div></div>
+   <div class="field"><label>Konsistenzstufe</label><select id="textureStage"><option value="1">1 – glatt oder fein zerdrückt</option><option value="2">2 – dick püriert oder weich zerdrückt</option><option value="3">3 – weich stückig</option><option value="4">4 – weiche Familienkost</option></select><div class="small" style="margin-top:5px">Unabhängig von der Menge. Der Coach auf „Heute“ schlägt den nächsten Schritt vor, ändert aber nie automatisch.</div></div>
    <div class="field"><label>Tiefkühl-Zielfrist</label><input type="number" min="14" id="freezerDays"></div>
   </div></details>
   <details class="settings-group"><summary>Reise und weitere Einstellungen</summary><div class="settings-group-body gridwide">
@@ -172,17 +172,17 @@
      </div>
     </details>
     <details class="help-topic">
-     <summary>Kostprobe und Hauptmahlzeit</summary>
+     <summary>Neue Lebensmittel protokollieren</summary>
      <div class="small">
-      <p>Eine neue oder unsichere Zutat wird als kleine Kostprobe separat oder in 1–2 Löffeln einer verträglichen Basis angeboten.</p>
-      <p>Hauptmahlzeit und Kostprobe werden getrennt protokolliert. „Probiert“ bestätigt nur den Kontakt; erst tatsächlich gegessene Zutaten werden für normale Kombinationen und Rezepte freigegeben.</p>
+      <p>Neue Lebensmittel und Wiederholungen werden im selben Protokolleintrag wie jedes andere Essen erfasst. Die interne Einführungsrolle bleibt dabei erhalten.</p>
+      <p>Bei freien Einträgen ist keine Mahlzeitenauswahl nötig. Sobald tatsächlich Essen angeboten wurde, wird die Konsistenz dokumentiert; alte Einträge ohne bekannte Konsistenz bleiben unverändert.</p>
      </div>
     </details>
     <details class="help-topic">
      <summary>Milch, Joghurt und Buttermilch</summary>
      <div class="small">
       <p>Pasteurisierte Kuhmilch, ungesüßter Naturjoghurt oder ungesüßte Buttermilch werden ab dem 6. Lebensmonat als Zutat für einen Milch-Getreide-Brei geführt, nicht als normales Getränk.</p>
-      <p>Eine volle Milch-/Joghurt-/Buttermilchmahlzeit wird höchstens einmal täglich geplant und nicht automatisch mit Fleisch oder einer anderen eisenreichen Mahlzeit kombiniert. Kleine Mengen in Gebäck zählen nicht pauschal als volle Milchmahlzeit.</p>
+      <p>Eine volle Milchmahlzeit mit Kuhmilch, Joghurt oder Buttermilch wird höchstens einmal täglich geplant und nicht automatisch mit Fleisch oder einer anderen eisenreichen Mahlzeit kombiniert. Kleine Mengen in Gebäck zählen nicht pauschal als volle Milchmahlzeit.</p>
      </div>
     </details>
     <details class="help-topic">
@@ -226,7 +226,7 @@
    </div>
   </details>
  </div>
- <div class="card collapsible-card data-card"><details class="panel-details"><summary><span><b>Daten & Sicherung</b><small>Backup, Wiederherstellung und Zurücksetzen</small></span></summary><div class="panel-body"><div id="backupReminder" class="notice warn" style="display:none"><b>Externes Backup empfohlen.</b> Das letzte Backup ist älter als 14 Tage oder fehlt.</div><div id="storageError" class="notice warn" style="display:none"></div><div id="storageStatus" class="storage-status"></div><div class="backup-actions"><button class="btn secondary" id="exportData">Backup in Dateien sichern</button><label class="btn secondary" style="display:inline-flex;align-items:center;margin:0">Backup laden<input type="file" id="importData" accept=".json,application/json" hidden></label><button class="btn secondary" id="showSnapshots">Zwischenstände</button><button class="btn danger" id="resetData">Zurücksetzen</button></div><p class="small">Safari und die Home-Bildschirm-App können getrennte Speicherbereiche verwenden. Ein externes Backup in der Dateien-App schützt zusätzlich.</p><p class="small"><b>App-Version <span id="appVersion">10.1.25</span></b><br>Die Daten werden lokal auf diesem Gerät gespeichert; ein zusätzliches Backup in der Dateien-App bleibt empfohlen.</p>
+ <div class="card collapsible-card data-card"><details class="panel-details"><summary><span><b>Daten & Sicherung</b><small>Backup, Wiederherstellung und Zurücksetzen</small></span></summary><div class="panel-body"><div id="backupReminder" class="notice warn" style="display:none"><b>Externes Backup empfohlen.</b> Das letzte Backup ist älter als 14 Tage oder fehlt.</div><div id="storageError" class="notice warn" style="display:none"></div><div class="storage-status" id="storageStatus"></div><div class="backup-actions"><button class="btn secondary" id="exportData">Backup in Dateien sichern</button><label class="btn secondary" style="display:inline-flex;align-items:center;margin:0">Backup laden<input type="file" id="importData" accept=".json,application/json" hidden></label><button class="btn secondary" id="showSnapshots">Zwischenstände</button><button class="btn danger" id="resetData">Zurücksetzen</button></div><p class="small">Safari und die Home-Bildschirm-App können getrennte Speicherbereiche verwenden. Ein externes Backup in der Dateien-App schützt zusätzlich.</p><p class="small"><b>App-Version <span id="appVersion">10.1.25</span></b><br>Die Daten werden lokal auf diesem Gerät gespeichert; ein zusätzliches Backup in der Dateien-App bleibt empfohlen.</p>
 <details class="version-details"><summary>Was ist neu?</summary><div class="small">Neu: Statistik unter „Mehr“ mit 7 Tagen, 30 Tagen und dem gesamten Zeitraum seit Beikoststart. Sie zeigt 100-Lebensmittel-Fortschritt, Vielfalt, neue Lebensmittel, Protokollergebnisse, Konsistenz und – wenn vorhanden – dokumentierte Mengen. Alle Werte werden direkt aus dem bestehenden Protokoll berechnet; es gibt keine neue Datenhaltung.</div></details></div></details></div>
 
 </section>
@@ -247,6 +247,7 @@
 <script src="js/icons.js?v=10.1.25"></script>
 <script src="js/state.js?v=10.1.25"></script>
 <script src="js/utils.js?v=10.1.25"></script>
+<script src="js/log-core.js?v=10.1.25"></script>
 <script src="js/migrations.js?v=10.1.25"></script>
 <script src="js/storage.js?v=10.1.25"></script>
 <script src="js/model.js?v=10.1.25"></script>

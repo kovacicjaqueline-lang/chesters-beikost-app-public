@@ -381,7 +381,7 @@ function familySuccessfulExposureCount(foodRecord, foods, logs, outcomeForFoodFn
     (logs || [])
       .flatMap((log) => (log.foodIds || [])
         .filter((id) => ids.has(id) && outcomeForFoodFn(log, id) === "eaten")
-        .map(() => `${log.date}|${log.meal}`)),
+        .map(() => typeof logExposureKey === "function" ? logExposureKey(log) : `${log.date}|${log.meal}`)),
   ).size;
 }
 

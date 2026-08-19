@@ -3,7 +3,7 @@
 /*
  * Handling-Readiness-Policy.
  *
- * Grundsatz: Löffel-/Breikost und geeignetes weiches Fingerfood sind parallele
+ * Grundsatz: Löffelkost und geeignetes weiches Fingerfood sind parallele
  * Darreichungswege. Fingerfood wird daher nicht aus textureStage abgeleitet.
  * Nicht migrierte Rezepte behalten konservativ die bisherige Stage-Sperre.
  */
@@ -223,7 +223,7 @@ function mergeRecipeHandlingState(recipeState, settings = {}, contractMap = null
 const HANDLING_OPTION_COPY = Object.freeze({
   "spoon-smooth": Object.freeze({
     key: "pureed",
-    label: "Fein / glatt vom Löffel",
+    label: "Fein und glatt vom Löffel",
     text: "Sehr weich zubereiten und fein beziehungsweise glatt anbieten.",
   }),
   "spoon-mashed": Object.freeze({
@@ -265,7 +265,7 @@ function ensureFeedingApproachControl() {
     field = document.createElement("div");
     field.className = "field";
     field.id = "feedingApproachField";
-    field.innerHTML = `<label>Beikostform</label><select id="feedingApproach"><option value="mixed">Gemischt</option><option value="spoon">Löffel / Brei</option><option value="fingerfood">Fingerfood / BLW</option></select><div class="small" style="margin-top:5px">Steuert, welche sicheren Darreichungsformen bevorzugt werden. Keine Entwicklungsstufe.</div>`;
+    field.innerHTML = `<label>Beikostform</label><select id="feedingApproach"><option value="mixed">Gemischt</option><option value="spoon">Löffelkost</option><option value="fingerfood">Fingerfood</option></select><div class="small" style="margin-top:5px">Steuert, welche sicheren Darreichungsformen bevorzugt werden. Keine Entwicklungsstufe.</div>`;
     texture.closest(".field")?.insertAdjacentElement("afterend", field);
   }
   let select = document.getElementById("feedingApproach");

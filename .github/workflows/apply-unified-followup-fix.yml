@@ -106,3 +106,5 @@ jobs:
           git add js/planning.js
           git commit -m "Avoid fabricated follow-up meal context"
           git push origin HEAD:refactor/unified-food-log
+
+# one-shot branch repair

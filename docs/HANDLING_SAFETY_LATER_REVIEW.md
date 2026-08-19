@@ -21,7 +21,8 @@ Keine neue allgemeine Regel wird daraus abgeleitet. Insbesondere gilt weiterhin:
 - ein Handling-Contract darf Zutaten-, Allergen-, Mahlzeiten- oder echte Alters-/Safety-Gates nicht umgehen;
 - nicht ausreichend eindeutige Fälle bleiben im Legacy-Stage-Fallback;
 - keine Safety-Regel wird aus Rezept-/FOOD-Freitext technisch geparst;
-- `minMonths` wird nicht stillschweigend zu einem neuen harten Alters-Gate umgedeutet.
+- `minMonths` wird nicht stillschweigend zu einem neuen harten Alters-Gate umgedeutet;
+- **dieser Audit-Branch implementiert keine Handling-Migration. Die eigentliche Handling-Migration bleibt im dafür bereits bestehenden separaten Arbeitsbranch.**
 
 ## 2. Technischer Review-Befund
 
@@ -51,24 +52,15 @@ Diese Quellen begründen keine neue App-Phasenlogik und keine pauschale Altersfr
 
 ### 4.1 Rind-Hafer-Bällchen – **weiter blockiert**
 
-Aktueller Rezepttext:
+Der Rezepttext fordert bereits vollständig durchgegarte kleine längliche oder flache Stücke, keine harte Kruste und keine festen runden Kugeln. Der aktuelle FOOD-Vertrag für `Rind` sagt jedoch weiterhin `fein püriert, zerzupft oder später als sehr weiches Bällchen`.
 
-- vollständig durchgaren;
-- kleine längliche oder flache Stücke;
-- keine harten Krusten und keine festen runden Kugeln;
-- `skillRequirement`: weich, leicht zerdrückbar, direkt beaufsichtigt.
-
-Der konkrete Rezepttext ist damit bereits deutlich sicherer als ein pauschales rundes Fleischbällchen. Der aktuelle FOOD-Vertrag für `Rind` sagt jedoch weiterhin: `fein püriert, zerzupft oder später als sehr weiches Bällchen`.
-
-**Review-Entscheidung:** Noch kein `finger-graspable`-Contract. Eine Frühmigration würde die noch vorhandene FOOD-Aussage `später` faktisch überholen, ohne dass diese Semantik strukturiert fachlich aufgelöst wurde.
+**Review-Entscheidung:** Noch kein `finger-graspable`-Contract. Eine Frühmigration würde die FOOD-Aussage `später` überholen, ohne dass diese Semantik fachlich strukturiert aufgelöst wurde.
 
 ### 4.2 Geflügel-Gemüse-Hafer-Bällchen – **weiter blockiert**
 
-Aktueller Rezepttext verlangt flache/längliche statt feste runde Stücke, vollständiges Durchgaren, saftige Konsistenz, keine harte Kruste und eine Prüfung auf leichte Zerdrückbarkeit.
+Der Rezepttext verlangt flache/längliche statt feste runde Stücke, vollständiges Durchgaren, saftige Konsistenz, keine harte Kruste und leichte Zerdrückbarkeit. Der FOOD-Vertrag für `Huhn` enthält aber ebenfalls `später als sehr weiches Bällchen`.
 
-Der aktuelle FOOD-Vertrag für `Huhn` enthält aber ebenfalls `später als sehr weiches Bällchen`.
-
-**Review-Entscheidung:** Noch kein `finger-graspable`-Contract. Gleicher ungelöster FOOD-/Rezept-Semantikkonflikt wie bei Rind.
+**Review-Entscheidung:** Noch kein `finger-graspable`-Contract.
 
 ### 4.3 Lachs-Kartoffel-Bällchen – **Migrationskandidat `finger-graspable`**
 
@@ -79,58 +71,49 @@ Aktueller Rezepttext:
 - mit weicher Kartoffel zerdrücken;
 - ausdrücklich flache Taler;
 - weich erwärmen oder backen;
-- `skillRequirement`: leicht zerdrückbar und direkt beaufsichtigt.
+- leicht zerdrückbar und direkt beaufsichtigt.
 
 Der FOOD-Vertrag für `Lachs` verlangt vollständiges Garen sowie sorgfältiges Entfernen von Haut/Schalen/Gräten und enthält keine zusätzliche Aussage `später`.
-
-Offizielle Fingerfood-Hinweise erlauben grätenfreien Fisch in geeigneter weicher Form. Die bestehende Rezeptform ist flach, weich und nicht rund.
 
 **Review-Vorschlag:** Nach fachlicher Bestätigung Aufnahme als ausschließlich `finger-graspable`. Zutaten-/Allergen- und sonstige Planner-Gates bleiben unverändert.
 
 ### 4.4 Bangus-Kartoffel-Taler – **weiter blockiert**
 
-Das Rezept weist selbst ausdrücklich darauf hin, dass Bangus viele feine Gräten besitzt und nur bei wirklich vollständiger Entgrätung verwendet werden darf.
+Das Rezept weist ausdrücklich darauf hin, dass Bangus viele feine Gräten besitzt und nur bei wirklich vollständiger Entgrätung verwendet werden darf.
 
-**Review-Entscheidung:** Kein allgemeiner `finger-graspable`-Contract. Der vorhandene Handling-Contract besitzt kein eigenes strukturiertes Gate, das die Bangus-spezifische vollständige Entgrätung technisch bestätigen könnte. Das besondere Feingräten-Risiko darf nicht durch Entfernen der Stage-Sperre banalisiert werden.
+**Review-Entscheidung:** Kein allgemeiner `finger-graspable`-Contract. Der vorhandene Handling-Contract besitzt kein eigenes strukturiertes Gate, das die Bangus-spezifische vollständige Entgrätung technisch bestätigen könnte.
 
-### 4.5 Eier-Finger – **Migrationskandidat `finger-graspable`**
+### 4.5 Eier-Finger – **weiter blockiert / Rezeptform praktisch nicht eindeutig reproduzierbar**
 
-Aktueller Rezepttext:
+Der Rezepttext verlangt ein vollständig gegartes Ei und `gut greifbare längliche Stücke`.
 
-- vollständig gegartes Ei;
-- in gut greifbare längliche Stücke schneiden;
-- frisch anbieten;
-- `skillRequirement`: leicht zerdrückbar, aufrecht sitzend, direkt beaufsichtigt.
+Die erneute praktische Prüfung zeigt jedoch einen relevanten Darreichungsfehler: Ein hart gekochtes Ei lässt sich nicht zuverlässig in stabile längliche Finger schneiden, ohne dass sich der Dotter aus dem Eiweiß löst oder zerbröselt. Damit beschreibt der aktuelle Rezepttext keine ausreichend reproduzierbare Gesamtform, obwohl gekochtes Ei grundsätzlich als Fingerfood geeignet sein kann.
 
-Der FOOD-Vertrag verlangt gut durchgegartes Vollei. Die Rezeptfreigabe verlangt weiterhin, dass `Ei` als Zutat entsprechend dem bestehenden Zutaten-/Allergenstatus bereit ist.
+Eine mögliche andere Rezeptform wie längs geviertelte Ei-Spalten oder Omelettstreifen wäre eine **eigene fachliche Rezeptentscheidung** und wird in diesem Audit nicht stillschweigend ersetzt.
 
-Der NHS führt gekochtes Ei ausdrücklich als mögliches Fingerfood auf und empfiehlt anfangs weiche, gut greifbare Formen.
-
-**Review-Vorschlag:** Nach fachlicher Bestätigung Aufnahme als ausschließlich `finger-graspable`. Keine Änderung an der Allergen-Einführung oder am Zutatenstatus.
+**Review-Entscheidung:** Eier-Finger ist **kein direkter Migrationskandidat**. Kein `finger-graspable`-Contract, solange die tatsächliche Rezept-/Servierform nicht fachlich eindeutig korrigiert wurde.
 
 ### 4.6 Ei-Champignon-Cups – **weiter blockiert**
 
-Das Rezept verlangt vollständig durchgebackene, weiche kleine Cups aus Ei und fein gehackten weich gegarten Champignons. Der Sicherheitstext verlangt leichte Zerdrückbarkeit.
+Das Rezept verlangt vollständig durchgebackene, weiche kleine Cups. Nicht eindeutig strukturiert ist die konkrete greifbare Geometrie: `6 kleine Cups` sagt nicht, ob sie als ausreichend große Streifen/flache Stücke oder als kleine kompakte Einzelstücke serviert werden.
 
-Nicht eindeutig strukturiert ist jedoch die konkrete greifbare Geometrie: `6 kleine Cups` sagt nicht, ob sie als ausreichend große Streifen/flache Stücke oder als kleine kompakte Einzelstücke serviert werden.
-
-**Review-Entscheidung:** Noch kein `finger-graspable`-Contract. Vor einer Migration sollte die tatsächlich sichere Servierform im Rezept eindeutig festgelegt werden; alternativ wäre zu prüfen, ob eine spätere `finger-small-soft`-Fähigkeit gemeint ist. Diese Entscheidung wird hier nicht erfunden.
+**Review-Entscheidung:** Noch kein `finger-graspable`-Contract. Vor einer Migration muss die tatsächlich sichere Servierform eindeutig festgelegt werden; alternativ wäre später ein `finger-small-soft`-Pfad zu prüfen.
 
 ### 4.7 Hummus mit weichen Gemüsesticks – **weiter blockiert**
 
-Der ursprüngliche Audit hat bereits einen konkreten Konflikt dokumentiert:
+Der ursprüngliche Audit dokumentiert einen konkreten Konflikt:
 
 - Rezept: `sehr weiche Gemüsesticks`;
 - kanonische Zutat: aktuell `Gurke`;
-- geprüfte Gurken-Sicherheitsform: längliche gut greifbare Stücke bzw. bei fester Form reiben/zerdrücken, aber keine pauschale Vorgabe `weich garen`.
+- Gurken-Sicherheitsform: längliche gut greifbare Stücke bzw. bei fester Form reiben/zerdrücken, aber keine pauschale Vorgabe `weich garen`.
 
-Zusätzlich kombiniert das Rezept einen glatten Dip mit einem Fingerfood-Bestandteil; der aktuelle Rezept-Handling-Contract modelliert nur eine Liste zulässiger Modi für das Gesamtgericht und keinen zusammengesetzten `Dip + Stick`-Vertrag.
+Zusätzlich kombiniert das Rezept einen glatten Dip mit einem Fingerfood-Bestandteil; der aktuelle Rezept-Handling-Contract modelliert keinen zusammengesetzten `Dip + Stick`-Vertrag.
 
 **Review-Entscheidung:** Nicht migrieren, bis Rezept-/FOOD-Form und die zusammengesetzte Darreichung eindeutig geklärt sind.
 
 ### 4.8 Fleisch-Gemüse-Bällchen – **weiter blockiert**
 
-Aktueller Rezepttext ist sicherheitsbewusst: flache/längliche statt feste runde Stücke, vollständig durchgaren, saftig halten, harte Kruste vermeiden und auf leichte Zerdrückbarkeit prüfen.
+Der Rezepttext fordert flache/längliche statt feste runde Stücke, vollständiges Durchgaren, saftige Konsistenz, keine harte Kruste und leichte Zerdrückbarkeit.
 
 Gleichzeitig:
 
@@ -220,34 +203,32 @@ Zusätzlich berührt das Rezept Fleisch-Handling.
 
 ### Direkt fachlich zur Freigabe vorgeschlagen
 
-Nur zwei der 16 Reviewfälle sind anhand des aktuellen Datenvertrags und der offiziellen Sicherheitsbasis hinreichend eindeutig, ohne eine neue allgemeine Regel zu erfinden:
+Nach der praktischen Nachprüfung bleibt von den 16 Reviewfällen **nur ein hinreichend eindeutiger direkter Migrationskandidat**:
 
 1. `Lachs-Kartoffel-Bällchen` → `finger-graspable`
-2. `Eier-Finger` → `finger-graspable`
 
-Diese Einordnung ist **noch keine Produktfreigabe**. Sie wird erst nach ausdrücklicher fachlicher Bestätigung umgesetzt.
+Diese Einordnung ist **noch keine Produktfreigabe**.
 
 ### Weiter blockiert
 
 - Rind-Hafer-Bällchen
 - Geflügel-Gemüse-Hafer-Bällchen
 - Bangus-Kartoffel-Taler
+- **Eier-Finger**
 - Ei-Champignon-Cups
 - Hummus mit weichen Gemüsesticks
 - Fleisch-Gemüse-Bällchen
 - alle 8 LATER-REVIEW-Rezepte
 
-## 7. Nächster technischer Schritt nach fachlicher Freigabe
+## 7. Weiteres Vorgehen
 
-Falls die beiden Kandidaten fachlich bestätigt werden:
+Dieser Branch bleibt **ausschließlich Audit-/Fachdokumentation** und nimmt keine Produktmigration vor.
 
-1. auf einem frischen Implementierungsbranch vom dann aktuellen `main` arbeiten;
-2. ausschließlich die beiden expliziten Rezeptnamen im `RECIPE_HANDLING_CONTRACT` ergänzen;
-3. keine `stage`, `minMonths`, `hardMinMonths`, FOOD-`safeForm` oder Rezepttexte nebenbei ändern;
-4. Regressionen ergänzen, die beweisen:
-   - beide Kandidaten werden über `finger-graspable` von der linearen Stage-Sperre entkoppelt;
-   - Zutaten-/Allergen-/Mahlzeiten-Gates bleiben hart;
-   - alle sechs übrigen SAFETY-REVIEW- und alle acht LATER-REVIEW-Fälle bleiben unmigriert;
-   - bestehende Logs/Locks und `presentationMode`-Semantik bleiben unverändert;
-5. vollständige Node- und WebKit-Regression ausführen;
-6. nichts ohne ausdrückliche Merge-Freigabe mergen.
+Falls `Lachs-Kartoffel-Bällchen` fachlich bestätigt wird, muss die technische Umsetzung in den bereits bestehenden separaten Handling-Migrationsworkflow übernommen werden. Dort sind mindestens Regressionen nötig, die beweisen:
+
+- `Lachs-Kartoffel-Bällchen` wird explizit über `finger-graspable` von der linearen Stage-Sperre entkoppelt;
+- Zutaten-/Allergen-/Mahlzeiten-Gates bleiben hart;
+- die sieben übrigen SAFETY-REVIEW- und alle acht LATER-REVIEW-Fälle bleiben unmigriert, solange sie nicht separat freigegeben wurden;
+- bestehende Logs/Locks und `presentationMode`-Semantik bleiben unverändert.
+
+Keine technische Umsetzung und kein Merge aus diesem Audit-Branch ohne eigenen Auftrag.

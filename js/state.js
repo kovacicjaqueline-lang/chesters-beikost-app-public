@@ -62,6 +62,42 @@ const STATUS_ORDER = {
 };
 const LEGACY_MILK_ID = "kuhmilch-joghurt";
 
+const FOOD_ALIAS_AUDIT_10_1_25 = Object.freeze({
+  lauch: Object.freeze(["Porree"]),
+  rosenkohl: Object.freeze(["Kohlsprossen"]),
+  petersilienwurzel: Object.freeze(["Petersilwurzel"]),
+});
+
+function applyFoodAliasAudit(foodDb) {
+  if (!Array.isArray(foodDb)) return foodDb;
+  const byId = new Map(foodDb.map((item) => [item?.id, item]).filter(([id]) => id));
+
+  for (const [id, aliases] of Object.entries(FOOD_ALIAS_AUDIT_10_1_25)) {
+    const item = byId.get(id);
+    if (!item) continue;
+
+    const seen = new Set();
+    const merged = [];
+    String(item.alias || "")
+      .split("|")
+      .map((value) => String(value || "").trim())
+      .filter(Boolean)
+      .concat(aliases)
+      .forEach((value) => {
+        const key = value.toLowerCase();
+        if (!key || seen.has(key)) return;
+        seen.add(key);
+        merged.push(value);
+      });
+
+    item.alias = merged.join("|");
+  }
+
+  return foodDb;
+}
+
+applyFoodAliasAudit(FOOD_DB);
+
 /*
  * Fachlich geprüfte Safe-Form-Korrekturen.
  * Diese Schicht korrigiert nur Zubereitungs-/Darreichungsdetails und Prep-Hinweise;

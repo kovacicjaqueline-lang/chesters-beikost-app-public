@@ -47,3 +47,5 @@ jobs:
           git add -A
           git commit -m 'Import clean public snapshot from private main'
           git push
+
+# retriggered after enabling repository Actions permissions

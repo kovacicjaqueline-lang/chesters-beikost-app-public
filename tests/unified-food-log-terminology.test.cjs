@@ -40,3 +40,12 @@ test("Unified Log: Terminologie ist direkt in Planner und UI integriert", () => 
   assert.ok(uiSource.includes("Sichere Form oder Notiz"));
   assert.ok(planningSource.includes("Neue Einführung separat"));
 });
+
+test("Unified Log: eigene Lebensmittel behalten interne Kategorien, zeigen aber slash-freie Labels", () => {
+  assert.equal(uiSource.includes('<option>${c}</option>'), false);
+  assert.ok(uiSource.includes("uiFoodCategoryDisplayLabel(c)"));
+  assert.ok(uiSource.includes('"Getreide/Stärke": "Getreide und Stärke"'));
+  assert.ok(uiSource.includes('"Kraut/Gewürz": "Kräuter und Gewürze"'));
+  assert.ok(uiSource.includes('"Wurzel/Knolle": "Wurzel- und Knollengemüse"'));
+  assert.ok(uiSource.includes('<option value="${esc(c)}">'));
+});

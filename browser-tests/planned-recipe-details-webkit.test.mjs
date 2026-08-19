@@ -83,6 +83,23 @@ async function seedRecipeMeal(page, recipeName, foodIds, textureStage = 3) {
   }, { recipeName, foodIds, textureStage });
 }
 
+async function assertRecipeTitleLayout(page, locator, widths = [320, 375, 390]) {
+  for (const width of widths) {
+    await page.setViewportSize({ width, height: 844 });
+    const box = await locator.boundingBox();
+    assert.ok(box, `Rezepttitel muss bei ${width}px sichtbar sein`);
+    assert.ok(box.height >= 44, `Rezepttitel muss bei ${width}px mindestens 44px hoch sein`);
+    const viewport = await page.evaluate(() => ({
+      innerWidth: window.innerWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+    }));
+    assert.ok(
+      viewport.scrollWidth <= viewport.innerWidth,
+      `Rezepttitel darf bei ${width}px keinen horizontalen Seiten-Overflow erzeugen`,
+    );
+  }
+}
+
 const server = await startStaticServer();
 const { port } = server.address();
 const browser = await webkit.launch();
@@ -98,6 +115,35 @@ try {
   await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "domcontentloaded" });
   await waitForApp(page);
 
+  // Reine UI-Dekoration darf keinen zweiten Planner-Durchlauf auslösen.
+  const plannerCalls = await page.evaluate(() => {
+    let buildCalls = 0;
+    let displayCalls = 0;
+    const originalBuildDays = buildDays;
+    const originalPlanDisplayDays = planDisplayDays;
+    buildDays = function countedBuildDays(...args) {
+      buildCalls += 1;
+      return originalBuildDays(...args);
+    };
+    planDisplayDays = function countedPlanDisplayDays(...args) {
+      displayCalls += 1;
+      return originalPlanDisplayDays(...args);
+    };
+    try {
+      window.__plannedRecipeDetails.decorateHomeRecipeTitles();
+      window.__plannedRecipeDetails.decoratePlanRecipeTitles();
+    } finally {
+      buildDays = originalBuildDays;
+      planDisplayDays = originalPlanDisplayDays;
+    }
+    return { buildCalls, displayCalls };
+  });
+  assert.deepEqual(
+    plannerCalls,
+    { buildCalls: 0, displayCalls: 0 },
+    "Rezepttitel-Dekoration darf Planner und sichtbare Woche nicht erneut aufbauen",
+  );
+
   // Heute: Rezeptname selbst ist das Touchziel und öffnet auch eine nicht-erste oneOf-Auswahl korrekt.
   let date = await seedRecipeMeal(
     page,
@@ -107,7 +153,7 @@ try {
   );
   let homeRecipe = page.locator('#todayCard [data-planned-recipe-name="Obst-Hafer-Pancakes"]');
   await homeRecipe.waitFor();
-  assert.ok((await homeRecipe.boundingBox())?.height >= 44, "Rezepttitel muss auf iPhone mindestens 44px hoch sein");
+  await assertRecipeTitleLayout(page, homeRecipe);
   await homeRecipe.click();
   await page.locator("#genericModal.open .recipe-card-v2[open]").waitFor();
   assert.match(await page.locator("#genericBody").innerText(), /Vorausgewählt:\s*Apfel/);
@@ -133,6 +179,7 @@ try {
   );
   const familyRecipe = page.locator('#todayCard [data-planned-recipe-name="Geflügel-Gemüse-Hafer-Bällchen"]');
   await familyRecipe.waitFor();
+  await assertRecipeTitleLayout(page, familyRecipe);
   await familyRecipe.click();
   await page.locator("#genericModal.open .recipe-card-v2[open]").waitFor();
   assert.match(await page.locator("#genericBody").innerText(), /Variante:\s*Pute \+ Karotte/);

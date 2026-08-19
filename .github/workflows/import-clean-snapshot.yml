@@ -3,14 +3,13 @@ name: Import clean main snapshot
 on:
   push:
     branches: [main]
-    paths:
-      - 'beikost-public-snapshot.zip'
 
 permissions:
   contents: write
 
 jobs:
   import-snapshot:
+    if: ${{ github.actor != 'github-actions[bot]' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout public repository
@@ -21,6 +20,7 @@ jobs:
         run: |
           set -euo pipefail
           ZIP='beikost-public-snapshot.zip'
+          test -f "$ZIP"
           rm -rf .snapshot-import
           mkdir .snapshot-import
           unzip -q "$ZIP" -d .snapshot-import

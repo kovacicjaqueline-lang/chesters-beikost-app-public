@@ -67,7 +67,7 @@
      <div class="field"><label>Rohgewicht in g</label><input id="batchRaw" type="number" min="1" step="1" inputmode="decimal" placeholder="z. B. 340"><div class="small" style="margin-top:4px">Verwendbarer roher Anteil – nach Schälen/Putzen, falls nötig.</div></div>
      <div class="field"><label>Fertiges Gesamtgewicht in g (optional)</label><input id="batchCooked" type="number" min="1" step="1" inputmode="decimal" placeholder="nach Garen/Pürieren"><div class="small" style="margin-top:4px">Für ein genaues Ergebnis nach dem Garen und nach tatsächlich zugegebenem Wasser wiegen.</div></div>
     </div>
-    <div class="field"><label>Portionsgröße</label><select id="batchPortion"><option value="5">5 g</option><option value="10">10 g</option><option value="20">20 g</option><option value="35">35 g</option></select><div class="small" style="margin-top:4px">Standardgrößen für den Vorrat; kleine Restmengen werden separat gekennzeichnet.</div></div>
+    <div class="field"><label>Portionsgröße</label><select id="batchPortion"><option value="5">5 g</option><option value="10">10 g</option><option value="20">20 g</option><option value="35">35 g</option></select><div class="small" style="margin-top:5px">Standardgrößen für den Vorrat; kleine Restmengen werden separat gekennzeichnet.</div></div>
     <button class="btn secondary" id="calculateBatch">Portionen berechnen</button>
     <div id="batchResult" class="notice olive" style="display:none;margin-top:10px"></div>
    </div>
@@ -108,14 +108,14 @@
  </div>
  <div class="card collapsible-card statistics-card" id="statisticsSection">
   <details class="panel-details" id="statisticsDetails">
-   <summary><span><b>Statistik</b><small id="statisticsSummary">7 Tage · 0 Einträge</small></span></summary>
+   <summary><span><b id="statisticsSummary">Statistik</b><small id="statisticsSummary">7 Tage · 0 Einträge</small></span></summary>
    <div class="panel-body" id="statisticsBody"></div>
   </details>
  </div>
  <div class="card allergen-card"><div class="eyebrow">ALLERGENE</div><h3>Allergene planen</h3><div id="allergenModule"></div></div>
  <div class="card collapsible-card recipes-card" id="recipesSection">
   <details class="panel-details" id="recipesDetails">
-   <summary><span><b>Rezepte & Fingerfood</b><small id="recipeCount">Passend zu Status und Konsistenz.</small></span></summary>
+   <summary><span><b id="recipeCount">Rezepte & Fingerfood</b><small id="recipeCount">Passend zu Status und Konsistenz.</small></span></summary>
    <div class="panel-body">
     <div class="field recipe-search"><label>Rezept suchen</label><input id="recipeSearch" placeholder="z. B. Lachs, Zucchini, Pancakes"></div>
     <div class="field recipe-filter-field"><label>Kategorie</label><div class="seg recipe-filters" id="recipeFilter" role="group" aria-label="Rezeptkategorie"><button class="active" type="button" data-recipe-filter="available">Jetzt passend</button><button type="button" data-recipe-filter="almost">Fast passend</button><button type="button" data-recipe-filter="all">Alle</button><button type="button" data-recipe-filter="pantry">Mit Vorrat</button><button type="button" data-recipe-filter="freezer">Einfrierbar</button><button type="button" data-recipe-filter="porridge">Brei & Löffelgerichte</button><button type="button" data-recipe-filter="pancakes">Pancakes</button><button type="button" data-recipe-filter="balls">Bällchen, Taler & Fingerfood</button><button type="button" data-recipe-filter="family">Familiengerichte</button><button type="button" data-recipe-filter="philippines">Philippinen</button><button type="button" data-recipe-filter="baking">Backen</button><button type="button" data-recipe-filter="snack">Snack</button></div></div>
@@ -151,7 +151,7 @@
 
  <div class="card collapsible-card help-card">
   <details class="panel-details" id="helpDetails">
-   <summary><span><b>Hilfe & Begriffe</b><small>Plan, Vorrat, Status und Sicherheit</small></span></summary>
+   <summary><span><b id="helpSummary">Hilfe & Begriffe</b><small>Plan, Vorrat, Status und Sicherheit</small></span></summary>
    <div class="panel-body help-body">
     <details class="help-topic">
      <summary>Plan und Schlösser</summary>
@@ -226,7 +226,7 @@
    </div>
   </details>
  </div>
- <div class="card collapsible-card data-card"><details class="panel-details"><summary><span><b>Daten & Sicherung</b><small>Backup, Wiederherstellung und Zurücksetzen</small></span></summary><div class="panel-body"><div id="backupReminder" class="notice warn" style="display:none"><b>Externes Backup empfohlen.</b> Das letzte Backup ist älter als 14 Tage oder fehlt.</div><div id="storageError" class="notice warn" style="display:none"></div><div id="storageStatus" class="storage-status"></div><div class="backup-actions"><button class="btn secondary" id="exportData">Backup in Dateien sichern</button><label class="btn secondary" style="display:inline-flex;align-items:center;margin:0">Backup laden<input type="file" id="importData" accept=".json,application/json" hidden></label><button class="btn secondary" id="showSnapshots">Zwischenstände</button><button class="btn danger" id="resetData">Zurücksetzen</button></div><p class="small">Safari und die Home-Bildschirm-App können getrennte Speicherbereiche verwenden. Ein externes Backup in der Dateien-App schützt zusätzlich.</p><p class="small"><b>App-Version <span id="appVersion">10.1.25</span></b><br>Die Daten werden lokal auf diesem Gerät gespeichert; ein zusätzliches Backup in der Dateien-App bleibt empfohlen.</p>
+ <div class="card collapsible-card data-card"><details class="panel-details"><summary><span><b>Daten & Sicherung</b><small>Backup, Wiederherstellung und Zurücksetzen</small></span></summary><div class="panel-body"><div id="backupReminder" class="notice warn" style="display:none"><b>Externes Backup empfohlen.</b> Das letzte Backup ist älter als 14 Tage oder fehlt.</div><div id="storageError" class="notice warn" style="display:none"></div><div class="storage-status" id="storageStatus"></div><div class="backup-actions"><button class="btn secondary" id="exportData">Backup in Dateien sichern</button><label class="btn secondary" style="display:inline-flex;align-items:center;margin:0">Backup laden<input type="file" id="importData" accept=".json,application/json" hidden></label><button class="btn secondary" id="showSnapshots">Zwischenstände</button><button class="btn danger" id="resetData">Zurücksetzen</button></div><p class="small">Safari und die Home-Bildschirm-App können getrennte Speicherbereiche verwenden. Ein externes Backup in der Dateien-App schützt zusätzlich.</p><p class="small"><b>App-Version <span id="appVersion">10.1.25</span></b><br>Die Daten werden lokal auf diesem Gerät gespeichert; ein zusätzliches Backup in der Dateien-App bleibt empfohlen.</p>
 <details class="version-details"><summary>Was ist neu?</summary><div class="small">Neu: Statistik unter „Mehr“ mit 7 Tagen, 30 Tagen und dem gesamten Zeitraum seit Beikoststart. Sie zeigt 100-Lebensmittel-Fortschritt, Vielfalt, neue Lebensmittel, Protokollergebnisse, Konsistenz und – wenn vorhanden – dokumentierte Mengen. Alle Werte werden direkt aus dem bestehenden Protokoll berechnet; es gibt keine neue Datenhaltung.</div></details></div></details></div>
 
 </section>
@@ -258,5 +258,6 @@
 <script src="js/statistics.js?v=10.1.25"></script>
 <script src="js/ui.js?v=10.1.25"></script>
 <script src="js/planner-log-rollover.js?v=10.1.25"></script>
+<script src="js/planner-log-rollover-cascade.js?v=10.1.25"></script>
 <script src="app.js?v=10.1.25"></script>
 </body></html>

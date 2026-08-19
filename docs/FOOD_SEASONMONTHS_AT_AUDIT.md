@@ -3,7 +3,7 @@
 Stand: 19.08.2026  
 Historische Audit-Prüfbasis: `main` bei `c3de54da3f56567641cc47b534c5daa6cead4895`, App-Version 10.1.25  
 Implementierungsbranch: `fix/food-seasonmonths-at`, PR #6 gegen Public-`main`  
-Status: vollständiger Fachaudit **fachlich freigegeben und in PR #6 implementiert/getestet; noch nicht auf `main` gemergt**  
+Status: vollständiger Fachaudit **fachlich freigegeben und in PR #6 implementiert/getestet; vor Merge 🟡 Branch/Integrations-PR, mit Merge dieses Change-Sets ✅ main**  
 Fachfreigabe: **`regional aus Lagerung` zählt bei `seasonMonths` mit** (19.08.2026)
 
 ## 1. Zweck und bestehender Vertrag
@@ -167,6 +167,6 @@ Die fachlich freigegebene Matrix ist im Implementierungsbranch ohne neue Fachreg
 3. `tests/food-seasonmonths-at.test.cjs` prüft die vollständige Matrix, eindeutige Ganzzahlmonate `1..12`, neutrale FOODs sowie In-/Out-of-Season und PH-Travel.
 4. `tests/food-seasonmonths-runtime.test.cjs` prüft, dass Runtime-Policy-Ergänzungen die Matrix nicht überschreiben und neu ergänzte FOODs ohne Freigabematrix neutral bleiben.
 5. Der veraltete übersprungene `TODO3 SEASON-AUDIT`-Platzhalter wurde entfernt und auf die dedizierten Saisonregressionen verwiesen.
-6. `docs/PLANNER_FACHKONZEPT.md` wird auf den tatsächlichen Integrationsstatus von PR #6 aktualisiert; vor dem Merge bleibt der Saisonblock 🟡 Branch/Integrations-PR.
+6. `docs/PLANNER_FACHKONZEPT.md` führt den Saisonblock als fachlich abgeschlossen; vor Merge 🟡 Branch/Integrations-PR, mit Merge dieses Change-Sets ✅ main.
 
 Nicht Teil dieses Blocks sind FOOD-COUNT, PHASE-TRANSITION, Rezept-Handling-Reviews oder Änderungen an der Höhe des saisonalen Scores.

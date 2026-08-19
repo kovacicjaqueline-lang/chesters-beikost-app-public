@@ -57,12 +57,28 @@ async function seedRecipeMeal(page, recipeName, foodIds, textureStage = 3) {
     window.__beikostTest.reset();
     const state = window.__beikostTest.getState();
     const date = window.__beikostTest.today();
+    const exposureDate = window.__beikostTest.addDays(date, -1);
     state.settings.textureStage = textureStage;
     state.settings.planFrom = date;
     for (const id of foodIds) {
       const item = state.foods.find((food) => food.id === id);
       if (item) item.manualStatus = "Verträgliche Basis";
     }
+    state.logs.push({
+      id: `recipe-ready-${recipeName}`,
+      date: exposureDate,
+      meal: "lunch",
+      focusId: foodIds[0],
+      foodIds: [...foodIds],
+      baseFoodIds: [...foodIds],
+      sampleFoodIds: [],
+      recipeName: "",
+      outcome: "eaten",
+      foodOutcomes: Object.fromEntries(foodIds.map((id) => [id, "eaten"])),
+      entryType: "meal",
+      textureStage,
+      createdAt: `${exposureDate}T12:00:00.000Z`,
+    });
     state.manualMeals[`${date}|lunch`] = {
       date,
       meal: "lunch",
@@ -98,6 +114,15 @@ async function assertRecipeTitleLayout(page, locator, widths = [320, 375, 390]) 
       `Rezepttitel darf bei ${width}px keinen horizontalen Seiten-Overflow erzeugen`,
     );
   }
+}
+
+async function openRecipeVariants(page) {
+  const summary = page.locator("#genericBody .recipe-subsection > summary", {
+    hasText: "Varianten",
+  });
+  await summary.waitFor();
+  await summary.click();
+  await page.locator("#genericBody .recipe-option-list").waitFor();
 }
 
 const server = await startStaticServer();
@@ -156,8 +181,10 @@ try {
   await assertRecipeTitleLayout(page, homeRecipe);
   await homeRecipe.click();
   await page.locator("#genericModal.open .recipe-card-v2[open]").waitFor();
-  assert.match(await page.locator("#genericBody").innerText(), /Vorausgewählt:\s*Apfel/);
-  assert.doesNotMatch(await page.locator("#genericBody").innerText(), /Vorausgewählt:\s*Banane/);
+  await openRecipeVariants(page);
+  const fruitVariantText = await page.locator("#genericBody .recipe-option-list").innerText();
+  assert.match(fruitVariantText, /Vorausgewählt:\s*Apfel/);
+  assert.doesNotMatch(fruitVariantText, /Vorausgewählt:\s*Banane/);
   await page.locator("#closeGeneric").click();
 
   // Wochenplan: derselbe direkte Einstieg funktioniert ohne Zusatzbutton.
@@ -182,7 +209,11 @@ try {
   await assertRecipeTitleLayout(page, familyRecipe);
   await familyRecipe.click();
   await page.locator("#genericModal.open .recipe-card-v2[open]").waitFor();
-  assert.match(await page.locator("#genericBody").innerText(), /Variante:\s*Pute \+ Karotte/);
+  await openRecipeVariants(page);
+  assert.match(
+    await page.locator("#genericBody .recipe-option-list").innerText(),
+    /Variante:\s*Pute \+ Karotte/,
+  );
   await page.locator("#closeGeneric").click();
 
   // Erledigtes Rezept: der protokollierte Rezeptname bleibt direkt aufrufbar.

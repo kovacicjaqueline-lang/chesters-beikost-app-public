@@ -346,6 +346,30 @@ function installManualMealFlowRuntime() {
     return result;
   };
 
+  if (typeof saveEditedPlanMeal === "function") {
+    let originalSaveEditedPlanMeal = saveEditedPlanMeal;
+    saveEditedPlanMeal = function manualFlowSaveEditedPlanMeal(date, meal, data) {
+      let context = manualMealFlowContext;
+      let foodIds = [...new Set(data?.foodIds || [])];
+      let preparationKeys = manualMealFlowValidPreparationKeys(
+        context?.foodPreparationKeys || data?.foodPreparationKeys || {},
+        foodIds,
+      );
+      let result = originalSaveEditedPlanMeal.call(this, date, meal, {
+        ...data,
+        foodPreparationKeys: preparationKeys,
+      });
+      if (result?.ok) {
+        manualMealFlowContext = null;
+        if (manualMealFlowObserver) {
+          manualMealFlowObserver.disconnect();
+          manualMealFlowObserver = null;
+        }
+      }
+      return result;
+    };
+  }
+
   let originalMealDisplayTitle = mealDisplayTitle;
   mealDisplayTitle = function manualFlowMealDisplayTitle(meal) {
     if (meal?.manualAdded && typeof dishTitle === "function")

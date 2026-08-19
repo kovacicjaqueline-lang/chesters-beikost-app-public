@@ -1,0 +1,48 @@
+name: Apply clean migration patch
+
+on:
+  push:
+    branches-ignore: [main]
+    paths:
+      - '.migration/*.diff'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply-patch:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Apply migration patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          PATCH="$(find .migration -maxdepth 1 -type f -name '*.diff' | sort | head -n 1)"
+          test -n "$PATCH"
+          git apply --check "$PATCH"
+          git apply "$PATCH"
+          rm -f "$PATCH"
+          rmdir .migration 2>/dev/null || true
+
+      - name: Commit clean branch snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Migrate clean working branch snapshot'
+          git push
+
+      - name: Remove temporary probe branches
+        if: always()
+        shell: bash
+        run: |
+          git push origin --delete tmp-ignore tmp-ignore-2 migration-placeholder 2>/dev/null || true

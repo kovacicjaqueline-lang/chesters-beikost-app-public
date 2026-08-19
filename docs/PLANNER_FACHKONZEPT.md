@@ -316,7 +316,7 @@ Ein nach Abschnitt 6.3 geplantes Nuss-/Samenmus-Topping bleibt die eine Kostprob
 
 ## 9.3 Mehrdeutige Rezepte
 
-Wenn mehrere unterschiedlicheliche Rezeptformen nach bestehenden Kriterien gleichrangig passen, wird keine Darreichungsform geraten.
+Wenn mehrere unterschiedliche Rezeptformen nach bestehenden Kriterien gleichrangig passen, wird keine Darreichungsform geraten.
 
 Technische Auswahlpriorität bei proaktiven Kandidaten:
 

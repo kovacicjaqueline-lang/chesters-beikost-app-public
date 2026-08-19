@@ -14,7 +14,8 @@ test("HANDLING offline: dynamisch geladener Contract, Runtime und Unified Log si
   assert.match(utilsSource, /js\/handling-readiness\.js\?v=10\.1\.25/);
 
   assert.match(swSource, /const HANDLING_PRECACHE\s*=\s*\[[\s\S]*\.\/data\/food-handling\.js[\s\S]*\.\/js\/handling-readiness\.js[\s\S]*\]/);
-  assert.match(swSource, /const UNIFIED_LOG_PRECACHE\s*=\s*\[[\s\S]*\.\/js\/log-core\.js[\s\S]*\.\/js\/unified-food-log-policy\.js[\s\S]*\]/);
+  assert.match(swSource, /const UNIFIED_LOG_PRECACHE\s*=\s*\[[\s\S]*\.\/js\/log-core\.js[\s\S]*\]/);
+  assert.doesNotMatch(swSource, /unified-food-log-policy\.js/);
   assert.match(
     swSource,
     /\.\.\.PLAN08_PRECACHE\s*,\s*\.\.\.HANDLING_PRECACHE\s*,\s*\.\.\.UNIFIED_LOG_PRECACHE\s*,\s*\.\.\.UI_PRECACHE/,

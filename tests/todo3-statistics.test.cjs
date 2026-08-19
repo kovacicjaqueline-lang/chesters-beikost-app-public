@@ -25,6 +25,9 @@ function harness(logs = []) {
     logs,
     planLocks: { '2026-08-17|lunch': { mode: 'auto', foodIds: ['a'] } },
   };
+  const learnedFoods = () => foods.filter((item) => state.logs.some((log) =>
+    (log.foodIds || []).includes(item.id) && ['eaten', 'tried'].includes(log.foodOutcomes?.[item.id] || log.outcome)
+  ));
   const context = {
     state,
     today: () => '2026-08-17',
@@ -33,7 +36,8 @@ function harness(logs = []) {
     canonicalId: (id) => id,
     outcomeForFood: (log, id) => log.foodOutcomes?.[id] || log.outcome || '',
     inferEntryType: (log) => log.entryType || 'meal',
-    uniqueTriedCount: () => new Set(state.logs.flatMap((log) => (log.foodIds || []).filter((id) => ['eaten', 'tried'].includes(log.foodOutcomes?.[id] || log.outcome)))).size,
+    learnedFoods,
+    uniqueTriedCount: () => learnedFoods().length,
   };
   vm.createContext(context);
   vm.runInContext(`${source}\nthis.__snapshot = statisticsSnapshot;`, context);

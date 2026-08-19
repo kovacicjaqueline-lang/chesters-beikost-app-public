@@ -1,6 +1,7 @@
 name: Import clean main snapshot
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
 
@@ -9,7 +10,6 @@ permissions:
 
 jobs:
   import-snapshot:
-    if: ${{ github.actor != 'github-actions[bot]' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout public repository
@@ -47,5 +47,3 @@ jobs:
           git add -A
           git commit -m 'Import clean public snapshot from private main'
           git push
-
-# retriggered after enabling repository Actions permissions

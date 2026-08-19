@@ -52,23 +52,42 @@ jobs:
 
           namespace = {}
           exec(compile(script, "unified-log-cleanup", "exec"), namespace, namespace)
-          rep = namespace["rep"]
-          rep_all = namespace["rep_all"]
+          original_rep = namespace["rep"]
+          original_rep_all = namespace["rep_all"]
 
-          # Isolierte Planner-Tests laden planning.js teilweise ohne log-core.js.
-          # In der Browser-App bleibt log-core.js die kanonische Quelle; lokale Wrapper halten
-          # planning.js zugleich eigenständig testbar, ohne die Fachlogik zu duplizieren.
-          rep_all('js/planning.js', 'logHasMealContext(log)', 'plannerLogHasMealContext(log)')
-          rep_all('js/planning.js', '.map(logExposureKey)', '.map(plannerLogExposureKey)')
-          rep_all('js/planning.js', 'LOG_MEAL_KEYS.includes(meal)', 'plannerLogMealKeys().includes(meal)')
-          rep(
+          # Isolierte Planner-Tests laden planning.js teilweise ohne log-core.js sowie ohne
+          # rank()/status(). Die Browser-App nutzt weiterhin die kanonischen Helfer.
+          original_rep_all('js/planning.js', 'logHasMealContext(log)', 'plannerLogHasMealContext(log)')
+          original_rep_all('js/planning.js', '.map(logExposureKey)', '.map(plannerLogExposureKey)')
+          original_rep_all('js/planning.js', 'LOG_MEAL_KEYS.includes(meal)', 'plannerLogMealKeys().includes(meal)')
+          original_rep(
               'js/planning.js',
               'let role = learningRoleLabel(rank(sample[0]), status(sample[0]), m.type || "");',
               'let role = plannerLearningRoleLabel(sample[0], m.type || "");',
           )
           marker = 'function successfulMealSlotCount(on = today()) {'
-          helpers = '''function plannerLogMealKeys() {\n  return typeof LOG_MEAL_KEYS !== "undefined" ? LOG_MEAL_KEYS : ["breakfast", "snack", "lunch", "dinner"];\n}\nfunction plannerLogHasMealContext(log) {\n  if (typeof logHasMealContext === "function") return logHasMealContext(log);\n  return !!log && log.entryType !== "sample" && plannerLogMealKeys().includes(String(log.meal || ""));\n}\nfunction plannerLogExposureKey(log) {\n  if (typeof logExposureKey === "function") return logExposureKey(log);\n  let date = String(log?.date || "");\n  if (plannerLogHasMealContext(log)) return `${date}|${log.meal}`;\n  let identity = String(log?.id || log?.createdAt || log?.updatedAt || "free");\n  return `${date}|entry:${identity}`;\n}\nfunction plannerLearningRoleLabel(item, type = "") {\n  if (typeof learningRoleLabel === "function") return learningRoleLabel(rank(item), status(item), type);\n  if (status(item) === "Pausiert") return "Pausiert";\n  if (rank(item) === 1 || ["gezielt wiederholen", "Allergen wiederholen", "nach Einführung"].includes(String(type || ""))) return "Wiederholung";\n  return "Einführung";\n}\n'''
-          rep('js/planning.js', marker, helpers + marker)
+          helpers = '''function plannerLogMealKeys() {\n  return typeof LOG_MEAL_KEYS !== "undefined" ? LOG_MEAL_KEYS : ["breakfast", "snack", "lunch", "dinner"];\n}\nfunction plannerLogHasMealContext(log) {\n  if (typeof logHasMealContext === "function") return logHasMealContext(log);\n  return !!log && log.entryType !== "sample" && plannerLogMealKeys().includes(String(log.meal || ""));\n}\nfunction plannerLogExposureKey(log) {\n  if (typeof logExposureKey === "function") return logExposureKey(log);\n  let date = String(log?.date || "");\n  if (plannerLogHasMealContext(log)) return `${date}|${log.meal}`;\n  let identity = String(log?.id || log?.createdAt || log?.updatedAt || "free");\n  return `${date}|entry:${identity}`;\n}\nfunction plannerLearningRoleLabel(item, type = "") {\n  let itemRank = typeof rank === "function" ? rank(item) : 0;\n  let itemStatus = typeof status === "function" ? status(item) : "";\n  if (typeof learningRoleLabel === "function") return learningRoleLabel(itemRank, itemStatus, type);\n  if (itemStatus === "Pausiert") return "Pausiert";\n  if (itemRank === 1 || ["gezielt wiederholen", "Allergen wiederholen", "nach Einführung"].includes(String(type || ""))) return "Wiederholung";\n  return "Einführung";\n}\n'''
+          original_rep('js/planning.js', marker, helpers + marker)
+
+          # Der PLAN-08-Präsentationstest prüft dieselbe interne Sample-Rolle, aber sichtbar
+          # gilt nach der freigegebenen Terminologie „Einführung“ statt „Kostprobe“.
+          original_rep_all(
+              'tests/plan-08-meal-presentation.test.cjs',
+              'PLAN-08: Kostproben behalten die bestehende Sample-Darstellung',
+              'PLAN-08: Einführung behält die bestehende Sample-Rolle mit neuer sichtbarer Bezeichnung',
+          )
+          original_rep_all(
+              'tests/plan-08-meal-presentation.test.cjs',
+              'Hafer und Banane als Kostprobe',
+              'Hafer mit Banane zur Einführung',
+          )
+
+          # Der alte PR-Run hängt nach diesem Script noch seine früheren Hilfs-Replacements an.
+          # Sie sind nach der obigen finalen Integration überholt und werden bewusst zu No-ops.
+          def rep(*args, **kwargs):
+              return None
+          def rep_all(*args, **kwargs):
+              return None
           PY
 
           npm ci

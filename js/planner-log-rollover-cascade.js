@@ -25,9 +25,23 @@
     return added;
   }
 
-  const API = Object.freeze({ materializeVisibleFuturePlans });
+  function primarySlotCompletion(data, core, date, meal) {
+    if (!core) return null;
+    let primary = core.primaryPlanInstances(data).find((plan) => plan.date === date && plan.meal === meal) || null;
+    return primary ? core.linkedCompletionLog(data, primary.planId, date, meal) : null;
+  }
+
+  const API = Object.freeze({ materializeVisibleFuturePlans, primarySlotCompletion });
   if (typeof module !== "undefined" && module.exports) module.exports = API;
   if (typeof window === "undefined" || typeof document === "undefined") return;
+
+  let coreForSlot = () => globalScope.__plannerLogRolloverCore;
+  completedLog = function concretePrimaryCompletedLog(date, meal) {
+    return primarySlotCompletion(state, coreForSlot(), date, meal);
+  };
+  mealIsCompleted = function concretePrimaryMealIsCompleted(date, meal) {
+    return !!primarySlotCompletion(state, coreForSlot(), date, meal);
+  };
 
   let baseRenderPlanQuality = renderPlanQuality;
   renderPlanQuality = function plannerLinkedRenderPlanQuality(days) {

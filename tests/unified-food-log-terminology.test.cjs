@@ -31,7 +31,12 @@ test("Unified Log: Konsistenzstufen und Hilfe verwenden die neuen eindeutigen Be
 test("Unified Log: Terminologie ist direkt in Planner und UI integriert", () => {
   assert.equal(uiSource.includes("toggleEntryChooser("), false);
   assert.equal(uiSource.includes("Mahlzeit oder Kostprobe"), false);
+  assert.equal(uiSource.includes('role === "sample" ? "Kostprobe"'), false);
+  assert.equal(uiSource.includes("Einführung / Wiederholung"), false);
+  assert.equal(uiSource.includes("Sichere Form / Notiz"), false);
   assert.equal(planningSource.includes("Schon gegessen / Kombination"), false);
   assert.ok(uiSource.includes("Hauptbasis und Lernrolle werden getrennt gespeichert."));
+  assert.ok(uiSource.includes("Einführung und Wiederholung"));
+  assert.ok(uiSource.includes("Sichere Form oder Notiz"));
   assert.ok(planningSource.includes("Neue Einführung separat"));
 });

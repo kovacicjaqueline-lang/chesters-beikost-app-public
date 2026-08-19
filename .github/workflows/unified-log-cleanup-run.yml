@@ -1,0 +1,46 @@
+name: Run unified log cleanup
+
+on:
+  push:
+    branches:
+      - refactor/unified-food-log
+    paths:
+      - '.unified-log-cleanup-trigger'
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/unified-food-log
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Apply reviewed cleanup
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          import textwrap
+          workflow = Path('.github/workflows/unified-log-cleanup.yml').read_text()
+          start_marker = "          python3 <<'PY'\n"
+          end_marker = "\n          PY\n\n          npm ci"
+          start = workflow.index(start_marker) + len(start_marker)
+          end = workflow.index(end_marker, start)
+          script = textwrap.dedent(workflow[start:end])
+          Path('/tmp/unified-log-cleanup.py').write_text(script)
+          PY
+          python3 /tmp/unified-log-cleanup.py
+          npm ci
+          npm test
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/unified-log-cleanup.yml .github/workflows/unified-log-cleanup-run.yml .unified-log-cleanup-trigger
+          git add app.js index.html sw.js js browser-tests tests
+          git commit -m "Integrate unified food log canonically"
+          git push origin HEAD:refactor/unified-food-log

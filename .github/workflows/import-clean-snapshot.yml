@@ -1,0 +1,49 @@
+name: Import clean main snapshot
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'beikost-public-snapshot.zip'
+
+permissions:
+  contents: write
+
+jobs:
+  import-snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout public repository
+        uses: actions/checkout@v4
+
+      - name: Import repository snapshot without Git history
+        shell: bash
+        run: |
+          set -euo pipefail
+          ZIP='beikost-public-snapshot.zip'
+          rm -rf .snapshot-import
+          mkdir .snapshot-import
+          unzip -q "$ZIP" -d .snapshot-import
+
+          ROOT="$(find .snapshot-import -mindepth 1 -maxdepth 1 -type d | head -n 1)"
+          test -n "$ROOT"
+
+          find . -mindepth 1 -maxdepth 1 \
+            ! -name '.git' \
+            ! -name '.snapshot-import' \
+            ! -name "$ZIP" \
+            -exec rm -rf {} +
+
+          cp -a "$ROOT"/. .
+          rm -rf .snapshot-import "$ZIP"
+          rm -f .github/workflows/import-clean-snapshot.yml
+
+      - name: Commit clean public snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Import clean public snapshot from private main'
+          git push

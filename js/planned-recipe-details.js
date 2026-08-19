@@ -1,38 +1,37 @@
 "use strict";
 
 /* Geplante Rezepte direkt aus Heute und Wochenplan öffnen.
- * Die vorhandene Recipe-V2-Darstellung bleibt die einzige Quelle für Rezeptdetails.
+ * Die vorhandene Recipe-V2-Darstellung und die zentrale recipeByName-Auflösung
+ * bleiben die einzigen Quellen für Rezeptdetails und Rezeptnamen.
  */
 (function plannedRecipeDetailsModule(root) {
-  function recipeAliasValuesLocal(recipe) {
-    let legacy = Array.isArray(recipe?.legacyNames)
-      ? recipe.legacyNames
-      : recipe?.legacyNames
-        ? [recipe.legacyNames]
-        : [];
-    let search = Array.isArray(recipe?.searchAliases)
-      ? recipe.searchAliases
-      : recipe?.searchAliases
-        ? String(recipe.searchAliases).split(",")
-        : [];
-    return [...legacy, ...search].map((name) => String(name).trim()).filter(Boolean);
+  function displayedRecipeName(meal, completed = null) {
+    if (completed) return String(completed.recipeName || "").trim();
+    return String(meal?.recipeName || "").trim();
   }
 
-  function storedRecipeRecord(name, recipes = []) {
-    let stored = String(name || "").trim();
-    if (!stored) return null;
-    return (recipes || []).find((recipe) =>
-      recipe?.name === stored || recipeAliasValuesLocal(recipe).includes(stored)
-    ) || null;
-  }
-
-  function recipeStateForStoredName(name, recipes = [], states = []) {
-    let stored = String(name || "").trim();
-    if (!stored) return null;
-    let canonical = storedRecipeRecord(stored, recipes)?.name || stored;
-    return (states || []).find((recipe) => recipe?.name === canonical) ||
-      (states || []).find((recipe) => recipeAliasValuesLocal(recipe).includes(stored)) ||
-      null;
+  function recipeContextHints(recipe, foodIds = [], resolveFoodId = (name) => name) {
+    if (!recipe) return [];
+    let plannedIds = new Set((foodIds || []).filter(Boolean));
+    if (!plannedIds.size) return [];
+    let hints = [];
+    let sets = [recipe.requires || [], ...(recipe.alternatives || [])];
+    let variantIndex = sets.findIndex((requirements) =>
+      requirements.length > 0 &&
+      requirements.every((name) => {
+        let id = resolveFoodId(name);
+        return !!id && plannedIds.has(id);
+      })
+    );
+    if (variantIndex >= 0) {
+      let label = recipe.variantLabels?.[variantIndex] || recipe.legacyNames?.[variantIndex] || "";
+      if (label) hints.push(label);
+    }
+    for (let option of [...(recipe.oneOf || []), ...(recipe.milkChoices || [])]) {
+      let id = resolveFoodId(option);
+      if (id && plannedIds.has(id)) hints.push(option);
+    }
+    return [...new Set(hints.filter(Boolean))];
   }
 
   function addRecipeChevron(node) {
@@ -52,9 +51,10 @@
     node.appendChild?.(chevron);
   }
 
-  function markRecipeTitle(node, recipeName) {
+  function markRecipeTitle(node, recipeName, foodIds = []) {
     if (!node || !recipeName) return node;
     node.dataset.plannedRecipeName = String(recipeName);
+    node.dataset.plannedRecipeFoodIds = (foodIds || []).filter(Boolean).join(",");
     node.classList?.add("planned-recipe-title");
     node.setAttribute?.("role", "button");
     node.setAttribute?.("tabindex", "0");
@@ -75,29 +75,28 @@
     return node;
   }
 
-  function markCompletedRecipeTitle(node, recipeName) {
+  function markCompletedRecipeTitle(node, recipeName, foodIds = []) {
     if (!node || !recipeName) return null;
     if (node.querySelector?.("[data-planned-recipe-name]"))
       return node.querySelector("[data-planned-recipe-name]");
     let text = String(node.textContent || "");
     let index = text.lastIndexOf(recipeName);
-    if (index < 0) return markRecipeTitle(node, recipeName);
+    if (index < 0) return markRecipeTitle(node, recipeName, foodIds);
     let prefix = text.slice(0, index);
     let doc = node.ownerDocument || (typeof document !== "undefined" ? document : null);
-    if (!doc?.createElement) return markRecipeTitle(node, recipeName);
+    if (!doc?.createElement) return markRecipeTitle(node, recipeName, foodIds);
     node.textContent = "";
     if (prefix && doc.createTextNode) node.appendChild(doc.createTextNode(prefix));
     let recipeTarget = doc.createElement("span");
     recipeTarget.textContent = recipeName;
     node.appendChild(recipeTarget);
-    return markRecipeTitle(recipeTarget, recipeName);
+    return markRecipeTitle(recipeTarget, recipeName, foodIds);
   }
 
   if (typeof module !== "undefined" && module.exports) {
     module.exports = {
-      recipeAliasValuesLocal,
-      storedRecipeRecord,
-      recipeStateForStoredName,
+      displayedRecipeName,
+      recipeContextHints,
       markRecipeTitle,
       markCompletedRecipeTitle,
     };
@@ -109,21 +108,29 @@
     typeof renderPlan !== "function"
   ) return;
 
-  function currentRecipeState(storedName) {
-    let recipes = typeof RECIPES !== "undefined" ? RECIPES : [];
+  function currentRecipeState(storedName, foodIds = []) {
+    if (typeof recipeByName !== "function" || typeof recipeStates !== "function") return null;
+    let recipeRecord = recipeByName(storedName);
+    if (!recipeRecord) return null;
+    let resolveFoodId = (name) => {
+      let item = typeof foodByName === "function" ? foodByName(name) : null;
+      return item?.id || "";
+    };
+    let hints = recipeContextHints(recipeRecord, foodIds, resolveFoodId);
     let previousQuery = typeof recipeQuery !== "undefined" ? recipeQuery : "";
     let states = [];
     try {
-      if (typeof recipeQuery !== "undefined") recipeQuery = String(storedName || "");
-      states = typeof recipeStates === "function" ? recipeStates() : [];
+      if (typeof recipeQuery !== "undefined")
+        recipeQuery = [storedName, recipeRecord.name, ...hints].filter(Boolean).join(" ");
+      states = recipeStates();
     } finally {
       if (typeof recipeQuery !== "undefined") recipeQuery = previousQuery;
     }
-    return recipeStateForStoredName(storedName, recipes, states);
+    return states.find((recipe) => recipe?.name === recipeRecord.name) || null;
   }
 
-  function openPlannedRecipeDetails(storedName) {
-    let recipe = currentRecipeState(storedName);
+  function openPlannedRecipeDetails(storedName, foodIds = []) {
+    let recipe = currentRecipeState(storedName, foodIds);
     if (!recipe) {
       if (typeof showToast === "function") showToast("Rezeptbeschreibung nicht gefunden.");
       return false;
@@ -137,16 +144,17 @@
     return true;
   }
 
-  function decorateMealRecipeTitle(mealNode, recipeName) {
+  function decorateMealRecipeTitle(mealNode, recipeName, foodIds = []) {
     if (!mealNode || !recipeName) return;
     let completedTitle = mealNode.querySelector(".completed-title");
     if (completedTitle) {
-      markCompletedRecipeTitle(completedTitle, recipeName);
+      markCompletedRecipeTitle(completedTitle, recipeName, foodIds);
       return;
     }
     markRecipeTitle(
       mealNode.querySelector(".dish-title, .manual-meal-title"),
       recipeName,
+      foodIds,
     );
   }
 
@@ -156,9 +164,10 @@
     let activeMeals = (day?.meals || []).filter((meal) => meal.active && meal.focusId);
     let mealNodes = [...document.querySelectorAll("#todayCard .mealbox")];
     activeMeals.forEach((meal, index) => {
-      let log = typeof completedLog === "function" ? completedLog(on, meal.meal) : null;
-      let storedRecipeName = log?.recipeName || meal.recipeName || "";
-      decorateMealRecipeTitle(mealNodes[index], storedRecipeName);
+      let completed = typeof completedLog === "function" ? completedLog(on, meal.meal) : null;
+      let recipeName = displayedRecipeName(meal, completed);
+      let foodIds = completed ? completed.foodIds || [] : meal.foodIds || [];
+      decorateMealRecipeTitle(mealNodes[index], recipeName, foodIds);
     });
   }
 
@@ -173,11 +182,12 @@
       let activeMeals = (day.meals || []).filter((meal) => meal.active);
       let mealNodes = [...dayNode.querySelectorAll(".mealbox, .manual-meal")];
       activeMeals.forEach((meal, mealIndex) => {
-        let log = typeof completedLog === "function"
+        let completed = typeof completedLog === "function"
           ? completedLog(day.date, meal.meal)
           : null;
-        let storedRecipeName = log?.recipeName || meal.recipeName || "";
-        decorateMealRecipeTitle(mealNodes[mealIndex], storedRecipeName);
+        let recipeName = displayedRecipeName(meal, completed);
+        let foodIds = completed ? completed.foodIds || [] : meal.foodIds || [];
+        decorateMealRecipeTitle(mealNodes[mealIndex], recipeName, foodIds);
       });
     });
   }
@@ -198,12 +208,19 @@
     return event.target?.closest?.("[data-planned-recipe-name]") || null;
   }
 
+  function targetFoodIds(target) {
+    return String(target?.dataset?.plannedRecipeFoodIds || "")
+      .split(",")
+      .map((id) => id.trim())
+      .filter(Boolean);
+  }
+
   document.addEventListener("click", (event) => {
     let target = recipeTarget(event);
     if (!target) return;
     event.preventDefault();
     event.stopPropagation();
-    openPlannedRecipeDetails(target.dataset.plannedRecipeName);
+    openPlannedRecipeDetails(target.dataset.plannedRecipeName, targetFoodIds(target));
   });
 
   document.addEventListener("keydown", (event) => {
@@ -212,7 +229,7 @@
     if (!target) return;
     event.preventDefault();
     event.stopPropagation();
-    openPlannedRecipeDetails(target.dataset.plannedRecipeName);
+    openPlannedRecipeDetails(target.dataset.plannedRecipeName, targetFoodIds(target));
   });
 
   root.__plannedRecipeDetails = {

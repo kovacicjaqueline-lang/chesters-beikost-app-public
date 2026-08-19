@@ -208,7 +208,7 @@ try {
   });
   const lockedPlannerTitle = await lockedPlannerCard.locator(".dish-title").innerText();
   assert.match(lockedPlannerTitle, /Banane/, "normaler manuell gesperrter Planner-Slot behält den Basistitel");
-  assert.doesNotMatch(lockedPlannerTitle, /Pfirsich|Kostprobe/, "manuelles Sperren allein darf nicht den Manual-Card-Titel erzwingen");
+  assert.doesNotMatch(lockedPlannerTitle, /Pfirsich|Einführung|Wiederholung/, "manuelles Sperren allein darf nicht den Manual-Card-Titel erzwingen");
 
   // Für den eigentlichen Zusatzmahlzeiten-/Rekey-Flow wieder einen freien Zustand herstellen.
   await page.evaluate(() => {
@@ -233,7 +233,7 @@ try {
   await page.locator('.selectFood[data-food="pfirsich"]').click();
 
   assert.match(await page.locator(".manual-role-group.base").innerText(), /Banane/, "Banane muss Hauptbasis bleiben");
-  assert.match(await page.locator(".manual-role-group.sample").innerText(), /Pfirsich/, "Pfirsich muss als Kostprobe geführt werden");
+  assert.match(await page.locator(".manual-role-group.sample").innerText(), /Pfirsich/, "Pfirsich muss als Einführung geführt werden");
 
   const bananaPreparation = page.locator('[data-manual-preparation="banane"]');
   await bananaPreparation.waitFor();
@@ -259,7 +259,7 @@ try {
   let manualCard = page.locator(".manual-meal").filter({
     has: page.locator(`.removeManualMeal[data-date="${dates.future}"][data-meal="breakfast"]`),
   });
-  assert.match(await manualCard.locator(".manual-meal-title").innerText(), /Banane.*Pfirsich.*Kostprobe/, "Kartentitel muss Hauptbasis und Kostprobe repräsentieren");
+  assert.match(await manualCard.locator(".manual-meal-title").innerText(), /Banane.*Pfirsich.*Einführung/, "Kartentitel muss Hauptbasis und Einführung repräsentieren");
   assert.equal(await manualCard.locator("summary").evaluate((element) => getComputedStyle(element).listStyleType), "none", "nativer Details-Marker darf nicht einrücken");
   assert.equal(await manualCard.locator(".manual-meal-actions").evaluate((element) => getComputedStyle(element).gap), "12px", "Aktionsbuttons müssen den 12px-Gruppenabstand des Designsystems verwenden");
 

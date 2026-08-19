@@ -493,7 +493,7 @@ function renderPlanCore() {
         : "";
       return `<div class="card block day-card">
         <div class="row day-head">
-          <div class="grow"><div class="day-date">${nice(d.date, true)}</div><div class="small day-type-text">${d.introAssigned ? "Einführung / Wiederholung" : "Bekannter Tag"}</div></div>
+          <div class="grow"><div class="day-date">${nice(d.date, true)}</div><div class="small day-type-text">${d.introAssigned ? "Einführung und Wiederholung" : "Bekannter Tag"}</div></div>
           ${dayBadge}
         </div>
         ${d.meals.map((m) => renderMeal(d, m)).join("")}
@@ -874,7 +874,7 @@ function openManualMealSelector(date, meal, initialMeal = null) {
                 let roleInfo = manualMealRoleInfo(f, meal, date), pausedManual = roleInfo.reason === "paused_manual";
                 let roleLabel = pausedManual
                   ? (role === "sample" ? "Einführung · pausiert" : "Pausiert · manuell")
-                  : role === "sample" ? "Kostprobe"
+                  : role === "sample" ? "Einführung"
                     : role === "base" ? "Hauptbasis"
                       : role === "component" ? "Bekannte Komponente"
                         : roleInfo.role === "sample" ? "wird Einführung"
@@ -1157,6 +1157,16 @@ function existingFoodWithName(name) {
       .some((alias) => normalizeName(alias) === normalized);
   }) || null;
 }
+function uiFoodCategoryDisplayLabel(category) {
+  if (typeof foodCategoryLabel === "function") return foodCategoryLabel(category);
+  let value = String(category || "");
+  return {
+    "Getreide/Stärke": "Getreide und Stärke",
+    "Kraut/Gewürz": "Kräuter und Gewürze",
+    "Wurzel/Knolle": "Wurzel- und Knollengemüse",
+    "Soja/Tofu": "Soja und Tofu",
+  }[value] || value;
+}
 function addCustomFoodForm(options = {}) {
   let cats = [
     "Gemüse",
@@ -1177,10 +1187,10 @@ function addCustomFoodForm(options = {}) {
   openGeneric(
     "Eigenes Lebensmittel",
     `<div class="field"><label>Name</label><input id="customName" autocomplete="off"><div class="small custom-food-message" id="customFoodMessage" aria-live="polite"></div></div>
-     <div class="field"><label>Kategorie</label><select id="customCat">${cats.map((c) => `<option>${c}</option>`).join("")}</select></div>
+     <div class="field"><label>Kategorie</label><select id="customCat">${cats.map((c) => `<option value="${esc(c)}">${esc(uiFoodCategoryDisplayLabel(c))}</option>`).join("")}</select></div>
      <div class="field"><label>Passend für</label><div style="display:flex;flex-wrap:wrap;gap:10px 18px"><label class="small" style="display:flex;align-items:center;gap:7px"><input type="checkbox" id="customMealBreakfast" value="breakfast"> Frühstück</label><label class="small" style="display:flex;align-items:center;gap:7px"><input type="checkbox" id="customMealLunch" value="lunch"> Mittagessen</label><label class="small" style="display:flex;align-items:center;gap:7px"><input type="checkbox" id="customMealDinner" value="dinner"> Abendessen</label></div><div class="small" style="margin-top:6px">Ohne Auswahl bleibt das Lebensmittel verfügbar, wird aber nicht automatisch geplant.</div></div>
      <div class="field"><label>Allergengruppe (optional)</label><input id="customAllergen"></div>
-     <div class="field"><label>Sichere Form / Notiz</label><textarea id="customSafe"></textarea></div>
+     <div class="field"><label>Sichere Form oder Notiz</label><textarea id="customSafe"></textarea></div>
      <div class="sticky-form-actions ds-actionbar"><button class="btn secondary" id="cancelCustom" type="button">Abbrechen</button><button class="btn" id="saveCustom">Speichern</button></div>`,
     returnToLog ? () => {
       document.getElementById("logModal").classList.add("open");

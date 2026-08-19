@@ -299,7 +299,7 @@ try {
     has: page.locator(`.removeManualMeal[data-date="${dates.past}"][data-meal="breakfast"]`),
   });
   await manualCard.locator(".moveMeal").click();
-  await page.locator(`.removeManualMeal[data-date="${dates.today}"][data-meal="breakfast"]`).waitFor();
+  await page.locator(`.removeManualMeal[data-date="${dates.today}"][data-meal="breakfast"]`).waitFor({ state: "attached" });
   savedState = await page.evaluate(() => window.__beikostTest.getState());
   assert.equal(savedState.manualMeals[`${dates.today}|breakfast`].foodPreparationKeys.banane, preparationKey, "Auf morgen darf die explizite Darreichung nicht verlieren");
   assert.equal(savedState.manualMeals[`${dates.today}|breakfast`].foodPreparationKeys.pfirsich, peachPreparationKey, "Auf morgen darf die Kostproben-Darreichung nicht verlieren");

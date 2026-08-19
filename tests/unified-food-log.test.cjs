@@ -177,6 +177,13 @@ test("unified log source has no meal selector or current-texture fallback", () =
   assert.equal(logSource.includes("log.textureStage || state.settings.textureStage"), false);
 });
 
+test("legacy texture edit exception is limited to already-positive historical entries", () => {
+  assert.match(
+    logSource,
+    /__legacyTextureUnknown\s*=\s*!!pendingLog\.editId\s*&&\s*logTextureStage\(plan\)\s*===\s*null\s*&&\s*logPositiveOutcome\(plan, outcomeForFood\)/,
+  );
+});
+
 test("browser loads canonical log core before migrations without a runtime policy", () => {
   const corePos = indexSource.indexOf('src="js/log-core.js');
   const migrationPos = indexSource.indexOf('src="js/migrations.js');

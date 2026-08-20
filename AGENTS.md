@@ -117,6 +117,21 @@ Phasenübergänge sind entwicklungsorientiert und werden einmalig durch die Nutz
 - Snack bleibt rezeptgetrieben; kein allgemeines neues `FOOD.meals`-Snack-Sondermodell erfinden, solange dies nicht ausdrücklich fachlich freigegeben wird.
 - Fehler wie eine unpassende Frühstückskombination nicht durch neue Kombinations-Sonderregeln kaschieren, wenn die Primärursache in der Lebensmittel-Eignung liegt.
 
+### Aufnahme neuer FOODs und Rezepte
+
+Für jedes **neue kanonische FOOD** und jedes **neue Laufzeitrezept** gilt ab jetzt eine verbindliche Definition of Done. Ein Datensatz ist nicht vollständig und nicht mergebereit, solange einer der folgenden Punkte fehlt:
+
+- vollständige fachliche Stammdaten einschließlich der für den Datensatz relevanten Mahlzeiten-, Eignungs-, Zubereitungs- und Safety-Angaben;
+- eine **individuell geprüfte Handling-Einordnung** in `data/food-handling.js`; keine Ableitung allein aus Kategorie, Rezepttyp, Alter oder `stage`;
+- eine **explizite orale Verarbeitungs-Einordnung** gemäß `docs/FOOD_HANDLING_ORAL_PROCESSING_CONTRACT.md`; zusätzliche Capabilities nur, wenn der konkrete Datensatz sie fachlich wirklich benötigt;
+- bei Rezepten eine eindeutige kanonische Servierform sowie erforderliche Serving-/Safety-Guidance; ein neues Laufzeitrezept darf nicht absichtlich im Legacy-Stage-Fallback verbleiben;
+- ein **eigenes V2-Icon-Asset** für den kanonischen FOOD-/Rezeptdatensatz, die eindeutige zentrale Icon-Zuordnung und der erforderliche Service-Worker-Precache; Kategorie-, Generic- oder Legacy-Fallbacks gelten für neue kanonische Datensätze nicht als fertiger Zustand;
+- die zum Scope gehörenden Regressionen, sodass ein neu aufgenommener Datensatz ohne erforderlichen Contract bzw. ohne Icon/Mapping/Precache nicht unbemerkt vollständig erscheinen kann.
+
+Für neue FOODs muss die Handling-/Oral-Prüfung ebenfalls explizit erfolgen, auch wenn ein aktueller Runtime-Consumer nur einen Teil dieser Metadaten verwendet. Bestehende Legacy-FOODs werden durch diese Vorwärtsregel nicht automatisch neu klassifiziert; dafür bleibt eine gesonderte Einzelmigration erforderlich.
+
+Bei Icon-Arbeit gilt zusätzlich `docs/ICON_GUIDELINES.md`. Bei Handling/Oral Processing gilt `docs/FOOD_HANDLING_ORAL_PROCESSING_CONTRACT.md`.
+
 ### Bestehende Semantik bewahren
 
 - Die Semantik von `Neu planen` gegenüber `Sichtbare Woche vollständig neu planen` nicht neu definieren. Vor Änderungen die tatsächlich implementierte Semantik im Code und in Tests feststellen.

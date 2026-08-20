@@ -48,18 +48,24 @@ function canonical(ids = []) {
   return [...new Set(ids)].filter(Boolean).sort().join("+");
 }
 
-function normalizePlan(days) {
-  const result = {};
-  for (const day of days || []) {
-    for (const meal of day.meals || []) {
-      if (!meal?.active || meal.empty || !meal.focusId) continue;
-      result[`${day.date}|${meal.meal}`] = {
-        foods: canonical(meal.foodIds || []),
-        recipe: meal.recipeName || "",
+async function visiblePlan(page) {
+  return page.locator("#blockPlan .logMeal[data-plan]").evaluateAll((buttons) => {
+    const groups = {};
+    for (const button of buttons) {
+      const payload = JSON.parse(decodeURIComponent(button.dataset.plan || ""));
+      const key = `${payload.date}|${payload.meal}`;
+      const entry = {
+        foods: [...new Set(payload.foodIds || [])].filter(Boolean).sort().join("+"),
+        recipe: payload.recipeName || "",
+        planId: payload.planId || payload.plannedMealId || "",
       };
+      (groups[key] ||= []).push(entry);
     }
-  }
-  return result;
+    for (const entries of Object.values(groups)) {
+      entries.sort((a, b) => `${a.planId}|${a.foods}|${a.recipe}`.localeCompare(`${b.planId}|${b.foods}|${b.recipe}`));
+    }
+    return groups;
+  });
 }
 
 const server = await startStaticServer();
@@ -77,16 +83,16 @@ try {
   await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => !!window.__beikostTest?.buildDays && !!window.__plannerRandomSwap);
 
-  const setup = await page.evaluate(() => {
+  const today = await page.evaluate(() => {
     window.__beikostTest.reset();
-    const today = window.__beikostTest.today();
+    const current = window.__beikostTest.today();
     const state = window.__beikostTest.getState();
     state.settings.phaseSelected = "aufbau";
-    state.settings.planFrom = today;
+    state.settings.planFrom = current;
     state.settings.preferInventoryInPlan = false;
     state.settings.newFoodEvery = 99;
     state.deferred ||= {};
-    state.deferred[today] = true;
+    state.deferred[current] = true;
     state.inventory = [];
     for (const food of state.foods) {
       if (food.active && food.autoPlan !== false && (food.meals || []).some((meal) => ["breakfast", "lunch"].includes(meal))) {
@@ -94,37 +100,41 @@ try {
       }
     }
     window.__beikostTest.setState(state);
-    const days = window.__beikostTest.buildDays(today, 7);
-    return { today, days };
+    return current;
   });
 
-  const before = normalizePlan(setup.days);
-  const targetKey = `${setup.today}|lunch`;
-  assert.ok(before[targetKey]?.foods, "heutiges Mittagessen muss vor dem Tausch geplant sein");
-
-  const todayButton = page.locator(`.today-randomize-meal[data-random-date="${setup.today}"][data-random-meal="lunch"]`);
+  const targetKey = `${today}|lunch`;
+  const todayButton = page.locator(`.today-randomize-meal[data-random-date="${today}"][data-random-meal="lunch"]`);
   await todayButton.waitFor();
   assert.equal(await todayButton.innerText(), "↻ Tauschen", "Heute muss den expliziten Tausch-Button zeigen");
 
-  const planButton = page.locator(`#blockPlan .randomizeMeal[data-random-date="${setup.today}"][data-random-meal="lunch"]`);
+  const planButton = page.locator(`#blockPlan .randomizeMeal[data-random-date="${today}"][data-random-meal="lunch"]`);
   assert.equal(await planButton.count(), 1, "derselbe Slot muss auch im Wochenplan einen Tausch-Button haben");
+
+  const before = await visiblePlan(page);
+  assert.equal(before[targetKey]?.length, 1, "heutiges Mittagessen muss im sichtbaren Wochenplan genau einmal offen geplant sein");
+  const previousTarget = before[targetKey][0].foods;
 
   await todayButton.click();
   await page.waitForFunction(({ key, previous }) => {
     const lock = window.__beikostTest.getState().planLocks?.[key];
     const current = [...new Set(lock?.foodIds || [])].filter(Boolean).sort().join("+");
     return !!current && current !== previous;
-  }, { key: targetKey, previous: before[targetKey].foods });
+  }, { key: targetKey, previous: previousTarget });
 
   assert.match(await page.locator("#toastText").innerText(), /restliche Wochenplan bleibt unverändert/i);
 
-  const afterDays = await page.evaluate((today) => window.__beikostTest.buildDays(today, 7), setup.today);
-  const after = normalizePlan(afterDays);
-  assert.notEqual(after[targetKey]?.foods, before[targetKey]?.foods, "gewählter Slot muss tatsächlich eine andere Kombination erhalten");
+  const after = await visiblePlan(page);
+  assert.equal(after[targetKey]?.length, 1, "getauschter Slot muss im sichtbaren Wochenplan genau einmal offen bleiben");
+  assert.notEqual(after[targetKey][0].foods, previousTarget, "gewählter sichtbarer Slot muss tatsächlich eine andere Kombination erhalten");
 
   for (const [key, value] of Object.entries(before)) {
     if (key === targetKey) continue;
-    assert.deepEqual(after[key], value, `anderer sichtbarer Plan-Slot darf sich nicht ändern: ${key}`);
+    assert.deepEqual(after[key], value, `anderer tatsächlich sichtbarer Plan-Slot darf sich nicht ändern: ${key}`);
+  }
+  for (const key of Object.keys(after)) {
+    if (key === targetKey) continue;
+    assert.ok(before[key], `Tausch darf keinen zusätzlichen sichtbaren Plan-Slot erzeugen: ${key}`);
   }
 
   await context.close();

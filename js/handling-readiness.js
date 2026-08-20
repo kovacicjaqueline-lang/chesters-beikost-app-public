@@ -414,6 +414,25 @@ function installPresentationModeRuntime() {
       let key = typeof planLockKey === "function" ? planLockKey(date, meal) : `${date}|${meal}`;
       let lock = state.planLocks?.[key];
       if (
+        lock?.mode === "auto" &&
+        !lock.followUpFoodId &&
+        plannedMeal.recipeName
+      ) {
+        let recipe = typeof recipeByName === "function"
+          ? recipeByName(plannedMeal.recipeName)
+          : { name: plannedMeal.recipeName };
+        let handling = recipeHandlingEligibility(
+          recipe,
+          state.settings,
+          RECIPE_HANDLING_CONTRACT,
+        );
+        if (handling.migrated && !handling.eligibleModes.length) {
+          delete state.planLocks[key];
+          if (typeof save === "function") save();
+          return null;
+        }
+      }
+      if (
         lock &&
         Object.prototype.hasOwnProperty.call(lock, "presentationMode")
       ) plannedMeal.presentationMode = lock.presentationMode;

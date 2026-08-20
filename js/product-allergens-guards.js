@@ -196,6 +196,12 @@ function productAllergenRecipeBaseSets(recipe) {
   return [recipe?.requires || [], ...(recipe?.alternatives || [])].filter((set, index) => set.length || index === 0);
 }
 
+function productAllergenRecipeNeedsExplicitChoice(recipe) {
+  return productAllergenRecipeBaseSets(recipe).length > 1 ||
+    (recipe?.oneOf || []).length > 1 ||
+    (recipe?.milkChoices || []).length > 1;
+}
+
 function productAllergenFoodIdByName(name) {
   if (typeof foodByName === "function") return foodByName(name, state?.foods || [])?.id || "";
   let normalized = typeof normalizeName === "function" ? normalizeName(name) : String(name || "").toLowerCase();
@@ -246,6 +252,8 @@ function productAllergenEnsureRecipeChoice(recipeName) {
   if (!recipe) return null;
   let presetIds = productAllergenInventoryContext.originalRecipeName === recipeName ? productAllergenInventoryContext.presetFoodIds : [];
   let choice = productAllergenRecipeChoiceState(recipe, presetIds);
+  choice.confirmed = !productAllergenRecipeNeedsExplicitChoice(recipe) ||
+    (productAllergenInventoryContext.originalRecipeName === recipeName && !!productAllergenInventoryContext.presetRecipeConfirmed);
   productAllergenInventoryContext.recipeChoices[recipeName] = choice;
   return choice;
 }
@@ -260,6 +268,7 @@ if (typeof addInventoryForm === "function") {
       originals: initial.originals,
       originalRecipeName: preset.recipeName || "",
       presetFoodIds: [...(preset.foodIds || [])],
+      presetRecipeConfirmed: !!preset.actualRecipeIngredientsConfirmed,
       recipeChoices: {},
     };
     productAllergenInventoryContext = context;
@@ -297,7 +306,11 @@ function productAllergenRecipeChoiceHtml(recipe, choice) {
   };
   parts.push(choiceSelect("Tatsächlich verwendete Auswahl", recipe.oneOf, choice.oneOfId, "data-inventory-recipe-oneof"));
   parts.push(choiceSelect("Tatsächlich verwendetes Milchprodukt", recipe.milkChoices, choice.milkChoiceId, "data-inventory-recipe-milk"));
-  return parts.filter(Boolean).length ? `<div class="notice olive"><b>Tatsächliche Rezeptzutaten</b><div class="small">Für den eingefrorenen Batch wird die wirklich zubereitete Variante gespeichert, nicht die aktuelle Planner-Vorauswahl.</div></div>${parts.join("")}` : "";
+  let needsConfirmation = productAllergenRecipeNeedsExplicitChoice(recipe);
+  let confirmation = needsConfirmation
+    ? `<label class="toggleline"><input type="checkbox" data-inventory-recipe-confirm ${choice.confirmed ? "checked" : ""}><span class="toggle-copy"><b>Diese Zutaten wurden tatsächlich verwendet</b><span class="small">Erst nach dieser Bestätigung kann der Rezeptvorrat gespeichert werden.</span></span></label>`
+    : "";
+  return parts.filter(Boolean).length || confirmation ? `<div class="notice olive"><b>Tatsächliche Rezeptzutaten</b><div class="small">Für den eingefrorenen Batch wird die wirklich zubereitete Variante gespeichert, nicht die aktuelle Planner-Vorauswahl.</div></div>${parts.join("")}${confirmation}` : "";
 }
 
 function productAllergenInventoryRows(ids) {
@@ -329,9 +342,12 @@ function productAllergenRenderInventoryBox(box, target) {
     productAllergenRenderInventoryBox(box, target);
     box.open = true;
   };
-  box.querySelector("[data-inventory-recipe-variant]")?.addEventListener("change", (event) => { choice.variantIndex = Number(event.target.value) || 0; rerender(); });
-  box.querySelector("[data-inventory-recipe-oneof]")?.addEventListener("change", (event) => { choice.oneOfId = event.target.value; rerender(); });
-  box.querySelector("[data-inventory-recipe-milk]")?.addEventListener("change", (event) => { choice.milkChoiceId = event.target.value; rerender(); });
+  box.querySelector("[data-inventory-recipe-variant]")?.addEventListener("change", (event) => { choice.variantIndex = Number(event.target.value) || 0; choice.confirmed = false; rerender(); });
+  box.querySelector("[data-inventory-recipe-oneof]")?.addEventListener("change", (event) => { choice.oneOfId = event.target.value; choice.confirmed = false; rerender(); });
+  box.querySelector("[data-inventory-recipe-milk]")?.addEventListener("change", (event) => { choice.milkChoiceId = event.target.value; choice.confirmed = false; rerender(); });
+  box.querySelector("[data-inventory-recipe-confirm]")?.addEventListener("change", (event) => { choice.confirmed = !!event.target.checked; rerender(); });
+  let saveButton = document.getElementById("saveInv");
+  if (saveButton && recipe && productAllergenRecipeNeedsExplicitChoice(recipe)) saveButton.disabled = !choice?.confirmed;
   return ids;
 }
 
@@ -343,6 +359,7 @@ if (typeof attachInventorySnapshotsAfterSave === "function") {
     if (!item) return;
     if (kind === "recipe") {
       item.foodIds = [...new Set(foodIds || [])];
+      item.actualRecipeIngredientsConfirmed = true;
       let snapshots = {};
       for (let id of item.foodIds) snapshots[id] = preservedOrCurrentSnapshot(id, productAllergenInventoryContext?.selections?.[id], productAllergenInventoryContext?.originals?.[id]);
       item.ingredientProductSnapshots = normalizeSnapshotMap(snapshots, item.foodIds);
@@ -369,6 +386,18 @@ if (typeof injectInventoryProductAllergens === "function") {
     note.parentNode.insertBefore(box, note);
     let beforeIds = new Set(state.inventory.map((item) => item.id));
     let saveButton = document.getElementById("saveInv");
+    let recipe = target.kind === "recipe" && typeof recipeByName === "function" ? recipeByName(target.key) : null;
+    let choice = recipe ? productAllergenEnsureRecipeChoice(target.key) : null;
+    if (recipe && productAllergenRecipeNeedsExplicitChoice(recipe) && !choice?.confirmed) box.open = true;
+    if (recipe && productAllergenRecipeNeedsExplicitChoice(recipe)) {
+      saveButton.addEventListener("click", (event) => {
+        if (choice?.confirmed) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        showToast?.("Bitte die tatsächlich verwendeten Rezeptzutaten bestätigen.");
+        box.open = true;
+      }, { capture: true });
+    }
     if (target.kind === "recipe" && typeof recipeFoodIds === "function") {
       saveButton.addEventListener("click", () => {
         productAllergenCaptureInventorySelections(box);

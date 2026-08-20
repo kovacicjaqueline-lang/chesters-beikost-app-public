@@ -163,8 +163,8 @@ test("static FOOD and recipe data receive no blanket Sulfite assignment", () => 
 test("product module is loaded before app start and is available offline", () => {
   const indexSource = fs.readFileSync(path.join(root, "index.html"), "utf8");
   const swSource = fs.readFileSync(path.join(root, "sw.js"), "utf8");
-  const productPos = indexSource.indexOf('js/product-allergens.js?v=10.1.25');
-  const appPos = indexSource.indexOf('app.js?v=10.1.25');
+  const productPos = indexSource.indexOf('src="js/product-allergens.js?v=');
+  const appPos = indexSource.indexOf('src="app.js?v=');
   assert.ok(productPos >= 0, "product allergen module must be loaded");
   assert.ok(appPos > productPos, "product allergen module must wrap migration/UI before app startup");
   assert.match(swSource, /\.\/js\/product-allergens\.js/);

@@ -163,9 +163,9 @@ test("Rezepttitel wird zugängliches iPhone-Touchziel mit Mahlzeitenkontext", ()
 });
 
 test("Feature liest nur gerenderten Kontext und baut den Planner nicht erneut auf", () => {
-  let uiIndex = indexSource.indexOf('js/ui.js?v=10.1.25');
-  let featureIndex = indexSource.indexOf('js/planned-recipe-details.js?v=10.1.25');
-  let appIndex = indexSource.indexOf('app.js?v=10.1.25');
+  let uiIndex = indexSource.indexOf('src="js/ui.js?v=');
+  let featureIndex = indexSource.indexOf('src="js/planned-recipe-details.js?v=');
+  let appIndex = indexSource.indexOf('src="app.js?v=');
 
   assert.ok(uiIndex >= 0);
   assert.ok(featureIndex > uiIndex);

@@ -214,7 +214,7 @@ test('review-fix runtime loads before app startup and all planner runtime files 
   const cascade = fs.readFileSync(path.join(root, 'js', 'planner-log-rollover-cascade.js'), 'utf8');
   const index = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
-  assert.match(cascade, /planner-log-rollover-review-fixes\.js\?v=10\.1\.25/);
+  assert.match(cascade, /planner-log-rollover-review-fixes\.js\?v=\d+\.\d+\.\d+/);
   for (const file of [
     './js/planner-log-rollover.js',
     './js/planner-log-rollover-cascade.js',
@@ -223,7 +223,7 @@ test('review-fix runtime loads before app startup and all planner runtime files 
   const coreIndex = index.indexOf('js/planner-log-rollover.js');
   const cascadeIndex = index.indexOf('js/planner-log-rollover-cascade.js');
   const recipeIndex = index.indexOf('js/planned-recipe-details.js');
-  const appIndex = index.indexOf('app.js?v=10.1.25');
+  const appIndex = index.indexOf('src="app.js?v=');
   assert.ok(coreIndex >= 0 && coreIndex < cascadeIndex);
   assert.ok(cascadeIndex < recipeIndex && recipeIndex < appIndex);
 });

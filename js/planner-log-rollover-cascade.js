@@ -89,7 +89,7 @@
 
   // Die Review-Fixes müssen vor app.js und vor nachgelagerten UI-Dekoratoren laufen.
   // Beim normalen Parser-Start lädt document.write das Zusatzmodul synchron.
-  const reviewFixSrc = "js/planner-log-rollover-review-fixes.js?v=10.1.25";
+  const reviewFixSrc = "js/planner-log-rollover-review-fixes.js?v=10.1.26";
   if (document.readyState === "loading") {
     document.write(`<script src="${reviewFixSrc}"></scr` + `ipt>`);
   } else {
@@ -99,7 +99,7 @@
     document.head.appendChild(script);
   }
 
-  const randomSwapSrc = "js/planner-random-swap.js?v=10.1.25";
+  const randomSwapSrc = "js/planner-random-swap.js?v=10.1.26";
   if (document.readyState === "loading") {
     document.write(`<script src="${randomSwapSrc}"></scr` + `ipt>`);
   } else {

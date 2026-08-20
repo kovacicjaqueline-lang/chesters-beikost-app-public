@@ -422,14 +422,6 @@ function installHandlingReadinessRuntime() {
     return standard ? [...structured, standard] : structured;
   };
 
-  if (typeof textureName === "function") {
-    let originalTextureName = textureName;
-    textureName = function handlingAwareTextureName(stage = Number(state.settings.textureStage)) {
-      if (Number(stage) === 3) return "weich-stückig";
-      return originalTextureName(stage);
-    };
-  }
-
   if (typeof renderSettings === "function") {
     let originalRenderSettings = renderSettings;
     renderSettings = function handlingAwareRenderSettings(...args) {

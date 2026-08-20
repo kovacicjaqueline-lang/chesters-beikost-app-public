@@ -85,43 +85,86 @@ function statusSource(f) {
 }
 
 /*
- * FOOD-COUNT: Für das 100-Lebensmittel-Ziel zählt die ausdrücklich freigegebene
- * kulinarische Grundstoff-Identität, nicht jede Verarbeitungsform als neues FOOD.
- * Diese Zuordnung ist absichtlich getrennt von foodFamily/allergenFamily, weil
- * jene Felder Planner- und Allergenverhalten steuern.
+ * FOOD-COUNT: Für das 100-Lebensmittel-Ziel zählt die fachlich freigegebene
+ * Grundstoff-Identität. Sie ist ausdrücklich unabhängig von foodFamily,
+ * allergenFamily und allergenGroup. Eine technische FOOD-ID kann mehrere
+ * Zählidentitäten tragen; reine Verarbeitungsformen erzeugen keinen Extra-Punkt.
+ * Der vollständige aktuelle FOOD-Stamm ist durch Regressionstests audit-gesperrt.
  */
-const COUNT100_IDENTITY_BY_ID = Object.freeze({
-  sesam: "sesam",
-  tahin: "sesam",
-  mais: "mais",
-  "mais-polenta": "mais",
-  polenta: "mais",
-  hafer: "hafer",
-  haferdrink: "hafer",
-  weizen: "weizen",
-  weizengriess: "weizen",
-  bulgur: "weizen",
-  couscous: "weizen",
-  "nudeln-pasta": "weizen",
-  brot: "weizen",
+const COUNT100_IDENTITIES_BY_ID = Object.freeze({
+  sesam: ["sesam"],
+  tahin: ["sesam"],
+  mais: ["mais"],
+  "mais-polenta": ["mais"],
+  polenta: ["mais"],
+  hafer: ["hafer"],
+  haferdrink: ["hafer"],
+  weizen: ["weizen"],
+  weizengriess: ["weizen"],
+  bulgur: ["weizen"],
+  couscous: ["weizen"],
+  "nudeln-pasta": ["weizen"],
+  brot: ["weizen"],
+  sojabohne: ["soja"],
+  "soja-tofu": ["soja"],
+  tempeh: ["soja"],
+  sojajoghurt: ["soja"],
+  kuhmilch: ["kuhmilch"],
+  naturjoghurt: ["kuhmilch"],
+  buttermilch: ["kuhmilch"],
+  butter: ["kuhmilch"],
+  frischkaese: ["kuhmilch"],
+  kaese: ["kuhmilch"],
+  kefir: ["kuhmilch"],
+  mozzarella: ["kuhmilch"],
+  quark: ["kuhmilch"],
+  skyr: ["kuhmilch"],
+  huettenkaese: ["kuhmilch"],
+  traube: ["traube"],
+  rosine: ["traube"],
 });
-function count100Identity(foodOrId, name = "") {
-  let id = typeof foodOrId === "object" ? foodOrId?.id : foodOrId;
-  let foodName = typeof foodOrId === "object" ? foodOrId?.name : name;
+function resolvedCount100Identities(foodOrId, name = "") {
+  let record = typeof foodOrId === "object" ? foodOrId : null;
+  let id = record?.id || foodOrId;
+  let foodName = record?.name || name;
+  if (!record && typeof state !== "undefined" && Array.isArray(state?.foods)) {
+    record = state.foods.find((item) => item?.id === id) || null;
+    if (record) foodName = record.name || foodName;
+  }
+  if (record?.count100 === false) return [];
   let canonical = canonicalId(id || "", foodName || "");
-  return COUNT100_IDENTITY_BY_ID[canonical] || canonical;
+  if (!canonical) return [];
+  if (Array.isArray(record?.count100Identities) && record.count100Identities.length) {
+    return [...new Set(record.count100Identities
+      .map((identity) => canonicalId(String(identity || ""), ""))
+      .filter(Boolean))];
+  }
+  let configured = COUNT100_IDENTITIES_BY_ID[canonical];
+  return configured ? [...configured] : [canonical];
+}
+function count100Identity(foodOrId, name = "") {
+  return resolvedCount100Identities(foodOrId, name)[0] || "";
+}
+function learnedCountIdentities() {
+  let identities = new Set();
+  for (let f of state.foods) {
+    if (f.count100 === false || rank(f) < 1) continue;
+    for (let identity of resolvedCount100Identities(f)) identities.add(identity);
+  }
+  return [...identities];
 }
 function learnedFoods() {
   let seen = new Set();
-  return state.foods
-    .filter((f) => f.count100 && rank(f) >= 1)
-    .sort((a, b) => a.priority - b.priority)
-    .filter((f) => {
-      let identity = count100Identity(f);
-      if (!identity || seen.has(identity)) return false;
+  let learned = [];
+  for (let f of [...state.foods].sort((a, b) => a.priority - b.priority)) {
+    if (f.count100 === false || rank(f) < 1) continue;
+    for (let identity of resolvedCount100Identities(f)) {
+      if (!identity || seen.has(identity)) continue;
       seen.add(identity);
-      return true;
-    });
+      learned.push(f);
+    }
+  }
+  return learned;
 }
 function lastDate(id, okOnly = false) {
   let ls = logsFor(id).filter((l) => !okOnly || outcomeForFood(l, id) === "eaten");

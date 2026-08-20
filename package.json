@@ -1,6 +1,6 @@
 {
   "name": "chesters-beikost-app",
-  "version": "10.1.25",
+  "version": "10.1.26",
   "private": true,
   "scripts": {
     "dev": "wrangler dev",

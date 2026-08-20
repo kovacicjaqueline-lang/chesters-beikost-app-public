@@ -1,11 +1,11 @@
 {
   "app": "Beikost-App",
-  "version": "10.1.25",
-  "releaseDate": "2026-08-17",
+  "version": "10.1.26",
+  "releaseDate": "2026-08-21",
   "channel": "test",
-  "schemaCompatibility": "bestehende Backups und lokale Daten aus Version 9.3 bis 10.1.23 bleiben kompatibel; alte Mengenstufen werden als separate Mengenorientierung übernommen und konservativ in Phasenmodell-v2 migriert; keine Speicher-Schemaerhöhung",
-  "contents": "FOOD-Aufnahme-/Korrekturblock: 34 freigegebene Lebensmittel zentral im FOOD-Stamm, alternative Bezeichnungen ausschließlich als Aliase, korrigierte Allergenzuordnungen, FOOD-01 Nektarine mit eigenem Food-V2-Asset sowie bestehende allgemeine FOOD-Auto-Eignung unverändert.",
-  "status": "Teststand – FOOD-Aufnahme-/Korrekturblock 10.1.25; stabile IDs und bestehende Nutzerdaten bleiben migrationskompatibel.",
+  "schemaCompatibility": "bestehende Backups und lokale Daten aus Version 9.3 bis 10.1.25 bleiben kompatibel; alte Mengenstufen werden als separate Mengenorientierung übernommen und konservativ in Phasenmodell-v2 migriert; keine Speicher-Schemaerhöhung",
+  "contents": "Konsolidierter Querschnitts-Teststand seit 10.1.25: Planner-Log-Verknüpfung und Missed-Day-Rollover, direkt öffnbare geplante Rezeptdetails, Rezeptmengen und weiche Altersorientierung, aktualisierte FOOD-Saisonmatrix, verbesserte automatische Kombinationen und randomisierter Einzelmahlzeiten-Tausch, vollständige Handling-/Oral-Processing-Migration der Laufzeitrezepte; dazu UI-, Such-, Branding- und PWA-Resume-Korrekturen sowie FOOD-/Recipe-V2-Icon-Migration, Integrity-Guards und Legacy-Asset-Cleanup.",
+  "status": "Teststand – konsolidierter Querschnitt 10.1.26; bestehende Daten bleiben migrationskompatibel, schemaVersion 7 unverändert.",
   "packageType": "vollständiger Projekt- und Teststand",
   "schemaVersion": 7
 }

@@ -150,8 +150,8 @@ const RECIPE_NOCKERL_SPLIT = Object.freeze([
     freezable: true,
     freezerNote: "Gegarte Nockerl einzeln vorfrieren, portionsweise verpacken und nach dem Auftauen vollständig erwärmen.",
     tags: Object.freeze(["Fingerfood", "Familiengericht", "einfrierbar"]),
-    legacyNames: Object.freeze(["Gemüse-Fleisch-Nockerl", "Gemüse-Fleisch-Spätzle", "Baby-Spätzle"]),
-    searchAliases: Object.freeze(["Gemüse-Fleisch-Nockerl", "Gemüse-Fleisch-Spätzle", "Baby-Spätzle", "Huhn-Zucchini-Nockerl"]),
+    legacyNames: Object.freeze([]),
+    searchAliases: Object.freeze([]),
     skillRequirement: "Nur vollständig durchgegart und sehr weich anbieten; ein aufgeschnittenes Nockerl darf nicht gummiartig oder kompakt-elastisch sein. Nur aufrecht sitzend und direkt beaufsichtigt anbieten.",
   }),
   Object.freeze({

@@ -34,6 +34,8 @@ const UI_PRECACHE = [
   "./js/planner-log-rollover.js",
   "./js/planner-log-rollover-cascade.js",
   "./js/planner-log-rollover-review-fixes.js",
+  "./js/product-allergens.js",
+  "./js/product-allergens-guards.js",
 ];
 
 self.addEventListener("install", (event) => {

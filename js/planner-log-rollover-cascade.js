@@ -98,4 +98,14 @@
     script.async = false;
     document.head.appendChild(script);
   }
+
+  const randomSwapSrc = "js/planner-random-swap.js?v=10.1.25";
+  if (document.readyState === "loading") {
+    document.write(`<script src="${randomSwapSrc}"></scr` + `ipt>`);
+  } else {
+    let script = document.createElement("script");
+    script.src = randomSwapSrc;
+    script.async = false;
+    document.head.appendChild(script);
+  }
 })(typeof globalThis !== "undefined" ? globalThis : this);

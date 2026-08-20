@@ -21,6 +21,11 @@ const HANDLING_PRECACHE = [
   "./js/handling-readiness.js",
 ];
 
+// Der einheitliche Essenslog wird vor app.js geladen und bleibt auch offline vollständig verfügbar.
+const UNIFIED_LOG_PRECACHE = [
+  "./js/log-core.js",
+];
+
 // Zusätzliche UI-/Flow-Dateien, die nicht im statischen FILES-Stamm von sw-core.js liegen.
 const UI_PRECACHE = [
   "./ui-meal-editor-footer.css",
@@ -31,7 +36,7 @@ const UI_PRECACHE = [
 self.addEventListener("install", (event) => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE);
-    await Promise.all([...PLAN08_PRECACHE, ...HANDLING_PRECACHE, ...UI_PRECACHE].map(async (url) => {
+    await Promise.all([...PLAN08_PRECACHE, ...HANDLING_PRECACHE, ...UNIFIED_LOG_PRECACHE, ...UI_PRECACHE].map(async (url) => {
       try {
         const response = await fetch(new Request(url, { cache: "reload" }));
         if (response && response.ok) await cache.put(url, response.clone());

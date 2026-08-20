@@ -37,7 +37,11 @@ function renderAll() {
   renderStorageStatus();
 }
 function textureSuccessCount(stage = Number(state.settings.textureStage)) {
-  return new Set(state.logs.filter((l) => (Object.values(l.foodOutcomes || {}).some((o) => o === "eaten") || l.outcome === "eaten") && Number(l.textureStage || stage) === Number(stage)).map((l) => `${l.date}|${l.meal}`)).size;
+  return new Set(
+    state.logs
+      .filter((log) => logTextureStage(log) === Number(stage) && logPositiveOutcome(log, outcomeForFood))
+      .map(logExposureKey),
+  ).size;
 }
 function setTextureStage(nextStage) {
   let stage = Math.max(1, Math.min(4, Number(nextStage) || 1));
@@ -82,7 +86,7 @@ function renderTextureCoach() {
     </summary>
     <div class="home-control-body">
       <div class="texture-track" aria-label="Konsistenzstufe ${stage} von 4">${progress}</div>
-      <div class="small">${successes} gut bewältigte Mahlzeit${successes === 1 ? "" : "en"} auf dieser Stufe.</div>
+      <div class="small">${successes} positive Texturerfahrung${successes === 1 ? "" : "en"} auf dieser Stufe.</div>
       <div class="texture-coach-actions">
         ${stage > 1 ? `<button class="btn secondary" id="textureBack">Zurück</button>` : ""}
         ${stage < 4 ? `<button class="btn ${suggest ? "" : "secondary"}" id="textureNext">Stufe ${next} testen</button>` : ""}
@@ -102,7 +106,10 @@ function compactMealRolesHtml(m) {
   let base = (m.baseFoodIds || []).map(food).filter(Boolean);
   let all = [...new Map([...(base || []), ...(sample || []), ...(m.foodIds || []).map(food).filter(Boolean)].map((item) => [item.id, item])).values()];
   if (all.length <= 1 && !m.recipeName) return "";
-  if (sample.length) return `<div class="compact-role-list">${base.length ? `<div class="compact-role-row"><b>${esc(base.map((x) => x.name).join(" + "))}</b><span>Hauptmahlzeit</span></div>` : ""}<div class="compact-role-row sample"><b>${esc(sample.map((x) => x.name).join(" + "))}</b><span>Kostprobe</span></div></div>`;
+  if (sample.length) {
+    let role = learningRoleLabel(rank(sample[0]), status(sample[0]), m?.type || "");
+    return `<div class="compact-role-list">${base.length ? `<div class="compact-role-row"><b>${esc(base.map((x) => x.name).join(" + "))}</b><span>Hauptmahlzeit</span></div>` : ""}<div class="compact-role-row sample"><b>${esc(sample.map((x) => x.name).join(" + "))}</b><span>${esc(role)}</span></div></div>`;
+  }
   let rows = (m.foodIds || []).map(food).filter(Boolean).map((f, index) => `<div class="compact-role-row"><b>${esc(f.name)}</b><span>${index === 0 ? "Hauptmahlzeit" : "Bestandteil"}</span></div>`).join("");
   return rows ? `<div class="compact-role-list">${rows}</div>` : "";
 }
@@ -150,10 +157,10 @@ function mealDisplayTitle(m) {
 }
 function mealTypeText(m) {
   let sample = (m?.sampleFoodIds || []).map(food).filter(Boolean);
-  if (sample.length && !(m?.baseFoodIds || []).length) return "Kostprobe";
   if (m?.recipeName) return "Rezept";
-  if (sample.length) return "Mahlzeit mit Kostprobe";
-  return "Mahlzeit";
+  if (!sample.length) return "Mahlzeit";
+  let role = learningRoleLabel(rank(sample[0]), status(sample[0]), m?.type || "");
+  return (m?.baseFoodIds || []).length ? `Mahlzeit mit ${role}` : role;
 }
 function mealStatusText(m) {
   let text = focusRole(m?.type);
@@ -185,7 +192,7 @@ function renderHomeCore() {
   let progressStatus = active.length && openMeals.length < active.length && openMeals.length > 0
     ? `<div class="status-chips"><span class="pill ok">${active.length-openMeals.length} erledigt</span></div>`
     : "";
-  document.getElementById("todayCard").innerHTML = `<div class="row"><div class="grow"><h2>${todayHeading}</h2><div class="small">${nice(on, true)} · ${age} Monate</div></div>${todayBadge}</div>${progressStatus}${todayHtml}<div class="add-meal-row"><button class="btn secondary smallbtn" id="homeAddEntry">＋ Mahlzeit oder Kostprobe</button></div>`;
+  document.getElementById("todayCard").innerHTML = `<div class="row"><div class="grow"><h2>${todayHeading}</h2><div class="small">${nice(on, true)} · ${age} Monate</div></div>${todayBadge}</div>${progressStatus}${todayHtml}<div class="add-meal-row"><button class="btn secondary smallbtn" id="homeAddEntry">＋ Eintrag</button></div>`;
   document.querySelectorAll(".homeLog").forEach((b) => b.onclick = () => openLog(JSON.parse(decodeURIComponent(b.dataset.plan))));
   document.querySelectorAll(".editCompletedLog").forEach((b) => b.onclick = () => editLogEntry(b.dataset.log));
   bindInactiveMealActions();
@@ -486,7 +493,7 @@ function renderPlanCore() {
         : "";
       return `<div class="card block day-card">
         <div class="row day-head">
-          <div class="grow"><div class="day-date">${nice(d.date, true)}</div><div class="small day-type-text">${d.introAssigned ? "Einführung / Wiederholung" : "Bekannter Tag"}</div></div>
+          <div class="grow"><div class="day-date">${nice(d.date, true)}</div><div class="small day-type-text">${d.introAssigned ? "Einführung und Wiederholung" : "Bekannter Tag"}</div></div>
           ${dayBadge}
         </div>
         ${d.meals.map((m) => renderMeal(d, m)).join("")}
@@ -646,6 +653,17 @@ function renderMealCore(day, m) {
     <button class="btn full logMeal" data-plan="${planPayload}">Protokollieren</button>
   </div>`;
 }
+function manualLearningRoleText(foodOrId, type = "") {
+  let item = typeof foodOrId === "string" ? food(foodOrId) : foodOrId;
+  if (!item) return "Einführung";
+  return learningRoleLabel(rank(item), status(item), type);
+}
+function manualLearningValidationText(message) {
+  return String(message || "")
+    .replace("Bitte als bekannte Komponente oder Einführung kennzeichnen.", "Bitte als bekannte Komponente oder als Einführung beziehungsweise Wiederholung kennzeichnen.")
+    .replace("Bitte als Einführung kennzeichnen oder entfernen.", "Bitte als Einführung beziehungsweise Wiederholung kennzeichnen oder entfernen.")
+    .replace("Nur eine neue oder unsichere Einführung gleichzeitig:", "Nur ein neues oder unsicheres Lebensmittel gleichzeitig als Einführung beziehungsweise Wiederholung:");
+}
 function storeEditedPlanMeal(date, meal, data) {
   let prepared = prepareManualMealData(data, meal, date);
   if (!prepared.ok) return prepared;
@@ -668,7 +686,7 @@ function storeEditedPlanMeal(date, meal, data) {
 function saveEditedPlanMeal(date, meal, data) {
   let result = storeEditedPlanMeal(date, meal, data);
   if (!result.ok) {
-    showToast(result.message || "Diese Mahlzeit kann noch nicht sicher gespeichert werden.");
+    showToast(manualLearningValidationText(result.message) || "Diese Mahlzeit kann noch nicht sicher gespeichert werden.");
     return result;
   }
   save();
@@ -704,7 +722,7 @@ function storeManualMeal(date, meal, data) {
 function saveManualMeal(date, meal, data) {
   let result = storeManualMeal(date, meal, data);
   if (!result.ok) {
-    showToast(result.message || "Diese Mahlzeit kann noch nicht sicher gespeichert werden.");
+    showToast(manualLearningValidationText(result.message) || "Diese Mahlzeit kann noch nicht sicher gespeichert werden.");
     return result;
   }
   save();
@@ -782,7 +800,7 @@ function openManualMealSelector(date, meal, initialMeal = null) {
     sampleFoodIds.delete(id);
     if (info.role === "base") baseFoodIds.add(id);
     else if (info.role === "sample") sampleFoodIds.add(id);
-    // Bekannte Komponenten bleiben bewusst außerhalb von Hauptbasis und Kostprobe.
+    // Bekannte Komponenten bleiben bewusst außerhalb von Hauptbasis und Lernrolle.
   }
   function setRole(id, role) {
     if (!selectedFoods.has(id)) return;
@@ -808,14 +826,16 @@ function openManualMealSelector(date, meal, initialMeal = null) {
     let group = (title, ids, role) => `<div class="manual-role-group ${role}"><div class="manual-role-heading">${title}</div>${ids.length ? ids.map((id) => {
       let f = food(id), info = validation.infos[id] || manualMealRoleInfo(id, meal, date, { recipeName: selectedRecipe });
       let canBeBase = info.role === "base";
+      let learningLabel = manualLearningRoleText(f, existing?.type || "");
       let switchButton = role === "sample" && canBeBase
         ? `<button class="btn secondary tinybtn setManualRole" data-food="${id}" data-role="base">Als Hauptbasis</button>`
         : role === "base" && info.role === "sample"
-          ? `<button class="btn secondary tinybtn setManualRole" data-food="${id}" data-role="sample">Als Kostprobe</button>`
+          ? `<button class="btn secondary tinybtn setManualRole" data-food="${id}" data-role="sample">Als ${esc(learningLabel === "Pausiert" ? "Einführung oder Wiederholung" : learningLabel)}</button>`
           : "";
-      return `<div class="manual-role-item"><div class="grow"><b>${esc(f?.name || id)}</b><span class="small">${esc(status(f))}</span></div><div class="manual-role-actions">${switchButton}<button class="iconbtn removeManualSelected" data-food="${id}" aria-label="${esc(f?.name || id)} entfernen">×</button></div></div>`;
+      let roleDetail = role === "sample" && learningLabel !== status(f) ? ` · ${esc(learningLabel)}` : "";
+      return `<div class="manual-role-item"><div class="grow"><b>${esc(f?.name || id)}</b><span class="small">${esc(status(f))}${roleDetail}</span></div><div class="manual-role-actions">${switchButton}<button class="iconbtn removeManualSelected" data-food="${id}" aria-label="${esc(f?.name || id)} entfernen">×</button></div></div>`;
     }).join("") : '<div class="small manual-role-none">Keine</div>'}</div>`;
-    return `<div class="manual-role-overview">${group("Hauptbasis", validation.bases, "base")}${group("Bekannte Komponente", validation.components || [], "component")}${group("Kostprobe", validation.samples, "sample")}</div>`;
+    return `<div class="manual-role-overview">${group("Hauptbasis", validation.bases, "base")}${group("Bekannte Komponente", validation.components || [], "component")}${group("Einführung und Wiederholung", validation.samples, "sample")}</div>`;
   }
   function renderSelector() {
     let roleData = currentRoleData();
@@ -843,8 +863,8 @@ function openManualMealSelector(date, meal, initialMeal = null) {
           a.priority - b.priority,
       );
     let warning = validation.messages.length
-      ? `<div class="notice warn manual-role-warning"><b>So passt die Auswahl noch nicht</b><div>${validation.messages.map(esc).join("<br>")}</div></div>`
-      : '<div class="notice olive manual-role-ok">Hauptbasis und Kostprobe werden getrennt gespeichert.</div>';
+      ? `<div class="notice warn manual-role-warning"><b>So passt die Auswahl noch nicht</b><div>${validation.messages.map((message) => esc(manualLearningValidationText(message))).join("<br>")}</div></div>`
+      : '<div class="notice olive manual-role-ok">Hauptbasis und Lernrolle werden getrennt gespeichert.</div>';
     let body = `<div class="meal-selector-tabs"><button id="selectorRecipes" class="${tab === "recipes" ? "active" : ""}">Rezepte</button><button id="selectorFoods" class="${tab === "foods" ? "active" : ""}">Lebensmittel</button></div>
       ${selectedRolesHtml(validation)}
       ${warning}
@@ -857,7 +877,7 @@ function openManualMealSelector(date, meal, initialMeal = null) {
                 let recipeIds = recipeFoodIds(r), recipeRoleInfos = Object.fromEntries(recipeIds.map((id) => [id, manualMealRoleInfo(id, meal, date, { recipeName: r.name })]));
                 let recipeBases = recipeIds.filter((id) => recipeRoleInfos[id].role === "base"), recipeSamples = recipeIds.filter((id) => recipeRoleInfos[id].role === "sample");
                 let preview = manualMealValidation({ recipeName: r.name, foodIds: recipeIds, baseFoodIds: recipeBases, sampleFoodIds: recipeSamples, foodRoles: foodRolesFor(recipeIds, recipeBases, recipeSamples) }, meal, date);
-                let roleHint = preview.multipleUnsafeIds.length ? ` · nicht speicherbar: ${preview.multipleUnsafeIds.map((id) => food(id)?.name || id).join(", ")}` : preview.samples.length ? ` · Kostprobe: ${preview.samples.map((id) => food(id)?.name || id).join(", ")}` : "";
+                let roleHint = preview.multipleUnsafeIds.length ? ` · nicht speicherbar: ${preview.multipleUnsafeIds.map((id) => food(id)?.name || id).join(", ")}` : preview.samples.length ? ` · ${preview.samples.map((id) => `${manualLearningRoleText(id)}: ${food(id)?.name || id}`).join(", ")}` : "";
                 return `<button class="selector-row selectRecipe ${selectedRecipe === r.name ? "selected" : ""}" data-recipe="${encodeURIComponent(r.name)}">${recipeIconSvg(r)}<span class="grow"><b>${esc(r.name)}</b><span class="small" style="display:block">${r.unlocked ? "Jetzt passend" : `Fast passend · ${esc(recipeMissingSummary(r))}`}${recipeInventoryPortions(r.name) ? ` · ${recipeInventoryPortions(r.name)} im Vorrat` : ""}${esc(roleHint)}</span></span><span class="selector-check" aria-hidden="true">${selectedRecipe === r.name ? "✓" : ""}</span></button>`;
               }).join("")
               : '<div class="empty">Kein passendes Rezept gefunden.</div>'
@@ -865,12 +885,13 @@ function openManualMealSelector(date, meal, initialMeal = null) {
               ? foodRows.map((f) => {
                 let selected = selectedFoods.has(f.id), role = sampleFoodIds.has(f.id) ? "sample" : baseFoodIds.has(f.id) ? "base" : selected ? "component" : "";
                 let roleInfo = manualMealRoleInfo(f, meal, date), pausedManual = roleInfo.reason === "paused_manual";
+                let learningLabel = manualLearningRoleText(f, existing?.type || "");
                 let roleLabel = pausedManual
-                  ? (role === "sample" ? "Kostprobe · pausiert" : "Pausiert · manuell")
-                  : role === "sample" ? "Kostprobe"
+                  ? "Pausiert · manuell"
+                  : role === "sample" ? learningLabel
                     : role === "base" ? "Hauptbasis"
                       : role === "component" ? "Bekannte Komponente"
-                        : roleInfo.role === "sample" ? "wird Kostprobe"
+                        : roleInfo.role === "sample" ? `wird ${learningLabel}`
                           : roleInfo.role === "component" ? "wird bekannte Komponente"
                             : "wird Hauptbasis";
                 return `<button class="selector-row selectFood ${selected ? "selected" : ""} ${pausedManual ? "manual-paused-food" : ""}" data-food="${f.id}">${foodIconSvg(f)}<span class="grow"><b>${esc(f.name)}</b><span class="small" style="display:block">${esc(status(f))}${pausedManual ? " · nur manuell" : ""}${!f.active ? " · deaktiviert" : ""}${inventoryPortions(f.id) ? ` · ${inventoryPortions(f.id)} Portionen im Vorrat` : ""}</span></span><span class="manual-role-type ${role || roleInfo.role} ${pausedManual ? "paused" : ""}">${esc(roleLabel)}</span><span class="selector-check" aria-hidden="true">${selected ? "✓" : ""}</span></button>`;
@@ -1053,24 +1074,11 @@ function renderPlan() {
   });
 }
 
-function toggleEntryChooser(anchor, date = today()) {
-  let insertionTarget = anchor.closest(".add-meal-row, .compact-log-head") || anchor;
-  let current = insertionTarget.nextElementSibling;
-  let closesCurrent = current?.classList.contains("entry-chooser");
-  document.querySelectorAll(".entry-chooser").forEach((node) => node.remove());
-  if (closesCurrent) return;
-  let chooser = document.createElement("div");
-  chooser.className = "entry-chooser";
-  chooser.innerHTML = `<button data-entry-kind="meal"><b>Mahlzeit</b><span>Hauptmahlzeit protokollieren</span></button><button data-entry-kind="sample"><b>Kostprobe</b><span>Klein und getrennt bewerten</span></button>`;
-  insertionTarget.insertAdjacentElement("afterend", chooser);
-  chooser.querySelector('[data-entry-kind="meal"]').onclick = () => { chooser.remove(); openLog({ date, meal: "lunch", focusId: "", foodIds: [], baseFoodIds: [], sampleFoodIds: [], entryType: "meal", foodOutcomes: {} }); };
-  chooser.querySelector('[data-entry-kind="sample"]').onclick = () => { chooser.remove(); openLog({ date, meal: "lunch", focusId: "", foodIds: [], baseFoodIds: [], sampleFoodIds: [], entryType: "sample", foodOutcomes: {} }); };
-}
 function renderHome() {
   renderHomeCore();
   let button = document.getElementById("homeAddEntry");
   if (button) {
-    button.onclick = (event) => { event.preventDefault(); toggleEntryChooser(button, today()); };
+    button.onclick = (event) => { event.preventDefault(); openLog(null); };
   }
 }
 
@@ -1169,6 +1177,16 @@ function existingFoodWithName(name) {
       .some((alias) => normalizeName(alias) === normalized);
   }) || null;
 }
+function uiFoodCategoryDisplayLabel(category) {
+  if (typeof foodCategoryLabel === "function") return foodCategoryLabel(category);
+  let value = String(category || "");
+  return {
+    "Getreide/Stärke": "Getreide und Stärke",
+    "Kraut/Gewürz": "Kräuter und Gewürze",
+    "Wurzel/Knolle": "Wurzel- und Knollengemüse",
+    "Soja/Tofu": "Soja und Tofu",
+  }[value] || value;
+}
 function addCustomFoodForm(options = {}) {
   let cats = [
     "Gemüse",
@@ -1189,10 +1207,10 @@ function addCustomFoodForm(options = {}) {
   openGeneric(
     "Eigenes Lebensmittel",
     `<div class="field"><label>Name</label><input id="customName" autocomplete="off"><div class="small custom-food-message" id="customFoodMessage" aria-live="polite"></div></div>
-     <div class="field"><label>Kategorie</label><select id="customCat">${cats.map((c) => `<option>${c}</option>`).join("")}</select></div>
+     <div class="field"><label>Kategorie</label><select id="customCat">${cats.map((c) => `<option value="${esc(c)}">${esc(uiFoodCategoryDisplayLabel(c))}</option>`).join("")}</select></div>
      <div class="field"><label>Passend für</label><div style="display:flex;flex-wrap:wrap;gap:10px 18px"><label class="small" style="display:flex;align-items:center;gap:7px"><input type="checkbox" id="customMealBreakfast" value="breakfast"> Frühstück</label><label class="small" style="display:flex;align-items:center;gap:7px"><input type="checkbox" id="customMealLunch" value="lunch"> Mittagessen</label><label class="small" style="display:flex;align-items:center;gap:7px"><input type="checkbox" id="customMealDinner" value="dinner"> Abendessen</label></div><div class="small" style="margin-top:6px">Ohne Auswahl bleibt das Lebensmittel verfügbar, wird aber nicht automatisch geplant.</div></div>
      <div class="field"><label>Allergengruppe (optional)</label><input id="customAllergen"></div>
-     <div class="field"><label>Sichere Form / Notiz</label><textarea id="customSafe"></textarea></div>
+     <div class="field"><label>Sichere Form oder Notiz</label><textarea id="customSafe"></textarea></div>
      <div class="sticky-form-actions ds-actionbar"><button class="btn secondary" id="cancelCustom" type="button">Abbrechen</button><button class="btn" id="saveCustom">Speichern</button></div>`,
     returnToLog ? () => {
       document.getElementById("logModal").classList.add("open");
@@ -1359,7 +1377,7 @@ function bind() {
   document.getElementById("planRecalculate").onclick = clearAutomaticLocks;
   document.getElementById("planRebuildAll")?.addEventListener("click", openFullPlanRebuild);
   document.getElementById("calculateBatch").onclick = calculateBatch;
-  document.getElementById("freeLog").onclick = (event) => { event.preventDefault(); toggleEntryChooser(document.getElementById("freeLog"), today()); };
+  document.getElementById("freeLog").onclick = (event) => { event.preventDefault(); openLog(null); };
   document.getElementById("closeLog").onclick = closeLog;
   document.getElementById("logModal").onclick = (e) => {
     if (e.target.id === "logModal") closeLog();
@@ -1452,7 +1470,7 @@ function renderAudit() {
   let checks = [
     ["V10-Datenfelder vorhanden", !!state.followUps && !!state.shoppingHints],
     ["Protokollrollen migriert", state.logs.every((log) => !!log.entryType && !!log.foodRoles)],
-    ["Reine Kostproben ohne Gramm", state.logs.filter((log) => log.entryType === "sample").every((log) => !log.amount)],
+    ["Legacy-Einträge bleiben lesbar", state.logs.filter((log) => log.entryType === "sample").every((log) => Array.isArray(log.foodIds))],
     ["Manuelle Planplätze geschützt", Object.entries(state.planLocks || {}).filter(([, lock]) => lock.mode === "manual").every(([key]) => !!state.planLocks[key])],
     ["Reaktionen ohne normale Wiedervorlage", state.foods.filter((f) => status(f) === "Pausiert").every((f) => !state.followUps?.[f.id] || state.followUps[f.id].status === "awaiting_medical")],
     ["Rezeptkarten maximal eine Statuskennzeichnung", [...document.querySelectorAll(".recipe-card-v2>summary .pill")].every((pill) => pill.parentElement.querySelectorAll(".pill").length <= 1)],

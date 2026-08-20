@@ -268,7 +268,7 @@ function showFoodInfoCore(f) {
 
   openGeneric(
     f.name,
-    `<div class="small food-detail-type">${esc(f.category)}${f.ph ? " · Philippinen" : ""}${f.ironRich ? " · eisenreich" : ""}${f.allergenGroup ? ` · Allergen: ${esc(f.allergenGroup)}` : ""}</div>
+    `<div class="small food-detail-type">${esc(foodCategoryLabel(f.category))}${f.ph ? " · Philippinen" : ""}${f.ironRich ? " · eisenreich" : ""}${f.allergenGroup ? ` · Allergen: ${esc(f.allergenGroup)}` : ""}</div>
     <div class="chips food-detail-status"><span class="pill ${!f.active ? "inactive-pill" : ""}">${esc(!f.active ? "Deaktiviert" : status(f))}</span></div>
     ${f.alias ? `<p class="small"><b>Anderer Name:</b> ${esc(f.alias)}</p>` : ""}
     <details class="accordion food-detail-settings">

@@ -51,10 +51,15 @@ function outcomeForFood(log, id) {
   if (log.foodOutcomes && log.foodOutcomes[id]) return log.foodOutcomes[id];
   return ({ not_eaten: "not_accepted", tasted_ok: "tried", eaten_ok: "eaten" }[log.outcome] || log.outcome);
 }
+function modelExposureKey(log) {
+  if (typeof logExposureKey === "function") return logExposureKey(log);
+  let hasMeal = log?.entryType !== "sample" && ["breakfast", "snack", "lunch", "dinner"].includes(String(log?.meal || ""));
+  return hasMeal ? `${log.date}|${log.meal}` : `${log?.date || ""}|entry:${log?.id || log?.createdAt || log?.updatedAt || "free"}`;
+}
 function autoStatus(f) {
   let ls = logsFor(f.id);
   if (ls.some((l) => outcomeForFood(l, f.id) === "reaction" && (!l.reactionFoodId || l.reactionFoodId === f.id))) return "Pausiert";
-  let success = new Set(ls.filter((l) => outcomeForFood(l, f.id) === "eaten").map((l) => l.date + "|" + l.meal));
+  let success = new Set(ls.filter((l) => outcomeForFood(l, f.id) === "eaten").map(modelExposureKey));
   let tried = ls.some((l) => ["tried", "eaten"].includes(outcomeForFood(l, f.id)));
   if (success.size >= 3) return "Regelmäßig";
   if (success.size >= 2) return "Verträgliche Basis";
@@ -71,11 +76,11 @@ function rank(f) {
 }
 function statusSource(f) {
   if (f.manualStatus && f.manualStatus !== "auto") return "manuell gesetzt";
-  let ls = logsFor(f.id), success = new Set(ls.filter((l) => outcomeForFood(l, f.id) === "eaten").map((l) => l.date + "|" + l.meal));
+  let ls = logsFor(f.id), success = new Set(ls.filter((l) => outcomeForFood(l, f.id) === "eaten").map(modelExposureKey));
   if (success.size >= 3) return `automatisch aus ${success.size} gegessenen Gaben`;
   if (success.size === 2) return "automatisch aus 2 gegessenen Gaben";
   if (success.size === 1) return "automatisch aus einer gegessenen Gabe";
-  if (ls.some((l) => outcomeForFood(l, f.id) === "tried")) return "automatisch aus einer Kostprobe";
+  if (ls.some((l) => outcomeForFood(l, f.id) === "tried")) return "automatisch aus einer Einführung oder Wiederholung";
   return "automatisch – noch ohne Protokoll";
 }
 

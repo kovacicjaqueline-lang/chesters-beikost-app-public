@@ -134,8 +134,8 @@ test("Log-Darreichung wird erst nach erfolgreichem Save gegen die tatsächlich g
 
 test("nur wirklich manuell hinzugefügte Karten verwenden dishTitle; manuelles Sperren allein ändert keinen Titel", () => {
   assert.ok(
-    planningSource.includes("return `${naturalMealFoodTitle(base)} und ${sampleName} als Kostprobe`;"),
-    "bestehende Mahlzeitenbenennung für Basis + Kostprobe muss erhalten bleiben",
+    planningSource.includes("return `${naturalMealFoodTitle(base)} mit ${sampleName} zur ${role}`;"),
+    "bestehende Mahlzeitenbenennung für Basis + Einführung muss erhalten bleiben",
   );
   const titleWrapper = runtimeSource.slice(
     runtimeSource.indexOf("mealDisplayTitle = function manualFlowMealDisplayTitle"),

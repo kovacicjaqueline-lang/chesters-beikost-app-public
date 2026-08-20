@@ -86,4 +86,16 @@
   }, true);
 
   globalScope.__plannerRolloverCascade = API;
+
+  // Die Review-Fixes müssen vor app.js und vor nachgelagerten UI-Dekoratoren laufen.
+  // Beim normalen Parser-Start lädt document.write das Zusatzmodul synchron.
+  const reviewFixSrc = "js/planner-log-rollover-review-fixes.js?v=10.1.25";
+  if (document.readyState === "loading") {
+    document.write(`<script src="${reviewFixSrc}"><\\/script>`);
+  } else {
+    let script = document.createElement("script");
+    script.src = reviewFixSrc;
+    script.async = false;
+    document.head.appendChild(script);
+  }
 })(typeof globalThis !== "undefined" ? globalThis : this);

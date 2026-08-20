@@ -37,6 +37,8 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
     timeout-minutes: 20
     steps:
       - name: Checkout repository
@@ -52,9 +54,6 @@ jobs:
 
       - name: Run regression tests
         run: npm test
-
-      - name: Install WebKit
-        run: npx playwright install --with-deps webkit
 
       - name: Run WebKit UI regression
         run: npm run test:browser

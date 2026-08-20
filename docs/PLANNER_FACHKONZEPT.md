@@ -1,7 +1,7 @@
 # Chesters Beikost-App – kanonisches Planner-Fachkonzept
 
-Stand: 19.08.2026  
-Dokumentationsbasis: fachlich geprüft gegen `main` bis `da86a07c64bc4a172b62e8a11543c6d8c6329999`, inklusive gemergter Handling-/BLW-Schicht aus PR #45, den Nuss-/Samen-/Topping-Integrationsstand auf `docs/planner-nuss-samen-toppings` sowie historischer Phasenmodell-v2-Stand `f9f886c82af2ce267c10571e5e89df787037c6b0`.
+Stand: 20.08.2026  
+Dokumentationsbasis: Statusabgleich gegen `main` bis `8106621cc9bc130b2907cc0bad563cb6eff7311e`, einschließlich gemergter Handling-/BLW-Schicht, dokumentiertem Oral-Processing-Contract, gemergtem Nuss-/Samen-/Topping-Block, vollständiger österreichischer `seasonMonths`-Matrix und aktuellem FOOD-COUNT-Identitätsstand; historischer Phasenmodell-v2-Stand `f9f886c82af2ce267c10571e5e89df787037c6b0`.
 
 Dieses Dokument führt die bisher über Phasenmodell, PLAN-07, PLAN-08, MILK-01, TODO3-Regressionen und spätere Fachentscheidungen verteilte Planner-Semantik an einer Stelle zusammen.
 
@@ -227,9 +227,9 @@ Neue Allergengruppen müssen durch dieselbe Plannerlogik laufen wie bereits vorh
 - Fällige Allergene können gezielt wiederholt werden.
 - Allergen-Wiederholungen dürfen vorhandene harte Mahlzeiten-/Safety-Gates nicht umgehen.
 
-## 6.3 Nüsse/Samen: Komponente, Sample und Topping 🟡 Branch/Integrations-PR
+## 6.3 Nüsse/Samen: Komponente, Sample und Topping ✅ main
 
-Fachlich beschlossen und auf `docs/planner-nuss-samen-toppings` umgesetzt:
+Fachlich beschlossen und auf `main` integriert:
 
 - Nuss- und Samen-FOODs werden nach erfolgreicher Einführung **nicht** zu normalen automatischen Mahlzeiten-Fokussen oder Hauptbasen.
 - Einführung, gezielte frühe Wiederholung und Allergen-Wiederholung bleiben ausdrücklich möglich. In diesen Pfaden bleibt Nuss/Samen eine `sample`-Kostprobe mit geeigneter bekannter Basis.
@@ -241,7 +241,7 @@ Fachlich beschlossen und auf `docs/planner-nuss-samen-toppings` umgesetzt:
 - Die Regel betrifft die fachliche Rolle von **Nuss/Samen**, nicht Allergene allgemein. Ei, glutenhaltiges Getreide, Milch, Fisch und andere geeignete Allergen-FOODs behalten ihre bestehenden Rollenregeln.
 - Rezepte mit Nuss-/Samen-Zutaten bleiben zulässig, sofern alle bestehenden Auto-, Safety-, Mahlzeiten- und Recipe-first-Gates erfüllt sind.
 
-Bis zum Merge des Branches gilt dieser Block technisch 🟡; nach Merge desselben getesteten Change-Sets ohne weitere fachliche Änderung ✅ main.
+Der Block ist auf `main` integriert und durch die vorhandenen Nuss-/Samen-/Topping-Regressionen abgesichert.
 
 ---
 
@@ -360,7 +360,7 @@ Die konkrete Gewichtung von Vorrat gegenüber anderen gleich geeigneten Kandidat
 
 # 12. Saison und Reisepriorisierung
 
-## 12.1 Datengetriebene Saisonpriorität 🟡 Branch/Integrations-PR
+## 12.1 Datengetriebene Saisonpriorität ✅ main
 
 Der Planner liest ausschließlich `seasonMonths` aus den FOOD-Daten.
 
@@ -370,17 +370,17 @@ Wenn Saisonpriorisierung aktiv ist:
 - FOOD mit definierter Saison außerhalb seiner Saison wird nachgereiht (`+6` bestehender Score);
 - `seasonMonths: []` bleibt bewusst neutral und erhält weder Saisonbonus noch Outside-Season-Nachreihung.
 
-Auf `main` bestand beim Audit noch der Consumer-Gap, dass `isSeason()` leere `seasonMonths` als saisonal behandelt und dadurch einen ungewollten Bonus auslösen konnte. PR #6 schließt diesen Gap durch die zusätzliche Voraussetzung `f.seasonMonths?.length` vor dem Saisonbonus. Im `phMode === "travel"` greift die Österreich-Saisonwertung weiterhin nicht.
+Der frühere Consumer-Gap, bei dem `isSeason()` leere `seasonMonths` als saisonal behandeln und dadurch einen ungewollten Bonus auslösen konnte, ist auf `main` geschlossen: Der Saisonbonus setzt tatsächlich vorhandene Saisonmonate voraus. Im `phMode === "travel"` greift die Österreich-Saisonwertung weiterhin nicht.
 
-## 12.2 Vollständige Saisonmatrix 🟡 Branch/Integrations-PR
+## 12.2 Vollständige Saisonmatrix ✅ main
 
 Der vollständige österreichische `seasonMonths`-Audit ist fachlich abgeschlossen. Verbindliche Modellierungsentscheidung:
 
 **`regional aus Lagerung` zählt bei `seasonMonths` mit.**
 
-Die exakte Matrix und die bewusst neutralen `seasonMonths: []`-Fälle sind in `docs/FOOD_SEASONMONTHS_AT_AUDIT.md` dokumentiert und in PR #6 datengetrieben umgesetzt. Die Regression prüft den gesamten physischen FOOD-Stamm exakt gegen diese Matrix; Runtime-Policy-Ergänzungen ohne eigene freigegebene Österreich-Matrix bleiben neutral.
+Die exakte Matrix und die bewusst neutralen `seasonMonths: []`-Fälle sind in `docs/FOOD_SEASONMONTHS_AT_AUDIT.md` dokumentiert. Die fachlich freigegebene Matrix wurde auf `main` integriert und mit PR #11 vollständig gegen den aktuellen FOOD-Stamm abgeglichen. Die Regression prüft den gesamten physischen FOOD-Stamm exakt gegen diese Matrix; Runtime-Policy-Ergänzungen ohne eigene freigegebene Österreich-Matrix bleiben neutral.
 
-Der Planner leitet daraus **keine neue Sonderlogik** ab, sondern konsumiert weiterhin ausschließlich die Daten. Bis zum Merge von PR #6 gilt dieser Block technisch 🟡; nach Merge desselben getesteten Change-Sets ohne weitere fachliche Änderung ✅ main.
+Der Planner leitet daraus **keine neue Sonderlogik** ab, sondern konsumiert weiterhin ausschließlich die Daten.
 
 ## 12.3 Philippinen-/Reisepriorität 🟠 Bestandsverhalten
 
@@ -506,9 +506,9 @@ Die dynamisch geladene Handling-Contract-/Runtime-Schicht wird zusammen mit der 
 
 Aktuell nicht als erledigt behandeln:
 
-1. 🔴 Einzelprüfung der noch bewusst zurückgestellten SAFETY-REVIEW-/LATER-REVIEW-Rezepte vor Aufnahme in den strukturierten Handling-Contract.
+1. 🔴 Einzelprüfung der noch bewusst zurückgestellten SAFETY-REVIEW-/LATER-REVIEW-Rezepte vor Aufnahme in den strukturierten Handling-Contract. Diese Prüfung läuft ausschließlich im separaten Handling-/Oral-Arbeitsstrang und wird in diesem Planner-Track nicht parallel neu bewertet.
 
-Die vollständige österreichische `seasonMonths`-Matrix ist fachlich abgeschlossen und in PR #6 umgesetzt; bis zum Merge bleibt ihr technischer Status 🟡 Branch/Integrations-PR. Die allgemeine Handling-/BLW-Schicht ist **keine offene Fachfrage mehr**. Die Nuss-/Samen-Rollen- und Toppingregel ist ebenfalls fachlich geklärt; ihre technische Integration steht bis zum Merge des zugehörigen Branches auf 🟡.
+Die vollständige österreichische `seasonMonths`-Matrix und die Nuss-/Samen-Rollen- und Toppingregel sind auf `main` integriert und nicht mehr als offene Planner-Blöcke zu behandeln. Die allgemeine Handling-/BLW-Schicht ist **keine offene Fachfrage mehr**. Der Oral-Processing-Contract ist fachlich auf `main` dokumentiert; Review, Einzelmigrationen und eine spätere technische Runtime-Abbildung bleiben ein separater Handling-/Oral-Arbeitsstrang und sind nicht Teil dieses Planner-Statusabgleichs.
 
 ## 17.2 Fachlich beschlossen, aber noch nicht vollständig auf main nachgewiesen
 

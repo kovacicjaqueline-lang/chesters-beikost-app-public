@@ -1,17 +1,33 @@
 "use strict";
 
-/* PLAN-08-X1: Eisenorientierung innerhalb der normalen Begleiterauswahl.
+/* PLAN-08-X1: Eisenorientierung und kulinarische Nachrangigkeit innerhalb der
+ * normalen Begleiterauswahl.
  *
  * Die bestehende FOOD-Auswahl bleibt die Source of Truth für Mahlzeiteneignung,
- * Auto-Eignung, Kombinierbarkeit und MILK-01. PLAN-08-X1 darf die normale
- * Zweierkombination nicht durch einen kulinarisch deutlich schrägeren Eisenpartner
- * ersetzen und hängt keine dritte FOOD-Komponente mehr an.
+ * Auto-Eignung, Kombinierbarkeit und MILK-01. Diese Schicht verändert keine
+ * Allergen- oder Milchmengenregeln. Sie beschreibt nur kulinarische Rollen, die
+ * nicht zuverlässig aus der Nährstoffkategorie abgeleitet werden können.
  *
- * Zusätzlich werden bestätigte herzhafte Obst-Mischungen außerhalb des Frühstücks
- * nicht als generischer FOOD-only-Fallback erzwungen: Obst + Gemüse/Wurzel bzw.
- * Obst + herzhafte Proteinquelle braucht entweder eine neutralere Begleiteralternative
- * oder genau ein aktuell freigeschaltetes passendes Rezept. Das ist keine globale
- * Rezept-Blacklist; echte Rezepte bleiben über ihren Rezeptvertrag zulässig.
+ * Bestätigte Leitplanken:
+ * - Obst + herzhaft wird außerhalb des Frühstücks nachrangig behandelt.
+ * - Blattgemüse gehört dabei zur herzhaften Gemüsefamilie.
+ * - Avocado ist kulinarisch eine herzhafte/cremige Frucht und wird nicht wie
+ *   Banane oder Apfel behandelt.
+ * - Gurke ist eine frische Beilage; Avocado, Naturjoghurt, Ei und Kichererbse
+ *   sind bevorzugte FOOD-only-Begleiter. Andere Gurkenpaare bleiben ein weicher
+ *   Fallback, wenn keine bessere bekannte Alternative verfügbar ist.
+ * - Bereits bekannte/kombinierbare allergene Gurken-Begleiter dürfen als normale
+ *   Begleiter berücksichtigt werden; eine beiläufige Allergen-Einführung bleibt
+ *   ausgeschlossen und MILK-01 greift weiterhin davor.
+ * - Zwiebel, Knoblauch, Kakao, Calamansi, Zitrone, Butter und Honig sind
+ *   Zutaten/Akzente: keine automatische Hauptbasis oder normaler Fokus und kein
+ *   generischer Begleiter. Bewusste Samples/Overrides und echte Rezepte bleiben
+ *   über die bestehenden Verträge möglich.
+ * - Milchprodukte und Sojajoghurt werden für die kulinarische Paarwahl nach ihrer
+ *   Darreichungsrolle eingeordnet; MILK-01 bleibt davon ausdrücklich getrennt.
+ *
+ * PLAN-08-X1 hängt weiterhin keine dritte FOOD-Komponente an. Eisen wird nur
+ * innerhalb der bereits zulässigen Zweierkombination optimiert.
  */
 
 const PLANNER_IRON_INTRODUCTION_TYPES = new Set([
@@ -25,6 +41,7 @@ const PLANNER_IRON_INTRODUCTION_TYPES = new Set([
 const PLANNER_FRUIT_SAVORY_VEGETABLE_CATEGORIES = new Set([
   "Gemüse",
   "Wurzel/Knolle",
+  "Blattgemüse",
 ]);
 
 const PLANNER_FRUIT_SAVORY_PROTEIN_CATEGORIES = new Set([
@@ -34,13 +51,111 @@ const PLANNER_FRUIT_SAVORY_PROTEIN_CATEGORIES = new Set([
   "Hülsenfrucht",
 ]);
 
+const PLANNER_CULINARY_ROLE_BY_ID = Object.freeze({
+  gurke: "fresh-side",
+  avocado: "savory-fruit",
+
+  zwiebel: "accent",
+  knoblauch: "accent",
+  kakao: "accent",
+  calamansi: "accent",
+  zitrone: "accent",
+  butter: "accent",
+  honig: "accent",
+
+  kuhmilch: "milk-base",
+  buttermilch: "milk-base",
+  naturjoghurt: "cultured-creamy",
+  kefir: "cultured-creamy",
+  quark: "cultured-creamy",
+  skyr: "cultured-creamy",
+  sojajoghurt: "cultured-creamy",
+
+  frischkaese: "soft-dairy",
+  kaese: "soft-dairy",
+  mozzarella: "soft-dairy",
+  huettenkaese: "soft-dairy",
+});
+
+const PLANNER_FRESH_SIDE_PREFERRED_IDS = new Set([
+  "avocado",
+  "naturjoghurt",
+  "ei",
+  "kichererbse",
+]);
+
+const PLANNER_CREAMY_DAIRY_ROLES = new Set([
+  "milk-base",
+  "cultured-creamy",
+]);
+
+function plannerCulinaryRole(foodRecord) {
+  if (!foodRecord) return "";
+  let explicit = PLANNER_CULINARY_ROLE_BY_ID[String(foodRecord.id || "")];
+  if (explicit) return explicit;
+
+  let category = String(foodRecord.category || "");
+  if (category === "Obst") return "fruit";
+  if (PLANNER_FRUIT_SAVORY_VEGETABLE_CATEGORIES.has(category)) return "savory-vegetable";
+  if (PLANNER_FRUIT_SAVORY_PROTEIN_CATEGORIES.has(category)) return "savory-protein";
+  if (category === "Getreide/Stärke") return "starch";
+  if (category === "Ei") return "egg";
+  if (category === "Milchprodukt") return "soft-dairy";
+  return "other";
+}
+
+function plannerCulinaryIsAccent(foodRecord) {
+  return plannerCulinaryRole(foodRecord) === "accent";
+}
+
+function plannerFreshSidePairPreference(focus, candidate) {
+  let focusFresh = plannerCulinaryRole(focus) === "fresh-side";
+  let candidateFresh = plannerCulinaryRole(candidate) === "fresh-side";
+  if (!focusFresh && !candidateFresh) return 0;
+
+  let other = focusFresh ? candidate : focus;
+  if (!other) return 0;
+  return PLANNER_FRESH_SIDE_PREFERRED_IDS.has(String(other.id || "")) ? 0 : 2;
+}
+
+function plannerFreshSideKnownAllergenCompanion(focus, candidate, combineFn = null) {
+  if (plannerCulinaryRole(focus) !== "fresh-side" || !candidate?.allergenGroup) return false;
+  if (!PLANNER_FRESH_SIDE_PREFERRED_IDS.has(String(candidate.id || ""))) return false;
+  return typeof combineFn === "function" && !!combineFn(candidate);
+}
+
+function plannerFreshSideCompanionPoolFood(focus, candidate, combineFn = null) {
+  if (!plannerFreshSideKnownAllergenCompanion(focus, candidate, combineFn)) return candidate;
+  return { ...candidate, allergenGroup: "" };
+}
+
 function plannerAutomaticPairPreferencePenalty(focus, candidate, meal) {
   if (!focus || !candidate || meal === "breakfast") return 0;
-  let categories = [focus.category || "", candidate.category || ""];
-  if (!categories.includes("Obst")) return 0;
-  let other = categories[0] === "Obst" ? categories[1] : categories[0];
-  if (PLANNER_FRUIT_SAVORY_PROTEIN_CATEGORIES.has(other)) return 2;
-  if (PLANNER_FRUIT_SAVORY_VEGETABLE_CATEGORIES.has(other)) return 1;
+
+  let freshSidePenalty = plannerFreshSidePairPreference(focus, candidate);
+  if (freshSidePenalty) return freshSidePenalty;
+
+  let focusRole = plannerCulinaryRole(focus);
+  let candidateRole = plannerCulinaryRole(candidate);
+
+  // Zutaten-/Akzentformen werden im Runtime-Pool ohnehin nicht als generischer
+  // Begleiter zugelassen. Als bewusst gewählter Sample-Fokus soll ihre Basiswahl
+  // aber nicht künstlich verschlechtert werden.
+  if (focusRole === "accent" || candidateRole === "accent") return 0;
+
+  let focusSweetFruit = focusRole === "fruit";
+  let candidateSweetFruit = candidateRole === "fruit";
+  if (focusSweetFruit !== candidateSweetFruit) {
+    let otherRole = focusSweetFruit ? candidateRole : focusRole;
+    if (otherRole === "savory-protein") return 2;
+    if (otherRole === "savory-vegetable") return 1;
+  }
+
+  // Milch-/Joghurtformen werden nur dann umsortiert, wenn sie selbst Fokus sind.
+  // So bleibt z. B. Gemüse + Naturjoghurt als bereits gewählte Kombination stabil
+  // und MILK-01 wird nicht indirekt durch eine neue Symmetrieregel verändert.
+  if (PLANNER_CREAMY_DAIRY_ROLES.has(focusRole) && candidateRole === "savory-vegetable") return 1;
+
   return 0;
 }
 
@@ -79,6 +194,17 @@ function plannerPairHasUniqueUnlockedRecipe(focus, candidate, meal) {
     });
   });
   return matches.length === 1;
+}
+
+function plannerPairRequiresRecipe(focus, candidate, meal) {
+  if (!focus || !candidate || meal === "breakfast") return false;
+  let focusRole = plannerCulinaryRole(focus);
+  let candidateRole = plannerCulinaryRole(candidate);
+  let focusSweetFruit = focusRole === "fruit";
+  let candidateSweetFruit = candidateRole === "fruit";
+  if (focusSweetFruit === candidateSweetFruit) return false;
+  let otherRole = focusSweetFruit ? candidateRole : focusRole;
+  return ["savory-vegetable", "savory-protein"].includes(otherRole);
 }
 
 function plannerFocusIsIntroduction(focus, focusType = "", trustedBaseFn = null) {
@@ -137,15 +263,17 @@ function plannerPreferredNormalCompanion(
   }
 
   // Isolierte Unit-Harnesses ohne geladenen Rezeptvertrag prüfen weiterhin nur
-  // die X1-Eisenmechanik. Im echten App-Stack ist der Rezeptvertrag vorhanden und
-  // herzhafte Obstpaare dürfen FOOD-only nicht als letzter Fallback erzwungen werden.
+  // die X1-Auswahlmechanik. Im echten App-Stack darf nur der bereits bestehende
+  // Obst-herzhaft-Vertrag FOOD-only nicht als letzten Fallback erzwungen werden.
   if (!plannerPairRecipeContractAvailable()) return alternative || normal;
 
   if (alternative) {
     let alternativePenalty = plannerAutomaticPairPreferencePenalty(focus, alternative, meal);
     if (alternativePenalty <= 0) return alternative;
+    if (!plannerPairRequiresRecipe(focus, alternative, meal)) return alternative;
     if (plannerPairHasUniqueUnlockedRecipe(focus, alternative, meal)) return alternative;
   }
+  if (!plannerPairRequiresRecipe(focus, normal, meal)) return normal;
   if (plannerPairHasUniqueUnlockedRecipe(focus, normal, meal)) return normal;
   return null;
 }
@@ -165,6 +293,17 @@ function installPlannerIronPreferenceRuntime() {
 
   globalThis.__plannerIronPreferenceRuntimeInstalled = true;
 
+  // Akzent-FOODs nutzen den bestehenden zentralen Planner-Rollenvertrag statt
+  // paralleler Basis-/Fokus-Sondergates. Dadurch sehen automatische Planung,
+  // manueller Editor und Lock-Validierung dieselbe "component"-Rolle.
+  if (typeof plannerRole === "function") {
+    let originalPlannerRole = plannerRole;
+    plannerRole = function culinaryAccentPlannerRole(foodRecord) {
+      if (plannerCulinaryIsAccent(foodRecord)) return "component";
+      return originalPlannerRole(foodRecord);
+    };
+  }
+
   let originalCompanionFor = companionFor;
 
   companionFor = function ironPreferredCompanionFor(
@@ -173,62 +312,78 @@ function installPlannerIronPreferenceRuntime() {
     on,
     focusType = "",
   ) {
-    let normal = plannerPreferredNormalCompanion(
-      originalCompanionFor,
-      focus,
-      meal,
-      on,
-      focusType,
-      isTrustedBase,
-    );
-    let amountRank = Number(
-      typeof AMOUNT_LEVELS !== "undefined"
-        ? AMOUNT_LEVELS[currentAmountLevel()]?.rank || 0
-        : 0,
-    );
+    let allFoods = state?.foods || null;
+    let canonicalCompanion = (selected) =>
+      allFoods?.find((item) => item?.id === selected?.id) || selected;
 
-    if (
-      !plannerIronPreferenceApplies(
-        focus,
-        meal,
-        focusType,
-        amountRank,
-        isTrustedBase,
-        isMilkProductFood,
-      ) ||
-      normal?.ironRich ||
-      isMilkProductFood(normal) ||
-      !state?.foods
-    ) return normal;
-
-    let normalPenalty = normal
-      ? plannerAutomaticPairPreferencePenalty(focus, normal, meal)
-      : 0;
-    let originalFoods = state.foods;
-    state.foods = originalFoods.filter((item) => {
-      if (item?.id === focus?.id) return true;
-      if (!item?.ironRich || rank(item) < 2) return false;
-      if (plannerAutomaticPairPreferencePenalty(focus, item, meal) > normalPenalty) return false;
-      if (
-        typeof combinationPaused === "function" &&
-        combinationPaused([focus?.id, item.id].filter(Boolean), on)
-      ) return false;
-      return true;
-    });
-
-    let preferred = null;
-    try {
-      preferred = originalCompanionFor(focus, meal, on, focusType);
-    } finally {
-      state.foods = originalFoods;
+    if (allFoods) {
+      let combineFn = typeof canCombine === "function" ? canCombine : null;
+      state.foods = allFoods
+        .filter((item) => item?.id === focus?.id || !plannerCulinaryIsAccent(item))
+        .map((item) => plannerFreshSideCompanionPoolFood(focus, item, combineFn));
     }
 
-    if (!preferred?.ironRich) return normal;
-    if (
-      plannerAutomaticPairPreferencePenalty(focus, preferred, meal) > normalPenalty
-    ) return normal;
-    if (enforceSingleStarch(focus, [preferred]).length !== 1) return normal;
-    return preferred;
+    try {
+      let normal = plannerPreferredNormalCompanion(
+        originalCompanionFor,
+        focus,
+        meal,
+        on,
+        focusType,
+        isTrustedBase,
+      );
+      let amountRank = Number(
+        typeof AMOUNT_LEVELS !== "undefined"
+          ? AMOUNT_LEVELS[currentAmountLevel()]?.rank || 0
+          : 0,
+      );
+
+      if (
+        !plannerIronPreferenceApplies(
+          focus,
+          meal,
+          focusType,
+          amountRank,
+          isTrustedBase,
+          isMilkProductFood,
+        ) ||
+        normal?.ironRich ||
+        isMilkProductFood(normal) ||
+        !state?.foods
+      ) return canonicalCompanion(normal);
+
+      let normalPenalty = normal
+        ? plannerAutomaticPairPreferencePenalty(focus, normal, meal)
+        : 0;
+      let culinaryFoods = state.foods;
+      state.foods = culinaryFoods.filter((item) => {
+        if (item?.id === focus?.id) return true;
+        if (!item?.ironRich || rank(item) < 2) return false;
+        if (plannerAutomaticPairPreferencePenalty(focus, item, meal) > normalPenalty) return false;
+        if (
+          typeof combinationPaused === "function" &&
+          combinationPaused([focus?.id, item.id].filter(Boolean), on)
+        ) return false;
+        return true;
+      });
+
+      let preferred = null;
+      try {
+        preferred = originalCompanionFor(focus, meal, on, focusType);
+      } finally {
+        state.foods = culinaryFoods;
+      }
+
+      if (!preferred?.ironRich) return canonicalCompanion(normal);
+      if (
+        plannerAutomaticPairPreferencePenalty(focus, preferred, meal) > normalPenalty
+      ) return canonicalCompanion(normal);
+      if (enforceSingleStarch(focus, [preferred]).length !== 1)
+        return canonicalCompanion(normal);
+      return canonicalCompanion(preferred);
+    } finally {
+      if (allFoods) state.foods = allFoods;
+    }
   };
 
   // buildDay() ruft diese Legacy-Funktion weiterhin auf. PLAN-08-X1 macht den
@@ -249,10 +404,18 @@ if (typeof module !== "undefined" && module.exports) {
     PLANNER_IRON_INTRODUCTION_TYPES,
     PLANNER_FRUIT_SAVORY_VEGETABLE_CATEGORIES,
     PLANNER_FRUIT_SAVORY_PROTEIN_CATEGORIES,
+    PLANNER_CULINARY_ROLE_BY_ID,
+    PLANNER_FRESH_SIDE_PREFERRED_IDS,
+    plannerCulinaryRole,
+    plannerCulinaryIsAccent,
+    plannerFreshSidePairPreference,
+    plannerFreshSideKnownAllergenCompanion,
+    plannerFreshSideCompanionPoolFood,
     plannerAutomaticPairPreferencePenalty,
     plannerPairRecipeNameVariants,
     plannerPairRecipeContractAvailable,
     plannerPairHasUniqueUnlockedRecipe,
+    plannerPairRequiresRecipe,
     plannerFocusIsIntroduction,
     plannerIronPreferenceApplies,
     plannerPreferredNormalCompanion,

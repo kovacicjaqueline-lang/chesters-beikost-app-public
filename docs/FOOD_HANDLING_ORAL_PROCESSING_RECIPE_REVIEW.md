@@ -37,7 +37,7 @@ Die Runtime stellt die orale Dimension additiv an den Rezeptzuständen bereit:
 
 Diese Felder sind **Metadaten**. Sie werden auch bei einem oral klassifizierten, aber noch nicht handlingseitig migrierten Rezept ausgegeben. In diesem Fall bleiben `handlingMigrated: false`, die bestehenden `requirementMissing`-Einträge sowie `unlocked` unverändert.
 
-Die konkreten freigegebenen Servier-/Texturbedingungen liegen damit strukturiert vor und müssen nicht aus `note` oder `skillRequirement` geparst werden. Die bestehenden Rezept-`note`-Texte werden in dieser Wave nicht als Steuerlogik umgeschrieben; offene Rezepturen bleiben bewusst unverändert.
+Die konkreten freigegebenen Servier-/Texturbedingungen liegen damit strukturiert vor und müssen nicht aus `note` oder `skillRequirement` geparst werden. `data/recipes.js` wird in dieser Wave nicht als Steuerlogik umgeschrieben. Für die 30 oral klassifizierten Rezeptzustände ersetzt die Runtime jedoch den bisherigen generischen Anzeigehinweis in `skillRequirement` durch die konkrete `oralServingRequirement` plus den bestehenden Hinweis auf aufrechtes Sitzen und direkte Beaufsichtigung. Dadurch zeigt die Rezeptkarte die freigegebene Servierbedingung, ohne dass offene Rezeptformulierungen oder Eligibility-Regeln verändert werden.
 
 ## Fachlich klare Einzelentscheidungen
 
@@ -116,3 +116,4 @@ Technischer Stand auf dem Arbeitsbranch:
 7. `recipeStates()` stellt `oralProcessing` und `oralServingRequirement` additiv bereit.
 8. Regressionen sichern sowohl die exakten 30 Zuordnungen als auch die Nicht-Freischaltung oral-only klassifizierter Legacy-/Safety-Fälle ab.
 9. Die bestehende Handling-Loaderkette und der Offline-Precache bleiben unverändert.
+10. Bei oral klassifizierten Fällen zeigt die bestehende Rezeptkarten-Hinweisfläche die konkrete freigegebene Servierbedingung statt des historischen generischen Kau-Hinweises.

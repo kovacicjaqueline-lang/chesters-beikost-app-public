@@ -89,7 +89,7 @@
    <div class="row wrap food-head-actions"><button class="btn secondary smallbtn" id="addFood">＋ Hinzufügen</button><button class="btn secondary smallbtn" id="toggleFoodOrder">↕ Reihenfolge</button></div>
   </div>
   <div class="notice olive" id="foodReorderHint" style="display:none;margin-top:10px"><b>Reihenfolge in diesem Tab ändern</b><br>Am Griff ziehen. Am oberen oder unteren Bildschirmrand scrollt die Liste automatisch mit.</div>
-  <div class="field" style="margin-top:12px"><label>Suchen</label><input id="foodSearch" placeholder="z. B. Erbsen, Fisch, Philippinen"></div>
+  <div class="field" style="margin-top:12px"><label>Suchen</label><input type="search" id="foodSearch" placeholder="z. B. Erbsen, Fisch, Philippinen"></div>
   <div class="seg" id="foodFilters"><button data-filter="all">Alle</button><button class="active" data-filter="open">Offen</button><button data-filter="allergen">Allergene</button><button data-filter="ph">Philippinen</button><button data-filter="iron">Eisenreich</button><button data-filter="paused">Pause</button><button data-filter="inactive" id="inactiveFoodFilter">Deaktiviert</button></div>
   <div id="foodList"></div>
  </div>
@@ -117,7 +117,7 @@
   <details class="panel-details" id="recipesDetails">
    <summary><span><b>Rezepte & Fingerfood</b><small id="recipeCount">Passend zu Status und Konsistenz.</small></span></summary>
    <div class="panel-body">
-    <div class="field recipe-search"><label>Rezept suchen</label><input id="recipeSearch" placeholder="z. B. Lachs, Zucchini, Pancakes"></div>
+    <div class="field recipe-search"><label>Rezept suchen</label><input type="search" id="recipeSearch" placeholder="z. B. Lachs, Zucchini, Pancakes"></div>
     <div class="field recipe-filter-field"><label>Kategorie</label><div class="seg recipe-filters" id="recipeFilter" role="group" aria-label="Rezeptkategorie"><button class="active" type="button" data-recipe-filter="available">Jetzt passend</button><button type="button" data-recipe-filter="almost">Fast passend</button><button type="button" data-recipe-filter="all">Alle</button><button type="button" data-recipe-filter="pantry">Mit Vorrat</button><button type="button" data-recipe-filter="freezer">Einfrierbar</button><button type="button" data-recipe-filter="porridge">Brei & Löffelgerichte</button><button type="button" data-recipe-filter="pancakes">Pancakes</button><button type="button" data-recipe-filter="balls">Bällchen, Taler & Fingerfood</button><button type="button" data-recipe-filter="family">Familiengerichte</button><button type="button" data-recipe-filter="philippines">Philippinen</button><button type="button" data-recipe-filter="baking">Backen</button><button type="button" data-recipe-filter="snack">Snack</button></div></div>
     <div id="recipeList"></div>
    </div>

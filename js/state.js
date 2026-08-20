@@ -6,7 +6,7 @@
  */
 
 const KEY = "chester-beikost-pwa-v6";
-const APP_VERSION = "10.1.25";
+const APP_VERSION = "10.1.26";
 const SCHEMA_VERSION = 5;
 const DB_NAME = "chester-beikost-db";
 const DB_VERSION = 1;

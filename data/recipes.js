@@ -1,7 +1,7 @@
 "use strict";
 
 /* Rezeptdaten – Version 10.0.0 konsolidiert
- * 101 kanonische Rezeptkarten; alle 109 historischen Namen bleiben über Aliase migrationssicher auffindbar.
+ * 100 kanonische Rezeptkarten; alle 109 historischen Namen bleiben über Aliase migrationssicher auffindbar.
  * Elf vorsichtig zusammengeführte Familien, individuelle Alters- und Sicherheitsprüfung.
  */
 

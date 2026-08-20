@@ -309,24 +309,14 @@ const RECIPE_ICON_PATHS = Object.freeze({
   "Bohnen-Kartoffel-Stampf": "assets/illustrations-v2/recipes/bohnen-kartoffel-stampf.svg"
 });
 
-const FOOD_CATEGORY_FALLBACK_PATHS = Object.freeze({
-  "Gemüse": "assets/illustrations/fallbacks/gemuese.svg",
-  "Obst": "assets/illustrations/fallbacks/obst.svg",
-  "Getreide/Stärke": "assets/illustrations/fallbacks/getreide-staerke.svg",
-  "Hülsenfrucht": "assets/illustrations/fallbacks/huelsenfrucht.svg",
-  "Fleisch": "assets/illustrations/fallbacks/fleisch.svg",
-  "Fisch": "assets/illustrations/fallbacks/fisch.svg",
-  "Milchprodukt": "assets/illustrations/fallbacks/milchprodukt.svg",
-  "Ei": "assets/illustrations/fallbacks/ei.svg",
-  "Nuss": "assets/illustrations/fallbacks/nuss.svg",
-  "Samen": "assets/illustrations/fallbacks/samen.svg",
-  "Kraut/Gewürz": "assets/illustrations/fallbacks/kraut-gewuerz.svg",
-  "Wurzel/Knolle": "assets/illustrations/fallbacks/wurzel-knolle.svg"
+const RECIPE_RUNTIME_ICON_ALIASES = Object.freeze({
+  "Bananen-Ei-Pancakes": RECIPE_ICON_PATHS["Buchweizen-Bananen-Pancakes"]
 });
-const FOOD_GENERIC_FALLBACK_PATH = "assets/illustrations/fallbacks/generisch.svg";
+
 function foodIllustrationPath(f){
-  if(!f) return FOOD_GENERIC_FALLBACK_PATH;
-  return FOOD_ICON_PATHS[f.id] || FOOD_CATEGORY_FALLBACK_PATHS[f.category] || FOOD_GENERIC_FALLBACK_PATH;
+  if(!f) return "";
+  if(f.illustrationId && FOOD_ICON_PATHS[f.illustrationId]) return FOOD_ICON_PATHS[f.illustrationId];
+  return FOOD_ICON_PATHS[f.id] || "";
 }
 const ILLUSTRATION_V2_PREFIX = "assets/illustrations-v2/";
 function isV2IllustrationPath(src){
@@ -334,7 +324,7 @@ function isV2IllustrationPath(src){
 }
 function illustrationMissingMarkup(label,kind="food"){
   console.error(`[Illustrationen] Fehlende ${kind}-Illustration:`,label);
-  return `<span class="illustration-missing" role="img" aria-label="Illustration für ${esc(label)} fehlt">!</span>`;
+  return "";
 }
 const ILLUSTRATION_ASSET_REVISION = "10.1.25";
 function revisionedIllustrationSrc(src){ return `${src}${String(src).includes("?") ? "&" : "?"}v=${ILLUSTRATION_ASSET_REVISION}`; }
@@ -347,12 +337,10 @@ function illustrationImg(src,label,kind="food"){
   return `<img class="item-illustration ${kind}-illustration" src="${assetSrc}" alt="" aria-hidden="true" loading="lazy" decoding="async">`;
 }
 function foodIconSvg(foodOrId){ const f=typeof foodOrId==="string" ? (food(foodOrId)||FOOD_DB.find(x=>x.id===foodOrId)) : foodOrId; return illustrationImg(foodIllustrationPath(f),f?.name||"unbekanntes Lebensmittel","food"); }
-function recipeIconSvg(recipeOrName){ const r=typeof recipeOrName==="string" ? RECIPES.find(x=>x.name===recipeOrName) : recipeOrName; return illustrationImg(r&&RECIPE_ICON_PATHS[r.name],r?.name||String(recipeOrName||"unbekanntes Rezept"),"recipe"); }
-function foodIllustrationUsesFallback(f){
-  const src=foodIllustrationPath(f);
-  return !src || src===FOOD_GENERIC_FALLBACK_PATH || src===FOOD_CATEGORY_FALLBACK_PATHS[f?.category];
-}
-function auditIllustrationCoverage(){ return {foodsMissing:FOOD_DB.filter(foodIllustrationUsesFallback).map(f=>f.name),recipesMissing:RECIPES.filter(r=>!RECIPE_ICON_PATHS[r.name]).map(r=>r.name),foodCount:FOOD_DB.length,recipeCount:RECIPES.length}; }
+function recipeIconSvg(recipeOrName){ const r=typeof recipeOrName==="string" ? RECIPES.find(x=>x.name===recipeOrName) : recipeOrName; const src=r&&(RECIPE_ICON_PATHS[r.name]||RECIPE_RUNTIME_ICON_ALIASES[r.name]); return illustrationImg(src,r?.name||String(recipeOrName||"unbekanntes Rezept"),"recipe"); }
+function foodIllustrationUsesFallback(f){ return !foodIllustrationPath(f); }
+function recipeIllustrationPath(r){ return r&&(RECIPE_ICON_PATHS[r.name]||RECIPE_RUNTIME_ICON_ALIASES[r.name])||""; }
+function auditIllustrationCoverage(){ return {foodsMissing:FOOD_DB.filter(foodIllustrationUsesFallback).map(f=>f.name),recipesMissing:RECIPES.filter(r=>!recipeIllustrationPath(r)).map(r=>r.name),foodCount:FOOD_DB.length,recipeCount:RECIPES.length}; }
 document.addEventListener("error",event=>{
   const img=event.target;
   if(!img || !img.classList || !img.classList.contains("illustration-icon__asset")) return;

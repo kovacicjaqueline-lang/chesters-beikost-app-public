@@ -12,7 +12,7 @@ const APPROVED_ICON_IDS = [
   "weizengriess", "bulgur", "kidneybohne", "braune-gruene-linse", "schnittlauch", "pecannuss",
   "paranuss", "macadamia", "lupine", "miesmuschel", "mohn", "tempeh", "kaeferbohne", "rhabarber",
   "chinakohl", "rucola", "radicchio", "endivie", "rettich", "blattsalat", "holunder", "preiselbeere",
-  "quitte", "kren", "walnussoel", "sojaoel", "weizenkeimoel", "huettenkaese",
+  "quitte", "kren", "walnussoel", "sojaoel", "weizenkeimoel", "huettenkaese", "honig",
 ];
 
 function embeddedPng(id) {

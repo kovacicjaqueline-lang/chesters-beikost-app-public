@@ -199,7 +199,8 @@ const FOOD_ICON_PATHS = Object.freeze({
   "kren": "assets/illustrations-v2/foods/kren.svg",
   "walnussoel": "assets/illustrations-v2/foods/walnussoel.svg",
   "sojaoel": "assets/illustrations-v2/foods/sojaoel.svg",
-  "weizenkeimoel": "assets/illustrations-v2/foods/weizenkeimoel.svg"
+  "weizenkeimoel": "assets/illustrations-v2/foods/weizenkeimoel.svg",
+  "honig": "assets/illustrations-v2/foods/honig.svg"
 });
 const RECIPE_ICON_PATHS = Object.freeze({
   "Obst-Hafer-Pancakes": "assets/illustrations-v2/recipes/obst-hafer-pancakes.svg",

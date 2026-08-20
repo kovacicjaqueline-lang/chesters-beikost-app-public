@@ -7,11 +7,11 @@
 
 function textureName(stage = Number(state.settings.textureStage)) {
   return {
-    1: "glatt oder fein zerdrückt",
-    2: "dick püriert oder weich zerdrückt",
-    3: "weich stückig",
+    1: "glatt / fein",
+    2: "dick / fein zerdrückt",
+    3: "mit kleinen weichen Stückchen",
     4: "weiche Familienkost",
-  }[Number(stage)] || "glatt oder fein zerdrückt";
+  }[Number(stage)] || "glatt / fein";
 }
 function textureText() {
   return `Stufe ${Number(state.settings.textureStage)} · ${textureName()}`;
@@ -1083,10 +1083,28 @@ function renderHome() {
 }
 
 function renderSettings() {
+  let textureSelect = document.getElementById("textureStage");
+  if (textureSelect) {
+    for (let option of textureSelect.options) {
+      let stage = Number(option.value);
+      if (stage >= 1 && stage <= 4) option.textContent = `${stage} – ${textureName(stage)}`;
+    }
+  }
   for (let id of ["birthDate","startDate","allergenDays","newFoodEvery","amountSelected","textureStage","phMode","travelDate","freezerDays"]) document.getElementById(id).value = state.settings[id];
   document.getElementById("seasonal").checked = state.settings.seasonal;
   document.getElementById("preferInventoryInPlan").checked =
     state.settings.preferInventoryInPlan !== false;
+  let actions = document.getElementById("settingsActionbar");
+  if (actions) {
+    Object.assign(actions.style, {
+      position: "static",
+      bottom: "auto",
+      zIndex: "auto",
+      margin: "10px 0 0",
+      padding: "0",
+      background: "transparent",
+    });
+  }
   let box = document.getElementById("settingsPhaseSummary");
   box.innerHTML = `<b>Phase: ${esc(phaseText())}</b><br>${esc(phaseSourceText())}<br><br><b>Mengenorientierung: ${esc(AMOUNT_LEVELS[currentAmountLevel()].label)}</b><br>${esc(amountLevelSourceText())}`;
 }
@@ -1135,22 +1153,10 @@ function resetMoreTransientUi() {
 function showView(id) {
   let previous = document.querySelector(".view.active")?.id;
   if (previous === "more" && id !== "more") {
-    resetMoreTransientUi();
-    recipeFilter = "available";
-    recipeQuery = "";
-    logMonthFilter = "all";
-    logVisibleCount = 8;
-    let recipeSearch = document.getElementById("recipeSearch");
-    if (recipeSearch) recipeSearch.value = "";
-    document.getElementById("recipeFilter")?.scrollTo({ left: 0, behavior: "auto" });
-    renderPrep();
+    document.querySelectorAll(".entry-chooser").forEach((chooser) => chooser.remove());
   }
-  if (previous === "foods" && id !== "foods") {
-    foodFilter = "open";
+  if (previous === "foods" && id !== "foods" && foodReorderMode) {
     foodReorderMode = false;
-    let foodSearch = document.getElementById("foodSearch");
-    if (foodSearch) foodSearch.value = "";
-    document.getElementById("foodFilters")?.scrollTo({ left: 0, behavior: "auto" });
     renderFoods();
   }
   document

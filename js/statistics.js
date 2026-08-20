@@ -23,10 +23,16 @@ function statisticsPositiveOutcome(outcome) {
   return outcome === "eaten" || outcome === "tried";
 }
 
-function statisticsCountableFoodId(id) {
+function statisticsCountableIdentityIds(id) {
   let item = food(id);
-  if (!item || item.count100 === false) return "";
-  return canonicalId(item.id, item.name);
+  if (!item || item.count100 === false) return [];
+  if (typeof resolvedCount100Identities === "function") return resolvedCount100Identities(item);
+  let canonical = canonicalId(item.id, item.name);
+  return canonical ? [canonical] : [];
+}
+
+function statisticsCountableFoodId(id) {
+  return statisticsCountableIdentityIds(id)[0] || "";
 }
 
 function statisticsFirstPositiveDate(foodId) {
@@ -36,6 +42,21 @@ function statisticsFirstPositiveDate(foodId) {
     .filter(Boolean)
     .sort();
   return dates[0] || "";
+}
+
+function statisticsFirstPositiveDateByIdentity() {
+  let firstDates = new Map();
+  for (let log of state.logs || []) {
+    if (!log.date) continue;
+    for (let id of new Set(log.foodIds || [])) {
+      if (!statisticsPositiveOutcome(outcomeForFood(log, id))) continue;
+      for (let identity of statisticsCountableIdentityIds(id)) {
+        let previous = firstDates.get(identity);
+        if (!previous || log.date < previous) firstDates.set(identity, log.date);
+      }
+    }
+  }
+  return firstDates;
 }
 
 function statisticsTextureCounts(logs) {
@@ -53,8 +74,9 @@ function statisticsTextureCounts(logs) {
 function statisticsSnapshot(range = statisticsRange) {
   let info = statisticsRangeInfo(range);
   let logs = statisticsLogs(range);
-  let positiveFoodIds = new Set();
-  let introducedFoodIds = new Set();
+  let positiveIdentities = new Set();
+  let introducedIdentities = new Set();
+  let firstPositiveDates = statisticsFirstPositiveDateByIdentity();
   let outcomeCounts = { eaten: 0, tried: 0, not_accepted: 0, not_offered: 0, reaction: 0 };
 
   for (let log of logs) {
@@ -62,11 +84,11 @@ function statisticsSnapshot(range = statisticsRange) {
       let outcome = outcomeForFood(log, id);
       if (Object.prototype.hasOwnProperty.call(outcomeCounts, outcome)) outcomeCounts[outcome] += 1;
       if (!statisticsPositiveOutcome(outcome)) continue;
-      let canonical = statisticsCountableFoodId(id);
-      if (!canonical) continue;
-      positiveFoodIds.add(canonical);
-      let firstDate = statisticsFirstPositiveDate(id);
-      if (firstDate && firstDate >= info.start && firstDate <= info.end) introducedFoodIds.add(canonical);
+      for (let identity of statisticsCountableIdentityIds(id)) {
+        positiveIdentities.add(identity);
+        let firstDate = firstPositiveDates.get(identity) || "";
+        if (firstDate && firstDate >= info.start && firstDate <= info.end) introducedIdentities.add(identity);
+      }
     }
   }
 
@@ -85,14 +107,14 @@ function statisticsSnapshot(range = statisticsRange) {
     entryCount: logs.length,
     mealCount: logs.length,
     sampleCount: 0,
-    varietyCount: positiveFoodIds.size,
-    introducedCount: introducedFoodIds.size,
+    varietyCount: positiveIdentities.size,
+    introducedCount: introducedIdentities.size,
     outcomeCounts,
     textureCounts,
     amounts,
     averageAmount,
     maxAmount,
-    totalLearned: learnedFoods().length,
+    totalLearned: typeof learnedCountIdentities === "function" ? learnedCountIdentities().length : learnedFoods().length,
     targetFoods: Number(state.settings.targetFoods) || 100,
   };
 }

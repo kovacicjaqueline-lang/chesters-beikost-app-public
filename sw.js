@@ -1,4 +1,80 @@
+// sw-core.js besitzt weiterhin die vollständige, versionsgebundene Precache-Liste.
+// Seine bisherige Fetch-Strategie war jedoch network-first und hat dadurch besonders
+// auf iOS/PWA-Cold-Starts bereits lokal vorhandene App-Dateien unnötig verzögert.
+// Wir übernehmen hier nur die Fetch-Strategie, ohne den bestehenden Precache umzubauen.
+const nativeAddEventListener = self.addEventListener.bind(self);
+const nativeRemoveEventListener = self.removeEventListener.bind(self);
+let coreFetchHandler = null;
+
+self.addEventListener = (type, listener, options) => {
+  nativeAddEventListener(type, listener, options);
+  if (type === "fetch") coreFetchHandler = listener;
+};
+
 importScripts("./sw-core.js");
+
+self.addEventListener = nativeAddEventListener;
+if (coreFetchHandler) nativeRemoveEventListener("fetch", coreFetchHandler);
+
+async function matchAppCache(request) {
+  const cache = await caches.open(CACHE);
+  const direct = await cache.match(request);
+  if (direct) return direct;
+  return cache.match(request, { ignoreSearch: true });
+}
+
+async function fetchAndStore(request) {
+  const response = await fetch(request);
+  if (response && response.ok) {
+    const cache = await caches.open(CACHE);
+    await cache.put(request, response.clone());
+
+    const url = new URL(request.url);
+    if (url.origin === self.location.origin && url.search) {
+      url.search = "";
+      url.hash = "";
+      await cache.put(url.toString(), response.clone());
+    }
+  }
+  return response;
+}
+
+// Stale-while-revalidate für bereits installierte App-Dateien: Der sichtbare
+// Wiederaufbau kommt sofort aus dem versionsgebundenen Cache. Parallel wird die
+// angeforderte Ressource aus dem Netz aktualisiert, damit spätere Deployments
+// ohne Service-Worker-Änderung nicht dauerhaft auf einem alten App-Stand hängen.
+nativeAddEventListener("fetch", (event) => {
+  if (event.request.method !== "GET") return;
+  const url = new URL(event.request.url);
+  if (url.origin !== self.location.origin) return;
+
+  const cachedPromise = matchAppCache(event.request);
+  event.waitUntil((async () => {
+    const cached = await cachedPromise;
+    if (!cached) return;
+    try {
+      await fetchAndStore(event.request);
+    } catch (_) {
+      // Offline bleibt die bereits gecachte Ressource gültig.
+    }
+  })());
+
+  event.respondWith((async () => {
+    const cached = await cachedPromise;
+    if (cached) return cached;
+
+    try {
+      return await fetchAndStore(event.request);
+    } catch (error) {
+      if (event.request.mode === "navigate") {
+        const cache = await caches.open(CACHE);
+        const index = await cache.match("./index.html");
+        if (index) return index;
+      }
+      throw error;
+    }
+  })());
+});
 
 // PLAN-08 wird nach dem initialen HTML dynamisch geladen. Diese Dateien müssen
 // schon beim Service-Worker-Install in denselben App-Cache, damit der erste

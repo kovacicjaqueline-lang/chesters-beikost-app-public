@@ -38,6 +38,15 @@
     return result;
   }
 
+  function mergePlanDays(primaryDays, secondaryDays) {
+    const byDate = new Map();
+    for (const day of [...(primaryDays || []), ...(secondaryDays || [])]) {
+      if (!day?.date || byDate.has(day.date)) continue;
+      byDate.set(day.date, day);
+    }
+    return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
+  }
+
   function chooseAlternative(alternatives, otherMeals, randomFn = Math.random) {
     const unique = [];
     const seen = new Set();
@@ -119,6 +128,7 @@
     canonicalCombination,
     hasFutureLearningDependency,
     otherMealsForSlot,
+    mergePlanDays,
     chooseAlternative,
     automaticFocusAllowed,
     learningCandidateCompatible,
@@ -147,12 +157,9 @@
       ?.meals?.find((entry) => entry?.meal === meal) || null;
   }
 
-  function planWindowForDate(date) {
-    const visible = currentVisiblePlan();
-    if ((visible || []).some((day) => day?.date === date)) return visible;
-    return typeof planDisplayDays === "function"
-      ? planDisplayDays(date, 7)
-      : buildDays(date, 7, false);
+  function targetPlanWindow(date, visibleDays) {
+    if ((visibleDays || []).some((day) => day?.date === date)) return visibleDays;
+    return buildDays(date, 7, false);
   }
 
   function shuffle(items) {
@@ -217,7 +224,7 @@
     }
   }
 
-  function buildCandidateWithPlanner(focus, date, meal, visibleDays) {
+  function buildCandidateWithPlanner(focus, date, meal, targetDays, contextDays) {
     const key = slotKey(date, meal);
     const previousLocks = clone(state.planLocks || {});
     const previousOverrides = clone(state.overrides || {});
@@ -227,13 +234,13 @@
       state.planLocks ||= {};
       state.overrides ||= {};
       state.autoLockExcluded ||= {};
-      seedVisiblePlannerContext(visibleDays, key);
+      seedVisiblePlannerContext(contextDays, key);
       delete state.planLocks[key];
       delete state.autoLockExcluded[key];
       state.overrides[key] = focus.id;
       // Reine Planner-Berechnung: planDisplayDays persistiert sichtbare Rollover-Snapshots
       // und darf deshalb während der Alternativensuche nicht aufgerufen werden.
-      const from = visibleDays?.[0]?.date || date;
+      const from = targetDays?.[0]?.date || date;
       const days = buildDays(from, 7, false);
       const generated = targetMealFrom(days, date, meal);
       if (!generated?.active || generated.empty || generated.focusId !== focus.id) return null;
@@ -246,11 +253,11 @@
     }
   }
 
-  function mainMealAlternatives(days, date, meal, current) {
+  function mainMealAlternatives(targetDays, contextDays, date, meal, current) {
     const alternatives = [];
     const seen = new Set();
-    for (const focus of shuffle(focusPool(current, date, meal, days))) {
-      const generated = buildCandidateWithPlanner(focus, date, meal, days);
+    for (const focus of shuffle(focusPool(current, date, meal, contextDays))) {
+      const generated = buildCandidateWithPlanner(focus, date, meal, targetDays, contextDays);
       if (!generated || generated.recipeName) continue;
       if (!learningCandidateCompatible(current, generated, focus.id)) continue;
       if (current.type === "Allergen wiederholen") {
@@ -333,18 +340,21 @@
       return { ok: false, reason: "follow-up" };
     }
 
-    const days = planWindowForDate(date);
-    const current = targetMealFrom(days, date, meal);
+    const visibleDays = currentVisiblePlan();
+    const targetIsVisible = visibleDays.some((day) => day?.date === date);
+    const targetDays = targetPlanWindow(date, visibleDays);
+    const contextDays = mergePlanDays(visibleDays, targetDays);
+    const current = targetMealFrom(targetDays, date, meal);
     if (!current?.active || current.empty || !current.focusId) {
       showToast("Für diesen Planplatz gibt es gerade keine austauschbare Mahlzeit.");
       return { ok: false, reason: "empty" };
     }
 
-    const dependency = hasFutureLearningDependency(days, date, current);
+    const dependency = hasFutureLearningDependency(contextDays, date, current);
     const alternatives = meal === "snack"
-      ? snackAlternatives(days, date, current)
-      : mainMealAlternatives(days, date, meal, current);
-    const chosen = chooseAlternative(alternatives, otherMealsForSlot(days, key));
+      ? snackAlternatives(contextDays, date, current)
+      : mainMealAlternatives(targetDays, contextDays, date, meal, current);
+    const chosen = chooseAlternative(alternatives, otherMealsForSlot(contextDays, key));
     if (!chosen) {
       showToast(
         dependency
@@ -354,14 +364,33 @@
       return { ok: false, reason: dependency ? "future-learning-dependency" : "no-alternative" };
     }
 
+    const snapshotFactory = (pinDate, pinMeal, generated, mode) =>
+      mealSnapshot(pinDate, pinMeal, generated, mode);
+    const completionCheck = (pinDate, pinMeal) => mealIsCompleted(pinDate, pinMeal);
+
     pinVisibleAutomaticMeals(
       state,
-      days,
+      visibleDays,
       key,
-      (pinDate, pinMeal, generated, mode) => mealSnapshot(pinDate, pinMeal, generated, mode),
-      (pinDate, pinMeal) => mealIsCompleted(pinDate, pinMeal),
+      snapshotFactory,
+      completionCheck,
       today(),
     );
+
+    // Liegt der Zieltag außerhalb der aktuell angezeigten Woche (z. B. Heute,
+    // während der Wochenplan ab morgen gezeigt wird), bleiben nur die anderen
+    // Mahlzeiten dieses Zieltags zusätzlich stabil. Der restliche unsichtbare
+    // Zielzeitraum wird nicht künstlich festgeschrieben.
+    if (!targetIsVisible) {
+      pinVisibleAutomaticMeals(
+        state,
+        targetDays.filter((day) => day?.date === date),
+        key,
+        snapshotFactory,
+        completionCheck,
+        today(),
+      );
+    }
 
     const snapshot = mealSnapshot(date, meal, chosen, "auto");
     if (!snapshot) return { ok: false, reason: "snapshot" };

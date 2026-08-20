@@ -91,7 +91,7 @@
   // Beim normalen Parser-Start lädt document.write das Zusatzmodul synchron.
   const reviewFixSrc = "js/planner-log-rollover-review-fixes.js?v=10.1.25";
   if (document.readyState === "loading") {
-    document.write(`<script src="${reviewFixSrc}"><\\/script>`);
+    document.write(`<script src="${reviewFixSrc}"></scr` + `ipt>`);
   } else {
     let script = document.createElement("script");
     script.src = reviewFixSrc;

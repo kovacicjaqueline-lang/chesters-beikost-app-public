@@ -375,7 +375,8 @@ if (typeof injectInventoryProductAllergens === "function") {
         let actualIds = inventoryTargetFoodIds("recipe", target.key);
         let originalRecipeFoodIds = recipeFoodIds;
         recipeFoodIds = function recipeFoodIdsForActualInventoryBatch(recipe) {
-          if (recipe?.name === target.key) return [...actualIds];
+          let inventoryModalOpen = document.getElementById("genericModal")?.classList?.contains("open");
+          if (inventoryModalOpen && recipe?.name === target.key) return [...actualIds];
           return originalRecipeFoodIds(recipe);
         };
         productAllergenQueueTask(() => { recipeFoodIds = originalRecipeFoodIds; });

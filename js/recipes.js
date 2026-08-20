@@ -2,17 +2,12 @@
 
 /* Rezepte und Allergenplanung
  * Rezeptfreigabe nach gegessenen Zutaten, Konsistenzregeln, Karten und Allergenplanung.
- * Konsolidierter Produktionsstand 10.0.0.
+ * Forschungs-/Datenstand 2026-08-20:
+ * - alle Laufzeitrezepte mit reproduzierbaren Mengenangaben
+ * - weiche Altersorientierung getrennt von hardMinMonths
+ * - Gemüse-Fleisch-Nockerl in drei eigenständige Rezepte aufgeteilt
  */
 
-/*
- * Fachlich freigegebene eigenständige Rezept-Ergänzung.
- * Sie wird hier – nach data/recipes.js, aber vor app.js – registriert, damit sie
- * bereits beim allerersten Planungsdurchlauf und vor dem Anlegen von Auto-Locks
- * Teil des kanonischen Browser-Rezeptkatalogs ist.
- *
- * Kein Alias von Obst-Hafer-Pancakes: Hafer ist hier keine Pflichtzutat.
- */
 const RECIPE_CATALOG_ADDITIONS = Object.freeze([
   Object.freeze({
     name: "Bananen-Ei-Pancakes",
@@ -32,13 +27,203 @@ function installRecipeCatalogAdditions(recipes = typeof RECIPES !== "undefined" 
   let changed = false;
   for (let recipe of RECIPE_CATALOG_ADDITIONS) {
     if (recipes.some((item) => item?.name === recipe.name)) continue;
-    recipes.push(recipe);
+    recipes.push({ ...recipe });
     changed = true;
   }
   return changed;
 }
 
+const RECIPE_RESEARCH_GUIDANCE = Object.freeze({
+  "Obst-Hafer-Pancakes": Object.freeze(["40 g feine Haferflocken, 60 g sehr weiches bekanntes Obst nach Auswahl, 1 Ei", 6]),
+  "Birne-Hirse-Pancakes": Object.freeze(["30 g weiche Birne, 30 g gekochter Hirsebrei, 1 Ei", 6]),
+  "Gemüse-Hafer-Pancakes": Object.freeze(["40 g feine Haferflocken, 60 g sehr weich gegarter Kürbis oder Süßkartoffel, 1 Ei", 6]),
+  "Zucchini-Hafer-Pancakes": Object.freeze(["30 g fein geriebene und gut ausgedrückte Zucchini, 20 g Haferflocken, 1 Ei", 6]),
+  "Ube-Bananen-Pancakes": Object.freeze(["30 g vollständig gegarte Ube, 30 g reife Banane, 20 g Haferflocken, 1 Ei", 6]),
+  "Rind-Hafer-Bällchen": Object.freeze(["100 g mageres Faschiertes vom Rind, 20 g feine Haferflocken, 1 Ei", 6]),
+  "Geflügel-Gemüse-Hafer-Bällchen": Object.freeze(["100 g Hühnerfaschiertes, 60 g fein geriebene und gut ausgedrückte Zucchini, 20 g feine Haferflocken; alternativ 100 g Putenfaschiertes, 60 g sehr weich gegarte fein zerdrückte Karotte und 20 g feine Haferflocken", 6]),
+  "Lachs-Kartoffel-Bällchen": Object.freeze(["50 g vollständig gegarter grätenfreier Lachs, 100 g sehr weiche Kartoffel", 6]),
+  "Rote-Linsen-Gemüsebällchen": Object.freeze(["80 g sehr weich gekochte rote Linsen, 40 g Karottenpüree, 10 g feine Haferflocken", 6]),
+  "Tofu-Brokkoli-Bällchen": Object.freeze(["80 g Naturtofu, 45 g sehr weicher Brokkoli, 10 g feine Haferflocken", 6]),
+  "Brokkoli-Kartoffel-Taler": Object.freeze(["100 g sehr weicher Brokkoli, 100 g sehr weiche Kartoffel", 6]),
+  "Zucchini-Hafer-Puffer": Object.freeze(["45 g fein geriebene Zucchini, 20 g Haferflocken, 1 Ei", 6]),
+  "Kichererbsen-Kürbis-Taler": Object.freeze(["80 g sehr weiche Kichererbsen, 60 g Kürbispüree, bei Bedarf 10 g feine Haferflocken als Binder", 6]),
+  "Rote-Linsen-Bratlinge": Object.freeze(["100 g sehr weich gekochte rote Linsen, 15 g feine Haferflocken", 6]),
+  "Polenta-Zucchini-Sticks": Object.freeze(["40 g feine Polenta, 160 ml Wasser, 60 g fein geriebene und weich gegarte Zucchini", 6]),
+  "Süßkartoffel-Hirse-Sticks": Object.freeze(["150 g Süßkartoffelpüree, 60 g sehr weich gekochte Hirse", 7]),
+  "Omelettstreifen": Object.freeze(["1 Ei, 15 ml Wasser", 6]),
+  "Zucchini-Omelett": Object.freeze(["1 Ei, 30 g fein geriebene Zucchini", 6]),
+  "Obst-Haferbrei": Object.freeze(["20 g feine Haferflocken, 120 ml Wasser, 40 g weiches bekanntes Obst nach Auswahl", 6]),
+  "Obst-Hirsebrei": Object.freeze(["20 g Hirseflocken, 120 ml Wasser, 40 g weiches bekanntes Obst nach Auswahl", 6]),
+  "Obst-Polentabrei": Object.freeze(["20 g feine Polenta, 120 ml Wasser, 40 g weiches bekanntes Obst nach Auswahl", 6]),
+  "Obst-Reisbrei": Object.freeze(["20 g Reis oder Reisflocken, 150 ml Wasser, 40 g weiches bekanntes Obst nach Auswahl", 6]),
+  "Obst-Quinoabrei": Object.freeze(["20 g weißer Quinoa, 140 ml Wasser, 40 g weiches bekanntes Obst nach Auswahl", 6]),
+  "Obst-Buchweizenbrei": Object.freeze(["20 g Buchweizenflocken oder sehr weich gekochter Buchweizen, 120 ml Wasser, 40 g weiches bekanntes Obst nach Auswahl", 6]),
+  "Obst-Grießbrei": Object.freeze(["20 g feiner Weizengrieß, 120 ml Wasser, 40 g weiches bekanntes Obst nach Auswahl", 6]),
+  "Milch-Getreide-Brei": Object.freeze(["20 g bekannte Getreideflocken oder feiner Grieß, 100 ml Wasser; nach Einführung zusätzlich entweder 100 ml pasteurisierte Vollmilch oder 80 g Naturjoghurt oder 100 ml ungesüßte Buttermilch", 6]),
+  "Baby-Bananenbrot": Object.freeze(["240 g sehr reife Banane (etwa 2 mittelgroße), 2 Eier, 150 g fein gemahlene Haferflocken oder Dinkel-/Weizenmehl, optional 15 ml Rapsöl", 7]),
+  "Kürbis-Hafer-Brei": Object.freeze(["100 g Kürbispüree, 15 g feine Haferflocken, 100 ml Wasser", 6]),
+  "Gemüse-Nudel-Sauce": Object.freeze(["120 g Zucchini, 150 g geschälte gegarte Tomate, 60 g trockene kleine Nudeln, 100 ml Wasser", 7]),
+  "Baby-Linsen-Bolognese": Object.freeze(["30 g trockene rote Linsen, 150 g gegarte Tomate, 60 g trockene kleine Nudeln, 150 ml Wasser", 7]),
+  "Lugaw-Basis": Object.freeze(["50 g Reis, 400 ml Wasser, 80 g vollständig gegartes fein zerkleinertes Huhn", 6]),
+  "Kürbis-Lugaw": Object.freeze(["50 g Reis, 400 ml Wasser, 120 g Kürbis", 6]),
+  "Monggo-Kalabasa-Brei": Object.freeze(["40 g trockene Mungbohnen, 150 g Kürbis, 300 ml Wasser", 6]),
+  "Tinola-inspiriert": Object.freeze(["100 g Huhn, 150 g Sayote, 5 g Malunggay-Blätter, 400 ml Wasser", 7]),
+  "Arroz-caldo-inspiriert": Object.freeze(["50 g Reis, 100 g Huhn, 500 ml Wasser, 2 g frischer Ingwer", 7]),
+  "Kalabasa mit Kokos": Object.freeze(["200 g Kürbis, 50 ml ungesüßte Kokosmilch, 50 ml Wasser", 6]),
+  "Tilapia-Reis-Brei": Object.freeze(["60 g vollständig gegarter grätenfreier Tilapia, 30 g Reis, 200 ml Wasser", 7]),
+  "Bangus-Kartoffel-Taler": Object.freeze(["60 g vollständig gegarter und äußerst sorgfältig entgräteter Bangus, 120 g sehr weiche Kartoffel", 7]),
+  "Obst-Hafer-Muffins": Object.freeze(["120 g sehr weiches Obst oder Obstpüree nach Auswahl, 80 g fein gemahlene Haferflocken, 1 Ei", 7]),
+  "Gemüse-Hafer-Muffins": Object.freeze(["100 g sehr fein vorbereitetes weiches Gemüse nach Auswahl, 80 g fein gemahlene Haferflocken, 1 Ei", 7]),
+  "Kürbis-Hirse-Muffins": Object.freeze(["120 g Kürbispüree, 70 g Hirseflocken, 1 Ei", 7]),
+  "Karotten-Polenta-Brei": Object.freeze(["150 g sehr weiche Karotte, 30 g feine Polenta, 180 ml Wasser", 6]),
+  "Süßkartoffel-Rote-Linsen-Brei": Object.freeze(["200 g Süßkartoffel, 50 g trockene rote Linsen, 300 ml Wasser", 6]),
+  "Zucchini-Quinoa-Brei": Object.freeze(["150 g Zucchini, 50 g weißer Quinoa, 300 ml Wasser", 6]),
+  "Kichererbsenmehl-Zucchini-Taler": Object.freeze(["50 g Kichererbsenmehl, 100 g fein geriebene Zucchini, 60 ml Wasser", 6]),
+  "Bananen-Haferbrei mit Erdnussmus": Object.freeze(["15 g feine Haferflocken, 100 ml Wasser, 50 g reife Banane, 5 g glattes Erdnussmus", 6]),
+  "Karotten-Hirse-Brei mit Tahin": Object.freeze(["15 g Hirseflocken, 100 ml Wasser, 60 g Karottenpüree, 3 g glattes Tahin", 6]),
+  "Apfel-Hirse-Brei mit Mandelmus": Object.freeze(["15 g Hirseflocken, 100 ml Wasser, 60 g weich gegarter Apfel, 3 g weißes Mandelmus", 6]),
+  "Apfel-Birnen-Kompott": Object.freeze(["150 g Apfel, 150 g Birne, 50 ml Wasser", 6]),
+  "Karotte-Süßkartoffel-Brei": Object.freeze(["200 g Karotte, 200 g Süßkartoffel, 120 ml Wasser zum Pürieren", 6]),
+  "Brokkoli-Kartoffel-Stampf": Object.freeze(["120 g Brokkoli, 180 g Kartoffel, 60 ml Wasser zum Lockern", 6]),
+  "Karfiol-Kartoffel-Stampf": Object.freeze(["120 g Karfiol, 180 g Kartoffel, 60 ml Wasser zum Lockern", 6]),
+  "Zucchini-Kartoffel-Brei": Object.freeze(["150 g Zucchini, 180 g Kartoffel, 50 ml Wasser zum Pürieren", 6]),
+  "Erbsen-Kartoffel-Stampf": Object.freeze(["100 g Erbsen, 180 g Kartoffel, 80 ml Wasser zum Lockern", 6]),
+  "Kürbis-Linsen-Suppe": Object.freeze(["300 g Kürbis, 50 g trockene rote Linsen, 500 ml Wasser", 7]),
+  "Mildes Rote-Linsen-Dhal": Object.freeze(["80 g trockene rote Linsen, 300 ml Wasser, optional 0,5 g Kurkuma (etwa ¼ TL)", 6]),
+  "Huhn-Karotte-Nudel-Topf": Object.freeze(["125 g Hühnerbrust, 30 g Karotte, 60 g trockene kleine Nudeln, 235 ml Wasser", 7]),
+  "Huhn-Lauch-Kartoffel-Topf": Object.freeze(["120 g Hühnerbrust, 100 g Lauch, 200 g Kartoffel, 300 ml Wasser", 7]),
+  "Huhn-Brokkoli-Reis": Object.freeze(["120 g Hühnerbrust, 100 g Brokkoli, 80 g Reis, 400 ml Wasser", 7]),
+  "Rind-Gemüse-Bolognese": Object.freeze(["120 g mageres Rindfaschiertes, 100 g Karotte, 300 g Tomate, 150 ml Wasser", 7]),
+  "Tomaten-Linsen-Sauce": Object.freeze(["300 g Tomate, 60 g trockene rote Linsen, 250 ml Wasser", 7]),
+  "Brokkoli-Linsen-Pasta": Object.freeze(["120 g Brokkoli, 50 g trockene rote Linsen, 80 g trockene kleine Nudeln, 300 ml Wasser", 7]),
+  "Gemüse-Pasta mit Zucchini und Tomate": Object.freeze(["150 g Zucchini, 200 g Tomate, 80 g trockene kleine Nudeln, 100 ml Wasser", 7]),
+  "Lachs-Reis-Erbsen": Object.freeze(["80 g Lachs, 50 g Reis, 60 g Erbsen, 300 ml Wasser", 7]),
+  "Lachs-Süßkartoffel-Stampf": Object.freeze(["80 g vollständig gegarter grätenfreier Lachs, 200 g sehr weiche Süßkartoffel", 7]),
+  "Kabeljau-Tomaten-Gemüse": Object.freeze(["90 g Kabeljau, 120 g Tomate, 120 g Zucchini, 50 ml Wasser", 7]),
+  "Weiches Rührei": Object.freeze(["1 Ei, 15 ml Wasser oder bereits eingeführte Vollmilch", 6]),
+  "Eier-Finger": Object.freeze(["1 Ei", 6]),
+  "Paprika-Omelettstreifen": Object.freeze(["1 Ei, 30 g sehr fein geschnittene weich gegarte Paprika", 6]),
+  "Ei-Champignon-Cups": Object.freeze(["3 Eier, 75 g fein gehackte weich gegarte Champignons", 7]),
+  "Hummus mit weichen Gemüsesticks": Object.freeze(["120 g sehr weiche Kichererbsen, optional 10 g Tahin, 45 ml Wasser, 150 g Gurke beziehungsweise Gemüsesticks in der jeweils hinterlegten sicheren Servierform", 6]),
+  "Kürbis-Kichererbsen-Creme": Object.freeze(["200 g Kürbis, 120 g sehr weiche Kichererbsen, 100 ml Wasser", 6]),
+  "Avocado-Bananen-Creme": Object.freeze(["70 g reife Avocado, 60 g reife Banane", 6]),
+  "Buchweizen-Bananen-Pancakes": Object.freeze(["40 g Buchweizenflocken oder Buchweizenmehl, 60 g reife Banane, 1 Ei", 6]),
+  "Süßkartoffel-Linsen-Taler": Object.freeze(["150 g Süßkartoffelpüree, 100 g sehr weich gekochte rote Linsen", 6]),
+  "Tofu-Zucchini-Reis": Object.freeze(["120 g Naturtofu, 150 g Zucchini, 80 g Reis, 400 ml Wasser", 7]),
+  "Gebackene Saba-Banane": Object.freeze(["1 reife Saba-Banane (etwa 120 g essbarer Anteil)", 6]),
+  "Huhn-Lugaw": Object.freeze(["60 g Reis, 120 g Huhn, 480 ml Wasser, optional 1 g frischer Ingwer", 7]),
+  "Sayote-Huhn-Reis": Object.freeze(["100 g Sayote, 100 g Huhn, 60 g Reis, 450 ml Wasser", 7]),
+  "Monggo-Süßkartoffel-Brei": Object.freeze(["50 g trockene Mungbohnen, 250 g Süßkartoffel, 500 ml Wasser", 6]),
+  "Ube-Hafer-Brei": Object.freeze(["200 g vollständig gegarte Ube, 40 g feine Haferflocken, 300 ml Wasser", 6]),
+  "Obst-Joghurt": Object.freeze(["80 g pasteurisierter ungesüßter Naturjoghurt, 50 g weiches Obst nach Auswahl", 6]),
+  "Obst-Hafer-Joghurt": Object.freeze(["20 g feine Haferflocken, 100 ml Wasser, 80 g Naturjoghurt, 50 g weiches Obst nach Auswahl", 6]),
+  "Obst-Hirse-Joghurt": Object.freeze(["20 g Hirseflocken, 100 ml Wasser, 80 g Naturjoghurt, 50 g weiches Obst nach Auswahl", 6]),
+  "Obst-Grieß-Joghurt": Object.freeze(["20 g feiner Weizengrieß, 100 ml Wasser, 80 g Naturjoghurt, 50 g weiches Obst nach Auswahl", 6]),
+  "Buttermilch-Hafer-Obstbrei": Object.freeze(["20 g feine Haferflocken, 100 ml Wasser, 100 ml pasteurisierte ungesüßte Buttermilch, 50 g weiches Obst nach Auswahl", 6]),
+  "Buttermilch-Hirse-Obstbrei": Object.freeze(["20 g Hirseflocken, 100 ml Wasser, 100 ml pasteurisierte ungesüßte Buttermilch, 50 g weiches Obst nach Auswahl", 6]),
+  "Buttermilch-Grieß-Obstbrei": Object.freeze(["20 g feiner Weizengrieß, 100 ml Wasser, 100 ml pasteurisierte ungesüßte Buttermilch, 50 g weiches Obst nach Auswahl", 6]),
+  "Joghurt-Nussmus-Miniportion": Object.freeze(["50 g Naturjoghurt, 3 g bereits erfolgreich eingeführtes glattes Nussmus", 6]),
+  "Bananen-Joghurt-Hafer-Pancakes": Object.freeze(["60 g reife Banane, 30 g Naturjoghurt, 30 g feine Haferflocken, 1 Ei", 6]),
+  "Obst-Joghurt-Hafer-Ofenbites": Object.freeze(["80 g Naturjoghurt, 50 g feine Haferflocken, 1 Ei, 80 g weiches Obst nach Auswahl", 7]),
+  "Zucchini-Joghurt-Hafer-Bites": Object.freeze(["80 g fein geriebene Zucchini, 80 g Naturjoghurt, 50 g feine Haferflocken, 1 Ei", 7]),
+  "Joghurt-Hafer-Waffeln": Object.freeze(["100 g Naturjoghurt, 60 g fein gemahlene Haferflocken, 1 Ei, 40 ml Wasser", 7]),
+  "Weiche Joghurt-Fladen": Object.freeze(["100 g Naturjoghurt, 80 g Weizenmehl oder feiner Weizengrieß, 1 Ei", 7]),
+  "Gemüse-Joghurt-Mini-Muffins": Object.freeze(["100 g Naturjoghurt, 80 g fein gemahlene Haferflocken, 1 Ei, 100 g sehr fein vorbereitetes weiches Gemüse nach Auswahl", 7]),
+  "Huhn-Gemüse-Muffins": Object.freeze(["80 g vollständig gegartes fein zerkleinertes Huhn, 80 g sehr weich gegartes Gemüse nach Auswahl, 60 g fein gemahlene Haferflocken, 1 Ei", 7]),
+  "Süßkartoffel-Linsen-Muffins": Object.freeze(["120 g Süßkartoffelpüree, 100 g sehr weich gekochte rote Linsen, 50 g fein gemahlene Haferflocken", 7]),
+  "Fleisch-Gemüse-Bällchen": Object.freeze(["Rind-Variante: 100 g mageres Rindfaschiertes, 60 g Karottenpüree, 80 g sehr weiche Kartoffel; Puten-Variante: 100 g Putenfaschiertes, 120 g Süßkartoffelpüree", 7]),
+  "Bohnen-Kartoffel-Stampf": Object.freeze(["200 g Kartoffel, 150 g sehr weich gegarte weiße oder schwarze Bohnen, 80 ml Wasser, optional 5 ml Rapsöl", 6]),
+  "Bananen-Ei-Pancakes": Object.freeze(["1 sehr reife Banane (etwa 120 g essbarer Anteil), 1 Ei", 6]),
+  "Huhn-Zucchini-Nockerl": Object.freeze(["60 g vollständig gegartes fein zerkleinertes Huhn, 80 g sehr weich gegarte und gut ausgedrückte Zucchini, 1 Ei, 45 g Weizenmehl oder feiner Weizengrieß, 5 ml Rapsöl, bei Bedarf bis zu 15 ml Wasser", 7]),
+  "Rind-Karotten-Nockerl": Object.freeze(["60 g vollständig gegartes fein zerkleinertes Rind, 80 g sehr weich gegarte Karotte oder Karottenpüree, 1 Ei, 45 g Weizenmehl oder feiner Weizengrieß, 5 ml Rapsöl, bei Bedarf bis zu 15 ml Wasser", 7]),
+  "Linsen-Süßkartoffel-Nockerl": Object.freeze(["100 g sehr weich gekochte rote Linsen, 100 g Süßkartoffelpüree, 1 Ei, 40 g Weizenmehl oder feiner Weizengrieß, 5 ml Rapsöl", 7]),
+});
+
+const RECIPE_NOCKERL_SPLIT = Object.freeze([
+  Object.freeze({
+    name: "Huhn-Zucchini-Nockerl",
+    category: "family",
+    requires: Object.freeze(["Huhn", "Zucchini", "Weizen", "Ei", "Rapsöl"]),
+    stage: 3,
+    batch: "12–16 kleine weiche Nockerl",
+    note: "Huhn vollständig garen und sehr fein zerkleinern, Zucchini sehr weich garen und gut ausdrücken. Mit Ei, Weizen und Rapsöl zu einem weichen, nicht festen Teig verrühren. Kleine längliche Nockerl in siedendem Wasser vollständig garen. Vor dem Servieren ein Nockerl aufschneiden: es muss durchgegart, weich, nicht gummiartig und unter leichtem Druck gut zerdrückbar sein.",
+    freezable: true,
+    freezerNote: "Gegarte Nockerl einzeln vorfrieren, portionsweise verpacken und nach dem Auftauen vollständig erwärmen.",
+    tags: Object.freeze(["Fingerfood", "Familiengericht", "einfrierbar"]),
+    legacyNames: Object.freeze([]),
+    searchAliases: Object.freeze([]),
+    skillRequirement: "Nur vollständig durchgegart und sehr weich anbieten; ein aufgeschnittenes Nockerl darf nicht gummiartig oder kompakt-elastisch sein. Nur aufrecht sitzend und direkt beaufsichtigt anbieten.",
+  }),
+  Object.freeze({
+    name: "Rind-Karotten-Nockerl",
+    category: "family",
+    requires: Object.freeze(["Rind", "Karotte", "Weizen", "Ei", "Rapsöl"]),
+    stage: 3,
+    batch: "12–16 kleine weiche Nockerl",
+    note: "Rind vollständig garen und sehr fein zerkleinern, Karotte sehr weich garen und fein zerdrücken. Mit Ei, Weizen und Rapsöl zu einem weichen, nicht festen Teig verrühren. Kleine längliche Nockerl in siedendem Wasser vollständig garen. Vor dem Servieren ein Nockerl aufschneiden: es muss durchgegart, weich, nicht gummiartig und unter leichtem Druck gut zerdrückbar sein.",
+    freezable: true,
+    freezerNote: "Gegarte Nockerl einzeln vorfrieren, portionsweise verpacken und nach dem Auftauen vollständig erwärmen.",
+    tags: Object.freeze(["Fingerfood", "Familiengericht", "einfrierbar"]),
+    searchAliases: Object.freeze(["Rind-Karotten-Nockerl"]),
+    skillRequirement: "Nur vollständig durchgegart und sehr weich anbieten; ein aufgeschnittenes Nockerl darf nicht gummiartig oder kompakt-elastisch sein. Nur aufrecht sitzend und direkt beaufsichtigt anbieten.",
+  }),
+  Object.freeze({
+    name: "Linsen-Süßkartoffel-Nockerl",
+    category: "family",
+    requires: Object.freeze(["Rote Linsen", "Süßkartoffel", "Weizen", "Ei", "Rapsöl"]),
+    stage: 3,
+    batch: "12–16 kleine weiche Nockerl",
+    note: "Linsen sehr weich kochen und Süßkartoffel vollständig weich garen. Beides fein zerdrücken und mit Ei, Weizen und Rapsöl nur so weit verrühren, dass ein weicher formbarer Teig entsteht. Kleine längliche Nockerl in siedendem Wasser vollständig garen. Vor dem Servieren ein Nockerl aufschneiden: es muss weich, nicht klebrig-gummiartig und unter leichtem Druck gut zerdrückbar sein.",
+    freezable: true,
+    freezerNote: "Gegarte Nockerl einzeln vorfrieren, portionsweise verpacken und nach dem Auftauen vollständig erwärmen.",
+    tags: Object.freeze(["Fingerfood", "Familiengericht", "einfrierbar"]),
+    searchAliases: Object.freeze(["Linsen-Süßkartoffel-Nockerl"]),
+    skillRequirement: "Nur vollständig durchgegart und sehr weich anbieten; ein aufgeschnittenes Nockerl darf nicht klebrig-gummiartig oder kompakt-elastisch sein. Nur aufrecht sitzend und direkt beaufsichtigt anbieten.",
+  }),
+]);
+
+function installRecipeResearchGuidance(recipes = typeof RECIPES !== "undefined" ? RECIPES : null) {
+  if (!Array.isArray(recipes)) return false;
+  let changed = false;
+
+  let aggregateIndex = recipes.findIndex((recipe) => recipe?.name === "Gemüse-Fleisch-Nockerl");
+  if (aggregateIndex >= 0) {
+    recipes.splice(aggregateIndex, 1, ...RECIPE_NOCKERL_SPLIT.map((recipe) => ({ ...recipe })));
+    changed = true;
+  } else {
+    let insertAt = recipes.findIndex((recipe) => recipe?.name === "Bohnen-Kartoffel-Stampf");
+    if (insertAt < 0) insertAt = recipes.length;
+    for (let recipe of [...RECIPE_NOCKERL_SPLIT].reverse()) {
+      if (!recipes.some((item) => item?.name === recipe.name)) {
+        recipes.splice(insertAt, 0, { ...recipe });
+        changed = true;
+      }
+    }
+  }
+
+  for (let recipe of recipes) {
+    let guidance = RECIPE_RESEARCH_GUIDANCE[recipe?.name];
+    if (!guidance) continue;
+    let [ingredients, recommendedMonths] = guidance;
+    if (recipe.ingredients !== ingredients) {
+      recipe.ingredients = ingredients;
+      changed = true;
+    }
+    let hardMinimum = Number(recipe.hardMinMonths || 0);
+    let recommendation = Math.max(hardMinimum, Number(recommendedMonths || 0));
+    if (Number(recipe.minMonths || 0) !== recommendation) {
+      recipe.minMonths = recommendation;
+      changed = true;
+    }
+    recipe.quantityGuidanceRevision = "2026-08-20";
+    recipe.ageGuidanceKind = "orientation";
+  }
+
+  return changed;
+}
+
 installRecipeCatalogAdditions();
+installRecipeResearchGuidance();
 
 function recipeStatesCore() {
   let stage = Number(state.settings.textureStage), age = monthsOld(today());
@@ -239,4 +424,14 @@ function renderRecipeCard(r) {
       <details class="recipe-subsection"><summary>Hinweise</summary><div class="recipe-subsection-body">${hints}</div></details>
     </div>
   </details>`;
+}
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    RECIPE_CATALOG_ADDITIONS,
+    RECIPE_RESEARCH_GUIDANCE,
+    RECIPE_NOCKERL_SPLIT,
+    installRecipeCatalogAdditions,
+    installRecipeResearchGuidance,
+  };
 }

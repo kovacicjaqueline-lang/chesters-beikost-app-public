@@ -30,6 +30,7 @@ const UNIFIED_LOG_PRECACHE = [
 const UI_PRECACHE = [
   "./ui-meal-editor-footer.css",
   "./js/manual-meal-flow.js",
+  "./js/planned-recipe-details.js",
 ];
 
 self.addEventListener("install", (event) => {

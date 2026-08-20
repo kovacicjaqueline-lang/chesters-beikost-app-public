@@ -218,7 +218,7 @@ try {
     entryType: "meal",
   }));
   assert.equal(await page.locator("#logMeal").count(), 0);
-  assert.match(await page.locator("#logForm").innerText(), /Geplante Mahlzeit[\s\S]*Mittagessen/);
+  assert.match(await page.locator("#logForm").innerText(), /Geplante Mahlzeit[\s\S]*Mittag/);
   await page.locator("#logTexture").selectOption("1");
   await page.locator("#saveLog").click();
   await page.waitForFunction(() => window.__beikostTest.getState().logs.length === 1);

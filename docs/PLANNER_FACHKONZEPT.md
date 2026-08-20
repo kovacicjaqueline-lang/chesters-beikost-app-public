@@ -473,6 +473,29 @@ Historische Locks/Logs ohne Feld bleiben unverändert und historische `textureSt
 
 FOODs und Rezepte werden nur über explizit geprüfte strukturierte Handling-Contracts migriert. SAFETY-REVIEW- und LATER-REVIEW-Rezepte werden dadurch **nicht pauschal früher freigegeben** und bleiben bis zur jeweiligen Einzelprüfung im bisherigen Verhalten.
 
+### 16.1 Orale Verarbeitungsdimension 🟡 fachlich freigegeben, noch nicht Runtime
+
+Für zusammenhängende Fingerfoods ist der Handlingmodus allein nicht ausreichend. Die fachlich freigegebene additive Detailreferenz ist:
+
+`docs/FOOD_HANDLING_ORAL_PROCESSING_CONTRACT.md`
+
+Sie unterscheidet orthogonal zum Handlingmodus:
+
+- `soft-breakdown`;
+- `easy-bite-separate`;
+- `structured-chew-required`.
+
+Diese Profile sind **keine lineare Entwicklungs- oder Altersleiter**. Insbesondere gilt:
+
+- `finger-graspable` bedeutet nicht automatisch eine bestimmte orale Anforderung;
+- bloßes Abbeißen ist kein Grund für eine spätere Freigabe;
+- entscheidend für die Abgrenzung zu `structured-chew-required` ist das Verhalten des tatsächlich abgetrennten Bissens;
+- Zwei-Finger-Zerdrückbarkeit, Rezeptkategorie, `stage` oder `minMonths` reichen allein nicht zur Einstufung;
+- eine zusätzliche orale Capability darf nur nach konkreter Einzelprüfung eines Rezeptes beziehungsweise einer Servierform eingeführt werden;
+- resistive Übungsformen werden durch diesen Contract nicht pauschal freigegeben.
+
+Die fachliche Erweiterung ändert noch keine Produktlogik, Rezeptdaten oder Planner-Auswahl. Eine spätere technische Abbildung muss die orale Dimension getrennt von `presentationMode`, `feedingApproach`, Texturstage und unabhängigen Safety-/Alters-/Zutatengates behandeln.
+
 Die dynamisch geladene Handling-Contract-/Runtime-Schicht wird zusammen mit der Planner-Policy-Kette vor dem finalen sichtbaren Render installiert und für den ersten Offline-Start vorgecached.
 
 ---
@@ -525,7 +548,10 @@ Weitere offene FOOD-Datenfragen werden separat im FOOD-Fachregel-Track geklärt 
 - keine historische Lock-/Log-/`textureStage`-Semantik wird durch Handling umgedeutet;
 - `presentationMode` bleibt additiv und persistiert nur, wenn es strukturiert gesetzt wurde;
 - PLAN-08-Auswahl, Rollen und Rezeptidentität bleiben durch Handling unverändert;
-- Handling-Contract und -Runtime stehen vor finalem sichtbaren Render sowie beim ersten Offline-Start zur Verfügung.
+- Handling-Contract und -Runtime stehen vor finalem sichtbaren Render sowie beim ersten Offline-Start zur Verfügung;
+- bei späterer Umsetzung der oralen Dimension bleiben `soft-breakdown` und `easy-bite-separate` nicht-lineare Profile ohne implizite Altersleiter;
+- Omelettstreifen bleiben Referenzfall für `finger-graspable` + `easy-bite-separate` ohne zusätzliche orale Capability;
+- `structured-chew-required` darf nur aus konkret freigegebener Struktur abgeleitet werden, nicht aus Rezeptkategorie, `stage`, `minMonths` oder bloßem Zwei-Finger-Test.
 
 ---
 
@@ -575,6 +601,7 @@ Handling-Integrationsstand zusätzlich:
 - `docs/NEXT_CHAT_FOOD_HANDLING_READINESS.md`
 - `docs/FOOD_HANDLING_READINESS_PLAN.md`
 - `docs/FOOD_HANDLING_READINESS_TECHNICAL_DESIGN.md`
+- `docs/FOOD_HANDLING_ORAL_PROCESSING_CONTRACT.md`
 - `data/food-handling.js`
 - `js/handling-readiness.js`
 - `tests/handling-readiness.test.cjs`

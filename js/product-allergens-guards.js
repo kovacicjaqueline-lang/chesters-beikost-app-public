@@ -19,6 +19,18 @@ function productAllergenForbiddenIntrinsicValue(value) {
   return /(^|\s)(sulfit|sulfite|sulfites|sulphit|sulphite|sulphites|schwefeldioxid)(\s|$)/.test(normalized);
 }
 
+function productAllergenStripSulfiteIntrinsicValue(value) {
+  let raw = String(value || "").trim();
+  if (!raw || !productAllergenForbiddenIntrinsicValue(raw)) return raw;
+  let parts = raw
+    .split(/\s*(?:,|;|\/|\||\+|&|\bund\b|\band\b)\s*/i)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .filter((part) => !productAllergenForbiddenIntrinsicValue(part));
+  let cleaned = parts.join(" / ").trim();
+  return productAllergenForbiddenIntrinsicValue(cleaned) ? "" : cleaned;
+}
+
 function productAllergenApplicableFoodIds(foodIds, foodOutcomes = {}, fallbackOutcome = "") {
   return [...new Set(Array.isArray(foodIds) ? foodIds : [])]
     .filter((id) => String(foodOutcomes?.[id] || fallbackOutcome || "") !== "not_offered");
@@ -36,9 +48,7 @@ function productAllergenCurrentLogOutcomes() {
   if (typeof document === "undefined" || typeof selectedLogFoods === "undefined") return outcomes;
   let sampleIds = new Set((typeof pendingLog !== "undefined" && pendingLog?.sampleFoodIds) || []);
   let main = document.getElementById("mainOutcome")?.value;
-  if (main) {
-    for (let id of selectedLogFoods) if (!sampleIds.has(id)) outcomes[id] = main;
-  }
+  if (main) for (let id of selectedLogFoods) if (!sampleIds.has(id)) outcomes[id] = main;
   let individual = !!document.getElementById("individualRatings")?.checked;
   if (individual) document.querySelectorAll?.("[data-individual-result]")?.forEach((select) => {
     outcomes[select.dataset.individualResult] = select.value;
@@ -49,21 +59,33 @@ function productAllergenCurrentLogOutcomes() {
   return outcomes;
 }
 
+function productAllergenSnapshotUiDiffers(foodId, productId, previousSnapshot, currentProduct = null) {
+  let selected = String(productId || "");
+  if (!selected || !previousSnapshot) return false;
+  let previous = normalizeProductAllergenSnapshot(previousSnapshot, foodId);
+  if (String(previous.productId || "") !== selected) return false;
+  let current = currentProduct || concreteProduct(selected);
+  if (!current || current.foodId !== foodId) return true;
+  let currentSnapshot = snapshotForConcreteProduct(foodId, selected);
+  return String(previous.productName || "") !== String(currentSnapshot.productName || "") ||
+    String(previous.brand || "") !== String(currentSnapshot.brand || "") ||
+    normalizeSulfiteStatus(previous.productAllergens?.sulfites) !== normalizeSulfiteStatus(currentSnapshot.productAllergens?.sulfites);
+}
+
+function productAllergenOptionLabel(foodId, item, selectedProductId, previousSnapshot) {
+  if (item?.id === selectedProductId && productAllergenSnapshotUiDiffers(foodId, selectedProductId, previousSnapshot, item)) {
+    let previous = normalizeProductAllergenSnapshot(previousSnapshot, foodId);
+    return `${productSnapshotLabel(previous)} · historisch · ${sulfiteStatusLabel(previous.productAllergens?.sulfites)}`;
+  }
+  return `${[item?.brand, item?.name].filter(Boolean).join(" · ") || item?.name || "Produkt"} · ${sulfiteStatusLabel(item?.productAllergens?.sulfites)}`;
+}
+
 function productAllergenHistoricalOption(foodId, selectedProductId, currentProducts, previousSnapshot) {
   let selected = String(selectedProductId || "");
   if (!selected || (currentProducts || []).some((item) => item?.id === selected)) return "";
-  let snapshot = typeof normalizeProductAllergenSnapshot === "function"
-    ? normalizeProductAllergenSnapshot(previousSnapshot, foodId)
-    : previousSnapshot;
+  let snapshot = normalizeProductAllergenSnapshot(previousSnapshot, foodId);
   if (!snapshot || String(snapshot.productId || "") !== selected) return "";
-  let label = typeof productSnapshotLabel === "function"
-    ? productSnapshotLabel(snapshot)
-    : [snapshot.brand, snapshot.productName].filter(Boolean).join(" · ") || "historisches Produkt";
-  let status = typeof sulfiteStatusLabel === "function"
-    ? sulfiteStatusLabel(snapshot.productAllergens?.sulfites)
-    : String(snapshot.productAllergens?.sulfites || "unknown");
-  let escape = typeof esc === "function" ? esc : (value) => String(value || "");
-  return `<option value="${escape(selected)}" selected>${escape(label)} · historisch · ${escape(status)}</option>`;
+  return `<option value="${esc(selected)}" selected>${esc(productSnapshotLabel(snapshot))} · historisch · ${esc(sulfiteStatusLabel(snapshot.productAllergens?.sulfites))}</option>`;
 }
 
 if (typeof DEFAULT !== "undefined" && DEFAULT) DEFAULT.productAllergenSchemaVersion = PRODUCT_ALLERGEN_DATA_SCHEMA_VERSION;
@@ -73,9 +95,13 @@ if (typeof migrateState === "function") {
   migrateState = function migrateStateWithProductAllergenGuards(source) {
     let migrated = productAllergenGuardBaseMigrateState(source);
     migrated.productAllergenSchemaVersion = PRODUCT_ALLERGEN_DATA_SCHEMA_VERSION;
+    let sourceFoods = Array.isArray(source?.foods) ? source.foods : [];
+    let sourceById = new Map(sourceFoods.map((item) => [String(item?.id || ""), item]));
     migrated.foods = (Array.isArray(migrated.foods) ? migrated.foods : []).map((item) => {
-      if (!productAllergenForbiddenIntrinsicValue(item?.allergenGroup)) return item;
-      return { ...item, allergenGroup: "" };
+      let raw = sourceById.get(String(item?.id || ""))?.allergenGroup;
+      if (!productAllergenForbiddenIntrinsicValue(raw ?? item?.allergenGroup)) return item;
+      let cleaned = productAllergenStripSulfiteIntrinsicValue(raw ?? item?.allergenGroup);
+      return { ...item, allergenGroup: cleaned };
     });
     return migrated;
   };
@@ -120,11 +146,7 @@ if (typeof productAllergenSelectHtml === "function") {
     let available = productsForFood(foodId);
     let previous = pendingLog?.productAllergenSnapshots?.[foodId];
     let historical = productAllergenHistoricalOption(foodId, selected, available, previous);
-    let options = available.map((item) => {
-      let label = [item.brand, item.name].filter(Boolean).join(" · ") || item.name;
-      let status = sulfiteStatusLabel(item.productAllergens?.sulfites);
-      return `<option value="${esc(item.id)}" ${item.id === selected ? "selected" : ""}>${esc(label)} · ${esc(status)}</option>`;
-    }).join("");
+    let options = available.map((item) => `<option value="${esc(item.id)}" ${item.id === selected ? "selected" : ""}>${esc(productAllergenOptionLabel(foodId, item, selected, previous))}</option>`).join("");
     return `<div class="field product-allergen-log-row" data-product-row="${esc(foodId)}"><label>${esc(food(foodId)?.name || foodId)}</label><div class="row"><select class="grow" data-product-food="${esc(foodId)}"><option value="" ${selected ? "" : "selected"}>Kein konkretes Produkt · unbekannt</option>${historical}${options}</select><button class="btn secondary smallbtn addProductForLog" type="button" data-food="${esc(foodId)}">+ Produkt</button></div><div class="small" data-product-status="${esc(foodId)}"></div></div>`;
   };
 }
@@ -195,25 +217,19 @@ if (typeof addCustomFoodForm === "function") {
 function productAllergenRecipeBaseSets(recipe) {
   return [recipe?.requires || [], ...(recipe?.alternatives || [])].filter((set, index) => set.length || index === 0);
 }
-
 function productAllergenRecipeNeedsExplicitChoice(recipe) {
-  return productAllergenRecipeBaseSets(recipe).length > 1 ||
-    (recipe?.oneOf || []).length > 1 ||
-    (recipe?.milkChoices || []).length > 1;
+  return productAllergenRecipeBaseSets(recipe).length > 1 || (recipe?.oneOf || []).length > 1 || (recipe?.milkChoices || []).length > 1;
 }
-
 function productAllergenFoodIdByName(name) {
   if (typeof foodByName === "function") return foodByName(name, state?.foods || [])?.id || "";
   let normalized = typeof normalizeName === "function" ? normalizeName(name) : String(name || "").toLowerCase();
   return (state?.foods || []).find((item) => (typeof normalizeName === "function" ? normalizeName(item.name) : String(item.name || "").toLowerCase()) === normalized)?.id || "";
 }
-
 function productAllergenRecipeChoiceState(recipe, presetFoodIds = []) {
   let preset = new Set(Array.isArray(presetFoodIds) ? presetFoodIds : []);
   let baseSets = productAllergenRecipeBaseSets(recipe);
   let baseIds = baseSets.map((set) => set.map(productAllergenFoodIdByName).filter(Boolean));
-  let variantIndex = 0;
-  let bestScore = -1;
+  let variantIndex = 0, bestScore = -1;
   baseIds.forEach((ids, index) => {
     let score = ids.filter((id) => preset.has(id)).length + (ids.length && ids.every((id) => preset.has(id)) ? 1000 : 0);
     if (score > bestScore) { bestScore = score; variantIndex = index; }
@@ -228,13 +244,8 @@ function productAllergenRecipeChoiceState(recipe, presetFoodIds = []) {
     let ids = (names || []).map(productAllergenFoodIdByName).filter(Boolean);
     return ids.find((id) => preset.has(id)) || ids.find((id) => defaultIds.includes(id)) || ids[0] || "";
   };
-  return {
-    variantIndex,
-    oneOfId: chooseFrom(recipe?.oneOf),
-    milkChoiceId: chooseFrom(recipe?.milkChoices),
-  };
+  return { variantIndex, oneOfId: chooseFrom(recipe?.oneOf), milkChoiceId: chooseFrom(recipe?.milkChoices) };
 }
-
 function productAllergenRecipeActualFoodIds(recipe, choice) {
   if (!recipe) return [];
   let sets = productAllergenRecipeBaseSets(recipe);
@@ -243,7 +254,6 @@ function productAllergenRecipeActualFoodIds(recipe, choice) {
   for (let id of [choice?.oneOfId, choice?.milkChoiceId]) if (id && !ids.includes(id)) ids.push(id);
   return [...new Set(ids)];
 }
-
 function productAllergenEnsureRecipeChoice(recipeName) {
   if (!productAllergenInventoryContext || !recipeName) return null;
   productAllergenInventoryContext.recipeChoices ||= {};
@@ -252,8 +262,7 @@ function productAllergenEnsureRecipeChoice(recipeName) {
   if (!recipe) return null;
   let presetIds = productAllergenInventoryContext.originalRecipeName === recipeName ? productAllergenInventoryContext.presetFoodIds : [];
   let choice = productAllergenRecipeChoiceState(recipe, presetIds);
-  choice.confirmed = !productAllergenRecipeNeedsExplicitChoice(recipe) ||
-    (productAllergenInventoryContext.originalRecipeName === recipeName && !!productAllergenInventoryContext.presetRecipeConfirmed);
+  choice.confirmed = !productAllergenRecipeNeedsExplicitChoice(recipe) || (productAllergenInventoryContext.originalRecipeName === recipeName && !!productAllergenInventoryContext.presetRecipeConfirmed);
   productAllergenInventoryContext.recipeChoices[recipeName] = choice;
   return choice;
 }
@@ -274,9 +283,6 @@ if (typeof addInventoryForm === "function") {
     productAllergenInventoryContext = context;
     if (preset.recipeName) productAllergenEnsureRecipeChoice(preset.recipeName);
     let result = productAllergenGuardBaseAddInventoryForm(preset);
-    // Der bestehende Produktebenen-Wrapper initialisiert während des Aufrufs ebenfalls
-    // seinen Kontext. Danach stellen wir den erweiterten Kontext wieder her; der
-    // über openGeneric eingeplante UI-Hook läuft erst im anschließenden Microtask.
     productAllergenInventoryContext = context;
     return result;
   };
@@ -300,16 +306,11 @@ function productAllergenRecipeChoiceHtml(recipe, choice) {
   if (sets.length > 1) {
     parts.push(`<div class="field"><label>Tatsächlich zubereitete Variante</label><select data-inventory-recipe-variant>${sets.map((set, index) => `<option value="${index}" ${index === Number(choice.variantIndex) ? "selected" : ""}>${esc(recipe.variantLabels?.[index] || set.join(" + ") || `Variante ${index + 1}`)}</option>`).join("")}</select></div>`);
   }
-  let choiceSelect = (label, names, value, attr) => {
-    if (!(names || []).length) return "";
-    return `<div class="field"><label>${esc(label)}</label><select ${attr}>${names.map((name) => { let id = productAllergenFoodIdByName(name); return `<option value="${esc(id)}" ${id === value ? "selected" : ""}>${esc(name)}</option>`; }).join("")}</select></div>`;
-  };
+  let choiceSelect = (label, names, value, attr) => !(names || []).length ? "" : `<div class="field"><label>${esc(label)}</label><select ${attr}>${names.map((name) => { let id = productAllergenFoodIdByName(name); return `<option value="${esc(id)}" ${id === value ? "selected" : ""}>${esc(name)}</option>`; }).join("")}</select></div>`;
   parts.push(choiceSelect("Tatsächlich verwendete Auswahl", recipe.oneOf, choice.oneOfId, "data-inventory-recipe-oneof"));
   parts.push(choiceSelect("Tatsächlich verwendetes Milchprodukt", recipe.milkChoices, choice.milkChoiceId, "data-inventory-recipe-milk"));
   let needsConfirmation = productAllergenRecipeNeedsExplicitChoice(recipe);
-  let confirmation = needsConfirmation
-    ? `<label class="toggleline"><input type="checkbox" data-inventory-recipe-confirm ${choice.confirmed ? "checked" : ""}><span class="toggle-copy"><b>Diese Zutaten wurden tatsächlich verwendet</b><span class="small">Erst nach dieser Bestätigung kann der Rezeptvorrat gespeichert werden.</span></span></label>`
-    : "";
+  let confirmation = needsConfirmation ? `<label class="toggleline"><input type="checkbox" data-inventory-recipe-confirm ${choice.confirmed ? "checked" : ""}><span class="toggle-copy"><b>Diese Zutaten wurden tatsächlich verwendet</b><span class="small">Erst nach dieser Bestätigung kann der Rezeptvorrat gespeichert werden.</span></span></label>` : "";
   return parts.filter(Boolean).length || confirmation ? `<div class="notice olive"><b>Tatsächliche Rezeptzutaten</b><div class="small">Für den eingefrorenen Batch wird die wirklich zubereitete Variante gespeichert, nicht die aktuelle Planner-Vorauswahl.</div></div>${parts.join("")}${confirmation}` : "";
 }
 
@@ -317,31 +318,22 @@ function productAllergenInventoryRows(ids) {
   return ids.map((id) => {
     let selected = String(productAllergenInventoryContext?.selections?.[id] || "");
     let available = productsForFood(id);
-    let historical = productAllergenHistoricalOption(id, selected, available, productAllergenInventoryContext?.originals?.[id]);
-    let options = available.map((item) => `<option value="${esc(item.id)}" ${item.id === selected ? "selected" : ""}>${esc([item.brand, item.name].filter(Boolean).join(" · ") || item.name)} · ${esc(sulfiteStatusLabel(item.productAllergens?.sulfites))}</option>`).join("");
+    let previous = productAllergenInventoryContext?.originals?.[id];
+    let historical = productAllergenHistoricalOption(id, selected, available, previous);
+    let options = available.map((item) => `<option value="${esc(item.id)}" ${item.id === selected ? "selected" : ""}>${esc(productAllergenOptionLabel(id, item, selected, previous))}</option>`).join("");
     return `<div class="field"><label>${esc(food(id)?.name || id)}</label><select data-inventory-product-food="${esc(id)}"><option value="" ${selected ? "" : "selected"}>Kein konkretes Produkt · unbekannt</option>${historical}${options}</select></div>`;
   }).join("");
 }
-
 function productAllergenCaptureInventorySelections(root = document) {
-  root.querySelectorAll?.("[data-inventory-product-food]")?.forEach((select) => {
-    productAllergenInventoryContext.selections[select.dataset.inventoryProductFood] = select.value;
-  });
+  root.querySelectorAll?.("[data-inventory-product-food]")?.forEach((select) => { productAllergenInventoryContext.selections[select.dataset.inventoryProductFood] = select.value; });
 }
-
 function productAllergenRenderInventoryBox(box, target) {
   let recipe = target.kind === "recipe" && typeof recipeByName === "function" ? recipeByName(target.key) : null;
   let choice = recipe ? productAllergenEnsureRecipeChoice(target.key) : null;
   let ids = target.kind === "recipe" ? productAllergenRecipeActualFoodIds(recipe, choice) : [target.key].filter(Boolean);
   box.innerHTML = `<summary>Verwendete konkrete Produkte</summary><div style="margin-top:10px"><div class="small">Diese Auswahl wird mit dem eingefrorenen Batch gespeichert und später unverändert ins Protokoll übernommen.</div>${productAllergenRecipeChoiceHtml(recipe, choice)}${productAllergenInventoryRows(ids)}</div>`;
-  box.querySelectorAll("[data-inventory-product-food]").forEach((select) => select.addEventListener("change", () => {
-    productAllergenInventoryContext.selections[select.dataset.inventoryProductFood] = select.value;
-  }));
-  let rerender = () => {
-    productAllergenCaptureInventorySelections(box);
-    productAllergenRenderInventoryBox(box, target);
-    box.open = true;
-  };
+  box.querySelectorAll("[data-inventory-product-food]").forEach((select) => select.addEventListener("change", () => { productAllergenInventoryContext.selections[select.dataset.inventoryProductFood] = select.value; }));
+  let rerender = () => { productAllergenCaptureInventorySelections(box); productAllergenRenderInventoryBox(box, target); box.open = true; };
   box.querySelector("[data-inventory-recipe-variant]")?.addEventListener("change", (event) => { choice.variantIndex = Number(event.target.value) || 0; choice.confirmed = false; rerender(); });
   box.querySelector("[data-inventory-recipe-oneof]")?.addEventListener("change", (event) => { choice.oneOfId = event.target.value; choice.confirmed = false; rerender(); });
   box.querySelector("[data-inventory-recipe-milk]")?.addEventListener("change", (event) => { choice.milkChoiceId = event.target.value; choice.confirmed = false; rerender(); });
@@ -353,9 +345,7 @@ function productAllergenRenderInventoryBox(box, target) {
 
 if (typeof attachInventorySnapshotsAfterSave === "function") {
   attachInventorySnapshotsAfterSave = function attachInventorySnapshotsAfterSaveGuarded(beforeIds, kind, foodIds) {
-    let item = productAllergenInventoryContext?.editId
-      ? state.inventory.find((entry) => entry.id === productAllergenInventoryContext.editId)
-      : state.inventory.find((entry) => !beforeIds.has(entry.id));
+    let item = productAllergenInventoryContext?.editId ? state.inventory.find((entry) => entry.id === productAllergenInventoryContext.editId) : state.inventory.find((entry) => !beforeIds.has(entry.id));
     if (!item) return;
     if (kind === "recipe") {
       item.foodIds = [...new Set(foodIds || [])];
@@ -403,10 +393,10 @@ if (typeof injectInventoryProductAllergens === "function") {
         productAllergenCaptureInventorySelections(box);
         let actualIds = inventoryTargetFoodIds("recipe", target.key);
         let originalRecipeFoodIds = recipeFoodIds;
-        recipeFoodIds = function recipeFoodIdsForActualInventoryBatch(recipe) {
+        recipeFoodIds = function recipeFoodIdsForActualInventoryBatch(recipeRecord) {
           let inventoryModalOpen = document.getElementById("genericModal")?.classList?.contains("open");
-          if (inventoryModalOpen && recipe?.name === target.key) return [...actualIds];
-          return originalRecipeFoodIds(recipe);
+          if (inventoryModalOpen && recipeRecord?.name === target.key) return [...actualIds];
+          return originalRecipeFoodIds(recipeRecord);
         };
         productAllergenQueueTask(() => { recipeFoodIds = originalRecipeFoodIds; });
       }, { capture: true, once: true });
@@ -416,6 +406,48 @@ if (typeof injectInventoryProductAllergens === "function") {
       let actualIds = target.kind === "recipe" ? inventoryTargetFoodIds("recipe", target.key) : ids;
       attachInventorySnapshotsAfterSave(beforeIds, target.kind, actualIds);
     }, { once: true });
+  };
+}
+
+function productAllergenConfirmedRecipeBatch(batch) {
+  return !!batch && batch.kind === "recipe" && batch.actualRecipeIngredientsConfirmed === true && Array.isArray(batch.foodIds) && batch.foodIds.length > 0;
+}
+function productAllergenApplyConfirmedBatchIngredients(meal) {
+  if (!meal?.recipeInventoryId || typeof state === "undefined") return meal;
+  let batch = state.inventory?.find((item) => item.id === meal.recipeInventoryId) || null;
+  if (!productAllergenConfirmedRecipeBatch(batch)) return meal;
+  let ids = [...new Set(batch.foodIds.filter((id) => typeof food !== "function" || food(id)))];
+  if (!ids.length) return meal;
+  meal.foodIds = ids;
+  meal.focusId = ids.includes(meal.focusId) ? meal.focusId : ids[0];
+  meal.baseFoodIds = [...ids];
+  meal.sampleFoodIds = [];
+  if (typeof foodRolesFor === "function") meal.foodRoles = foodRolesFor(ids, ids, []);
+  if (typeof plannedMealAmounts === "function") {
+    let allocation = plannedMealAmounts({ ...meal, ingredientAmounts: {} });
+    meal.portionTargetGrams = allocation.targetGrams;
+    meal.sampleTargetGrams = allocation.sampleGrams;
+    meal.totalOfferedGrams = allocation.totalOfferedGrams;
+    meal.ingredientAmounts = { ...allocation.amounts };
+  }
+  return meal;
+}
+
+if (typeof reserveMealInventory === "function") {
+  const productAllergenBaseReserveMealInventory = reserveMealInventory;
+  reserveMealInventory = function reserveMealInventoryWithActualRecipeBatch(meal, ctx) {
+    let result = productAllergenBaseReserveMealInventory(meal, ctx);
+    return productAllergenApplyConfirmedBatchIngredients(result || meal);
+  };
+}
+
+if (typeof openLog === "function") {
+  const productAllergenBaseOpenLog = openLog;
+  openLog = function openLogWithActualRecipeBatch(plan) {
+    if (!plan?.editId && plan?.recipeInventoryId) {
+      plan = productAllergenApplyConfirmedBatchIngredients({ ...plan, foodIds: [...(plan.foodIds || [])], baseFoodIds: [...(plan.baseFoodIds || [])], sampleFoodIds: [...(plan.sampleFoodIds || [])] });
+    }
+    return productAllergenBaseOpenLog(plan);
   };
 }
 
@@ -441,9 +473,7 @@ if (typeof calculateBatch === "function") {
       let beforeIds = new Set(state.inventory.map((item) => item.id));
       original?.();
       let snapshot = selectedId ? snapshotForConcreteProduct(foodId, selectedId) : emptyProductAllergenSnapshot(foodId);
-      state.inventory
-        .filter((item) => !beforeIds.has(item.id) && item.kind !== "recipe" && item.foodId === foodId)
-        .forEach((item) => { item.productAllergenSnapshot = normalizeProductAllergenSnapshot(snapshot, foodId); });
+      state.inventory.filter((item) => !beforeIds.has(item.id) && item.kind !== "recipe" && item.foodId === foodId).forEach((item) => { item.productAllergenSnapshot = normalizeProductAllergenSnapshot(snapshot, foodId); });
       save();
     };
     return result;
@@ -463,7 +493,6 @@ if (typeof buildBackupPackage === "function") {
     return pack;
   };
 }
-
 if (typeof validateBackup === "function") {
   const productAllergenBaseValidateBackup = validateBackup;
   validateBackup = async function validateBackupWithProductSchema(raw) {

@@ -15,7 +15,7 @@ test('RANDOM-SWAP-01: Kombinationsidentität ist reihenfolgeunabhängig', () => 
   assert.equal(swap.canonicalCombination(['kartoffel', 'gurke', 'kartoffel']), 'gurke+kartoffel');
 });
 
-test('RANDOM-SWAP-02: spätere Verwendung einer heutigen Einführung wird als Abhängigkeit erkannt', () => {
+test('RANDOM-SWAP-02: jede spätere Verwendung einer heutigen Einführung wird als Abhängigkeit erkannt', () => {
   const current = { sampleFoodIds: ['gurke'], foodIds: ['hafer', 'gurke'] };
   const days = [
     { date: '2026-08-20', meals: [] },
@@ -23,6 +23,8 @@ test('RANDOM-SWAP-02: spätere Verwendung einer heutigen Einführung wird als Ab
   ];
   assert.equal(swap.hasFutureLearningDependency(days, '2026-08-20', current), true);
   days[1].meals[0].sampleFoodIds = ['gurke'];
+  assert.equal(swap.hasFutureLearningDependency(days, '2026-08-20', current), true);
+  days[1].meals[0].foodIds = ['kartoffel', 'apfel'];
   assert.equal(swap.hasFutureLearningDependency(days, '2026-08-20', current), false);
 });
 
@@ -107,7 +109,7 @@ test('RANDOM-SWAP-04: sichtbare automatische Folgeslots werden eingefroren, Schu
   assert.equal(data.autoLockExcluded['2026-08-23|breakfast'], undefined);
 });
 
-test('RANDOM-SWAP-05: Browser-Loader und Offline-Precache enthalten das Tauschmodul', () => {
+test('RANDOM-SWAP-05: Browser-Loader, Heute-Zugang und Offline-Precache enthalten das Tauschmodul', () => {
   const cascade = fs.readFileSync(path.join(root, 'js', 'planner-log-rollover-cascade.js'), 'utf8');
   const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
   const source = fs.readFileSync(path.join(root, 'js', 'planner-random-swap.js'), 'utf8');
@@ -115,6 +117,8 @@ test('RANDOM-SWAP-05: Browser-Loader und Offline-Precache enthalten das Tauschmo
   assert.match(cascade, /planner-random-swap\.js\?v=10\.1\.25/);
   assert.match(sw, /\.\/js\/planner-random-swap\.js/);
   assert.match(source, /class="btn secondary randomizeMeal"/);
+  assert.match(source, /today-randomize-meal/);
+  assert.match(source, /\.homeLog\[data-plan\]/);
   assert.match(source, /↻ Tauschen/);
   assert.match(source, /Der restliche Wochenplan bleibt unverändert/);
 });

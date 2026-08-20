@@ -195,7 +195,22 @@
     return pool.filter((item) => canCombine(item));
   }
 
-  function buildCandidateWithPlanner(focus, date, meal) {
+  function seedVisiblePlannerContext(days, targetKey) {
+    state.planLocks ||= {};
+    for (const day of days || []) {
+      for (const meal of day.meals || []) {
+        if (!meal?.active || meal.empty || !meal.focusId) continue;
+        const key = slotKey(day.date, meal.meal);
+        if (key === targetKey || state.manualMeals?.[key]?.manualAdded) continue;
+        const existing = state.planLocks[key];
+        if (existing?.mode === "manual" || existing?.followUpFoodId) continue;
+        const snapshot = mealSnapshot(day.date, meal.meal, meal, "auto");
+        if (snapshot?.focusId) state.planLocks[key] = snapshot;
+      }
+    }
+  }
+
+  function buildCandidateWithPlanner(focus, date, meal, visibleDays) {
     const key = slotKey(date, meal);
     const previousLocks = clone(state.planLocks || {});
     const previousOverrides = clone(state.overrides || {});
@@ -205,6 +220,7 @@
       state.planLocks ||= {};
       state.overrides ||= {};
       state.autoLockExcluded ||= {};
+      seedVisiblePlannerContext(visibleDays, key);
       delete state.planLocks[key];
       delete state.autoLockExcluded[key];
       state.overrides[key] = focus.id;
@@ -226,7 +242,7 @@
     const alternatives = [];
     const seen = new Set();
     for (const focus of shuffle(focusPool(current, date, meal, days))) {
-      const generated = buildCandidateWithPlanner(focus, date, meal);
+      const generated = buildCandidateWithPlanner(focus, date, meal, days);
       if (!generated || generated.recipeName) continue;
       if (!learningCandidateCompatible(current, generated, focus.id)) continue;
       if (current.type === "Allergen wiederholen") {

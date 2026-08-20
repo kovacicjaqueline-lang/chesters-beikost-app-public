@@ -26,6 +26,19 @@ Diese Trennung ist absichtlich orthogonal:
 
 Damit können z. B. Lachs- oder Bangus-Taler oral als `soft-breakdown` dokumentiert sein, ohne dadurch automatisch handlingseitig migriert oder früher freigeschaltet zu werden.
 
+Die Runtime stellt die orale Dimension additiv an den Rezeptzuständen bereit:
+
+```js
+{
+  oralProcessing: "soft-breakdown" | "easy-bite-separate" | "",
+  oralServingRequirement: "..."
+}
+```
+
+Diese Felder sind **Metadaten**. Sie werden auch bei einem oral klassifizierten, aber noch nicht handlingseitig migrierten Rezept ausgegeben. In diesem Fall bleiben `handlingMigrated: false`, die bestehenden `requirementMissing`-Einträge sowie `unlocked` unverändert.
+
+Die konkreten freigegebenen Servier-/Texturbedingungen liegen damit strukturiert vor und müssen nicht aus `note` oder `skillRequirement` geparst werden. Die bestehenden Rezept-`note`-Texte werden in dieser Wave nicht als Steuerlogik umgeschrieben; offene Rezepturen bleiben bewusst unverändert.
+
 ## Fachlich klare Einzelentscheidungen
 
 | Rezept | Orales Profil | Verbindliche Form-/Texturbedingung |
@@ -90,9 +103,9 @@ Dip und Gemüsestick bleiben zwei unterschiedliche Komponenten. Das Profil des S
 
 ## Status
 
-Fachlich freigegebene Oral-Processing-Wave: **30 klare Einzelentscheidungen**.
+Fachlich freigegebene und technisch abgebildete Oral-Processing-Wave: **30 klare Einzelentscheidungen**.
 
-Technische Leitplanken:
+Technischer Stand auf dem Arbeitsbranch:
 
 1. 20 × `easy-bite-separate`.
 2. 10 × `soft-breakdown`.
@@ -100,3 +113,6 @@ Technische Leitplanken:
 4. keine neue orale Capability.
 5. offene Fälle bleiben ohne Oral-Eintrag.
 6. Oral-Eintrag allein verändert keine Handling-/Legacy-Eligibility.
+7. `recipeStates()` stellt `oralProcessing` und `oralServingRequirement` additiv bereit.
+8. Regressionen sichern sowohl die exakten 30 Zuordnungen als auch die Nicht-Freischaltung oral-only klassifizierter Legacy-/Safety-Fälle ab.
+9. Die bestehende Handling-Loaderkette und der Offline-Precache bleiben unverändert.

@@ -1,396 +1,302 @@
-# FOOD Handling Readiness – technisches Sollmodell
+# FOOD Handling Readiness – technisches Soll- und Laufzeitmodell
 
-Stand: 2026-08-18  
-Branch: `refactor/food-handling-readiness`  
-Basis: aktueller `main` nach Merge von PLAN-08
+Stand: 2026-08-20  
+Status: Handling- und Oral-Processing-Contract für alle 103 Laufzeitrezepte migriert  
+Bezug: `docs/FOOD_HANDLING_ORAL_PROCESSING_CONTRACT.md` und `docs/PLANNER_FACHKONZEPT.md`
 
 ## Ziel
 
-Die fachlich freigegebene Parallelität von Löffel-/Breikost und geeignetem Fingerfood technisch abbilden, ohne Mahlzeitenphase, Alter, Allergene, Mahlzeiteneignung, FOOD-Sicherheit oder bestehende Planner-Locks abzuschwächen.
+Löffelkost und geeignetes Fingerfood werden parallel abgebildet, ohne Beikostphase, Alter, Allergene, Mahlzeiteneignung, FOOD-Sicherheit oder Planner-Locks abzuschwächen.
 
-Das Modell ersetzt **nicht** die Beikostphase und führt **keinen neuen linearen Skill-Level** ein.
+Das Modell ersetzt weder die Beikostphase noch führt es eine lineare Skill-Leiter ein.
 
-## Revalidierung nach PLAN-08-Merge
+## 1. Getrennte Dimensionen
 
-Der aktuelle `main` enthält inzwischen PLAN-08 Recipe-first. Das verändert den Integrationspunkt, aber nicht den Grundbefund:
+Die Laufzeit trennt:
 
-- `recipeStatesCore()` sperrt weiterhin über `textureStage < recipe.stage`.
-- PLAN-08 Recipe-first verwendet `recipeStates()` und verwirft Kandidaten mit `requirementMissing`.
-- Damit reicht eine zentrale Korrektur der Rezept-Handling-Eignung in `recipeStatesCore()` aus, damit auch Recipe-first dieselben Regeln übernimmt.
-- Keine zweite parallele Handling-Schranke in `planner-recipe-first.js` einbauen.
-- Der bestehende `FOOD_PRESENTATION_CONTRACT` aus PLAN-08 bleibt Anzeige-/Darstellungslogik und darf nicht zur Handling-Eignung umgedeutet werden.
+1. **Feeding-Präferenz**
+   - `spoon`
+   - `fingerfood`
+   - `mixed`
 
-## Grundprinzipien
+2. **Handlingmodus**
+   - `spoon-smooth`
+   - `spoon-mashed`
+   - `spoon-soft-lumpy`
+   - `finger-graspable`
+   - `finger-small-soft`
 
-1. **Eligibility und Preference trennen.** Eine sichere Darreichungsform kann fachlich möglich sein, auch wenn sie nicht der bevorzugten Beikostform entspricht.
-2. **Kein Parsen von Freitext.** `safeForm`, `note` und `skillRequirement` bleiben erklärende Texte, keine Steuerlogik.
-3. **Bestehende Safety-Regeln bleiben härter als Handling-Präferenz.**
-4. **Unmigrierte Rezepte behalten zunächst ihre alte `stage`-Sperre.** Dadurch entsteht keine globale Frühfreigabe.
-5. **Migration erfolgt gruppenweise und explizit** auf Basis des Read-only-Audits.
-6. **Historische `textureStage`-Logs behalten ihre Bedeutung.** Kein nachträgliches Umdeuten zu BLW-/Fingerfood-Fähigkeit.
+3. **Orales Verarbeitungsprofil**
+   - `soft-breakdown`
+   - `easy-bite-separate`
+   - `structured-chew-required`
 
-## 1. Nutzerpräferenz
+4. **Beobachtete Fähigkeiten**
+   - `small-soft-pieces`
+   - `structured-chew`
 
-Neues Setting:
+5. **Unabhängige bestehende Gates**
+   - Zutatenstatus
+   - Allergene
+   - Mahlzeiteneignung
+   - `hardMinMonths`
+   - FOOD-Safety
+   - sonstige Planner-/Policy-Regeln
+
+Keine dieser Dimensionen darf aus einer anderen automatisch abgeleitet werden.
+
+## 2. Feeding-Präferenz
+
+`feedingApproach` steuert ausschließlich die Reihenfolge bereits geeigneter Darreichungsformen.
 
 ```js
 feedingApproach: "mixed"
 ```
 
-Zulässige Werte:
+Semantik:
 
-- `spoon` – Löffel/Brei bevorzugen
-- `fingerfood` – selbst greifbare Formen bevorzugen
-- `mixed` – beide Wege gleichwertig zulassen
+- `spoon`: geeignete Löffelformen bevorzugen;
+- `fingerfood`: geeignete Fingerfoodformen bevorzugen;
+- `mixed`: beide gleichwertig behandeln.
 
-### Semantik
+Die Präferenz darf keine Safety-, Handling- oder Oral-Capability umgehen.
 
-`feedingApproach` ist **keine Reifestufe** und kein Safety-Override. Das Feld beeinflusst die Auswahl/Sortierung geeigneter Darreichungsformen, nicht die allgemeinen Lebensmittelregeln.
+## 3. Handling-Contract
 
-### Default/Migration
-
-Empfehlung: `mixed` als neuer Default. Bestehende gespeicherte Zustände erhalten den Wert additiv bei Migration/Default-Merge.
-
-Wichtig: Bereits vorhandene `planLocks`, manuelle Mahlzeiten und Logs werden durch das neue Feld nicht neu geschrieben. Änderungen wirken nur auf neu erzeugte automatische Planung bzw. neu gewählte Darreichungsformen.
-
-## 2. Strukturierter Handling-Contract
-
-Neue separate Datei, z. B.:
+Der strukturierte Contract liegt in:
 
 `data/food-handling.js`
 
-Sie ist bewusst **nicht** `data/food-presentation.js`, weil PLAN-08 dort Anzeige-/Komponentenrollen hält, die ausdrücklich keine Planner-Eignung verändern.
+Ein Rezept erhält explizit einen oder mehrere Modi. Die Zuordnung basiert auf Einzelentscheidungen und nicht auf `category` oder `stage`.
 
-### Darreichungsmodi
-
-Arbeitsnamen:
+Beispiel:
 
 ```js
-const HANDLING_MODES = {
-  SPOON_SMOOTH: "spoon-smooth",
-  SPOON_MASHED: "spoon-mashed",
-  SPOON_SOFT_LUMPY: "spoon-soft-lumpy",
-  FINGER_GRASPABLE: "finger-graspable",
-  FINGER_SMALL_SOFT: "finger-small-soft",
-};
+"Obst-Hafer-Pancakes": {
+  modes: ["finger-graspable"],
+  oralProcessing: "easy-bite-separate"
+}
 ```
 
-### Semantik
+### `spoon-soft-lumpy`
 
-- `spoon-smooth`: glatt/löffelbar
-- `spoon-mashed`: weich zerdrückt
-- `spoon-soft-lumpy`: weiche gröbere/stückige Löffeltextur
-- `finger-graspable`: weiches, ausreichend großes, gut greifbares Fingerfood; **nicht** automatisch spätere Entwicklungsstufe
-- `finger-small-soft`: kleine weiche Stücke; nur dort verwenden, wo eine zusätzliche feinmotorische Voraussetzung tatsächlich fachlich bestätigt ist
+Dieser Modus bleibt an die bestehende Texturentwicklung gekoppelt. Das ist eine Textur-/Handlingfrage und keine Altersregel.
 
-### Fachlich freigegebene orale Verarbeitungsdimension
+### `finger-graspable`
 
-Der Handlingmodus allein beschreibt bei zusammenhängendem Fingerfood nicht vollständig die orale Anforderung. Die am 20.08.2026 fachlich freigegebene additive Erweiterung ist verbindlich in
+Dieser Modus ist keine spätere Stufe. Ein weiches gut greifbares Fingerfood kann bei allgemeiner Beikostreife geeignet sein.
+
+### `finger-small-soft`
+
+Dieser Modus wird nur dort verwendet, wo kleine weiche Einzelstücke Teil der kanonischen Form sind und die zusätzliche Handlingfähigkeit individuell freigegeben wurde.
+
+Aktuell:
+
+- Huhn-Zucchini-Nockerl
+- Rind-Karotten-Nockerl
+- Linsen-Süßkartoffel-Nockerl
+
+Diese drei verlangen:
+
+```js
+requiredCapabilities: {
+  "finger-small-soft": "small-soft-pieces"
+}
+```
+
+## 4. Orale Verarbeitungsdimension
+
+`oralProcessing` ist unabhängig vom Handlingmodus.
+
+Für die vollständige fachliche Definition gilt:
 
 `docs/FOOD_HANDLING_ORAL_PROCESSING_CONTRACT.md`
 
-dokumentiert.
+Nur vier konkrete Rezepte verlangen aktuell `structured-chew`:
 
-Dort werden die orthogonalen Profile `soft-breakdown`, `easy-bite-separate` und `structured-chew-required` definiert. Sie bilden **keine lineare Alters- oder Entwicklungsleiter**. Insbesondere bedeutet `finger-graspable` nicht automatisch, dass ein Stück oral gleich anspruchsvoll ist, und `structured-chew-required` ist kein verstecktes „ab 10 Monaten“.
+- Rind-Hafer-Bällchen
+- Baby-Bananenbrot
+- Weiche Joghurt-Fladen
+- Huhn-Gemüse-Muffins
 
-Für spätere technische Erweiterungen gilt daher zusätzlich:
-
-- orale Verarbeitung getrennt vom Handlingmodus modellieren;
-- Einstufung nur aus konkret geprüftem Rezept plus Servierform ableiten;
-- keine Gruppenlogik aus `Muffin`, `Pancake`, `Bällchen`, `Fleisch`, `stage` oder `minMonths`;
-- Zwei-Finger-Zerdrückbarkeit allein reicht nicht zur oralen Einstufung;
-- bei unklarer reproduzierbarer Struktur bleibt das orale Profil offen;
-- eine zusätzliche orale Capability darf erst für einen konkret fachlich freigegebenen Fall produktiv werden.
-
-## 3. Rezept-Contract
-
-Rezeptfreigabe wird künftig nicht aus `category === "pancakes"` oder `stage === 3` abgeleitet.
-
-Beispielstruktur:
+Technische Form:
 
 ```js
-const RECIPE_HANDLING_CONTRACT = Object.freeze({
-  "Obst-Hafer-Pancakes": Object.freeze({
-    modes: ["finger-graspable"],
-  }),
-  "Omelettstreifen": Object.freeze({
-    modes: ["finger-graspable"],
-  }),
-  "Brokkoli-Kartoffel-Stampf": Object.freeze({
-    modes: ["spoon-mashed", "spoon-soft-lumpy"],
-  }),
-});
+{
+  modes: ["finger-graspable"],
+  oralProcessing: "structured-chew-required",
+  oralRequiredCapability: "structured-chew"
+}
 ```
 
-Für einen migrierten Recipe-Eintrag ersetzt der Handling-Contract die historische `stage`-Sperre **nur für die Handling-Dimension**. `hardMinMonths`, Zutatenstatus, Milchregeln, Mahlzeiteneignung und andere unabhängige Regeln bleiben aktiv.
+Alle anderen zusammenhängenden Fingerfoods werden nicht aufgrund ihrer Kategorie pauschal hochgestuft.
 
-### Unmigrierte Rezepte
+## 5. Nutzerfähigkeiten
 
-Wenn kein strukturierter Handling-Eintrag vorhanden ist:
-
-```text
-legacy fallback = bisherige recipe.stage / textureStage-Logik
-```
-
-So kann die Migration kontrolliert erfolgen und `SAFETY-REVIEW` / `LATER-REVIEW` bleiben zunächst unangetastet.
-
-## 4. FOOD-Contract
-
-Für einzelne FOODs wird ebenfalls explizit festgelegt, welche Darreichungsmodi fachlich bestätigt sind.
-
-Beispiele aus bereits geprüften Safe-Forms:
-
-```js
-const FOOD_HANDLING_CONTRACT = Object.freeze({
-  karotte: Object.freeze({
-    modes: ["spoon-smooth", "spoon-mashed", "finger-graspable"],
-  }),
-  zucchini: Object.freeze({
-    modes: ["spoon-smooth", "spoon-mashed", "finger-graspable"],
-  }),
-  banane: Object.freeze({
-    modes: ["spoon-mashed", "finger-graspable"],
-  }),
-  avocado: Object.freeze({
-    modes: ["spoon-mashed", "finger-graspable"],
-  }),
-});
-```
-
-Der Contract sagt **nur**, welche Form grundsätzlich existiert. Die konkrete `safeForm` bleibt verbindliche Zubereitungsanweisung.
-
-## 5. Optionale echte Fähigkeit
-
-Für die erste Implementierungsstufe ist **kein User-Skill für `finger-graspable` nötig**. Das ist der zentrale Unterschied zum heutigen Stage-3-Modell.
-
-Eine zusätzliche Fähigkeit wird erst eingeführt, wenn ein konkreter Rezept-/FOOD-Fall sie benötigt. Vorgesehener Erweiterungspunkt:
-
-```js
-requiredCapability: "small-soft-pieces"
-```
-
-Möglicher Nutzerstatus später:
+Die beiden Fähigkeiten werden unabhängig gespeichert:
 
 ```js
 handlingCapabilities: {
   smallSoftPieces: false,
+  structuredChew: false
 }
 ```
 
-Dieser Wert darf erst produktiv werden, wenn die zugehörigen Lebensmittel/Rezeptformen einzeln fachlich freigegeben sind. Kein pauschaler „Pinzettengriff = alles klein erlaubt“-Schalter.
+Fehlende Altwerte werden konservativ als `false` normalisiert.
 
-Die orale Contract-Erweiterung reserviert dabei **keine** neue Capability pauschal. Ein möglicher späterer Wert wie `structured-chew` wäre erst nach einer konkreten Einzelentscheidung einzuführen.
+Die Nutzerin bestätigt die Fähigkeiten in den Einstellungen nur dann, wenn sie tatsächlich beobachtet wurden.
 
-## 6. Zentrale Eligibility-Funktion
+Wichtig:
 
-Neue pure Funktion, z. B.:
+- kein Auto-Unlock nach Alter;
+- kein Auto-Unlock aus `textureStage`;
+- kein Auto-Unlock aus `feedingApproach`;
+- `smallSoftPieces` schaltet Structured Chew nicht frei;
+- `structuredChew` schaltet kleine Stücke nicht frei.
 
-```js
-handlingEligibilityForRecipe(recipe, settings)
-```
+## 6. Vollmigration der 103 Laufzeitrezepte
 
-Ergebnisstruktur:
+Der vorherige Wave-1-Zwischenstand ist abgeschlossen.
 
-```js
-{
-  migrated: true,
-  eligibleModes: ["finger-graspable"],
-  preferredModes: ["finger-graspable"],
-  blockedReasons: [],
-}
-```
+Der aktuelle Contract enthält genau **103 Rezeptnamen** und muss exakt mit dem normalisierten Laufzeitkatalog übereinstimmen.
 
-### Ablauf
+Auditmatrix:
 
-1. strukturierten Recipe-Handling-Eintrag suchen
-2. wenn keiner vorhanden: Legacy-Stage-Fallback
-3. Modi gegen tatsächlich erforderliche Capability prüfen
-4. `feedingApproach` nur für `preferredModes`/Ranking verwenden
-5. keine Alters-, Zutaten-, Mahlzeiten- oder Safety-Regel in dieser Funktion duplizieren
+| Gruppe | Anzahl | Technische Wirkung |
+| --- | ---: | --- |
+| kein zusätzliches späteres Gate | 87 | expliziter Handling-/Oral-Contract, historische Stage-Sperre entfällt handlingseitig |
+| `structured-chew` | 4 | harte beobachtete orale Capability |
+| `small-soft-pieces` | 3 | harte beobachtete Handling-Capability |
+| weiche spätere Formorientierung | 9 | keine neue Capability; kanonische Form/`minMonths`-Orientierung bleibt erhalten |
+| offen | 0 | – |
 
-## 7. Integration in `recipeStatesCore()`
+Die neun weichen späteren Formfälle sind:
 
-Heute:
+- Gemüse-Nudel-Sauce
+- Baby-Linsen-Bolognese
+- Huhn-Karotte-Nudel-Topf
+- Huhn-Lauch-Kartoffel-Topf
+- Brokkoli-Linsen-Pasta
+- Gemüse-Pasta mit Zucchini und Tomate
+- Ei-Champignon-Cups
+- Tinola-inspiriert
+- Sayote-Huhn-Reis
+
+## 7. Zentrale Eligibility
+
+`js/handling-readiness.js` bleibt die zentrale Policy.
+
+Ablauf für ein migriertes Rezept:
+
+1. Contract nach Rezeptname lesen;
+2. Modi gegen Textur- und Handlingvoraussetzungen prüfen;
+3. orale Capability unabhängig prüfen;
+4. Feeding-Präferenz nur auf bereits geeignete Modi anwenden;
+5. alte `Konsistenz:`-Stage-Sperre für das migrierte Rezept entfernen;
+6. unabhängige Zutaten-/Alters-/Safety-Gates unverändert lassen.
+
+Ein fehlender Contract behält weiterhin den konservativen Legacy-Fallback. Im aktuellen Laufzeitkatalog soll dieser Fall durch die 103/103-Migration jedoch nicht mehr vorkommen.
+
+### Blockgründe
+
+Handling-Capability:
 
 ```text
-textureStage < recipe.stage -> requirementMissing
+Darreichungsform: kleine weiche Stücke noch nicht bestätigt
 ```
 
-Neu:
+Orale Capability:
 
-- migriertes Rezept: Handling-Eligibility aus dem strukturierten Contract verwenden
-- unmigriertes Rezept: bisherigen Stage-Vergleich unverändert beibehalten
-- `hardMinMonths` bleibt wie bisher
-- `ingredientMissing` bleibt wie bisher
-- `unlocked` bleibt zentrale kombinierte Freigabe
+```text
+Orale Verarbeitung: strukturiertes Kauen noch nicht bestätigt
+```
 
-Dadurch übernehmen automatisch auch:
+Diese Blockgründe ersetzen nicht unabhängige andere Sperren.
 
-- Rezeptliste
-- Rezeptvorrat
-- Snack-Rezeptkandidaten
-- PLAN-08 Recipe-first
+## 8. Rezept-Serving-Guidance
 
-konsistent dieselbe Handlingfreigabe.
+Der Contract darf für individuell geprüfte Fälle strukturierte Serving-Guidance tragen.
 
-## 8. PLAN-08 Recipe-first
+Dazu gehören insbesondere:
 
-`plannerExactRecipeCandidates()` prüft bereits:
+- eindeutige breite Streifen beim Zucchini-Omelett;
+- saftige flache/längliche Form bei Geflügel- und Fleischbällchen;
+- weich-stückige kanonische Form bei Tinola und Sayote-Huhn-Reis;
+- Safety-Ausschluss klebrig-teigiger Krume beim Baby-Bananenbrot;
+- Ausschluss klebrig/roh-teigiger Mitte bei Joghurt-Fladen;
+- Safety-/Texturkontrolle der drei Nockerl.
 
-- Mahlzeiteneignung
-- `recipeAllowedFn`
-- `requirementMissing`
-- exakte FOOD-ID-Übereinstimmung
+Die Runtime darf diese strukturierte Guidance als angezeigten Zubereitungs-/Sicherheitstext verwenden. Freitext wird niemals zurück in Steuerlogik geparst.
 
-Daher **keine neue Speziallogik in PLAN-08**. Ein Recipe-first-Kandidat ist nur dann möglich, wenn `recipeStates()` ihn nach der neuen zentralen Handlinglogik freigibt.
+## 9. Integration in `recipeStatesCore()`
 
-Wichtig: Wenn mehrere technisch gleichrangige Rezeptformen exakt passen, darf PLAN-08 weiterhin keine Darreichungsform erraten. Feeding-Präferenz kann später als expliziter Ranking-Faktor ergänzt werden; sie darf die bestehende Ambiguität nicht unbemerkt auflösen, bevor dieses Verhalten getestet/freigegeben ist.
+Die bestehende zentrale Rezeptfreigabe wird weiterhin gewrappt.
 
-## 9. FOOD-only-Folgeformen
+Für migrierte Rezepte:
 
-`followUpPreparationOptions()` darf künftig nicht mehr `textureStage >= 3` als Fingerfood-Bedingung verwenden.
+- historische `Konsistenz:`-Sperre entfernen;
+- Handling-/Oral-Eligibility anwenden;
+- `hardMinMonths` unverändert lassen;
+- `ingredientMissing` unverändert lassen;
+- `unlocked` anschließend aus allen verbleibenden Gründen neu bestimmen.
 
-Stattdessen:
+Dadurch verwenden Rezeptliste, Vorrat und PLAN-08 Recipe-first dieselbe zentrale Entscheidung.
 
-1. `FOOD_HANDLING_CONTRACT[foodId].modes` lesen
-2. sichere verfügbare Modi bestimmen
-3. nach `feedingApproach` sortieren
-4. bestehende `safeForm`-Texte als Erklärung anzeigen
+Keine zweite parallele Oral-/Handling-Schranke in `planner-recipe-first.js` einbauen.
 
-Für FOODs ohne Contract bleibt der heutige konservative Fallback zunächst bestehen.
+## 10. Presentation Mode
 
-## 10. Mahlzeit-/Plan-Daten
-
-Neue optionale Eigenschaft auf einer konkret geplanten Mahlzeit:
+Eine automatisch erzeugte Mahlzeit kann additiv tragen:
 
 ```js
 presentationMode: "finger-graspable"
 ```
 
-Zweck:
+Das Feld kann in neue Auto-Locks und Logs übernommen werden.
 
-- Prep weiß, welche Form geplant war
-- Plananzeige kann die Form verständlich nennen
-- Logging kann die tatsächlich angebotene Form übernehmen
-- Locks frieren die konkrete Darreichung mit ein
+Bestehende Locks und Logs ohne dieses Feld bleiben gültig. Aus historischem `textureStage` darf kein `presentationMode` rückwirkend erfunden werden.
 
-### Lock-Kompatibilität
+## 11. Settings-UI und Persistenz
 
-Alte Locks ohne `presentationMode` bleiben gültig. Neue Locks übernehmen das Feld nur additiv.
+Die Settings-UI enthält:
 
-## 11. Logging
+- Beikostform;
+- Bestätigung für kleine weiche Stücke;
+- Bestätigung für strukturiertes Kauen.
 
-`textureStage` bleibt vorerst unverändert gespeichert, um Historie und vorhandene Statistiken nicht zu brechen.
+Die beiden Capability-Werte werden im bestehenden Settings-Objekt gespeichert. Eine neue Storage-Schema-Version ist dafür nicht erforderlich, weil die Felder additiv sind und fehlende Altwerte konservativ normalisiert werden.
 
-Optional neues Feld:
+## 12. Safety bleibt unabhängig
 
-```js
-presentationMode: "spoon-mashed"
-```
+Ein Safety-Problem darf nie durch eine Capability freigeschaltet werden.
 
-Dadurch können später getrennt ausgewertet werden:
+Beispiel Baby-Bananenbrot:
 
-- Speisentextur
-- Selbstfütterungsform
+- `structuredChew: true` erlaubt nur eine korrekt gebackene, vollständig ausgekühlte, nicht klebrig-teigige Krume;
+- eine klebrig, teigig oder ballend geratene Charge bleibt ungeeignet.
 
-Ein alter Log ohne `presentationMode` wird **nicht** aus `textureStage` rückwirkend als BLW oder Löffel interpretiert.
+Dasselbe Prinzip gilt für harte Krusten, kompakt-federnde Bällchen oder gummiartige Nockerl.
 
-## 12. UI
+## 13. Regressionen
 
-### Beikostform
+Mindestens abzusichern:
 
-Neue verständliche Auswahl:
+1. 103 Runtime-Rezepte = 103 Contract-Einträge;
+2. keine Doppelzuordnung;
+3. Auditmatrix 87 / 4 / 3 / 9;
+4. vier Structured-Chew-Fälle ohne Capability gesperrt und mit Capability freigegeben;
+5. drei Nockerl nur durch `small-soft-pieces` freigegeben;
+6. die beiden Fähigkeiten entsperren sich nicht gegenseitig;
+7. Feeding-Präferenz umgeht keine Capability;
+8. weiche Referenz-Fingerfoods bleiben ohne zusätzliche Capability möglich;
+9. `spoon-soft-lumpy` bleibt an Texturentwicklung gekoppelt;
+10. `hardMinMonths` und fehlende Zutaten bleiben unabhängig aktiv;
+11. Safety-/Serving-Guidance für Bananenbrot und weitere Einzelentscheidungen bleibt erhalten;
+12. Settings speichern beide Capability-Werte getrennt und Reload erhält sie;
+13. PLAN-08-Rezeptidentität und bestehende Locks bleiben stabil.
 
-- Löffel/Brei
-- Fingerfood/BLW
-- Gemischt
+Nach Produktivänderungen in diesem Bereich gelten gemäß `AGENTS.md` / `docs/AI_WORKFLOW.md`:
 
-Kurzer Hinweis:
-
-> Die Auswahl steuert, welche passenden Darreichungsformen die Planung bevorzugt. Sie ist keine Entwicklungsstufe.
-
-### Textur-Coach
-
-Der Textur-Coach darf weiter Löffel-/Speisentextur begleiten, aber `Stage 3 = Fingerfood` muss entkoppelt werden.
-
-Zieltexturbezeichnungen später z. B.:
-
-- 1: glatt / fein zerdrückt
-- 2: weich zerdrückt
-- 3: weich-stückig
-- 4: weiche Familienkost
-
-Fingerfood wird separat über Handling-/Darreichungsform erklärt.
-
-## 13. Erste migrationssichere Implementierungswelle
-
-Nicht alle 100 Rezepte gleichzeitig migrieren.
-
-### Wave 1 – eindeutige Referenzfälle
-
-FOOD:
-
-- Karotte
-- Kartoffel
-- Zucchini
-- Brokkoli
-- Karfiol
-- Süßkartoffel
-- Banane
-- Avocado
-
-Rezepte:
-
-- Obst-Hafer-Pancakes
-- Birne-Hirse-Pancakes
-- Gemüse-Hafer-Pancakes
-- Omelettstreifen
-- Zucchini-Omelett
-- Brokkoli-Kartoffel-Stampf
-- Zucchini-Kartoffel-Brei
-- Avocado-Bananen-Creme
-
-Diese Fälle decken frühes Löffeln, frühes greifbares Fingerfood und adaptive Textur ab.
-
-### Noch nicht Wave 1
-
-- alle `SAFETY-REVIEW`-Rezepte
-- alle `LATER-REVIEW`-Rezepte
-- pauschale Migration aller Bällchen/Muffins/Bites
-
-## 14. Bananen-Ei-Pancakes
-
-Das neue Rezept wird erst nach funktionierender Wave-1-Handlinglogik ergänzt.
-
-Geplanter Contract:
-
-```js
-"Bananen-Ei-Pancakes": {
-  modes: ["finger-graspable"]
-}
-```
-
-Damit dient das Rezept als Regression dafür, dass ein weiches Fingerfood nicht künstlich eine spätere `textureStage` braucht.
-
-## 15. Tests-first
-
-Vor Produktivänderung Tests für mindestens:
-
-1. migriertes `finger-graspable`-Rezept ist bei `textureStage = 1` handlingseitig möglich
-2. Legacy-Rezept ohne Contract behält Stage-Sperre
-3. `hardMinMonths` bleibt unabhängig aktiv
-4. unbekannte Zutat sperrt weiterhin
-5. `feedingApproach=spoon` macht Fingerfood nicht „unsicher“, sondern nur nicht bevorzugt
-6. `feedingApproach=fingerfood` macht Löffelform nicht fachlich ungültig
-7. `mixed` lässt beide Mode-Familien gleichwertig zu
-8. FOOD Karotte liefert bei Stage 1 sowohl Löffel- als auch `finger-graspable`-Option
-9. PLAN-08 Recipe-first sieht nur zentral freigegebene Rezepte
-10. bestehender Lock ohne `presentationMode` bleibt stabil
-11. neuer Lock kann `presentationMode` tragen
-12. alter Log behält `textureStage`; kein rückwirkendes BLW-Inferenzfeld
-
-Bei einer späteren technischen Umsetzung der oralen Dimension kommen zusätzlich Regressionen aus `docs/FOOD_HANDLING_ORAL_PROCESSING_CONTRACT.md` hinzu; insbesondere muss `Omelettstreifen` als `easy-bite-separate` ohne zusätzliche orale Capability bei allgemeiner Beikostreife möglich bleiben.
-
-## Status
-
-Technisches Sollmodell festgelegt. Die additive orale Verarbeitungsdimension ist fachlich in `docs/FOOD_HANDLING_ORAL_PROCESSING_CONTRACT.md` festgelegt, aber noch nicht als Runtime-Feld oder Capability implementiert. Bestehende Produktlogik und Rezeptdaten werden durch diese Dokumentation nicht verändert.
+- betroffene Node-Regressionen;
+- `npm run verify:fast`;
+- wegen Settings-/Browserfluss zusätzlich `npm run verify:app`.

@@ -24,6 +24,10 @@ function runtime(recipeStates, settings = {}) {
       settings: {
         textureStage: 1,
         feedingApproach: "mixed",
+        handlingCapabilities: {
+          smallSoftPieces: false,
+          structuredChew: false,
+        },
         ...settings,
       },
     },
@@ -57,9 +61,10 @@ test("HANDLING runtime: migrierter Pancake verliert nur die historische Konsiste
   assert.equal(recipe.unlocked, true);
   assert.equal(recipe.handlingMigrated, true);
   assert.deepEqual([...recipe.handlingModes], ["finger-graspable"]);
+  assert.equal(recipe.oralProcessing, "easy-bite-separate");
 });
 
-test("HANDLING runtime: Alter und fehlende Zutaten bleiben trotz Fingerfood-Migration harte Sperren", () => {
+test("HANDLING runtime: Alter und fehlende Zutaten bleiben trotz Migration harte Sperren", () => {
   const ctx = runtime([
     {
       name: "Obst-Hafer-Pancakes",
@@ -90,9 +95,62 @@ test("HANDLING runtime: Alter und fehlende Zutaten bleiben trotz Fingerfood-Migr
   assert.equal(recipe.unlocked, false);
 });
 
-test("HANDLING runtime: unmigriertes Rezept bleibt unverändert im Legacy-Stage-Verhalten", () => {
-  const original = {
+test("ORAL runtime: structured-chew ersetzt Stage nicht durch Alter, sondern durch konkrete Fähigkeit", () => {
+  const base = {
     name: "Rind-Hafer-Bällchen",
+    stage: 3,
+    ingredientMissing: [],
+    requirementMissing: ["Konsistenz: weich-stückig / Fingerfood"],
+    missing: ["Konsistenz: weich-stückig / Fingerfood"],
+    unlocked: false,
+    almost: true,
+  };
+  const blocked = runtime([base]).recipeStatesCore()[0];
+  assert.deepEqual([...blocked.requirementMissing], [
+    "Orale Verarbeitung: strukturiertes Kauen noch nicht bestätigt",
+  ]);
+  assert.equal(blocked.unlocked, false);
+  assert.equal(blocked.oralProcessing, "structured-chew-required");
+  assert.equal(blocked.oralRequiredCapability, "structured-chew");
+
+  const ready = runtime(
+    [base],
+    { handlingCapabilities: { smallSoftPieces: false, structuredChew: true } },
+  ).recipeStatesCore()[0];
+  assert.deepEqual([...ready.requirementMissing], []);
+  assert.equal(ready.unlocked, true);
+  assert.deepEqual([...ready.handlingModes], ["finger-graspable"]);
+});
+
+test("HANDLING runtime: Nockerl werden nur durch small-soft-pieces freigegeben", () => {
+  const base = {
+    name: "Huhn-Zucchini-Nockerl",
+    stage: 3,
+    ingredientMissing: [],
+    requirementMissing: ["Konsistenz: weich-stückig / Fingerfood"],
+    missing: ["Konsistenz: weich-stückig / Fingerfood"],
+    unlocked: false,
+    almost: true,
+  };
+  const blocked = runtime([base]).recipeStatesCore()[0];
+  assert.deepEqual([...blocked.requirementMissing], [
+    "Darreichungsform: kleine weiche Stücke noch nicht bestätigt",
+  ]);
+  assert.equal(blocked.unlocked, false);
+  assert.equal(blocked.oralProcessing, "soft-breakdown");
+
+  const ready = runtime(
+    [base],
+    { handlingCapabilities: { smallSoftPieces: true, structuredChew: false } },
+  ).recipeStatesCore()[0];
+  assert.deepEqual([...ready.requirementMissing], []);
+  assert.equal(ready.unlocked, true);
+  assert.deepEqual([...ready.handlingModes], ["finger-small-soft"]);
+});
+
+test("HANDLING runtime: synthetisches unmigriertes Rezept bleibt im Legacy-Stage-Verhalten", () => {
+  const original = {
+    name: "Nicht migriert",
     stage: 3,
     ingredientMissing: [],
     requirementMissing: ["Konsistenz: weich-stückig / Fingerfood"],
@@ -137,7 +195,7 @@ test("HANDLING runtime: Fingerfood-Präferenz sortiert nur, sie entfernt Löffel
   assert.ok(options.some((option) => option.mode === "spoon-mashed"));
 });
 
-test("HANDLING loader: Wave 1 wird vor finalem Planner-Reveal geladen und installiert", () => {
+test("HANDLING loader: Contract wird vor finalem Planner-Reveal geladen und installiert", () => {
   assert.match(utilsSource, /data\/food-handling\.js\?v=10\.1\.25/);
   assert.match(utilsSource, /js\/handling-readiness\.js\?v=10\.1\.25/);
   assert.match(

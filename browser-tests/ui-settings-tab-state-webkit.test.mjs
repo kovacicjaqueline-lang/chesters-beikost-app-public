@@ -48,6 +48,11 @@ async function waitForApp(page) {
   await page.waitForFunction(() => !!window.__beikostTest?.getState);
 }
 
+async function openSettings(page) {
+  await page.locator('nav button[data-view="more"]').click();
+  await page.locator(".settings-card > details").evaluate((details) => { details.open = true; });
+}
+
 const expectedTextureLabels = [
   "1 – glatt / fein",
   "2 – dick / fein zerdrückt",
@@ -78,8 +83,11 @@ try {
       `Konsistenzbezeichnungen müssen bei ${width}px exakt dem freigegebenen Text entsprechen`,
     );
 
-    await page.locator('nav button[data-view="more"]').click();
-    await page.locator(".settings-card > details").evaluate((details) => { details.open = true; });
+    await openSettings(page);
+    assert.equal(await page.locator("#feedingApproach").count(), 1, `Beikostform muss bei ${width}px vorhanden sein`);
+    assert.equal(await page.locator("#smallSoftPiecesCapability").count(), 1, `Small-Soft-Fähigkeit muss bei ${width}px vorhanden sein`);
+    assert.equal(await page.locator("#structuredChewCapability").count(), 1, `Structured-Chew-Fähigkeit muss bei ${width}px vorhanden sein`);
+
     const actionbar = page.locator("#settingsActionbar");
     await actionbar.scrollIntoViewIfNeeded();
 
@@ -126,6 +134,23 @@ try {
   await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "load" });
   await waitForApp(page);
 
+  await openSettings(page);
+  await page.locator("#smallSoftPiecesCapability").check();
+  await page.locator("#structuredChewCapability").check();
+  await page.locator("#saveSettings").click();
+
+  assert.deepEqual(
+    await page.evaluate(() => window.__beikostTest.getState().settings.handlingCapabilities),
+    { smallSoftPieces: true, structuredChew: true },
+    "beide beobachteten Fähigkeiten müssen separat im State gespeichert werden",
+  );
+
+  await page.reload({ waitUntil: "load" });
+  await waitForApp(page);
+  await openSettings(page);
+  assert.equal(await page.locator("#smallSoftPiecesCapability").isChecked(), true, "Small-Soft-Fähigkeit muss Reload überleben");
+  assert.equal(await page.locator("#structuredChewCapability").isChecked(), true, "Structured-Chew-Fähigkeit muss Reload überleben");
+
   await page.locator('nav button[data-view="foods"]').click();
   await page.locator('#foodFilters button[data-filter="allergen"]').click();
   await page.locator("#foodSearch").fill("Ei");
@@ -155,6 +180,8 @@ try {
   await page.locator('nav button[data-view="more"]').click();
   assert.equal(await page.locator("#recipeSearch").inputValue(), "", "Rezeptsuche darf Reload nicht überleben");
   assert.ok(await page.locator('#recipeFilter button[data-recipe-filter="available"]').evaluate((button) => button.classList.contains("active")), "Rezeptfilter muss nach Reload wieder auf Jetzt passend stehen");
+  assert.equal(await page.locator("#smallSoftPiecesCapability").isChecked(), true, "gespeicherte Small-Soft-Fähigkeit darf durch UI-Tab-State-Reset nicht verloren gehen");
+  assert.equal(await page.locator("#structuredChewCapability").isChecked(), true, "gespeicherte Structured-Chew-Fähigkeit darf durch UI-Tab-State-Reset nicht verloren gehen");
 
   await context.close();
 } finally {

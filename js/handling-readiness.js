@@ -3,9 +3,9 @@
 /*
  * Handling-Readiness-Policy.
  *
- * Grundsatz: Löffelkost und geeignetes weiches Fingerfood sind parallele
- * Darreichungswege. Fingerfood wird daher nicht aus textureStage abgeleitet.
- * Nicht migrierte Rezepte behalten konservativ die bisherige Stage-Sperre.
+ * Löffelkost und geeignetes Fingerfood sind parallele Darreichungswege.
+ * Handling und orale Verarbeitung bleiben getrennte Dimensionen; weder
+ * Fingerfood noch structured-chew werden aus textureStage oder Alter abgeleitet.
  */
 
 function normalizeFeedingApproach(value) {
@@ -26,6 +26,13 @@ function handlingCapabilitySatisfied(capability, settings = {}) {
   if (!capability) return true;
   if (capability === "small-soft-pieces")
     return settings?.handlingCapabilities?.smallSoftPieces === true;
+  return false;
+}
+
+function oralCapabilitySatisfied(capability, settings = {}) {
+  if (!capability) return true;
+  if (capability === "structured-chew")
+    return settings?.handlingCapabilities?.structuredChew === true;
   return false;
 }
 
@@ -64,13 +71,25 @@ function handlingEligibility(contract, settings = {}) {
       migrated: false,
       eligibleModes: [],
       preferredModes: [],
+      oralProcessing: "",
+      oralRequiredCapability: "",
+      oralCapabilitySatisfied: true,
       blockedReasons: ["legacy-stage-fallback"],
     };
   }
+
   let eligibleModes = eligibleHandlingModes(contract, settings);
-  let blockedReasons = contract.modes?.length && !eligibleModes.length
-    ? ["handling-requirement"]
-    : [];
+  let oralRequiredCapability = String(contract.oralRequiredCapability || "");
+  let oralReady = oralCapabilitySatisfied(oralRequiredCapability, settings);
+  let blockedReasons = [];
+
+  if (contract.modes?.length && !eligibleModes.length)
+    blockedReasons.push("handling-requirement");
+  if (eligibleModes.length && !oralReady) {
+    eligibleModes = [];
+    blockedReasons.push("oral-processing-requirement");
+  }
+
   return {
     migrated: true,
     eligibleModes,
@@ -78,6 +97,9 @@ function handlingEligibility(contract, settings = {}) {
       eligibleModes,
       settings.feedingApproach,
     ),
+    oralProcessing: String(contract.oralProcessing || ""),
+    oralRequiredCapability,
+    oralCapabilitySatisfied: oralReady,
     blockedReasons,
   };
 }
@@ -191,25 +213,47 @@ function legacyRecipeStageAllowed(recipe, textureStage) {
   return Number(textureStage || 1) >= Number(recipe?.stage || 1);
 }
 
+function recipeContractFor(recipeState, contractMap = null) {
+  let map = contractMap || (
+    typeof RECIPE_HANDLING_CONTRACT !== "undefined"
+      ? RECIPE_HANDLING_CONTRACT
+      : {}
+  );
+  return recipeState?.name ? map?.[recipeState.name] || null : null;
+}
+
 function mergeRecipeHandlingState(recipeState, settings = {}, contractMap = null) {
-  let handling = recipeHandlingEligibility(recipeState, settings, contractMap);
+  let contract = recipeContractFor(recipeState, contractMap);
+  let handling = handlingEligibility(contract, settings);
   if (!handling.migrated) return {
     ...recipeState,
     handlingMigrated: false,
     handlingModes: [],
     preferredHandlingModes: [],
+    oralProcessing: "",
+    oralRequiredCapability: "",
   };
 
   let requirementMissing = (recipeState.requirementMissing || []).filter(
     (item) => !String(item || "").startsWith("Konsistenz:"),
   );
-  if (!handling.eligibleModes.length)
-    requirementMissing.push("Darreichungsform: aktuell noch nicht passend");
+  if (!handling.eligibleModes.length) {
+    if (handling.blockedReasons.includes("oral-processing-requirement"))
+      requirementMissing.push("Orale Verarbeitung: strukturiertes Kauen noch nicht bestätigt");
+    else if (
+      contract?.requiredCapabilities?.["finger-small-soft"] === "small-soft-pieces"
+    )
+      requirementMissing.push("Darreichungsform: kleine weiche Stücke noch nicht bestätigt");
+    else
+      requirementMissing.push("Darreichungsform: aktuell noch nicht passend");
+  }
 
   let ingredientMissing = [...(recipeState.ingredientMissing || [])];
   let missing = [...ingredientMissing, ...requirementMissing];
   return {
     ...recipeState,
+    note: contract?.noteOverride || recipeState.note,
+    skillRequirement: contract?.servingRequirement || recipeState.skillRequirement,
     requirementMissing,
     missing,
     unlocked: missing.length === 0,
@@ -217,6 +261,9 @@ function mergeRecipeHandlingState(recipeState, settings = {}, contractMap = null
     handlingMigrated: true,
     handlingModes: handling.eligibleModes,
     preferredHandlingModes: handling.preferredModes,
+    oralProcessing: handling.oralProcessing,
+    oralRequiredCapability: handling.oralRequiredCapability,
+    laterKind: contract?.laterKind || "",
   };
 }
 
@@ -256,10 +303,19 @@ function handlingPreparationOptions(foodOrId, settings = {}, contractMap = null)
     .filter(Boolean);
 }
 
+function normalizeHandlingCapabilities(settings = {}) {
+  settings.handlingCapabilities = {
+    smallSoftPieces: settings?.handlingCapabilities?.smallSoftPieces === true,
+    structuredChew: settings?.handlingCapabilities?.structuredChew === true,
+  };
+  return settings.handlingCapabilities;
+}
+
 function ensureFeedingApproachControl() {
   if (typeof document === "undefined" || typeof state === "undefined") return;
   let texture = document.getElementById("textureStage");
   if (!texture) return;
+
   let field = document.getElementById("feedingApproachField");
   if (!field) {
     field = document.createElement("div");
@@ -270,6 +326,23 @@ function ensureFeedingApproachControl() {
   }
   let select = document.getElementById("feedingApproach");
   if (select) select.value = normalizeFeedingApproach(state.settings.feedingApproach);
+
+  normalizeHandlingCapabilities(state.settings);
+  let capabilityField = document.getElementById("handlingCapabilitiesField");
+  if (!capabilityField) {
+    capabilityField = document.createElement("div");
+    capabilityField.className = "field";
+    capabilityField.id = "handlingCapabilitiesField";
+    capabilityField.innerHTML = `<label>Aktuelle Essfähigkeiten</label>
+      <label class="check-row"><input type="checkbox" id="smallSoftPiecesCapability"> Kleine weiche Stücke gezielt aufnehmen und sicher zum Mund führen</label>
+      <label class="check-row"><input type="checkbox" id="structuredChewCapability"> Strukturierte weiche Bissen sicher im Mund bewegen und wiederholt zerkleinern</label>
+      <div class="small" style="margin-top:5px">Nur bestätigen, wenn die Fähigkeit tatsächlich beobachtet wurde. Die Auswahl ist keine Altersstufe.</div>`;
+    field.insertAdjacentElement("afterend", capabilityField);
+  }
+  let smallPieces = document.getElementById("smallSoftPiecesCapability");
+  let structuredChew = document.getElementById("structuredChewCapability");
+  if (smallPieces) smallPieces.checked = state.settings.handlingCapabilities.smallSoftPieces;
+  if (structuredChew) structuredChew.checked = state.settings.handlingCapabilities.structuredChew;
 }
 
 function plannerPageStartedAt() {
@@ -341,6 +414,25 @@ function installPresentationModeRuntime() {
       let key = typeof planLockKey === "function" ? planLockKey(date, meal) : `${date}|${meal}`;
       let lock = state.planLocks?.[key];
       if (
+        lock?.mode === "auto" &&
+        !lock.followUpFoodId &&
+        plannedMeal.recipeName
+      ) {
+        let recipe = typeof recipeByName === "function"
+          ? recipeByName(plannedMeal.recipeName)
+          : { name: plannedMeal.recipeName };
+        let handling = recipeHandlingEligibility(
+          recipe,
+          state.settings,
+          RECIPE_HANDLING_CONTRACT,
+        );
+        if (handling.migrated && !handling.eligibleModes.length) {
+          delete state.planLocks[key];
+          if (typeof save === "function") save();
+          return null;
+        }
+      }
+      if (
         lock &&
         Object.prototype.hasOwnProperty.call(lock, "presentationMode")
       ) plannedMeal.presentationMode = lock.presentationMode;
@@ -391,6 +483,7 @@ function installHandlingReadinessRuntime() {
 
   globalThis.__handlingReadinessRuntimeInstalled = true;
   state.settings.feedingApproach = normalizeFeedingApproach(state.settings.feedingApproach);
+  normalizeHandlingCapabilities(state.settings);
 
   let prunedBootAutoLocks = false;
   if (typeof window !== "undefined" && window.__plannerPoliciesReady === false) {
@@ -442,6 +535,10 @@ function installHandlingReadinessRuntime() {
     saveButton.onclick = function handlingAwareSaveSettings(event) {
       let selected = document.getElementById("feedingApproach")?.value;
       state.settings.feedingApproach = normalizeFeedingApproach(selected);
+      state.settings.handlingCapabilities = {
+        smallSoftPieces: document.getElementById("smallSoftPiecesCapability")?.checked === true,
+        structuredChew: document.getElementById("structuredChewCapability")?.checked === true,
+      };
       return typeof originalSave === "function"
         ? originalSave.call(this, event)
         : undefined;
@@ -473,6 +570,7 @@ if (typeof module !== "undefined" && module.exports) {
     handlingModeFamily,
     handlingModeCapability,
     handlingCapabilitySatisfied,
+    oralCapabilitySatisfied,
     handlingModeTextureAllowed,
     eligibleHandlingModes,
     preferredHandlingModes,
@@ -483,8 +581,10 @@ if (typeof module !== "undefined" && module.exports) {
     applyPresentationModeToAutomaticMeal,
     applyPresentationModesToDay,
     legacyRecipeStageAllowed,
+    recipeContractFor,
     mergeRecipeHandlingState,
     handlingPreparationOptions,
+    normalizeHandlingCapabilities,
     plannerPageStartedAt,
     pruneCurrentPagePrePolicyAutoLocks,
     installPresentationModeRuntime,

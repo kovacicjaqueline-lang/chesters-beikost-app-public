@@ -32,6 +32,22 @@ Direkt nach dem Startcheck umsetzen, wenn die fachliche Entscheidung schon fests
 
 Eine erneute fachliche Freigabe ist nötig, wenn neue Produktsemantik, Sicherheits-/Eignungsregeln, Planner-Logik, Migrationen oder noch offene Darstellungsentscheidungen entstehen.
 
+## Neue FOODs und Rezepte: Pflichtcheck
+
+Bei jedem neuen kanonischen FOOD oder neuen Laufzeitrezept gehört die Vollständigkeitsprüfung zum selben Auftrag. Vor Abschluss müssen mindestens gemeinsam vorhanden sein:
+
+- vollständige fachliche Stammdaten und Safety-/Zubereitungsangaben;
+- individuelle Handling-Einordnung;
+- explizite Oral-Processing-Einordnung und nur bei tatsächlichem Bedarf eine zusätzliche Capability;
+- bei Rezepten die kanonische Servierform und erforderliche Serving-Guidance;
+- eigenes Food-V2- bzw. Recipe-V2-Icon;
+- zentrales Icon-Mapping und erforderlicher Precache;
+- passende Regressionen für Contract-/Katalogvollständigkeit und `npm run verify:icons` bei Icon-Änderungen.
+
+Ein neuer Datensatz mit Kategorie-/Generic-/Legacy-Iconfallback oder ein neues Rezept im Legacy-Stage-Fallback ist **nicht fertig**. Für bestehende Legacy-FOODs gilt diese Vorwärtsregel nicht als automatische Gruppenmigration; sie müssen weiterhin einzeln fachlich geprüft werden.
+
+Die verbindlichen Details stehen in `AGENTS.md`, `docs/FOOD_HANDLING_ORAL_PROCESSING_CONTRACT.md` und `docs/ICON_GUIDELINES.md`.
+
 ## Testmatrix
 
 | Änderung | Standardprüfung |

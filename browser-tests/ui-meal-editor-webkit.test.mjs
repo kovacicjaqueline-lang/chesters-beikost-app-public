@@ -314,6 +314,7 @@ try {
   await manualCard.locator(".logMeal").click();
   await page.locator('[data-remove-log-food="pfirsich"]').waitFor();
   await page.locator('[data-remove-log-food="pfirsich"]').click();
+  await page.locator("#logTextureStage").selectOption("1");
   await page.locator("#saveLog").click();
   await page.locator("#logModal").waitFor({ state: "hidden" });
 

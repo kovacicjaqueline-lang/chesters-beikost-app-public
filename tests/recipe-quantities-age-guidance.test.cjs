@@ -10,13 +10,17 @@ const ROOT = path.join(__dirname, "..");
 const dataSource = fs.readFileSync(path.join(ROOT, "data/recipes.js"), "utf8");
 const runtimeSource = fs.readFileSync(path.join(ROOT, "js/recipes.js"), "utf8");
 
+function hostJson(context, expression) {
+  return JSON.parse(vm.runInContext(`JSON.stringify(${expression})`, context));
+}
+
 function loadCatalog() {
   const context = vm.createContext({ console });
   vm.runInContext(dataSource, context, { filename: "data/recipes.js" });
-  const before = vm.runInContext("JSON.parse(JSON.stringify(RECIPES))", context);
+  const before = hostJson(context, "RECIPES");
   vm.runInContext(runtimeSource, context, { filename: "js/recipes.js" });
-  const after = vm.runInContext("JSON.parse(JSON.stringify(RECIPES))", context);
-  const guidance = vm.runInContext("JSON.parse(JSON.stringify(RECIPE_RESEARCH_GUIDANCE))", context);
+  const after = hostJson(context, "RECIPES");
+  const guidance = hostJson(context, "RECIPE_RESEARCH_GUIDANCE");
   return { before, after, guidance };
 }
 
@@ -72,14 +76,20 @@ test("recipe age guidance: existing hardMinMonths are never lowered or rewritten
   }
 });
 
-test("Nockerl split: legacy aggregate resolves only to Huhn-Zucchini default", () => {
+test("Nockerl split: ambiguous aggregate legacy names are not assigned to a concrete recipe", () => {
   const { after } = loadCatalog();
   const split = after.filter((recipe) => recipe.name.endsWith("-Nockerl"));
-  const owners = split.filter((recipe) =>
-    (recipe.legacyNames || []).includes("Gemüse-Fleisch-Nockerl") ||
-    (recipe.searchAliases || []).includes("Gemüse-Fleisch-Nockerl")
-  );
-  assert.deepEqual(owners.map((recipe) => recipe.name), ["Huhn-Zucchini-Nockerl"]);
+  for (const ambiguousName of [
+    "Gemüse-Fleisch-Nockerl",
+    "Gemüse-Fleisch-Spätzle",
+    "Baby-Spätzle",
+  ]) {
+    const owners = split.filter((recipe) =>
+      (recipe.legacyNames || []).includes(ambiguousName) ||
+      (recipe.searchAliases || []).includes(ambiguousName)
+    );
+    assert.deepEqual(owners.map((recipe) => recipe.name), [], `${ambiguousName} darf keiner konkreten Variante zugeordnet sein`);
+  }
   assert.deepEqual(
     after.find((r) => r.name === "Huhn-Zucchini-Nockerl").requires,
     ["Huhn", "Zucchini", "Weizen", "Ei", "Rapsöl"],

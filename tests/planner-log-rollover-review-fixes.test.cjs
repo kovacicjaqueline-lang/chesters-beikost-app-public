@@ -113,9 +113,57 @@ test('normal Auf morgen still treats a free actual log as a target conflict', ()
   );
 });
 
+test('normal Auf morgen treats a carried open plan as a target conflict', () => {
+  const carried = {
+    ...plan('carried', '2026-08-21'),
+    source: 'carried',
+    carriedPlannerPlan: true,
+    rolloverShifted: true,
+  };
+  const data = state({
+    backupMeta: {
+      plannerLinking: {
+        version: 1,
+        rolloverHandled: {},
+        carriedPlans: { carried },
+      },
+    },
+  });
+  assert.equal(
+    fixes.normalMoveSlotOccupied(data, core, '2026-08-21', 'lunch', () => false),
+    true,
+  );
+});
+
 test('normal next-free search preserves the historic rule: auto slots are replaceable, manual/log slots are not', () => {
   const data = state({
     manualMeals: { '2026-08-22|lunch': plan('manual', '2026-08-22', 'lunch', { mode: 'manual' }) },
+  });
+  const free = fixes.normalMoveNextFreeDate(data, core, '2026-08-21', 'lunch', addDays);
+  assert.equal(free, '2026-08-23');
+});
+
+test('next-free skips protected carried plans but temporary visible snapshots remain replaceable like auto plans', () => {
+  const protectedPlan = {
+    ...plan('protected', '2026-08-22'),
+    source: 'carried',
+    carriedPlannerPlan: true,
+    rolloverShifted: true,
+  };
+  const visible = {
+    ...plan('visible', '2026-08-23'),
+    source: 'carried',
+    carriedPlannerPlan: true,
+    visibleSnapshot: true,
+  };
+  const data = state({
+    backupMeta: {
+      plannerLinking: {
+        version: 1,
+        rolloverHandled: {},
+        carriedPlans: { protected: protectedPlan, visible },
+      },
+    },
   });
   const free = fixes.normalMoveNextFreeDate(data, core, '2026-08-21', 'lunch', addDays);
   assert.equal(free, '2026-08-23');

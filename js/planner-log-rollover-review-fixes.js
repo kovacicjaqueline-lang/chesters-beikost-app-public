@@ -79,19 +79,32 @@
     return !!core?.legacyCompletedLog?.(data, date, meal);
   }
 
+  function openConcretePlansAt(data, core, date, meal) {
+    return core?.openPlanInstances?.(
+      data,
+      (plan) => plan.date === date && plan.meal === meal,
+    ) || [];
+  }
+
   function normalMoveSlotOccupied(data, core, date, meal, activeMealFn = () => false) {
     let key = `${date}|${meal}`;
-    return !!data?.manualMeals?.[key] || actualLoggedSlot(data, core, date, meal) || !!activeMealFn(meal, date);
+    return !!data?.manualMeals?.[key] ||
+      actualLoggedSlot(data, core, date, meal) ||
+      openConcretePlansAt(data, core, date, meal).length > 0 ||
+      !!activeMealFn(meal, date);
   }
 
   function normalMoveNextFreeDate(data, core, fromDate, meal, addDaysFn) {
     for (let offset = 1; offset <= 45; offset++) {
       let day = addDaysFn(fromDate, offset);
       let key = `${day}|${meal}`;
+      let protectedCarried = openConcretePlansAt(data, core, day, meal)
+        .some((plan) => plan.source === "carried" && !plan.visibleSnapshot);
       let manuallyOccupied = !!data?.manualMeals?.[key] ||
         !!data?.overrides?.[key] ||
         data?.planLocks?.[key]?.mode === "manual" ||
-        actualLoggedSlot(data, core, day, meal);
+        actualLoggedSlot(data, core, day, meal) ||
+        protectedCarried;
       if (!manuallyOccupied) return day;
     }
     return "";
@@ -108,6 +121,7 @@
     visibleSnapshotPlansForSlot,
     persistVisibleAutoPlans,
     actualLoggedSlot,
+    openConcretePlansAt,
     normalMoveSlotOccupied,
     normalMoveNextFreeDate,
     dayActualLogSummary,

@@ -78,13 +78,12 @@ test("recipe age guidance: existing hardMinMonths are never lowered or rewritten
 
 test("Nockerl split: ambiguous aggregate legacy names are not assigned to a concrete recipe", () => {
   const { after } = loadCatalog();
-  const split = after.filter((recipe) => recipe.name.endsWith("-Nockerl"));
   for (const ambiguousName of [
     "Gemüse-Fleisch-Nockerl",
     "Gemüse-Fleisch-Spätzle",
     "Baby-Spätzle",
   ]) {
-    const owners = split.filter((recipe) =>
+    const owners = after.filter((recipe) =>
       (recipe.legacyNames || []).includes(ambiguousName) ||
       (recipe.searchAliases || []).includes(ambiguousName)
     );

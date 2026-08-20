@@ -85,7 +85,7 @@
   }
 
   function normalMoveNextFreeDate(data, core, fromDate, meal, addDaysFn) {
-    for (let offset = 0; offset < 45; offset++) {
+    for (let offset = 1; offset <= 45; offset++) {
       let day = addDaysFn(fromDate, offset);
       let key = `${day}|${meal}`;
       let manuallyOccupied = !!data?.manualMeals?.[key] ||
@@ -117,6 +117,33 @@
 
   let core = globalScope.__plannerLogRolloverCore;
   if (!core) return;
+
+  // Beim Bearbeiten eines freien Logs darf die Plan-ID nicht nachträglich aus
+  // date|meal oder gleichen Zutaten inferiert werden. Der Sentinel durchläuft
+  // die bestehende Wrapper-Kette und wird direkt nach dem Speichern entfernt.
+  const FREE_EDIT_SENTINEL = "__planner_free_log_edit__";
+  let originalOpenLog = openLog;
+  openLog = function plannerFreeEditAwareOpenLog(plan) {
+    if (plan?.editId && !plan.plannedMealId)
+      return originalOpenLog({ ...plan, plannedMealId: FREE_EDIT_SENTINEL });
+    return originalOpenLog(plan);
+  };
+  let originalSaveLog = saveLog;
+  saveLog = function plannerFreeEditAwareSaveLog() {
+    let freeEditId = pendingLog?.editId && pendingLog?.plannedMealId === FREE_EDIT_SENTINEL
+      ? pendingLog.editId
+      : "";
+    let result = originalSaveLog();
+    if (freeEditId) {
+      let saved = state.logs?.find((log) => log.id === freeEditId);
+      if (saved?.plannedMealId === FREE_EDIT_SENTINEL) {
+        delete saved.plannedMealId;
+        save();
+        renderAll();
+      }
+    }
+    return result;
+  };
 
   let storageReady = false;
   let snapshotSavePending = false;
@@ -192,10 +219,10 @@
       date: targetDate,
       meal: payload.meal,
       active: true,
-      manualAdded: true,
+      manualAdded: payload.manualAdded !== false,
       type: payload.type || "manuell",
       note: payload.note || "Bewusst auf diesen Tag verschoben.",
-      createdAt: payload.createdAt || new Date().toISOString(),
+      createdAt: new Date().toISOString(),
     };
     state.manualMeals ||= {};
     state.planLocks ||= {};
@@ -230,7 +257,7 @@
       if (!free) {
         let error = document.getElementById("moveMealError");
         if (error) {
-          error.textContent = "In den nächsten 45 Tagen wurde kein freier Platz gefunden.";
+          error.textContent = "In den nächsten Wochen wurde kein freier Platz gefunden.";
           error.style.display = "block";
         }
         return;

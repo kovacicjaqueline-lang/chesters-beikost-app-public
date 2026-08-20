@@ -115,10 +115,10 @@ test('normal Auf morgen still treats a free actual log as a target conflict', ()
 
 test('normal next-free search preserves the historic rule: auto slots are replaceable, manual/log slots are not', () => {
   const data = state({
-    manualMeals: { '2026-08-21|lunch': plan('manual', '2026-08-21', 'lunch', { mode: 'manual' }) },
+    manualMeals: { '2026-08-22|lunch': plan('manual', '2026-08-22', 'lunch', { mode: 'manual' }) },
   });
   const free = fixes.normalMoveNextFreeDate(data, core, '2026-08-21', 'lunch', addDays);
-  assert.equal(free, '2026-08-22');
+  assert.equal(free, '2026-08-23');
 });
 
 test('completed-day summary counts every actual log and every documented gram', () => {
@@ -136,6 +136,13 @@ test('normal move review layer restores conflict choices and never calls rollove
   assert.match(source, /Auf den nächsten freien Tag verschieben/);
   assert.match(source, /moveCancel/);
   assert.doesNotMatch(source, /shiftPlanOneDay|shiftOutstandingPlans/);
+});
+
+test('editing a free log is explicitly protected from accidental plan inference', () => {
+  const source = fs.readFileSync(path.join(__dirname, '..', 'js', 'planner-log-rollover-review-fixes.js'), 'utf8');
+  assert.match(source, /plan\?\.editId && !plan\.plannedMealId/);
+  assert.match(source, /FREE_EDIT_SENTINEL/);
+  assert.match(source, /delete saved\.plannedMealId/);
 });
 
 test('review-fix runtime loads before app startup and all planner runtime files are offline precached', () => {

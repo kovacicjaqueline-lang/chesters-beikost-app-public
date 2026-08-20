@@ -78,11 +78,13 @@ test("mixed legacy intrinsic allergen keeps the real allergen and strips Sulfite
       { id: "custom-milk", name: "Eigenes Produkt", allergenGroup: "Milch / Sulfite" },
       { id: "custom-sesame", name: "Eigenes Produkt 2", allergenGroup: "Sesam und Schwefeldioxid" },
       { id: "custom-only", name: "Eigenes Produkt 3", allergenGroup: "Schwefeldioxid / Sulfite" },
+      { id: "custom-parentheses", name: "Eigenes Produkt 4", allergenGroup: "Milch (Sulfite)" },
     ],
   });
   assert.equal(migrated.foods[0].allergenGroup, "Milch");
   assert.equal(migrated.foods[1].allergenGroup, "Sesam");
   assert.equal(migrated.foods[2].allergenGroup, "");
+  assert.equal(migrated.foods[3].allergenGroup, "Milch");
 });
 
 test("historical product label wins when the same product id was edited later", () => {
@@ -110,7 +112,7 @@ test("confirmed recipe batch foodIds replace generic planner recipe ids", () => 
   };
   const foods = new Map([["hafer", { id: "hafer" }], ["banane", { id: "banane" }], ["mango", { id: "mango" }]]);
   const context = runGuard({
-    state: { inventory: [batch] },
+    state: { inventory: [batch], settings: {} },
     food: (id) => foods.get(id) || null,
     foodRolesFor: (ids) => Object.fromEntries(ids.map((id) => [id, "base"])),
     plannedMealAmounts: (meal) => ({ targetGrams: 70, sampleGrams: 0, totalOfferedGrams: 70, amounts: Object.fromEntries(meal.foodIds.map((id) => [id, 35])) }),
@@ -130,6 +132,53 @@ test("confirmed recipe batch foodIds replace generic planner recipe ids", () => 
   assert.equal(Object.prototype.hasOwnProperty.call(meal.ingredientAmounts, "banane"), false);
 });
 
+test("automatic planning does not use a confirmed batch when an actual ingredient is paused", () => {
+  const batch = { id: "batch-1", kind: "recipe", actualRecipeIngredientsConfirmed: true, foodIds: ["hafer", "mango"] };
+  const foods = new Map([
+    ["hafer", { id: "hafer", active: true, meals: ["breakfast"] }],
+    ["banane", { id: "banane", active: true, meals: ["breakfast"] }],
+    ["mango", { id: "mango", active: true, meals: ["breakfast"] }],
+  ]);
+  const context = runGuard({
+    state: { inventory: [batch], settings: {} },
+    food: (id) => foods.get(id) || null,
+    status: (item) => item.id === "mango" ? "Pausiert" : "Regelmäßig",
+    reserveMealInventory: (meal) => meal,
+  });
+  const meal = context.reserveMealInventory({
+    meal: "breakfast",
+    type: "Rezeptvorrat",
+    recipeInventoryId: "batch-1",
+    foodIds: ["hafer", "banane"],
+    baseFoodIds: ["hafer", "banane"],
+    sampleFoodIds: [],
+    focusId: "hafer",
+  }, {});
+  assert.equal(meal.recipeInventoryId, "");
+  assert.equal(meal.type, "Rezept");
+  assert.deepEqual(Array.from(meal.foodIds), ["hafer", "banane"]);
+});
+
+test("openLog still records actual confirmed batch ingredients even if they are no longer auto-eligible", () => {
+  const batch = { id: "batch-1", kind: "recipe", actualRecipeIngredientsConfirmed: true, foodIds: ["hafer", "mango"] };
+  const foods = new Map([
+    ["hafer", { id: "hafer", active: true }],
+    ["banane", { id: "banane", active: true }],
+    ["mango", { id: "mango", active: true }],
+  ]);
+  let received = null;
+  const context = runGuard({
+    state: { inventory: [batch], settings: {} },
+    food: (id) => foods.get(id) || null,
+    status: (item) => item.id === "mango" ? "Pausiert" : "Regelmäßig",
+    foodRolesFor: () => ({}),
+    plannedMealAmounts: (meal) => ({ targetGrams: 70, sampleGrams: 0, totalOfferedGrams: 70, amounts: Object.fromEntries(meal.foodIds.map((id) => [id, 35])) }),
+    openLog: (plan) => { received = plan; return plan; },
+  });
+  context.openLog({ recipeInventoryId: "batch-1", foodIds: ["hafer", "banane"], baseFoodIds: ["hafer", "banane"], sampleFoodIds: [], focusId: "hafer" });
+  assert.deepEqual(Array.from(received.foodIds), ["hafer", "mango"]);
+});
+
 test("openLog repairs a stale planned recipe batch before the log draft is created", () => {
   const batch = {
     id: "batch-1",
@@ -140,7 +189,7 @@ test("openLog repairs a stale planned recipe batch before the log draft is creat
   let received = null;
   const foods = new Map([["hafer", { id: "hafer" }], ["mango", { id: "mango" }], ["banane", { id: "banane" }]]);
   const context = runGuard({
-    state: { inventory: [batch] },
+    state: { inventory: [batch], settings: {} },
     food: (id) => foods.get(id) || null,
     foodRolesFor: () => ({}),
     plannedMealAmounts: (meal) => ({ targetGrams: 70, sampleGrams: 0, totalOfferedGrams: 70, amounts: Object.fromEntries(meal.foodIds.map((id) => [id, 35])) }),

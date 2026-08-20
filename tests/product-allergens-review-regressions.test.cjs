@@ -42,4 +42,18 @@ test("hidden individual outcome rows do not override the shared meal outcome", (
 test("recipe inventory uses actual ingredient ids before the base save listener runs", () => {
   assert.match(source, /recipeFoodIdsForActualInventoryBatch/);
   assert.match(source, /capture:\s*true/);
+  assert.match(source, /genericModal/);
+});
+
+test("ambiguous recipe batches require explicit actual-ingredient confirmation", () => {
+  const context = runGuard();
+  assert.equal(context.productAllergenRecipeNeedsExplicitChoice({ requires: ["Hafer"] }), false);
+  assert.equal(context.productAllergenRecipeNeedsExplicitChoice({ requires: ["Hafer"], alternatives: [["Hirse"]] }), true);
+  assert.equal(context.productAllergenRecipeNeedsExplicitChoice({ requires: ["Hafer"], oneOf: ["Banane", "Mango"] }), true);
+  assert.equal(context.productAllergenRecipeNeedsExplicitChoice({ requires: ["Hafer"], milkChoices: ["Milch", "Joghurt"] }), true);
+});
+
+test("confirmed actual recipe ingredients are persisted on the inventory batch", () => {
+  assert.match(source, /actualRecipeIngredientsConfirmed\s*=\s*true/);
+  assert.match(source, /data-inventory-recipe-confirm/);
 });

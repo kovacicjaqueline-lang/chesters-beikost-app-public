@@ -17,10 +17,6 @@ const {
 
 const ROOT = path.resolve(__dirname, "..");
 const KNOWN_RUNTIME_FOOD_V2_GAPS = Object.freeze([
-  ["saibling", "Saibling"],
-  ["hering", "Hering"],
-  ["karpfen", "Karpfen"],
-  ["atlantische-makrele", "Atlantische Makrele"],
   ["schwertfisch", "Schwertfisch"],
   ["heilbutt", "Heilbutt"],
   ["hecht", "Hecht"],
@@ -122,7 +118,7 @@ test("aktive FOOD-/Recipe-Mappings zeigen auf existente V2-Assets", () => {
   assert.deepEqual(Object.keys(runtime.recipePaths).sort((a, b) => a.localeCompare(b, "de")), activeRecipeNames, "RECIPE_ICON_PATHS enthält verwaiste oder fehlende aktive Mapping-Schlüssel");
 });
 
-test("Runtime-FOODs: nur die 10 dokumentierten V2-Soll/Ist-Gaps bleiben offen", () => {
+test("Runtime-FOODs: nur die 6 dokumentierten V2-Soll/Ist-Gaps bleiben offen", () => {
   const missing = runtime.runtimeFoods
     .filter((food) => food.active !== false && !effectiveFoodMappingId(food))
     .map((food) => [food.id, food.name])

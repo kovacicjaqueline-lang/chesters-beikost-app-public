@@ -68,3 +68,9 @@ Die migrierten Prüfsummen und ihre aktive Zuordnung werden durch
 - `git diff --check`: bestanden.
 - Keine Änderung an Version, Rezeptdaten, Icon-Zuordnung, Service-Worker-Dateiliste oder
   sonstiger Produktlogik.
+
+## Aktueller Gesamtstatus
+
+- Aktiver Recipe-V2-Bestand: 100 Rezeptkarten; vollständig über `RECIPE_ICON_PATHS` zugeordnet.
+- 11 Runtime-FOODs haben derzeit noch kein eigenes V2-Asset; dieser Restbestand wird in den separaten FOOD-/Coverage-Arbeitssträngen behandelt.
+- Der technische Vollbestands-/Integrity-Test bleibt bewusst ein separater Arbeitsstrang.

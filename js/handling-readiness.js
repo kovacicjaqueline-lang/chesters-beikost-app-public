@@ -107,9 +107,15 @@ function recipeOralProcessingState(recipeOrName, contractMap = null) {
 }
 
 function mergeRecipeOralProcessingState(recipeState, contractMap = null) {
+  let oralState = recipeOralProcessingState(recipeState, contractMap);
+  if (!oralState.oralServingRequirement) return {
+    ...recipeState,
+    ...oralState,
+  };
   return {
     ...recipeState,
-    ...recipeOralProcessingState(recipeState, contractMap),
+    ...oralState,
+    skillRequirement: `${oralState.oralServingRequirement} Nur aufrecht sitzend und direkt beaufsichtigt anbieten.`,
   };
 }
 

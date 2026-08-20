@@ -19,6 +19,7 @@ function legacyState(name, stage = 3) {
     ingredientMissing: [],
     requirementMissing: ["Konsistenz: weich-stückig / Fingerfood"],
     missing: ["Konsistenz: weich-stückig / Fingerfood"],
+    skillRequirement: "Kann weiche kompakte Fingerfoodstücke sicher abbeißen und kauen.",
     unlocked: false,
     almost: true,
   };
@@ -44,13 +45,15 @@ test("ORAL runtime: Oral-only Lachs bleibt im konservativen Handling-Stage-Fallb
 
   assert.equal(merged.oralProcessing, "soft-breakdown");
   assert.match(merged.oralServingRequirement, /grätenfrei/i);
+  assert.match(merged.skillRequirement, /grätenfrei/i);
+  assert.doesNotMatch(merged.skillRequirement, /Kann weiche kompakte/i);
   assert.equal(merged.handlingMigrated, false);
   assert.deepEqual(merged.requirementMissing, original.requirementMissing);
   assert.deepEqual(merged.missing, original.missing);
   assert.equal(merged.unlocked, false);
 });
 
-test("ORAL runtime: bestehend migrierter Omelett-Referenzfall behält Handling-Semantik", () => {
+test("ORAL runtime: bestehend migrierter Omelett-Referenzfall behält Handling-Semantik und präzise Karten-Copy", () => {
   const original = legacyState("Omelettstreifen", 2);
   const merged = mergeRecipeHandlingState(
     original,
@@ -60,6 +63,9 @@ test("ORAL runtime: bestehend migrierter Omelett-Referenzfall behält Handling-S
   );
 
   assert.equal(merged.oralProcessing, "easy-bite-separate");
+  assert.match(merged.skillRequirement, /breite gut greifbare Streifen/i);
+  assert.match(merged.skillRequirement, /direkt beaufsichtigt/i);
+  assert.doesNotMatch(merged.skillRequirement, /Kann weiche kompakte/i);
   assert.equal(merged.handlingMigrated, true);
   assert.deepEqual(merged.handlingModes, ["finger-graspable"]);
   assert.deepEqual(merged.requirementMissing, []);
@@ -67,7 +73,7 @@ test("ORAL runtime: bestehend migrierter Omelett-Referenzfall behält Handling-S
   assert.equal(merged.unlocked, true);
 });
 
-test("ORAL runtime: offener Fall erhält weder Profil noch Servierbedingung", () => {
+test("ORAL runtime: offener Fall erhält weder Profil noch Servierbedingung und behält Legacy-Copy", () => {
   const original = legacyState("Baby-Bananenbrot");
   const merged = mergeRecipeHandlingState(
     original,
@@ -78,6 +84,7 @@ test("ORAL runtime: offener Fall erhält weder Profil noch Servierbedingung", ()
 
   assert.equal(merged.oralProcessing, "");
   assert.equal(merged.oralServingRequirement, "");
+  assert.equal(merged.skillRequirement, original.skillRequirement);
   assert.equal(merged.handlingMigrated, false);
   assert.deepEqual(merged.requirementMissing, original.requirementMissing);
   assert.equal(merged.unlocked, false);
@@ -103,6 +110,7 @@ test("ORAL runtime: Oral-Metadaten allein verändern Eligibility nicht", () => {
   );
 
   assert.equal(merged.oralProcessing, "easy-bite-separate");
+  assert.match(merged.skillRequirement, /nicht federnd, gummiartig oder kompakt-elastisch/i);
   assert.equal(merged.handlingMigrated, false);
   assert.deepEqual(merged.requirementMissing, original.requirementMissing);
   assert.deepEqual(merged.missing, original.missing);

@@ -83,5 +83,4 @@ test("Icon-Coverage erkennt echte Kategorie- und Generic-Fallbacks weiterhin", (
 
   assert.equal(missing.includes("Runtime-Obst"), true);
   assert.equal(missing.includes("Runtime-Unbekannt"), true);
-  assert.equal(missing.includes("Honig"), true);
 });

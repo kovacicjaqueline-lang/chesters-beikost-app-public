@@ -22,12 +22,14 @@ function productAllergenForbiddenIntrinsicValue(value) {
 function productAllergenStripSulfiteIntrinsicValue(value) {
   let raw = String(value || "").trim();
   if (!raw || !productAllergenForbiddenIntrinsicValue(raw)) return raw;
-  let parts = raw
-    .split(/\s*(?:,|;|\/|\||\+|&|\bund\b|\band\b)\s*/i)
-    .map((part) => part.trim())
-    .filter(Boolean)
-    .filter((part) => !productAllergenForbiddenIntrinsicValue(part));
-  let cleaned = parts.join(" / ").trim();
+  let cleaned = raw
+    .replace(/\b(?:sulfit|sulfite|sulfites|sulphit|sulphite|sulphites|schwefeldioxid)\b/gi, " ")
+    .replace(/[()\[\]{}]/g, " ")
+    .replace(/\s*(?:,|;|\/|\||\+|&|\bund\b|\band\b)\s*/gi, " / ")
+    .replace(/(?:\s*\/\s*)+/g, " / ")
+    .replace(/^\s*\/\s*|\s*\/\s*$/g, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
   return productAllergenForbiddenIntrinsicValue(cleaned) ? "" : cleaned;
 }
 
@@ -412,12 +414,30 @@ if (typeof injectInventoryProductAllergens === "function") {
 function productAllergenConfirmedRecipeBatch(batch) {
   return !!batch && batch.kind === "recipe" && batch.actualRecipeIngredientsConfirmed === true && Array.isArray(batch.foodIds) && batch.foodIds.length > 0;
 }
-function productAllergenApplyConfirmedBatchIngredients(meal) {
+function productAllergenBatchFoodHardAutoEligible(foodId, meal) {
+  let item = typeof food === "function" ? food(foodId) : null;
+  if (!item || item.active === false || item.autoPlan === false) return false;
+  if (typeof status === "function" && status(item) === "Pausiert") return false;
+  if (meal?.meal && Array.isArray(item.meals) && !item.meals.includes(meal.meal)) return false;
+  if (typeof automaticFoodEligibility === "function") {
+    let on = meal?.date || (typeof today === "function" ? today() : "");
+    if (!automaticFoodEligibility(item, on, state?.settings || {})) return false;
+  }
+  return true;
+}
+
+function productAllergenApplyConfirmedBatchIngredients(meal, enforceAutoEligibility = false) {
   if (!meal?.recipeInventoryId || typeof state === "undefined") return meal;
   let batch = state.inventory?.find((item) => item.id === meal.recipeInventoryId) || null;
   if (!productAllergenConfirmedRecipeBatch(batch)) return meal;
   let ids = [...new Set(batch.foodIds.filter((id) => typeof food !== "function" || food(id)))];
   if (!ids.length) return meal;
+  if (enforceAutoEligibility && ids.some((id) => !productAllergenBatchFoodHardAutoEligible(id, meal))) {
+    meal.recipeInventoryId = "";
+    if (meal.type === "Rezeptvorrat") meal.type = "Rezept";
+    meal.note = [meal.note, "Der vorhandene Rezeptvorrat enthält aktuell nicht automatisch geeignete Zutaten und wird deshalb nicht automatisch verwendet."].filter(Boolean).join(" ");
+    return meal;
+  }
   meal.foodIds = ids;
   meal.focusId = ids.includes(meal.focusId) ? meal.focusId : ids[0];
   meal.baseFoodIds = [...ids];
@@ -437,7 +457,7 @@ if (typeof reserveMealInventory === "function") {
   const productAllergenBaseReserveMealInventory = reserveMealInventory;
   reserveMealInventory = function reserveMealInventoryWithActualRecipeBatch(meal, ctx) {
     let result = productAllergenBaseReserveMealInventory(meal, ctx);
-    return productAllergenApplyConfirmedBatchIngredients(result || meal);
+    return productAllergenApplyConfirmedBatchIngredients(result || meal, true);
   };
 }
 
@@ -445,7 +465,7 @@ if (typeof openLog === "function") {
   const productAllergenBaseOpenLog = openLog;
   openLog = function openLogWithActualRecipeBatch(plan) {
     if (!plan?.editId && plan?.recipeInventoryId) {
-      plan = productAllergenApplyConfirmedBatchIngredients({ ...plan, foodIds: [...(plan.foodIds || [])], baseFoodIds: [...(plan.baseFoodIds || [])], sampleFoodIds: [...(plan.sampleFoodIds || [])] });
+      plan = productAllergenApplyConfirmedBatchIngredients({ ...plan, foodIds: [...(plan.foodIds || [])], baseFoodIds: [...(plan.baseFoodIds || [])], sampleFoodIds: [...(plan.sampleFoodIds || [])] }, false);
     }
     return productAllergenBaseOpenLog(plan);
   };

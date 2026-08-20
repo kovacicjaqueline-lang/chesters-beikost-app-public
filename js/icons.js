@@ -200,7 +200,11 @@ const FOOD_ICON_PATHS = Object.freeze({
   "walnussoel": "assets/illustrations-v2/foods/walnussoel.svg",
   "sojaoel": "assets/illustrations-v2/foods/sojaoel.svg",
   "weizenkeimoel": "assets/illustrations-v2/foods/weizenkeimoel.svg",
-  "honig": "assets/illustrations-v2/foods/honig.svg"
+  "honig": "assets/illustrations-v2/foods/honig.svg",
+  "saibling": "assets/illustrations-v2/foods/saibling.svg",
+  "hering": "assets/illustrations-v2/foods/hering.svg",
+  "karpfen": "assets/illustrations-v2/foods/karpfen.svg",
+  "atlantische-makrele": "assets/illustrations-v2/foods/atlantische-makrele.svg"
 });
 const RECIPE_ICON_PATHS = Object.freeze({
   "Obst-Hafer-Pancakes": "assets/illustrations-v2/recipes/obst-hafer-pancakes.svg",

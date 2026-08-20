@@ -148,6 +148,14 @@
       ?.meals?.find((entry) => entry?.meal === meal) || null;
   }
 
+  function planWindowForDate(date) {
+    const visible = currentVisiblePlan();
+    if ((visible || []).some((day) => day?.date === date)) return visible;
+    return typeof planDisplayDays === "function"
+      ? planDisplayDays(date, 7)
+      : buildDays(date, 7, false);
+  }
+
   function shuffle(items) {
     const result = [...(items || [])];
     for (let i = result.length - 1; i > 0; i--) {
@@ -226,7 +234,8 @@
       state.overrides[key] = focus.id;
       // Reine Planner-Berechnung: planDisplayDays persistiert sichtbare Rollover-Snapshots
       // und darf deshalb während der Alternativensuche nicht aufgerufen werden.
-      const days = buildDays(visibleStart(), 7, false);
+      const from = visibleDays?.[0]?.date || date;
+      const days = buildDays(from, 7, false);
       const generated = targetMealFrom(days, date, meal);
       if (!generated?.active || generated.empty || generated.focusId !== focus.id) return null;
       return clone(generated);
@@ -325,7 +334,7 @@
       return { ok: false, reason: "follow-up" };
     }
 
-    const days = currentVisiblePlan();
+    const days = planWindowForDate(date);
     const current = targetMealFrom(days, date, meal);
     if (!current?.active || current.empty || !current.focusId) {
       showToast("Für diesen Planplatz gibt es gerade keine austauschbare Mahlzeit.");
@@ -410,11 +419,44 @@
     );
   };
 
+  function decorateTodaySwapButtons() {
+    const card = document.getElementById("todayCard");
+    if (!card) return;
+    for (const logButton of card.querySelectorAll(".homeLog[data-plan]")) {
+      const box = logButton.closest(".mealbox");
+      if (!box || box.querySelector(".randomizeMeal")) continue;
+      let payload = null;
+      try {
+        payload = JSON.parse(decodeURIComponent(logButton.dataset.plan || ""));
+      } catch (_error) {
+        continue;
+      }
+      if (!payload?.date || !payload?.meal || payload.date < today()) continue;
+      if (state.manualMeals?.[slotKey(payload.date, payload.meal)]?.manualAdded) continue;
+      if (state.planLocks?.[slotKey(payload.date, payload.meal)]?.followUpFoodId) continue;
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "btn secondary full randomizeMeal today-randomize-meal";
+      button.dataset.randomDate = payload.date;
+      button.dataset.randomMeal = payload.meal;
+      button.textContent = "↻ Tauschen";
+      logButton.before(button);
+    }
+  }
+
+  const baseRenderHomeCore = renderHomeCore;
+  renderHomeCore = function randomSwapRenderHomeCore() {
+    const result = baseRenderHomeCore();
+    decorateTodaySwapButtons();
+    return result;
+  };
+
   const style = document.createElement("style");
   style.id = "planner-random-swap-style";
   style.textContent = `
     .actionbar.random-swap-actions{grid-template-columns:repeat(3,minmax(0,1fr))}
     .actionbar.random-swap-actions .btn{padding-left:8px;padding-right:8px}
+    .today-randomize-meal{margin-bottom:8px}
     @media(max-width:380px){
       .actionbar.random-swap-actions{grid-template-columns:1fr 1fr}
       .actionbar.random-swap-actions .randomizeMeal{grid-column:1/-1}

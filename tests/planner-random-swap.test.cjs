@@ -92,18 +92,19 @@ test('RANDOM-SWAP-04: sichtbare automatische Folgeslots werden eingefroren, Schu
     '2026-08-20',
   );
 
-  assert.equal(count, 1);
-  const pinned = data.planLocks['2026-08-20|lunch'];
-  assert.equal(pinned.mode, 'auto');
-  assert.equal(pinned[swap.PIN_FLAG], true);
-  assert.equal(pinned[swap.PRESERVE_FLAG], true);
+  assert.equal(count, 2);
+  for (const key of ['2026-08-20|lunch', '2026-08-23|breakfast']) {
+    assert.equal(data.planLocks[key].mode, 'auto');
+    assert.equal(data.planLocks[key][swap.PIN_FLAG], true);
+    assert.equal(data.planLocks[key][swap.PRESERVE_FLAG], true);
+  }
   assert.deepEqual(clone({
     manual: data.planLocks['2026-08-21|breakfast'],
     follow: data.planLocks['2026-08-21|lunch'],
     already: data.planLocks['2026-08-22|breakfast'],
   }), before);
   assert.equal(data.planLocks['2026-08-22|lunch'], undefined);
-  assert.equal(data.planLocks['2026-08-23|breakfast'], undefined);
+  assert.equal(data.autoLockExcluded['2026-08-23|breakfast'], undefined);
 });
 
 test('RANDOM-SWAP-05: Browser-Loader und Offline-Precache enthalten das Tauschmodul', () => {
@@ -116,4 +117,22 @@ test('RANDOM-SWAP-05: Browser-Loader und Offline-Precache enthalten das Tauschmo
   assert.match(source, /class="btn secondary randomizeMeal"/);
   assert.match(source, /↻ Tauschen/);
   assert.match(source, /Der restliche Wochenplan bleibt unverändert/);
+});
+
+test('RANDOM-SWAP-06: automatische Fokus-Eignung respektiert Basis-, Auto- und Planner-Policy', () => {
+  const food = { id: 'tahin' };
+  assert.equal(swap.automaticFocusAllowed(food, 'lunch', '2026-08-20', () => true, () => true, () => true), true);
+  assert.equal(swap.automaticFocusAllowed(food, 'lunch', '2026-08-20', () => false, () => true, () => true), false);
+  assert.equal(swap.automaticFocusAllowed(food, 'lunch', '2026-08-20', () => true, () => false, () => true), false);
+  assert.equal(swap.automaticFocusAllowed(food, 'lunch', '2026-08-20', () => true, () => true, () => false), false);
+});
+
+test('RANDOM-SWAP-07: bekannte Mahlzeiten werden nicht gegen neue Sample-Mahlzeiten getauscht', () => {
+  const known = { sampleFoodIds: [] };
+  const learning = { sampleFoodIds: ['gurke'] };
+  const alternativeKnown = { sampleFoodIds: [] };
+  assert.equal(swap.learningCandidateCompatible(known, learning, 'gurke'), false);
+  assert.equal(swap.learningCandidateCompatible(known, alternativeKnown, 'apfel'), true);
+  assert.equal(swap.learningCandidateCompatible(learning, { sampleFoodIds: ['birne'] }, 'birne'), true);
+  assert.equal(swap.learningCandidateCompatible(learning, alternativeKnown, 'birne'), false);
 });

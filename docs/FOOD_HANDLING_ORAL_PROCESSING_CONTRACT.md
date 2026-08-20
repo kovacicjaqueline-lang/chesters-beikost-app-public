@@ -99,17 +99,18 @@ Daraus folgen zwei wichtige Regeln:
 1. Ein Lebensmittel kann etwas Widerstand beim Nagen beziehungsweise Abbeißen bieten und trotzdem nach der Abtrennung leicht verarbeitbar sein.
 2. Ein äußerlich weiches Lebensmittel kann nach der Abtrennung als kompakter, elastischer oder faseriger Bissen bestehen bleiben und dadurch oral anspruchsvoller sein.
 
-## 4. Resistive Übungslebensmittel sind separat zu betrachten
+## 4. Resistive Übungsformen sind nicht Gegenstand dieses Contracts
 
 Widerstand beim Nagen ist nicht automatisch `structured-chew-required`.
 
-Ein resistives Übungslebensmittel kann gerade deshalb verwendet werden, weil es einem Baby Gelegenheit zum Nagen und Erkunden gibt, ohne dass daraus folgt, dass ein schwieriger abgetrennter Bissen bereits sicher verarbeitet werden kann.
+Die Eignung, Sicherheit oder Verwendung resistiver Übungslebensmittel beziehungsweise resistiver Übungsformen wird durch diesen Contract **nicht fachlich freigegeben und nicht bewertet**. Solche Formen benötigen, falls sie im Projekt relevant werden, eine eigene konkrete fachliche Prüfung.
 
-Daher gilt:
+Falls eine resistive Übungsform separat geprüft wird, gilt für die Abgrenzung der oralen Dimension:
 
 - „braucht Kraft zum Abbeißen“ != automatisch `structured-chew-required`;
 - die Klassifikation richtet sich nach dem Verhalten des **essbaren abgetrennten Bissens**;
-- resistive Übungsformen dürfen nicht als Beleg für eine höhere Schluck-/Kaukompetenz interpretiert werden.
+- Widerstand beim Nagen darf nicht als Beleg dafür interpretiert werden, dass ein Kind einen schwierigen abgetrennten Bissen bereits sicher oral verarbeiten kann;
+- die bloße Nennung resistiver Übungsformen in externen Quellen erzeugt keine Rezept- oder FOOD-Freigabe in diesem Projekt.
 
 ## 5. Keine Kategorienlogik
 
@@ -265,15 +266,37 @@ Ein Rezept wird nur dann früher verfügbar, wenn **alle** unabhängigen Gates e
 
 ## 14. Externe fachliche Plausibilisierung
 
-Die Contract-Schärfung wurde zusätzlich gegen aktuelle öffentliche Fachinformationen plausibilisiert. Relevant waren insbesondere:
+Abrufstand der folgenden öffentlichen Quellen: **20.08.2026**.
 
-- NHS: Fingerfoods ab Beikostbeginn können weich sein und das Lernen von Abbeißen, Kauen und Schlucken unterstützen.
-- NHS-Rezept `Omelette fingers`: weiche Omelettstreifen ab etwa 6 Monaten als konkreter Referenzfall.
-- Cambridge University Hospitals: klinische Unterscheidung zwischen leicht zerfallenden beziehungsweise „bite and dissolve/melt“-Texturen und `soft chewable foods`, die tatsächliche orale Bearbeitung verlangen.
-- UK Early Years Food Safety Guidance: weiches Brot kann im Mund teigig/kompakt werden; „weich“ ist daher nicht automatisch oral einfacher.
-- CDC: Form, Größe und Textur müssen zur Entwicklung passen; harte, zähe oder schwer zu kauende Formen sind getrennt als Sicherheitsproblem zu betrachten.
+Die Quellen stützen die Struktur des Contract-Modells; sie erzeugen **keine pauschalen Rezept-, FOOD- oder Altersfreigaben** im Projekt.
 
-Diese Quellen begründen keine pauschalen Rezeptfreigaben. Sie stützen ausschließlich die **Struktur des Contract-Modells**.
+- **NHS – Your baby's first solid foods**  
+  https://www.nhs.uk/baby/weaning-and-feeding/babys-first-solid-foods/  
+  Relevanz: geeignete weiche Fingerfoods ab Beikostbeginn; Lernen von Abbeißen, Kauen und Schlucken.
+- **NHS – Omelette fingers**  
+  https://www.nhs.uk/best-start-in-life/baby/recipes-and-meal-ideas/omelette-fingers/  
+  Relevanz: konkrete weiche Omelett-Finger ab etwa 6 Monaten als Plausibilisierung des Referenzfalls.
+- **Cambridge University Hospitals – Food textures: bite and dissolve/bite and melt**  
+  https://www.cuh.nhs.uk/patient-information/food-textures-bite-and-dissolvebite-and-melt/  
+  Relevanz: klinische Beschreibung von Texturen, die nach dem Abbeißen sehr leicht zerfallen beziehungsweise schmelzen.
+- **Cambridge University Hospitals – Easy to chew foods**  
+  https://www.cuh.nhs.uk/patient-information/easy-to-chew-foods/  
+  Relevanz: klinische Gegenperspektive auf weiche Lebensmittel, die dennoch tatsächliche orale Bearbeitung verlangen.
+- **UK Department for Education – Food safety (Help for early years providers)**  
+  https://help-for-early-years-providers.education.gov.uk/get-help-to-improve-your-practice/food-safety  
+  Relevanz: Hinweis, dass weiches Brot im Mund teigig beziehungsweise kompakt werden kann; „weich“ ist daher allein kein ausreichendes orales Kriterium.
+- **CDC – Choking Hazards**  
+  https://www.cdc.gov/infant-toddler-nutrition/foods-and-drinks/choking-hazards.html  
+  Relevanz: Form, Größe und Textur müssen entwicklungsangemessen sein; schwer zu kauende beziehungsweise problematische Strukturen bleiben eine getrennte Safety-Frage.
+
+## 15. Kanonische Einbindung
+
+Diese Datei ist die fachlich verbindliche Detailreferenz für die orale Verarbeitungsdimension und wird additiv aus folgenden bestehenden Referenzdokumenten eingebunden:
+
+- `docs/FOOD_HANDLING_READINESS_TECHNICAL_DESIGN.md` – technisches Handling-Sollmodell;
+- `docs/PLANNER_FACHKONZEPT.md` – kanonische Planner-Semantik.
+
+Die orale Dimension ersetzt keine Regel in diesen Dokumenten, sondern präzisiert den Handling-Vertrag dort, wo zusammenhängende Fingerfoods oral unterschiedlich anspruchsvoll sein können.
 
 ## Status
 

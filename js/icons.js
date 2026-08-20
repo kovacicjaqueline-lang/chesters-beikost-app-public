@@ -343,7 +343,11 @@ function illustrationImg(src,label,kind="food"){
 }
 function foodIconSvg(foodOrId){ const f=typeof foodOrId==="string" ? (food(foodOrId)||FOOD_DB.find(x=>x.id===foodOrId)) : foodOrId; return illustrationImg(foodIllustrationPath(f),f?.name||"unbekanntes Lebensmittel","food"); }
 function recipeIconSvg(recipeOrName){ const r=typeof recipeOrName==="string" ? RECIPES.find(x=>x.name===recipeOrName) : recipeOrName; return illustrationImg(r&&RECIPE_ICON_PATHS[r.name],r?.name||String(recipeOrName||"unbekanntes Rezept"),"recipe"); }
-function auditIllustrationCoverage(){ return {foodsMissing:FOOD_DB.filter(f=>!FOOD_ICON_PATHS[f.id]).map(f=>f.name),recipesMissing:RECIPES.filter(r=>!RECIPE_ICON_PATHS[r.name]).map(r=>r.name),foodCount:FOOD_DB.length,recipeCount:RECIPES.length}; }
+function foodIllustrationUsesFallback(f){
+  const src=foodIllustrationPath(f);
+  return !src || src===FOOD_GENERIC_FALLBACK_PATH || src===FOOD_CATEGORY_FALLBACK_PATHS[f?.category];
+}
+function auditIllustrationCoverage(){ return {foodsMissing:FOOD_DB.filter(foodIllustrationUsesFallback).map(f=>f.name),recipesMissing:RECIPES.filter(r=>!RECIPE_ICON_PATHS[r.name]).map(r=>r.name),foodCount:FOOD_DB.length,recipeCount:RECIPES.length}; }
 document.addEventListener("error",event=>{
   const img=event.target;
   if(!img || !img.classList || !img.classList.contains("illustration-icon__asset")) return;

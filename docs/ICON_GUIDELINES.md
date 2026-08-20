@@ -2,6 +2,22 @@
 
 Diese Leitlinie gilt verbindlich für neue und überarbeitete FOOD-Illustrationen der Beikost-App.
 
+## Vollständigkeitsregel für neue FOODs und Rezepte
+
+Ein neues kanonisches FOOD oder ein neues Laufzeitrezept ist erst vollständig, wenn gleichzeitig ein eigenes V2-Icon vorhanden ist.
+
+Verbindlich für neue Datensätze:
+
+- neues FOOD -> eigenes Food-V2-Asset;
+- neues Rezept -> eigenes Recipe-V2-Asset;
+- eindeutige zentrale Icon-Zuordnung;
+- erforderlicher Service-Worker-Precache;
+- passende Icon-Regressionen bzw. `npm run verify:icons` im vorgesehenen Testscope.
+
+Kategorie-, Generic- oder Legacy-Fallbacks gelten für neue kanonische FOODs oder Rezepte nicht als fertiger Zustand. Ein Datensatz darf nicht als vollständig bzw. mergebereit behandelt werden, wenn sein eigenes V2-Icon, Mapping oder Precache noch fehlt.
+
+Diese Asset-Regel ist Teil der allgemeinen Aufnahmebedingung aus `AGENTS.md`: Neue FOODs und Rezepte müssen außerdem ihre fachliche Handling-/Oral-Processing-Einordnung und die jeweils erforderlichen Safety-/Serving-Angaben bereitstellen.
+
 ## Grundstil
 
 - Lebensmittel müssen auf den ersten Blick eindeutig erkennbar sein.

@@ -276,6 +276,7 @@ function showFoodInfoCore(f) {
       </div>
       <div class="food-detail-hero-icon" aria-hidden="true" style="--icon-food:96px;width:96px;height:96px;display:flex;align-items:center;justify-content:center;pointer-events:none">${foodIconSvg(f)}</div>
     </div>
+    <div class="food-detail-dynamic"></div>
     <details class="accordion food-detail-settings">
       <summary>Status und Planung</summary>
       <div class="grid2" style="margin-top:10px">
@@ -497,10 +498,11 @@ function showFoodInfo(f) {
   showFoodInfoCore(f);
   let raw = status(f), count = offeredCount(f.id);
   let modal = document.getElementById("genericBody");
+  let dynamic = modal?.querySelector(".food-detail-dynamic");
   modal?.querySelectorAll(".chips .pill").forEach((pill) => { if (["Offen", "Verträgliche Basis"].includes((pill.textContent || "").trim())) pill.textContent = ({ Offen: "Noch offen", "Verträgliche Basis": "Vertragen" })[(pill.textContent || "").trim()]; });
   if (["Probiert", "Verträgliche Basis"].includes(raw)) {
-    modal?.querySelector(".chips")?.insertAdjacentHTML("afterend", `<div class="small food-offer-count">${count}× angeboten · ${esc(statusSource(f))}</div>`);
+    dynamic?.insertAdjacentHTML("beforeend", `<div class="small food-offer-count">${count}× angeboten · ${esc(statusSource(f))}</div>`);
   }
   let follow = state.followUps?.[f.id];
-  if (follow) modal?.querySelector(".chips")?.insertAdjacentHTML("afterend", `<div class="notice olive"><b>${esc(followUpStatusText(follow))}</b><div class="small">${follow.dueDate ? `Fällig ${shortDate(follow.dueDate)}` : "Wird nach dem Einkauf wieder eingeplant."}</div></div>`);
+  if (follow) dynamic?.insertAdjacentHTML("afterbegin", `<div class="notice olive"><b>${esc(followUpStatusText(follow))}</b><div class="small">${follow.dueDate ? `Fällig ${shortDate(follow.dueDate)}` : "Wird nach dem Einkauf wieder eingeplant."}</div></div>`);
 }

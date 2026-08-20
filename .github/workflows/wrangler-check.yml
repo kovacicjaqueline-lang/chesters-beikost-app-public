@@ -34,12 +34,8 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Install Wrangler
-        run: npm install --ignore-scripts
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Validate Wrangler deployment from repository root
-        run: npx wrangler deploy --dry-run
-
-      - name: Validate Wrangler config discovery from nested directory
-        working-directory: js
-        run: npx wrangler deploy --dry-run
+      - name: Run deployment verification gate
+        run: npm run verify:deploy

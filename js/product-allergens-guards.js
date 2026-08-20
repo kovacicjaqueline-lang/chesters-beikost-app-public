@@ -39,7 +39,8 @@ function productAllergenCurrentLogOutcomes() {
   if (main) {
     for (let id of selectedLogFoods) if (!sampleIds.has(id)) outcomes[id] = main;
   }
-  document.querySelectorAll?.("[data-individual-result]")?.forEach((select) => {
+  let individual = !!document.getElementById("individualRatings")?.checked;
+  if (individual) document.querySelectorAll?.("[data-individual-result]")?.forEach((select) => {
     outcomes[select.dataset.individualResult] = select.value;
   });
   document.querySelectorAll?.("[data-sample-result]")?.forEach((select) => {
@@ -367,7 +368,20 @@ if (typeof injectInventoryProductAllergens === "function") {
     let ids = productAllergenRenderInventoryBox(box, target);
     note.parentNode.insertBefore(box, note);
     let beforeIds = new Set(state.inventory.map((item) => item.id));
-    document.getElementById("saveInv").addEventListener("click", () => {
+    let saveButton = document.getElementById("saveInv");
+    if (target.kind === "recipe" && typeof recipeFoodIds === "function") {
+      saveButton.addEventListener("click", () => {
+        productAllergenCaptureInventorySelections(box);
+        let actualIds = inventoryTargetFoodIds("recipe", target.key);
+        let originalRecipeFoodIds = recipeFoodIds;
+        recipeFoodIds = function recipeFoodIdsForActualInventoryBatch(recipe) {
+          if (recipe?.name === target.key) return [...actualIds];
+          return originalRecipeFoodIds(recipe);
+        };
+        productAllergenQueueTask(() => { recipeFoodIds = originalRecipeFoodIds; });
+      }, { capture: true, once: true });
+    }
+    saveButton.addEventListener("click", () => {
       productAllergenCaptureInventorySelections(box);
       let actualIds = target.kind === "recipe" ? inventoryTargetFoodIds("recipe", target.key) : ids;
       attachInventorySnapshotsAfterSave(beforeIds, target.kind, actualIds);

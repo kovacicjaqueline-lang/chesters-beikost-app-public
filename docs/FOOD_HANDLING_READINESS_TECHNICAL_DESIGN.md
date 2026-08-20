@@ -83,6 +83,25 @@ const HANDLING_MODES = {
 - `finger-graspable`: weiches, ausreichend großes, gut greifbares Fingerfood; **nicht** automatisch spätere Entwicklungsstufe
 - `finger-small-soft`: kleine weiche Stücke; nur dort verwenden, wo eine zusätzliche feinmotorische Voraussetzung tatsächlich fachlich bestätigt ist
 
+### Fachlich freigegebene orale Verarbeitungsdimension
+
+Der Handlingmodus allein beschreibt bei zusammenhängendem Fingerfood nicht vollständig die orale Anforderung. Die am 20.08.2026 fachlich freigegebene additive Erweiterung ist verbindlich in
+
+`docs/FOOD_HANDLING_ORAL_PROCESSING_CONTRACT.md`
+
+dokumentiert.
+
+Dort werden die orthogonalen Profile `soft-breakdown`, `easy-bite-separate` und `structured-chew-required` definiert. Sie bilden **keine lineare Alters- oder Entwicklungsleiter**. Insbesondere bedeutet `finger-graspable` nicht automatisch, dass ein Stück oral gleich anspruchsvoll ist, und `structured-chew-required` ist kein verstecktes „ab 10 Monaten“.
+
+Für spätere technische Erweiterungen gilt daher zusätzlich:
+
+- orale Verarbeitung getrennt vom Handlingmodus modellieren;
+- Einstufung nur aus konkret geprüftem Rezept plus Servierform ableiten;
+- keine Gruppenlogik aus `Muffin`, `Pancake`, `Bällchen`, `Fleisch`, `stage` oder `minMonths`;
+- Zwei-Finger-Zerdrückbarkeit allein reicht nicht zur oralen Einstufung;
+- bei unklarer reproduzierbarer Struktur bleibt das orale Profil offen;
+- eine zusätzliche orale Capability darf erst für einen konkret fachlich freigegebenen Fall produktiv werden.
+
 ## 3. Rezept-Contract
 
 Rezeptfreigabe wird künftig nicht aus `category === "pancakes"` oder `stage === 3` abgeleitet.
@@ -159,6 +178,8 @@ handlingCapabilities: {
 ```
 
 Dieser Wert darf erst produktiv werden, wenn die zugehörigen Lebensmittel/Rezeptformen einzeln fachlich freigegeben sind. Kein pauschaler „Pinzettengriff = alles klein erlaubt“-Schalter.
+
+Die orale Contract-Erweiterung reserviert dabei **keine** neue Capability pauschal. Ein möglicher späterer Wert wie `structured-chew` wäre erst nach einer konkreten Einzelentscheidung einzuführen.
 
 ## 6. Zentrale Eligibility-Funktion
 
@@ -368,6 +389,8 @@ Vor Produktivänderung Tests für mindestens:
 11. neuer Lock kann `presentationMode` tragen
 12. alter Log behält `textureStage`; kein rückwirkendes BLW-Inferenzfeld
 
+Bei einer späteren technischen Umsetzung der oralen Dimension kommen zusätzlich Regressionen aus `docs/FOOD_HANDLING_ORAL_PROCESSING_CONTRACT.md` hinzu; insbesondere muss `Omelettstreifen` als `easy-bite-separate` ohne zusätzliche orale Capability bei allgemeiner Beikostreife möglich bleiben.
+
 ## Status
 
-Technisches Sollmodell festgelegt. Noch keine Produktivdatei, kein State-Schema und kein Rezeptdatensatz verändert. Nächster Schritt: Tests für die zentrale Handling-Eligibility und Wave 1 schreiben, danach erst Produktivlogik implementieren.
+Technisches Sollmodell festgelegt. Die additive orale Verarbeitungsdimension ist fachlich in `docs/FOOD_HANDLING_ORAL_PROCESSING_CONTRACT.md` festgelegt, aber noch nicht als Runtime-Feld oder Capability implementiert. Bestehende Produktlogik und Rezeptdaten werden durch diese Dokumentation nicht verändert.

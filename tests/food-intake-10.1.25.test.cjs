@@ -219,13 +219,16 @@ test('Service Worker precacht alle neuen Food-V2-Assets und verwendet Cache-Vers
   for (const id of NEW_IDS) assert.ok(sw.includes(`./assets/illustrations-v2/foods/${id}.svg`), id);
 });
 
-test('Version 10.1.25 ist in Runtime, Paket, Metadaten und Asset-Querystrings konsistent', () => {
+test('aktuelle App-Version ist in Runtime, Paket, Metadaten und Asset-Querystrings konsistent', () => {
   const context = loadRuntime({ policy: false });
-  assert.equal(context.__version, '10.1.25');
-  assert.equal(JSON.parse(source('package.json')).version, '10.1.25');
-  assert.equal(JSON.parse(source('VERSION.json')).version, '10.1.25');
-  assert.match(source('index.html'), /app\.js\?v=10\.1\.25/);
-  assert.match(source('index.html'), /data\/foods\.js\?v=10\.1\.25/);
+  const metadataVersion = JSON.parse(source('VERSION.json')).version;
+  const packageVersion = JSON.parse(source('package.json')).version;
+  const escapedVersion = metadataVersion.replaceAll('.', '\\.');
+  const index = source('index.html');
+  assert.equal(packageVersion, metadataVersion);
+  assert.equal(context.__version, metadataVersion);
+  assert.match(index, new RegExp(`app\\.js\\?v=${escapedVersion}`));
+  assert.match(index, new RegExp(`data\\/foods\\.js\\?v=${escapedVersion}`));
 });
 
 test('Holunderbeere trägt weiterhin den freigegebenen Sicherheitshinweis', () => {

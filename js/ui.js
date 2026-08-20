@@ -167,7 +167,9 @@ function mealStatusText(m) {
   return text === "Heute geplant" ? "" : text;
 }
 function renderHomeCore() {
-  let learned = learnedFoods(), tried = learned.length, target = Number(state.settings.targetFoods) || 100,
+  let learned = learnedFoods(),
+    tried = typeof learnedCountIdentities === "function" ? learnedCountIdentities().length : learned.length,
+    target = Number(state.settings.targetFoods) || 100,
     pct = Math.min(100, tried / target * 100), on = today(), age = monthsOld(on),
     day = buildDays(on, 1)[0], active = day.meals.filter((m) => m.active && m.focusId);
   let openMeals = active.filter((m) => !mealIsCompleted(on, m.meal));

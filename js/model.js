@@ -154,15 +154,14 @@ function learnedCountIdentities() {
   return [...identities];
 }
 function learnedFoods() {
-  let seen = new Set();
+  let seenIdentities = new Set();
   let learned = [];
   for (let f of [...state.foods].sort((a, b) => a.priority - b.priority)) {
     if (f.count100 === false || rank(f) < 1) continue;
-    for (let identity of resolvedCount100Identities(f)) {
-      if (!identity || seen.has(identity)) continue;
-      seen.add(identity);
-      learned.push(f);
-    }
+    let identities = resolvedCount100Identities(f).filter(Boolean);
+    if (!identities.some((identity) => !seenIdentities.has(identity))) continue;
+    identities.forEach((identity) => seenIdentities.add(identity));
+    learned.push(f);
   }
   return learned;
 }

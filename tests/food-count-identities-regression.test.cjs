@@ -7,6 +7,7 @@ const vm = require('node:vm');
 const root = path.resolve(__dirname, '..');
 const modelSource = fs.readFileSync(path.join(root, 'js', 'model.js'), 'utf8');
 const statisticsSource = fs.readFileSync(path.join(root, 'js', 'statistics.js'), 'utf8');
+const uiSource = fs.readFileSync(path.join(root, 'js', 'ui.js'), 'utf8');
 const foodsSource = fs.readFileSync(path.join(root, 'data', 'foods.js'), 'utf8');
 
 function addDays(value, days) {
@@ -95,7 +96,14 @@ test('FOOD-COUNT: ein explizites zusammengesetztes FOOD kann mehrere Grundstoff-
   const h = harness([composite]);
   assert.deepEqual(h.resolve(composite), ['weizen', 'ei']);
   assert.deepEqual(h.learnedIdentities(), ['weizen', 'ei']);
-  assert.equal(h.learnedFoods().length, 2, 'Fortschrittslänge entspricht auch bei Composite der Identitätszahl');
+  assert.equal(h.learnedFoods().length, 1, 'ein technisches Composite erscheint in der Vorschau nur einmal');
+});
+
+test('FOOD-COUNT Home: Zählstand und technische Vorschau sind ausdrücklich getrennt', () => {
+  assert.ok(
+    uiSource.includes('tried = typeof learnedCountIdentities === "function" ? learnedCountIdentities().length : learned.length'),
+    'Home muss den numerischen Fortschritt aus Zählidentitäten ableiten',
+  );
 });
 
 test('FOOD-COUNT: Reihenfolge und mehrere technische Formen erzeugen keinen Doppelpunkt', () => {

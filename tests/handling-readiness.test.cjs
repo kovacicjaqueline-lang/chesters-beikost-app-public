@@ -104,9 +104,8 @@ test("HANDLING: Fingerfood-Präferenz bevorzugt Karottenstick ohne Löffelformen
   assert.equal(result.eligibleModes.length, 3);
 });
 
-test("HANDLING: Wave 1 enthält nur freigegebene Referenzfälle, keine Safety-/Later-Review-Fälle", () => {
+test("HANDLING: nicht einzeln geprüfte Safety-/Later-Review-Fälle bleiben unmigriert", () => {
   for (const name of [
-    "Rind-Hafer-Bällchen",
     "Geflügel-Gemüse-Hafer-Bällchen",
     "Lachs-Kartoffel-Bällchen",
     "Bangus-Kartoffel-Taler",
@@ -122,13 +121,14 @@ test("HANDLING: Wave 1 enthält nur freigegebene Referenzfälle, keine Safety-/L
   }
 });
 
-test("HANDLING: Wave-1-Pancakes und Omelettstreifen sind explizit soft graspable", () => {
+test("HANDLING: freigegebene Pancakes, Omelettstreifen und Rind-Hafer-Fall sind explizit soft graspable", () => {
   for (const name of [
     "Obst-Hafer-Pancakes",
     "Birne-Hirse-Pancakes",
     "Gemüse-Hafer-Pancakes",
     "Omelettstreifen",
     "Zucchini-Omelett",
+    "Rind-Hafer-Bällchen",
   ]) {
     assert.deepEqual(
       [...RECIPE_HANDLING_CONTRACT[name].modes],
@@ -162,7 +162,7 @@ test("HANDLING: Steuerlogik parst keine safeForm-/note-Freitexte", () => {
   assert.doesNotMatch(contractSource, /safeForm\s*:/);
 });
 
-test("HANDLING: Wave 1 Contract ist klein und explizit", () => {
+test("HANDLING: strukturierter Contract bleibt klein und explizit", () => {
   assert.deepEqual(Object.keys(FOOD_HANDLING_CONTRACT).sort(), [
     "avocado",
     "banane",
@@ -181,6 +181,7 @@ test("HANDLING: Wave 1 Contract ist klein und explizit", () => {
     "Gemüse-Hafer-Pancakes",
     "Obst-Hafer-Pancakes",
     "Omelettstreifen",
+    "Rind-Hafer-Bällchen",
     "Zucchini-Kartoffel-Brei",
     "Zucchini-Omelett",
   ].sort());

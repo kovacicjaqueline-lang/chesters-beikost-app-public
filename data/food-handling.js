@@ -1,7 +1,7 @@
 "use strict";
 
 /*
- * Strukturierter Handling-/Darreichungsvertrag – Wave 1.
+ * Strukturierter Handling-/Darreichungsvertrag – Wave 1 plus einzeln geprüfte Fälle.
  *
  * Fachliche Trennung:
  * - keine Mahlzeiteneignung
@@ -10,7 +10,8 @@
  * - keine lineare Annahme "Brei -> Fingerfood"
  *
  * Nicht aufgeführte FOODs/Rezepte bleiben bis zur Einzelmigration im bestehenden
- * Legacy-Verhalten. SAFETY-REVIEW- und LATER-REVIEW-Fälle sind bewusst nicht hier.
+ * Legacy-Verhalten. SAFETY-REVIEW- und LATER-REVIEW-Fälle werden ausschließlich
+ * nach konkreter Einzelprüfung ergänzt.
  */
 
 const HANDLING_MODES = Object.freeze({
@@ -110,6 +111,9 @@ const RECIPE_HANDLING_CONTRACT = Object.freeze({
     modes: Object.freeze([HANDLING_MODES.SPOON_MASHED]),
   }),
   "Bananen-Ei-Pancakes": Object.freeze({
+    modes: Object.freeze([HANDLING_MODES.FINGER_GRASPABLE]),
+  }),
+  "Rind-Hafer-Bällchen": Object.freeze({
     modes: Object.freeze([HANDLING_MODES.FINGER_GRASPABLE]),
   }),
 });

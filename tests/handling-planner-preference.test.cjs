@@ -94,8 +94,7 @@ test("feedingApproach: Preference entfernt keine bereits sichere Darreichungsfor
   ]);
 });
 
-const SAFETY_REVIEW = [
-  "Rind-Hafer-Bällchen",
+const UNRESOLVED_SAFETY_REVIEW = [
   "Geflügel-Gemüse-Hafer-Bällchen",
   "Lachs-Kartoffel-Bällchen",
   "Bangus-Kartoffel-Taler",
@@ -116,8 +115,8 @@ const LATER_REVIEW = [
   "Süßkartoffel-Linsen-Muffins",
 ];
 
-test("feedingApproach: SAFETY-REVIEW und LATER-REVIEW bleiben unter fingerfood unmigriert", () => {
-  for (const name of [...SAFETY_REVIEW, ...LATER_REVIEW]) {
+test("feedingApproach: nicht geprüfte SAFETY-REVIEW- und alle LATER-REVIEW-Fälle bleiben unter fingerfood unmigriert", () => {
+  for (const name of [...UNRESOLVED_SAFETY_REVIEW, ...LATER_REVIEW]) {
     assert.equal(
       Object.prototype.hasOwnProperty.call(RECIPE_HANDLING_CONTRACT, name),
       false,
@@ -138,6 +137,24 @@ test("feedingApproach: SAFETY-REVIEW und LATER-REVIEW bleiben unter fingerfood u
     assert.equal(state.unlocked, false, `${name} darf durch Präferenz nicht freigeschaltet werden`);
     assert.deepEqual(state.requirementMissing, ["Konsistenz: Stufe 3 erforderlich"]);
   }
+});
+
+test("feedingApproach: individuell geprüftes Rind-Hafer-Rezept bleibt auch unter spoon in seiner einzigen sicheren Form", () => {
+  const state = handling.mergeRecipeHandlingState(
+    {
+      name: "Rind-Hafer-Bällchen",
+      requirementMissing: ["Konsistenz: Stufe 3 erforderlich"],
+      ingredientMissing: [],
+      missing: ["Konsistenz: Stufe 3 erforderlich"],
+      unlocked: false,
+    },
+    settings("spoon"),
+    RECIPE_HANDLING_CONTRACT,
+  );
+  assert.equal(state.handlingMigrated, true);
+  assert.equal(state.unlocked, true);
+  assert.deepEqual(state.handlingModes, ["finger-graspable"]);
+  assert.deepEqual(state.preferredHandlingModes, ["finger-graspable"]);
 });
 
 test("feedingApproach: PLAN-08-Rezeptidentität bleibt unverändert", () => {

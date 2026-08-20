@@ -11,6 +11,7 @@ on:
       - 'app.js'
       - 'js/**'
       - 'data/**'
+      - 'assets/illustrations-v2/**'
       - 'tests/**'
       - 'browser-tests/**'
       - 'package.json'
@@ -25,6 +26,7 @@ on:
       - 'app.js'
       - 'js/**'
       - 'data/**'
+      - 'assets/illustrations-v2/**'
       - 'tests/**'
       - 'browser-tests/**'
       - 'package.json'
@@ -52,8 +54,5 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run regression tests
-        run: npm test
-
-      - name: Run WebKit UI regression
-        run: npm run test:browser
+      - name: Run app verification gate
+        run: npm run verify:app

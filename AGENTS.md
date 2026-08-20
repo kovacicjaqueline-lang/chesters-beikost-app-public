@@ -1,10 +1,12 @@
 # AGENTS.md
 
-Gilt für das gesamte Repository `kovacicjaqueline-lang/chesters-beikost-app`.
+Gilt für das gesamte Repository `kovacicjaqueline-lang/chesters-beikost-app-public`.
 
 ## Ziel
 
 Arbeite schnell, reproduzierbar und ohne bereits geklärte Fachentscheidungen erneut aufzurollen. Behandle den aktuellen GitHub-Stand als Source of Truth und verwende Chat-/Übergabestände nur als Kontext, nie als Ersatz für die Prüfung des Repositories.
+
+Für kurze wiederkehrende Aufträge und die Testmatrix siehe ergänzend `docs/AI_WORKFLOW.md`. Bei Widersprüchen gilt `AGENTS.md`.
 
 ## Verbindlicher Startcheck
 
@@ -46,6 +48,14 @@ Dabei:
 - bestehende Daten- und Backup-Kompatibilität erhalten, sofern die Aufgabe nicht ausdrücklich eine Migration verlangt,
 - keine Produktivlogik außerhalb des notwendigen Scopes verändern.
 
+### Fast Path und Freigaben
+
+Eine zusätzliche Plan-/Freigabeschleife ist nicht nötig, wenn die fachlichen Entscheidungen bereits getroffen sind und die Aufgabe nur klar spezifizierte mechanische Umsetzung enthält, z. B. freigegebene Assets, Mappings, Precache-Einträge, spezifizierte Regressionstests oder reine CI-/Dokumentationspflege.
+
+Eine fachliche Review-/Freigabeschleife bleibt erforderlich, wenn neue Produktsemantik, neue Sicherheits-/Eignungsregeln, neue Planner-Logik, eine Migration oder eine noch nicht entschiedene Darstellung eingeführt werden soll.
+
+Technisch gleichartige, bereits einzeln fachlich freigegebene Änderungen dürfen in einem gemeinsamen Arbeitsbranch umgesetzt und gemeinsam getestet werden. Aus einer Einzelentscheidung darf dabei keine fachliche Gruppenfreigabe abgeleitet werden.
+
 ## Tests
 
 Offizieller Regressionstest:
@@ -56,12 +66,22 @@ npm test
 
 Er läuft mit Node.js 22 und führt die vorhandenen Node-Testdateien unter `tests/` aus.
 
+Schnelle Standardkommandos:
+
+- `npm run verify:icons` für FOOD-/Recipe-Icon-Assets, Mappings und V2-Precache,
+- `npm run verify:fast` für die vollständige Node-Regression,
+- `npm run verify:app` für Node- plus Browser-Regression,
+- `npm run verify:deploy` für beide Wrangler-Dry-Runs,
+- `npm run verify` als vollständiger lokaler Gate aus App- und Deployment-Prüfung.
+
 Prüfreihenfolge:
 
-1. zuerst die direkt betroffenen Tests,
-2. danach `npm test`, wenn Produktivlogik, Planner, Datenmodell, Persistenz oder zentrale Utilities verändert wurden,
-3. `npm run check:deploy`, wenn Deployment-/Wrangler-relevante Dateien verändert wurden,
-4. vorhandene GitHub-Actions-Ergebnisse vor Merge prüfen, wenn CI ausgelöst wurde.
+1. zuerst die direkt betroffenen Tests bzw. den passenden schnellen Bereichs-Gate,
+2. danach `npm run verify:fast`, wenn Produktivlogik, Planner, Datenmodell, Persistenz oder zentrale Utilities verändert wurden,
+3. `npm run verify:app`, wenn ein Browser-/UI-Fluss betroffen ist,
+4. `npm run verify:deploy`, wenn Deployment-/Wrangler-relevante Dateien verändert wurden,
+5. `npm run verify` nur als Querschnitts-/Release-Gate oder wenn der Änderungsumfang mehrere Bereiche betrifft,
+6. vorhandene GitHub-Actions-Ergebnisse vor Merge prüfen, wenn CI ausgelöst wurde.
 
 Nie behaupten, ein Test sei bestanden, wenn er nicht tatsächlich ausgeführt bzw. als CI-Ergebnis geprüft wurde.
 

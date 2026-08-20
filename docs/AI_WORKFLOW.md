@@ -1,0 +1,65 @@
+# AI-Workflow für Chesters Beikost-App
+
+Diese Datei ist die kurze Arbeitsreferenz für wiederkehrende Chat-/Coding-Aufträge. Die verbindlichen Regeln stehen in `AGENTS.md`; bei Widersprüchen gilt immer `AGENTS.md`.
+
+## Minimaler Starttext
+
+Für einen neuen technischen Auftrag reichen normalerweise:
+
+```text
+Arbeite ausschließlich im PUBLIC-Repository kovacicjaqueline-lang/chesters-beikost-app-public.
+Prüfe zuerst den tatsächlichen aktuellen Remote-main.
+Arbeitsbranch: <branch>
+
+Ziel: <konkretes Ergebnis>
+Scope: <betroffene Dateien/Funktionen/Daten>
+Bereits fachlich freigegeben: <ja/nein + Entscheidungen>
+Nicht ändern: <wichtige Grenzen>
+Nichts mergen.
+```
+
+Alte Versionen, Commit-SHAs, vollständige Projektchroniken oder bereits in `AGENTS.md` dokumentierte Grundregeln müssen nicht in jeden neuen Chat kopiert werden. Der aktuelle Repository-Stand bleibt Source of Truth.
+
+## Wann direkt umgesetzt werden kann
+
+Direkt nach dem Startcheck umsetzen, wenn die fachliche Entscheidung schon feststeht und nur mechanische Arbeit offen ist, zum Beispiel:
+
+- freigegebene Assets einbauen,
+- vorhandene Mappings/Precache-Einträge ergänzen,
+- einen klar beschriebenen UI-Fix umsetzen,
+- spezifizierte Regressionstests ergänzen,
+- CI-, Workflow- oder Dokumentationspflege ohne Produktsemantik.
+
+Eine erneute fachliche Freigabe ist nötig, wenn neue Produktsemantik, Sicherheits-/Eignungsregeln, Planner-Logik, Migrationen oder noch offene Darstellungsentscheidungen entstehen.
+
+## Testmatrix
+
+| Änderung | Standardprüfung |
+| --- | --- |
+| Nur Dokumentation | keine künstliche Regression |
+| FOOD-/Recipe-V2-Icons, Mapping, Precache | `npm run verify:icons` |
+| Datenmodell, Planner, Persistenz, zentrale Utilities | betroffene Tests + `npm run verify:fast` |
+| UI-/Browser-Fluss | betroffene Tests + `npm run verify:app` |
+| Wrangler-/Deployment-Konfiguration | `npm run verify:deploy` |
+| Querschnitt, Release oder mehrere Bereiche | `npm run verify` |
+
+`npm run verify` ist bewusst kein Standard nach jeder kleinen Änderung. Es ist der vollständige Gate, wenn der Scope mehrere Bereiche berührt oder ein Abschluss-/Releasecheck gebraucht wird.
+
+## Bündelung gleichartiger Aufgaben
+
+Mehrere technisch gleichartige Änderungen dürfen gemeinsam umgesetzt werden, wenn jede fachliche Einzelentscheidung bereits vorliegt. Beispiel: mehrere einzeln freigegebene FOOD-Icons können in einem Branch ergänzt und mit einem gemeinsamen Icon-Integrity-Gate geprüft werden.
+
+Dabei gilt weiterhin: Eine Freigabe für ein Element ist keine automatische fachliche Freigabe für andere Elemente.
+
+## Abschlussformat
+
+Am Ende knapp festhalten:
+
+```text
+Ausgangs-HEAD/Version: ...
+Branch: ...
+Geändert: ...
+Tests: ...
+Offen: ...
+Commit/PR/Merge: ...
+```

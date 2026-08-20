@@ -77,9 +77,19 @@ async function configurePlanner(page, planOffsetDays) {
     state.settings.planFrom = window.__beikostTest.addDays(current, offset);
     state.settings.preferInventoryInPlan = false;
     state.settings.newFoodEvery = 99;
-    state.deferred ||= {};
-    state.deferred[current] = true;
+    state.planLocks = {};
+    state.manualMeals = {};
+    state.overrides = {};
+    state.autoLockExcluded = {};
+    state.followUps = {};
+    state.deferred = { [current]: true };
     state.inventory = [];
+    state.backupMeta ||= {};
+    state.backupMeta.plannerLinking = {
+      version: 1,
+      rolloverHandled: {},
+      carriedPlans: {},
+    };
     for (const food of state.foods) {
       if (food.active && food.autoPlan !== false && (food.meals || []).some((meal) => ["breakfast", "lunch"].includes(meal))) {
         food.manualStatus = "Regelmäßig";
@@ -91,8 +101,9 @@ async function configurePlanner(page, planOffsetDays) {
 }
 
 async function todayMealFoods(page, meal) {
-  const button = page.locator(`#todayCard .homeLog[data-plan]`).filter({ has: undefined });
-  const payloads = await button.evaluateAll((buttons) => buttons.map((entry) => JSON.parse(decodeURIComponent(entry.dataset.plan || ""))));
+  const payloads = await page.locator("#todayCard .homeLog[data-plan]").evaluateAll((buttons) =>
+    buttons.map((entry) => JSON.parse(decodeURIComponent(entry.dataset.plan || ""))),
+  );
   const payload = payloads.find((entry) => entry.meal === meal);
   return canonical(payload?.foodIds || []);
 }

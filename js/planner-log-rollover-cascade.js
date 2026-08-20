@@ -57,17 +57,12 @@
         )
         .map((meal) => ({
           ...meal,
-          // planQualityIssues kennt historisch nur date|meal. Ein synthetischer
-          // Schlüssel verhindert, dass ein anderer erledigter Plan desselben
-          // Mahlzeitentyps diesen offenen konkreten Plan ausblendet.
           meal: `__open_${meal.planId || day.date + "_" + meal.meal}`,
         })),
     }));
     return baseRenderPlanQuality(adjusted);
   };
 
-  // Capture-Phase: Die sichtbare Auto-Kette wird unmittelbar vor dem bereits
-  // installierten Klick-Handler der Rollover-Schicht materialisiert.
   document.addEventListener("click", (event) => {
     let button = event.target?.closest?.("#shiftOpenPlans");
     if (!button) return;
@@ -87,14 +82,22 @@
 
   globalScope.__plannerRolloverCascade = API;
 
-  // Die Review-Fixes müssen vor app.js und vor nachgelagerten UI-Dekoratoren laufen.
-  // Beim normalen Parser-Start lädt document.write das Zusatzmodul synchron.
   const reviewFixSrc = "js/planner-log-rollover-review-fixes.js?v=10.1.25";
   if (document.readyState === "loading") {
     document.write(`<script src="${reviewFixSrc}"></scr` + `ipt>`);
   } else {
     let script = document.createElement("script");
     script.src = reviewFixSrc;
+    script.async = false;
+    document.head.appendChild(script);
+  }
+
+  const randomSwapSrc = "js/planner-random-swap.js?v=10.1.25";
+  if (document.readyState === "loading") {
+    document.write(`<script src="${randomSwapSrc}"></scr` + `ipt>`);
+  } else {
+    let script = document.createElement("script");
+    script.src = randomSwapSrc;
     script.async = false;
     document.head.appendChild(script);
   }

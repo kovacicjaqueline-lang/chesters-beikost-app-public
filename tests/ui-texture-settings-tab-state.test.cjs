@@ -15,6 +15,7 @@ function functionSource(source, name, nextName) {
 
 test("UI: Konsistenzbezeichnungen liegen zentral in textureName", () => {
   const source = read("js/ui.js");
+  const handling = read("js/handling-readiness.js");
   const texture = functionSource(source, "textureName", "textureText");
 
   assert.match(texture, /1: "glatt \/ fein"/);
@@ -23,6 +24,8 @@ test("UI: Konsistenzbezeichnungen liegen zentral in textureName", () => {
   assert.match(texture, /4: "weiche Familienkost"/);
   assert.doesNotMatch(texture, /Fingerfood/);
   assert.doesNotMatch(texture, /dick püriert/);
+  assert.doesNotMatch(handling, /handlingAwareTextureName/);
+  assert.doesNotMatch(handling, /textureName\s*=\s*function/);
 });
 
 test("UI: renderSettings übernimmt die zentralen Labels und beendet Sticky-Leerraum lokal", () => {

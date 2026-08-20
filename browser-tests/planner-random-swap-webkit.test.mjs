@@ -68,6 +68,35 @@ async function visiblePlan(page) {
   });
 }
 
+async function configurePlanner(page, planOffsetDays) {
+  return page.evaluate((offset) => {
+    window.__beikostTest.reset();
+    const current = window.__beikostTest.today();
+    const state = window.__beikostTest.getState();
+    state.settings.phaseSelected = "aufbau";
+    state.settings.planFrom = window.__beikostTest.addDays(current, offset);
+    state.settings.preferInventoryInPlan = false;
+    state.settings.newFoodEvery = 99;
+    state.deferred ||= {};
+    state.deferred[current] = true;
+    state.inventory = [];
+    for (const food of state.foods) {
+      if (food.active && food.autoPlan !== false && (food.meals || []).some((meal) => ["breakfast", "lunch"].includes(meal))) {
+        food.manualStatus = "Regelmäßig";
+      }
+    }
+    window.__beikostTest.setState(state);
+    return current;
+  }, planOffsetDays);
+}
+
+async function todayMealFoods(page, meal) {
+  const button = page.locator(`#todayCard .homeLog[data-plan]`).filter({ has: undefined });
+  const payloads = await button.evaluateAll((buttons) => buttons.map((entry) => JSON.parse(decodeURIComponent(entry.dataset.plan || ""))));
+  const payload = payloads.find((entry) => entry.meal === meal);
+  return canonical(payload?.foodIds || []);
+}
+
 const server = await startStaticServer();
 const { port } = server.address();
 const browser = await webkit.launch();
@@ -83,26 +112,7 @@ try {
   await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => !!window.__beikostTest?.buildDays && !!window.__plannerRandomSwap);
 
-  const today = await page.evaluate(() => {
-    window.__beikostTest.reset();
-    const current = window.__beikostTest.today();
-    const state = window.__beikostTest.getState();
-    state.settings.phaseSelected = "aufbau";
-    state.settings.planFrom = current;
-    state.settings.preferInventoryInPlan = false;
-    state.settings.newFoodEvery = 99;
-    state.deferred ||= {};
-    state.deferred[current] = true;
-    state.inventory = [];
-    for (const food of state.foods) {
-      if (food.active && food.autoPlan !== false && (food.meals || []).some((meal) => ["breakfast", "lunch"].includes(meal))) {
-        food.manualStatus = "Regelmäßig";
-      }
-    }
-    window.__beikostTest.setState(state);
-    return current;
-  });
-
+  const today = await configurePlanner(page, 0);
   const targetKey = `${today}|lunch`;
   const todayButton = page.locator(`.today-randomize-meal[data-random-date="${today}"][data-random-meal="lunch"]`);
   await todayButton.waitFor();
@@ -127,7 +137,6 @@ try {
   const after = await visiblePlan(page);
   assert.equal(after[targetKey]?.length, 1, "getauschter Slot muss im sichtbaren Wochenplan genau einmal offen bleiben");
   assert.notEqual(after[targetKey][0].foods, previousTarget, "gewählter sichtbarer Slot muss tatsächlich eine andere Kombination erhalten");
-
   for (const [key, value] of Object.entries(before)) {
     if (key === targetKey) continue;
     assert.deepEqual(after[key], value, `anderer tatsächlich sichtbarer Plan-Slot darf sich nicht ändern: ${key}`);
@@ -136,6 +145,28 @@ try {
     if (key === targetKey) continue;
     assert.ok(before[key], `Tausch darf keinen zusätzlichen sichtbaren Plan-Slot erzeugen: ${key}`);
   }
+
+  const shiftedToday = await configurePlanner(page, 1);
+  const shiftedTargetKey = `${shiftedToday}|lunch`;
+  const visibleBeforeTodaySwap = await visiblePlan(page);
+  const previousTodayFoods = await todayMealFoods(page, "lunch");
+  assert.ok(previousTodayFoods, "Heute muss auch bei ab morgen sichtbarem Wochenplan ein Mittagessen enthalten");
+
+  const shiftedTodayButton = page.locator(`.today-randomize-meal[data-random-date="${shiftedToday}"][data-random-meal="lunch"]`);
+  await shiftedTodayButton.waitFor();
+  await shiftedTodayButton.click();
+  await page.waitForFunction(({ key, previous }) => {
+    const lock = window.__beikostTest.getState().planLocks?.[key];
+    const current = [...new Set(lock?.foodIds || [])].filter(Boolean).sort().join("+");
+    return !!current && current !== previous;
+  }, { key: shiftedTargetKey, previous: previousTodayFoods });
+
+  const visibleAfterTodaySwap = await visiblePlan(page);
+  assert.deepEqual(
+    visibleAfterTodaySwap,
+    visibleBeforeTodaySwap,
+    "Tausch auf Heute darf einen separat ab morgen angezeigten Wochenplan nicht verändern",
+  );
 
   await context.close();
 } finally {

@@ -129,10 +129,14 @@
   if (typeof module !== "undefined" && module.exports) module.exports = Object.freeze({ ...API });
   if (typeof window === "undefined" || typeof document === "undefined") return;
 
-  function currentVisiblePlan() {
-    const from = typeof visiblePlanStart === "function"
+  function visibleStart() {
+    return typeof visiblePlanStart === "function"
       ? visiblePlanStart()
       : state.settings?.planFrom || today();
+  }
+
+  function currentVisiblePlan() {
+    const from = visibleStart();
     return typeof planDisplayDays === "function"
       ? planDisplayDays(from, 7)
       : buildDays(from, 7, false);
@@ -196,6 +200,7 @@
     const previousLocks = clone(state.planLocks || {});
     const previousOverrides = clone(state.overrides || {});
     const previousExcluded = clone(state.autoLockExcluded || {});
+    const previousFollowUps = clone(state.followUps || {});
     try {
       state.planLocks ||= {};
       state.overrides ||= {};
@@ -203,7 +208,9 @@
       delete state.planLocks[key];
       delete state.autoLockExcluded[key];
       state.overrides[key] = focus.id;
-      const days = currentVisiblePlan();
+      // Reine Planner-Berechnung: planDisplayDays persistiert sichtbare Rollover-Snapshots
+      // und darf deshalb während der Alternativensuche nicht aufgerufen werden.
+      const days = buildDays(visibleStart(), 7, false);
       const generated = targetMealFrom(days, date, meal);
       if (!generated?.active || generated.empty || generated.focusId !== focus.id) return null;
       return clone(generated);
@@ -211,6 +218,7 @@
       state.planLocks = previousLocks;
       state.overrides = previousOverrides;
       state.autoLockExcluded = previousExcluded;
+      state.followUps = previousFollowUps;
     }
   }
 

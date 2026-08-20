@@ -21,8 +21,7 @@
       (day.meals || []).some((meal) => {
         if (!meal?.active || meal.empty) return false;
         const used = meal.foodIds || [];
-        const stillSamples = new Set(meal.sampleFoodIds || []);
-        return [...samples].some((id) => used.includes(id) && !stillSamples.has(id));
+        return [...samples].some((id) => used.includes(id));
       }),
     );
   }

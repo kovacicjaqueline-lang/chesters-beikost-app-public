@@ -216,9 +216,11 @@ try {
   );
   await page.locator("#closeGeneric").click();
 
-  // Erledigtes Rezept: der protokollierte Rezeptname bleibt direkt aufrufbar.
+  // Erledigtes Rezept: der explizit mit dem Plan verknüpfte Rezeptname bleibt direkt aufrufbar.
   await page.evaluate((date) => {
     const state = window.__beikostTest.getState();
+    const plannedMealId = state.manualMeals[`${date}|lunch`]?.planId;
+    if (!plannedMealId) throw new Error("Plan-ID für erledigtes Rezept fehlt");
     state.logs.push({
       id: "completed-recipe",
       date,
@@ -228,6 +230,7 @@ try {
       baseFoodIds: ["pute", "karotte", "hafer"],
       sampleFoodIds: [],
       recipeName: "Geflügel-Gemüse-Hafer-Bällchen",
+      plannedMealId,
       outcome: "eaten",
       foodOutcomes: { pute: "eaten", karotte: "eaten", hafer: "eaten" },
       entryType: "meal",
@@ -242,9 +245,11 @@ try {
   await page.locator("#genericModal.open .recipe-card-v2[open]").waitFor();
   await page.locator("#closeGeneric").click();
 
-  // Erledigter FOOD-Eintrag ohne recipeName darf NICHT auf das zuvor geplante Rezept zurückfallen.
+  // Explizit verknüpfter FOOD-Eintrag ohne recipeName darf NICHT auf das zuvor geplante Rezept zurückfallen.
   await page.evaluate((date) => {
     const state = window.__beikostTest.getState();
+    const plannedMealId = state.manualMeals[`${date}|lunch`]?.planId;
+    if (!plannedMealId) throw new Error("Plan-ID für erledigten FOOD-Eintrag fehlt");
     state.logs = [{
       id: "completed-food-only",
       date,
@@ -254,6 +259,7 @@ try {
       baseFoodIds: ["banane", "ei"],
       sampleFoodIds: [],
       recipeName: "",
+      plannedMealId,
       outcome: "eaten",
       foodOutcomes: { banane: "eaten", ei: "eaten" },
       entryType: "meal",

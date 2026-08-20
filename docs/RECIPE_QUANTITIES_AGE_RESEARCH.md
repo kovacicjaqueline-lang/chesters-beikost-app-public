@@ -152,7 +152,7 @@ Eine gemeinsame Mengen- und Oral-Processing-Aussage wäre fachlich nicht reprodu
 - `Rind-Karotten-Nockerl`;
 - `Linsen-Süßkartoffel-Nockerl`.
 
-Der alte gespeicherte Name `Gemüse-Fleisch-Nockerl` sowie `Gemüse-Fleisch-Spätzle` und `Baby-Spätzle` bleiben migrationssicher als Legacy-/Suchnamen beim früheren Defaultpfad `Huhn-Zucchini-Nockerl` hinterlegt. Die beiden anderen Varianten behalten ihre eigenen eindeutigen Namen.
+Die historischen Sammelnamen `Gemüse-Fleisch-Nockerl`, `Gemüse-Fleisch-Spätzle` und `Baby-Spätzle` werden **bewusst keiner der drei neuen Varianten als Alias zugeordnet**. Aus einem gespeicherten Sammelnamen lässt sich rückwirkend nicht sicher ableiten, ob Huhn, Rind oder Linsen verwendet wurden. Eine automatische Zuordnung würde Zutaten- und damit potenziell Allergen-/Vorratsinformationen erfinden. Historische Einträge mit einem solchen mehrdeutigen Namen bleiben deshalb als historischer Name erhalten und müssen bei einer späteren Wiederverwendung ausdrücklich einer konkreten neuen Variante zugeordnet werden.
 
 Die Nockerl erhalten eine vorsichtige Orientierung ab etwa 7 Monaten, aber **keine automatische orale Klassifikation**. Entscheidend bleibt die fertige Struktur: vollständig durchgegart, sehr weich, nicht gummiartig, nicht kompakt-elastisch beziehungsweise bei der Linsenvariante nicht klebrig-gummiartig. Die drei Rezepte werden anschließend im Oral-Processing-Strang separat beurteilt.
 

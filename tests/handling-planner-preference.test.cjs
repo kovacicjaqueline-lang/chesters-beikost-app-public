@@ -9,8 +9,16 @@ const {
   RECIPE_HANDLING_CONTRACT,
 } = require("../data/food-handling.js");
 
-function settings(feedingApproach) {
-  return { feedingApproach, textureStage: 1 };
+function settings(feedingApproach, extra = {}) {
+  return {
+    feedingApproach,
+    textureStage: 1,
+    handlingCapabilities: {
+      smallSoftPieces: false,
+      structuredChew: false,
+    },
+    ...extra,
+  };
 }
 
 function autoDay() {
@@ -94,50 +102,58 @@ test("feedingApproach: Preference entfernt keine bereits sichere Darreichungsfor
   ]);
 });
 
-const SAFETY_REVIEW = [
-  "Rind-Hafer-Bällchen",
-  "Geflügel-Gemüse-Hafer-Bällchen",
-  "Lachs-Kartoffel-Bällchen",
-  "Bangus-Kartoffel-Taler",
-  "Eier-Finger",
-  "Ei-Champignon-Cups",
-  "Hummus mit weichen Gemüsesticks",
-  "Fleisch-Gemüse-Bällchen",
-];
-
-const LATER_REVIEW = [
-  "Obst-Hafer-Muffins",
-  "Gemüse-Hafer-Muffins",
-  "Kürbis-Hirse-Muffins",
-  "Joghurt-Hafer-Waffeln",
-  "Weiche Joghurt-Fladen",
-  "Gemüse-Joghurt-Mini-Muffins",
-  "Huhn-Gemüse-Muffins",
-  "Süßkartoffel-Linsen-Muffins",
-];
-
-test("feedingApproach: SAFETY-REVIEW und LATER-REVIEW bleiben unter fingerfood unmigriert", () => {
-  for (const name of [...SAFETY_REVIEW, ...LATER_REVIEW]) {
-    assert.equal(
-      Object.prototype.hasOwnProperty.call(RECIPE_HANDLING_CONTRACT, name),
-      false,
-      `${name} darf nicht pauschal in den Handling-Contract aufgenommen werden`,
-    );
-    const state = handling.mergeRecipeHandlingState(
-      {
-        name,
-        requirementMissing: ["Konsistenz: Stufe 3 erforderlich"],
-        ingredientMissing: [],
-        missing: ["Konsistenz: Stufe 3 erforderlich"],
-        unlocked: false,
-      },
-      settings("fingerfood"),
+test("feedingApproach: Präferenz umgeht weder structured-chew noch small-soft-pieces", () => {
+  for (const feedingApproach of ["mixed", "spoon", "fingerfood"]) {
+    const chew = handling.recipeHandlingEligibility(
+      { name: "Baby-Bananenbrot" },
+      settings(feedingApproach),
       RECIPE_HANDLING_CONTRACT,
     );
-    assert.equal(state.handlingMigrated, false, `${name} muss Legacy-Stage-Fallback behalten`);
-    assert.equal(state.unlocked, false, `${name} darf durch Präferenz nicht freigeschaltet werden`);
-    assert.deepEqual(state.requirementMissing, ["Konsistenz: Stufe 3 erforderlich"]);
+    assert.deepEqual(chew.eligibleModes, [], feedingApproach);
+    assert.deepEqual(chew.blockedReasons, ["oral-processing-requirement"], feedingApproach);
+
+    const small = handling.recipeHandlingEligibility(
+      { name: "Huhn-Zucchini-Nockerl" },
+      settings(feedingApproach),
+      RECIPE_HANDLING_CONTRACT,
+    );
+    assert.deepEqual(small.eligibleModes, [], feedingApproach);
+    assert.deepEqual(small.blockedReasons, ["handling-requirement"], feedingApproach);
   }
+});
+
+test("feedingApproach: bestätigte Fähigkeiten ändern nur Eligibility, nicht Rezeptidentität", () => {
+  const chewMeal = {
+    meal: "snack",
+    active: true,
+    focusId: "banane",
+    foodIds: ["banane", "hafer", "ei"],
+    baseFoodIds: ["banane"],
+    sampleFoodIds: [],
+    recipeName: "Baby-Bananenbrot",
+    type: "bekannt",
+  };
+  const blocked = structuredClone(chewMeal);
+  handling.applyPresentationModeToAutomaticMeal(
+    blocked,
+    settings("fingerfood"),
+    FOOD_HANDLING_CONTRACT,
+    RECIPE_HANDLING_CONTRACT,
+  );
+  assert.equal(Object.hasOwn(blocked, "presentationMode"), false);
+  assert.equal(blocked.recipeName, "Baby-Bananenbrot");
+
+  const ready = structuredClone(chewMeal);
+  handling.applyPresentationModeToAutomaticMeal(
+    ready,
+    settings("fingerfood", {
+      handlingCapabilities: { smallSoftPieces: false, structuredChew: true },
+    }),
+    FOOD_HANDLING_CONTRACT,
+    RECIPE_HANDLING_CONTRACT,
+  );
+  assert.equal(ready.presentationMode, "finger-graspable");
+  assert.equal(ready.recipeName, "Baby-Bananenbrot");
 });
 
 test("feedingApproach: PLAN-08-Rezeptidentität bleibt unverändert", () => {

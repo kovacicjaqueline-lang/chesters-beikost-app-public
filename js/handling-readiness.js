@@ -92,6 +92,33 @@ function recipeHandlingEligibility(recipe, settings = {}, contractMap = null) {
   return handlingEligibility(contract, settings);
 }
 
+function recipeOralProcessingState(recipeOrName, contractMap = null) {
+  let map = contractMap || (
+    typeof RECIPE_ORAL_PROCESSING_CONTRACT !== "undefined"
+      ? RECIPE_ORAL_PROCESSING_CONTRACT
+      : {}
+  );
+  let name = typeof recipeOrName === "string" ? recipeOrName : recipeOrName?.name;
+  let contract = name ? map?.[name] : null;
+  return {
+    oralProcessing: String(contract?.oralProcessing || ""),
+    oralServingRequirement: String(contract?.servingRequirement || ""),
+  };
+}
+
+function mergeRecipeOralProcessingState(recipeState, contractMap = null) {
+  let oralState = recipeOralProcessingState(recipeState, contractMap);
+  if (!oralState.oralServingRequirement) return {
+    ...recipeState,
+    ...oralState,
+  };
+  return {
+    ...recipeState,
+    ...oralState,
+    skillRequirement: `${oralState.oralServingRequirement} Nur aufrecht sitzend und direkt beaufsichtigt anbieten.`,
+  };
+}
+
 function foodHandlingEligibility(foodOrId, settings = {}, contractMap = null) {
   let map = contractMap || (
     typeof FOOD_HANDLING_CONTRACT !== "undefined"
@@ -191,10 +218,11 @@ function legacyRecipeStageAllowed(recipe, textureStage) {
   return Number(textureStage || 1) >= Number(recipe?.stage || 1);
 }
 
-function mergeRecipeHandlingState(recipeState, settings = {}, contractMap = null) {
+function mergeRecipeHandlingState(recipeState, settings = {}, contractMap = null, oralContractMap = null) {
+  let oralState = mergeRecipeOralProcessingState(recipeState, oralContractMap);
   let handling = recipeHandlingEligibility(recipeState, settings, contractMap);
   if (!handling.migrated) return {
-    ...recipeState,
+    ...oralState,
     handlingMigrated: false,
     handlingModes: [],
     preferredHandlingModes: [],
@@ -209,7 +237,7 @@ function mergeRecipeHandlingState(recipeState, settings = {}, contractMap = null
   let ingredientMissing = [...(recipeState.ingredientMissing || [])];
   let missing = [...ingredientMissing, ...requirementMissing];
   return {
-    ...recipeState,
+    ...oralState,
     requirementMissing,
     missing,
     unlocked: missing.length === 0,
@@ -405,6 +433,9 @@ function installHandlingReadinessRuntime() {
         recipeState,
         state.settings,
         RECIPE_HANDLING_CONTRACT,
+        typeof RECIPE_ORAL_PROCESSING_CONTRACT !== "undefined"
+          ? RECIPE_ORAL_PROCESSING_CONTRACT
+          : {},
       ),
     );
   };
@@ -453,6 +484,13 @@ function installHandlingReadinessRuntime() {
       let recipe = typeof recipeByName === "function" ? recipeByName(recipeName) : null;
       return recipe ? recipeHandlingEligibility(recipe, state.settings, RECIPE_HANDLING_CONTRACT) : null;
     };
+    window.__beikostTest.recipeOralProcessing = (recipeName) =>
+      recipeOralProcessingState(
+        recipeName,
+        typeof RECIPE_ORAL_PROCESSING_CONTRACT !== "undefined"
+          ? RECIPE_ORAL_PROCESSING_CONTRACT
+          : {},
+      );
     window.__beikostTest.foodHandlingEligibility = (foodId) =>
       foodHandlingEligibility(foodId, state.settings, FOOD_HANDLING_CONTRACT);
     window.__beikostTest.presentationModeForMeal = (meal) =>
@@ -478,6 +516,8 @@ if (typeof module !== "undefined" && module.exports) {
     preferredHandlingModes,
     handlingEligibility,
     recipeHandlingEligibility,
+    recipeOralProcessingState,
+    mergeRecipeOralProcessingState,
     foodHandlingEligibility,
     presentationModeForMeal,
     applyPresentationModeToAutomaticMeal,

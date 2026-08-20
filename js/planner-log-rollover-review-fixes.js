@@ -110,6 +110,14 @@
     return "";
   }
 
+  function clearRolloverAcknowledgement(data, core, planId) {
+    if (!planId || !core?.ensurePlannerMeta) return false;
+    let handled = core.ensurePlannerMeta(data).rolloverHandled;
+    if (!handled?.[planId]) return false;
+    delete handled[planId];
+    return true;
+  }
+
   function dayActualLogSummary(logs = []) {
     return {
       count: logs.length,
@@ -124,6 +132,7 @@
     openConcretePlansAt,
     normalMoveSlotOccupied,
     normalMoveNextFreeDate,
+    clearRolloverAcknowledgement,
     dayActualLogSummary,
   });
   if (typeof module !== "undefined" && module.exports) module.exports = API;
@@ -217,6 +226,7 @@
     if (!sourcePlanId || state.planLocks?.[sourceKey]?.planId === sourcePlanId)
       delete state.planLocks?.[sourceKey];
     delete state.overrides?.[sourceKey];
+    clearRolloverAcknowledgement(state, core, sourcePlanId);
 
     // Nur die normale manuelle Verschiebeaktion benutzt weiterhin deferred.
     // Der Tageswechsel-/Rollover-Pfad bleibt davon vollständig getrennt.

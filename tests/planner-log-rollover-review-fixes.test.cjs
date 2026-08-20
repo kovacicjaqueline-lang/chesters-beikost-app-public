@@ -169,6 +169,21 @@ test('next-free skips protected carried plans but temporary visible snapshots re
   assert.equal(free, '2026-08-23');
 });
 
+test('normal move clears an earlier keep acknowledgement for the same concrete plan', () => {
+  const data = state({
+    backupMeta: {
+      plannerLinking: {
+        version: 1,
+        rolloverHandled: { kept: { action: 'keep', at: '2026-08-20T08:00:00.000Z' } },
+        carriedPlans: {},
+      },
+    },
+  });
+  assert.equal(fixes.clearRolloverAcknowledgement(data, core, 'kept'), true);
+  assert.equal(data.backupMeta.plannerLinking.rolloverHandled.kept, undefined);
+  assert.equal(fixes.clearRolloverAcknowledgement(data, core, 'kept'), false);
+});
+
 test('completed-day summary counts every actual log and every documented gram', () => {
   const summary = fixes.dayActualLogSummary([
     log('breakfast', '2026-08-20', 'breakfast', { amount: '20' }),
@@ -183,6 +198,7 @@ test('normal move review layer restores conflict choices and never calls rollove
   assert.match(source, /Vorhandene Mahlzeit ersetzen/);
   assert.match(source, /Auf den nächsten freien Tag verschieben/);
   assert.match(source, /moveCancel/);
+  assert.match(source, /clearRolloverAcknowledgement\(state, core, sourcePlanId\)/);
   assert.doesNotMatch(source, /shiftPlanOneDay|shiftOutstandingPlans/);
 });
 

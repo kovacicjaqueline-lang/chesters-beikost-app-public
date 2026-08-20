@@ -653,6 +653,17 @@ function renderMealCore(day, m) {
     <button class="btn full logMeal" data-plan="${planPayload}">Protokollieren</button>
   </div>`;
 }
+function manualLearningRoleText(foodOrId, type = "") {
+  let item = typeof foodOrId === "string" ? food(foodOrId) : foodOrId;
+  if (!item) return "Einführung";
+  return learningRoleLabel(rank(item), status(item), type);
+}
+function manualLearningValidationText(message) {
+  return String(message || "")
+    .replace("Bitte als bekannte Komponente oder Einführung kennzeichnen.", "Bitte als bekannte Komponente oder als Einführung beziehungsweise Wiederholung kennzeichnen.")
+    .replace("Bitte als Einführung kennzeichnen oder entfernen.", "Bitte als Einführung beziehungsweise Wiederholung kennzeichnen oder entfernen.")
+    .replace("Nur eine neue oder unsichere Einführung gleichzeitig:", "Nur ein neues oder unsicheres Lebensmittel gleichzeitig als Einführung beziehungsweise Wiederholung:");
+}
 function storeEditedPlanMeal(date, meal, data) {
   let prepared = prepareManualMealData(data, meal, date);
   if (!prepared.ok) return prepared;
@@ -675,7 +686,7 @@ function storeEditedPlanMeal(date, meal, data) {
 function saveEditedPlanMeal(date, meal, data) {
   let result = storeEditedPlanMeal(date, meal, data);
   if (!result.ok) {
-    showToast(result.message || "Diese Mahlzeit kann noch nicht sicher gespeichert werden.");
+    showToast(manualLearningValidationText(result.message) || "Diese Mahlzeit kann noch nicht sicher gespeichert werden.");
     return result;
   }
   save();
@@ -711,7 +722,7 @@ function storeManualMeal(date, meal, data) {
 function saveManualMeal(date, meal, data) {
   let result = storeManualMeal(date, meal, data);
   if (!result.ok) {
-    showToast(result.message || "Diese Mahlzeit kann noch nicht sicher gespeichert werden.");
+    showToast(manualLearningValidationText(result.message) || "Diese Mahlzeit kann noch nicht sicher gespeichert werden.");
     return result;
   }
   save();
@@ -815,14 +826,16 @@ function openManualMealSelector(date, meal, initialMeal = null) {
     let group = (title, ids, role) => `<div class="manual-role-group ${role}"><div class="manual-role-heading">${title}</div>${ids.length ? ids.map((id) => {
       let f = food(id), info = validation.infos[id] || manualMealRoleInfo(id, meal, date, { recipeName: selectedRecipe });
       let canBeBase = info.role === "base";
+      let learningLabel = manualLearningRoleText(f, existing?.type || "");
       let switchButton = role === "sample" && canBeBase
         ? `<button class="btn secondary tinybtn setManualRole" data-food="${id}" data-role="base">Als Hauptbasis</button>`
         : role === "base" && info.role === "sample"
-          ? `<button class="btn secondary tinybtn setManualRole" data-food="${id}" data-role="sample">Als Einführung</button>`
+          ? `<button class="btn secondary tinybtn setManualRole" data-food="${id}" data-role="sample">Als ${esc(learningLabel === "Pausiert" ? "Einführung oder Wiederholung" : learningLabel)}</button>`
           : "";
-      return `<div class="manual-role-item"><div class="grow"><b>${esc(f?.name || id)}</b><span class="small">${esc(status(f))}</span></div><div class="manual-role-actions">${switchButton}<button class="iconbtn removeManualSelected" data-food="${id}" aria-label="${esc(f?.name || id)} entfernen">×</button></div></div>`;
+      let roleDetail = role === "sample" && learningLabel !== status(f) ? ` · ${esc(learningLabel)}` : "";
+      return `<div class="manual-role-item"><div class="grow"><b>${esc(f?.name || id)}</b><span class="small">${esc(status(f))}${roleDetail}</span></div><div class="manual-role-actions">${switchButton}<button class="iconbtn removeManualSelected" data-food="${id}" aria-label="${esc(f?.name || id)} entfernen">×</button></div></div>`;
     }).join("") : '<div class="small manual-role-none">Keine</div>'}</div>`;
-    return `<div class="manual-role-overview">${group("Hauptbasis", validation.bases, "base")}${group("Bekannte Komponente", validation.components || [], "component")}${group("Einführung", validation.samples, "sample")}</div>`;
+    return `<div class="manual-role-overview">${group("Hauptbasis", validation.bases, "base")}${group("Bekannte Komponente", validation.components || [], "component")}${group("Einführung und Wiederholung", validation.samples, "sample")}</div>`;
   }
   function renderSelector() {
     let roleData = currentRoleData();
@@ -850,7 +863,7 @@ function openManualMealSelector(date, meal, initialMeal = null) {
           a.priority - b.priority,
       );
     let warning = validation.messages.length
-      ? `<div class="notice warn manual-role-warning"><b>So passt die Auswahl noch nicht</b><div>${validation.messages.map(esc).join("<br>")}</div></div>`
+      ? `<div class="notice warn manual-role-warning"><b>So passt die Auswahl noch nicht</b><div>${validation.messages.map((message) => esc(manualLearningValidationText(message))).join("<br>")}</div></div>`
       : '<div class="notice olive manual-role-ok">Hauptbasis und Lernrolle werden getrennt gespeichert.</div>';
     let body = `<div class="meal-selector-tabs"><button id="selectorRecipes" class="${tab === "recipes" ? "active" : ""}">Rezepte</button><button id="selectorFoods" class="${tab === "foods" ? "active" : ""}">Lebensmittel</button></div>
       ${selectedRolesHtml(validation)}
@@ -864,7 +877,7 @@ function openManualMealSelector(date, meal, initialMeal = null) {
                 let recipeIds = recipeFoodIds(r), recipeRoleInfos = Object.fromEntries(recipeIds.map((id) => [id, manualMealRoleInfo(id, meal, date, { recipeName: r.name })]));
                 let recipeBases = recipeIds.filter((id) => recipeRoleInfos[id].role === "base"), recipeSamples = recipeIds.filter((id) => recipeRoleInfos[id].role === "sample");
                 let preview = manualMealValidation({ recipeName: r.name, foodIds: recipeIds, baseFoodIds: recipeBases, sampleFoodIds: recipeSamples, foodRoles: foodRolesFor(recipeIds, recipeBases, recipeSamples) }, meal, date);
-                let roleHint = preview.multipleUnsafeIds.length ? ` · nicht speicherbar: ${preview.multipleUnsafeIds.map((id) => food(id)?.name || id).join(", ")}` : preview.samples.length ? ` · Einführung: ${preview.samples.map((id) => food(id)?.name || id).join(", ")}` : "";
+                let roleHint = preview.multipleUnsafeIds.length ? ` · nicht speicherbar: ${preview.multipleUnsafeIds.map((id) => food(id)?.name || id).join(", ")}` : preview.samples.length ? ` · ${preview.samples.map((id) => `${manualLearningRoleText(id)}: ${food(id)?.name || id}`).join(", ")}` : "";
                 return `<button class="selector-row selectRecipe ${selectedRecipe === r.name ? "selected" : ""}" data-recipe="${encodeURIComponent(r.name)}">${recipeIconSvg(r)}<span class="grow"><b>${esc(r.name)}</b><span class="small" style="display:block">${r.unlocked ? "Jetzt passend" : `Fast passend · ${esc(recipeMissingSummary(r))}`}${recipeInventoryPortions(r.name) ? ` · ${recipeInventoryPortions(r.name)} im Vorrat` : ""}${esc(roleHint)}</span></span><span class="selector-check" aria-hidden="true">${selectedRecipe === r.name ? "✓" : ""}</span></button>`;
               }).join("")
               : '<div class="empty">Kein passendes Rezept gefunden.</div>'
@@ -872,12 +885,13 @@ function openManualMealSelector(date, meal, initialMeal = null) {
               ? foodRows.map((f) => {
                 let selected = selectedFoods.has(f.id), role = sampleFoodIds.has(f.id) ? "sample" : baseFoodIds.has(f.id) ? "base" : selected ? "component" : "";
                 let roleInfo = manualMealRoleInfo(f, meal, date), pausedManual = roleInfo.reason === "paused_manual";
+                let learningLabel = manualLearningRoleText(f, existing?.type || "");
                 let roleLabel = pausedManual
-                  ? (role === "sample" ? "Einführung · pausiert" : "Pausiert · manuell")
-                  : role === "sample" ? "Einführung"
+                  ? "Pausiert · manuell"
+                  : role === "sample" ? learningLabel
                     : role === "base" ? "Hauptbasis"
                       : role === "component" ? "Bekannte Komponente"
-                        : roleInfo.role === "sample" ? "wird Einführung"
+                        : roleInfo.role === "sample" ? `wird ${learningLabel}`
                           : roleInfo.role === "component" ? "wird bekannte Komponente"
                             : "wird Hauptbasis";
                 return `<button class="selector-row selectFood ${selected ? "selected" : ""} ${pausedManual ? "manual-paused-food" : ""}" data-food="${f.id}">${foodIconSvg(f)}<span class="grow"><b>${esc(f.name)}</b><span class="small" style="display:block">${esc(status(f))}${pausedManual ? " · nur manuell" : ""}${!f.active ? " · deaktiviert" : ""}${inventoryPortions(f.id) ? ` · ${inventoryPortions(f.id)} Portionen im Vorrat` : ""}</span></span><span class="manual-role-type ${role || roleInfo.role} ${pausedManual ? "paused" : ""}">${esc(roleLabel)}</span><span class="selector-check" aria-hidden="true">${selected ? "✓" : ""}</span></button>`;

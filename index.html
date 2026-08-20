@@ -7,11 +7,11 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Beikost">
-<link rel="manifest" href="manifest.webmanifest?v=10.1.25">
-<link rel="apple-touch-icon" href="apple-touch-icon.png?v=10.1.25">
+<link rel="manifest" href="manifest.webmanifest?v=10.1.26">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=10.1.26">
 <title>Beikost-App</title>
-<link rel="stylesheet" href="styles.css?v=10.1.25">
-<link rel="stylesheet" href="ui-meal-editor-footer.css?v=10.1.25">
+<link rel="stylesheet" href="styles.css?v=10.1.26">
+<link rel="stylesheet" href="ui-meal-editor-footer.css?v=10.1.26">
 </head>
 <body>
 <header class="app-header"><div class="brand-orb" aria-hidden="true">B</div><div class="brand-copy"><h1>Beikost</h1><p>Planen · vorbereiten · entspannt anbieten</p></div></header>
@@ -108,7 +108,7 @@
  </div>
  <div class="card collapsible-card statistics-card" id="statisticsSection">
   <details class="panel-details" id="statisticsDetails">
-   <summary><span><b>Statistik</b><small id="statisticsSummary">7 Tage · 0 Einträge</small></span></summary>
+   <summary><span><b>Statistik</b><small id="statisticsSummary">7 Tage · 0 Einträge</small></summary>
    <div class="panel-body" id="statisticsBody"></div>
   </details>
  </div>
@@ -226,7 +226,7 @@
    </div>
   </details>
  </div>
- <div class="card collapsible-card data-card"><details class="panel-details"><summary><span><b>Daten & Sicherung</b><small>Backup, Wiederherstellung und Zurücksetzen</small></span></summary><div class="panel-body"><div id="backupReminder" class="notice warn" style="display:none"><b>Externes Backup empfohlen.</b> Das letzte Backup ist älter als 14 Tage oder fehlt.</div><div id="storageError" class="notice warn" style="display:none"></div><div id="storageStatus" class="storage-status"></div><div class="backup-actions"><button class="btn secondary" id="exportData">Backup in Dateien sichern</button><label class="btn secondary" style="display:inline-flex;align-items:center;margin:0">Backup laden<input type="file" id="importData" accept=".json,application/json" hidden></label><button class="btn secondary" id="showSnapshots">Zwischenstände</button><button class="btn danger" id="resetData">Zurücksetzen</button></div><p class="small">Safari und die Home-Bildschirm-App können getrennte Speicherbereiche verwenden. Ein externes Backup in der Dateien-App schützt zusätzlich.</p><p class="small"><b>App-Version <span id="appVersion">10.1.25</span></b><br>Die Daten werden lokal auf diesem Gerät gespeichert; ein zusätzliches Backup in der Dateien-App bleibt empfohlen.</p>
+ <div class="card collapsible-card data-card"><details class="panel-details"><summary><span><b>Daten & Sicherung</b><small>Backup, Wiederherstellung und Zurücksetzen</small></span></summary><div class="panel-body"><div id="backupReminder" class="notice warn" style="display:none"><b>Externes Backup empfohlen.</b> Das letzte Backup ist älter als 14 Tage oder fehlt.</div><div id="storageError" class="notice warn" style="display:none"></div><div id="storageStatus" class="storage-status"></div><div class="backup-actions"><button class="btn secondary" id="exportData">Backup in Dateien sichern</button><label class="btn secondary" style="display:inline-flex;align-items:center;margin:0">Backup laden<input type="file" id="importData" accept=".json,application/json" hidden></label><button class="btn secondary" id="showSnapshots">Zwischenstände</button><button class="btn danger" id="resetData">Zurücksetzen</button></div><p class="small">Safari und die Home-Bildschirm-App können getrennte Speicherbereiche verwenden. Ein externes Backup in der Dateien-App schützt zusätzlich.</p><p class="small"><b>App-Version <span id="appVersion">10.1.26</span></b><br>Die Daten werden lokal auf diesem Gerät gespeichert; ein zusätzliches Backup in der Dateien-App bleibt empfohlen.</p>
 <details class="version-details"><summary>Was ist neu?</summary><div class="small">Neu: Statistik unter „Mehr“ mit 7 Tagen, 30 Tagen und dem gesamten Zeitraum seit Beikoststart. Sie zeigt 100-Lebensmittel-Fortschritt, Vielfalt, neue Lebensmittel, Protokollergebnisse, Konsistenz und – wenn vorhanden – dokumentierte Mengen. Alle Werte werden direkt aus dem bestehenden Protokoll berechnet; es gibt keine neue Datenhaltung.</div></details></div></details></div>
 
 </section>
@@ -241,27 +241,27 @@
 <div class="toast" id="toast"><div class="grow" id="toastText"></div><button id="toastUndo">Rückgängig</button></div>
 <div class="modal" id="logModal"><div class="sheet log-sheet"><div class="sheethead row"><div class="grow"><h2 id="logTitle">Protokollieren</h2><div class="small" id="logSubtitle"></div></div><button class="iconbtn" id="closeLog">×</button></div><div id="logForm"></div></div></div>
 <div class="modal" id="genericModal"><div class="sheet"><div class="sheethead row"><div class="grow"><h2 id="genericTitle"></h2></div><button class="iconbtn" id="closeGeneric">×</button></div><div id="genericBody"></div></div></div>
- <!-- Version 10.1.25: Recipe-V2 R01–R10 (100 freigegebene Rezeptillustrationen) integriert; Joghurt-Zutatenwürfel entfernt; Food-V2 164/164 sowie Funktionalität unverändert. -->
-<script src="data/foods.js?v=10.1.25"></script>
-<script src="data/recipes.js?v=10.1.25"></script>
-<script src="js/icons.js?v=10.1.25"></script>
-<script src="js/state.js?v=10.1.25"></script>
-<script src="js/utils.js?v=10.1.25"></script>
-<script src="js/log-core.js?v=10.1.25"></script>
-<script src="js/migrations.js?v=10.1.25"></script>
-<script src="js/storage.js?v=10.1.25"></script>
-<script src="js/model.js?v=10.1.25"></script>
-<script src="js/planning.js?v=10.1.25"></script>
-<script src="js/log.js?v=10.1.25"></script>
-<script src="js/foods.js?v=10.1.25"></script>
-<script src="js/recipes.js?v=10.1.25"></script>
-<script src="js/prep.js?v=10.1.25"></script>
-<script src="js/statistics.js?v=10.1.25"></script>
-<script src="js/ui.js?v=10.1.25"></script>
-<script src="js/planner-log-rollover.js?v=10.1.25"></script>
-<script src="js/planner-log-rollover-cascade.js?v=10.1.25"></script>
-<script src="js/planned-recipe-details.js?v=10.1.25"></script>
-<script src="js/product-allergens.js?v=10.1.25"></script>
-<script src="js/product-allergens-guards.js?v=10.1.25"></script>
-<script src="app.js?v=10.1.25"></script>
+ <!-- Version 10.1.26: Recipe-V2 R01–R10 (100 freigegebene Rezeptillustrationen) integriert; Joghurt-Zutatenwürfel entfernt; Food-V2 164/164 sowie Funktionalität unverändert. -->
+<script src="data/foods.js?v=10.1.26"></script>
+<script src="data/recipes.js?v=10.1.26"></script>
+<script src="js/icons.js?v=10.1.26"></script>
+<script src="js/state.js?v=10.1.26"></script>
+<script src="js/utils.js?v=10.1.26"></script>
+<script src="js/log-core.js?v=10.1.26"></script>
+<script src="js/migrations.js?v=10.1.26"></script>
+<script src="js/storage.js?v=10.1.26"></script>
+<script src="js/model.js?v=10.1.26"></script>
+<script src="js/planning.js?v=10.1.26"></script>
+<script src="js/log.js?v=10.1.26"></script>
+<script src="js/foods.js?v=10.1.26"></script>
+<script src="js/recipes.js?v=10.1.26"></script>
+<script src="js/prep.js?v=10.1.26"></script>
+<script src="js/statistics.js?v=10.1.26"></script>
+<script src="js/ui.js?v=10.1.26"></script>
+<script src="js/planner-log-rollover.js?v=10.1.26"></script>
+<script src="js/planner-log-rollover-cascade.js?v=10.1.26"></script>
+<script src="js/planned-recipe-details.js?v=10.1.26"></script>
+<script src="js/product-allergens.js?v=10.1.26"></script>
+<script src="js/product-allergens-guards.js?v=10.1.26"></script>
+<script src="app.js?v=10.1.26"></script>
 </body></html>

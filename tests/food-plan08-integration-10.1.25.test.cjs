@@ -9,6 +9,8 @@ const vm = require("node:vm");
 const ROOT = path.resolve(__dirname, "..");
 const source = (file) => fs.readFileSync(path.join(ROOT, file), "utf8");
 const json = (value) => JSON.parse(JSON.stringify(value));
+const appVersion = JSON.parse(source("VERSION.json")).version;
+const cacheVersion = appVersion.replace(/\./g, "-");
 
 function runtime() {
   const context = vm.createContext({ console, structuredClone });
@@ -82,5 +84,5 @@ test("FOOD/PLAN-08: dynamische Planner-Policy-Kette wird bereits beim Service-Wo
   for (const file of required) assert.ok(wrapper.includes(`\"${file}\"`), file);
   assert.match(wrapper, /caches\.open\(CACHE\)/);
   assert.match(wrapper, /cache:\s*"reload"/);
-  assert.match(core, /const CACHE='chester-beikost-v10-1-25-icons-final'/);
+  assert.match(core, new RegExp(`const CACHE='chester-beikost-v${cacheVersion}-icons-final'`));
 });

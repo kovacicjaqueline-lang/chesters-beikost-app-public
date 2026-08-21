@@ -97,7 +97,7 @@ test("HANDLING runtime: Alter und fehlende Zutaten bleiben trotz Migration harte
   assert.equal(recipe.unlocked, false);
 });
 
-test("BITE/ORAL runtime: Rind-Hafer-Bällchen verlangt graded-bite und structured-chew unabhängig", () => {
+test("BITE/ORAL runtime: Rind-Hafer-Bällchen bleibt bite-seitig easy und hängt nur an structured-chew", () => {
   const base = {
     name: "Rind-Hafer-Bällchen",
     stage: 3,
@@ -110,12 +110,11 @@ test("BITE/ORAL runtime: Rind-Hafer-Bällchen verlangt graded-bite und structure
 
   const blocked = runtime([base]).recipeStatesCore()[0];
   assert.deepEqual([...blocked.requirementMissing], [
-    "Bissabtrennung: gezieltes Abtrennen eines passenden Bissens noch nicht bestätigt",
     "Orale Verarbeitung: strukturiertes Kauen noch nicht bestätigt",
   ]);
   assert.equal(blocked.unlocked, false);
-  assert.equal(blocked.biteSeparation, "graded-bite-required");
-  assert.equal(blocked.biteRequiredCapability, "graded-bite");
+  assert.equal(blocked.biteSeparation, "easy-bite-separate");
+  assert.equal(blocked.biteRequiredCapability, "");
   assert.equal(blocked.oralProcessing, "structured-chew-required");
   assert.equal(blocked.oralRequiredCapability, "structured-chew");
 
@@ -128,18 +127,9 @@ test("BITE/ORAL runtime: Rind-Hafer-Bällchen verlangt graded-bite und structure
     "Orale Verarbeitung: strukturiertes Kauen noch nicht bestätigt",
   ]);
 
-  const structuredOnly = runtime(
-    [base],
-    { handlingCapabilities: { smallSoftPieces: false, gradedBite: false, structuredChew: true } },
-  ).recipeStatesCore()[0];
-  assert.equal(structuredOnly.unlocked, false);
-  assert.deepEqual([...structuredOnly.requirementMissing], [
-    "Bissabtrennung: gezieltes Abtrennen eines passenden Bissens noch nicht bestätigt",
-  ]);
-
   const ready = runtime(
     [base],
-    { handlingCapabilities: { smallSoftPieces: false, gradedBite: true, structuredChew: true } },
+    { handlingCapabilities: { smallSoftPieces: false, gradedBite: false, structuredChew: true } },
   ).recipeStatesCore()[0];
   assert.deepEqual([...ready.requirementMissing], []);
   assert.equal(ready.unlocked, true);

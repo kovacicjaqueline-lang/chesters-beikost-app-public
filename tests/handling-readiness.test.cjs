@@ -104,12 +104,12 @@ test("HANDLING: alle 103 Laufzeitrezepte sind explizit und genau einmal migriert
 test("HANDLING: Auditmatrix bleibt 87 ohne Extra-Gate und 16 bewusst später", () => {
   const entries = Object.values(RECIPE_HANDLING_CONTRACT);
   assert.equal(entries.filter((entry) => !entry.laterKind).length, 87);
-  assert.equal(entries.filter((entry) => entry.laterKind === "oral-capability").length, 4);
+  assert.equal(entries.filter((entry) => entry.laterKind === "bite-and-oral-capability").length, 4);
   assert.equal(entries.filter((entry) => entry.laterKind === "handling-capability").length, 3);
   assert.equal(entries.filter((entry) => entry.laterKind === "soft-orientation").length, 9);
 });
 
-test("BITE: 41 greifbare Fingerfoods sind einzeln 13 low-resistance und 28 easy-bite zugeordnet", () => {
+test("BITE: 41 greifbare Fingerfoods sind einzeln 13 low-resistance, 24 easy-bite und 4 graded-bite zugeordnet", () => {
   const fingerEntries = Object.entries(RECIPE_HANDLING_CONTRACT)
     .filter(([, entry]) => entry.modes.includes(HANDLING_MODES.FINGER_GRASPABLE));
   assert.equal(fingerEntries.length, 41);
@@ -119,11 +119,11 @@ test("BITE: 41 greifbare Fingerfoods sind einzeln 13 low-resistance und 28 easy-
   );
   assert.equal(
     fingerEntries.filter(([, entry]) => entry.biteSeparation === BITE_SEPARATION_PROFILES.EASY_BITE_SEPARATE).length,
-    28,
+    24,
   );
   assert.equal(
     fingerEntries.filter(([, entry]) => entry.biteSeparation === BITE_SEPARATION_PROFILES.GRADED_BITE_REQUIRED).length,
-    0,
+    4,
   );
   for (const [name, entry] of fingerEntries) {
     assert.ok(Object.values(BITE_SEPARATION_PROFILES).includes(entry.biteSeparation), name);
@@ -137,7 +137,7 @@ test("ORAL: easy-chew ist post-separation und die alte Mischsemantik ist kein Or
   assert.equal(RECIPE_HANDLING_CONTRACT["Omelettstreifen"].biteSeparation, BITE_SEPARATION_PROFILES.LOW_RESISTANCE_SEPARATE);
 });
 
-test("ORAL: genau vier Rezepte verlangen strukturiertes Kauen und bleiben bite-seitig easy", () => {
+test("BITE/ORAL: vier Rezepte verlangen nach Einzelprüfung graded-bite und structured-chew", () => {
   const expected = [
     "Rind-Hafer-Bällchen",
     "Baby-Bananenbrot",
@@ -151,9 +151,10 @@ test("ORAL: genau vier Rezepte verlangen strukturiertes Kauen und bleiben bite-s
   assert.deepEqual(actual, expected);
   for (const name of expected) {
     const entry = RECIPE_HANDLING_CONTRACT[name];
-    assert.equal(entry.biteSeparation, BITE_SEPARATION_PROFILES.EASY_BITE_SEPARATE, name);
-    assert.equal(entry.biteRequiredCapability, undefined, name);
+    assert.equal(entry.biteSeparation, BITE_SEPARATION_PROFILES.GRADED_BITE_REQUIRED, name);
+    assert.equal(entry.biteRequiredCapability, HANDLING_CAPABILITIES.GRADED_BITE, name);
     assert.equal(entry.oralProcessing, ORAL_PROCESSING_PROFILES.STRUCTURED_CHEW_REQUIRED, name);
+    assert.equal(entry.oralRequiredCapability, HANDLING_CAPABILITIES.STRUCTURED_CHEW, name);
     assert.deepEqual([...entry.modes], [HANDLING_MODES.FINGER_GRASPABLE], name);
   }
 });
@@ -215,25 +216,35 @@ test("BITE/ORAL: graded-bite und structured-chew entsperren sich nicht gegenseit
   );
 });
 
-test("ORAL: structured-chew bleibt gesperrt bis genau diese Fähigkeit bestätigt ist", () => {
+test("BITE/ORAL: Baby-Bananenbrot verlangt beide unabhängigen Fähigkeiten", () => {
   const recipe = { name: "Baby-Bananenbrot", stage: 3 };
   const blocked = recipeHandlingEligibility(recipe, settings(), RECIPE_HANDLING_CONTRACT);
   assert.deepEqual(blocked.eligibleModes, []);
-  assert.deepEqual(blocked.blockedReasons, ["oral-processing-requirement"]);
+  assert.deepEqual(blocked.blockedReasons, ["bite-separation-requirement", "oral-processing-requirement"]);
 
-  const wrongCapability = recipeHandlingEligibility(
+  const onlyBite = recipeHandlingEligibility(
     recipe,
     settings({ handlingCapabilities: { smallSoftPieces: false, gradedBite: true, structuredChew: false } }),
     RECIPE_HANDLING_CONTRACT,
   );
-  assert.deepEqual(wrongCapability.eligibleModes, []);
+  assert.deepEqual(onlyBite.eligibleModes, []);
+  assert.deepEqual(onlyBite.blockedReasons, ["oral-processing-requirement"]);
 
-  const ready = recipeHandlingEligibility(
+  const onlyChew = recipeHandlingEligibility(
     recipe,
     settings({ handlingCapabilities: { smallSoftPieces: false, gradedBite: false, structuredChew: true } }),
     RECIPE_HANDLING_CONTRACT,
   );
+  assert.deepEqual(onlyChew.eligibleModes, []);
+  assert.deepEqual(onlyChew.blockedReasons, ["bite-separation-requirement"]);
+
+  const ready = recipeHandlingEligibility(
+    recipe,
+    settings({ handlingCapabilities: { smallSoftPieces: false, gradedBite: true, structuredChew: true } }),
+    RECIPE_HANDLING_CONTRACT,
+  );
   assert.deepEqual(ready.eligibleModes, [HANDLING_MODES.FINGER_GRASPABLE]);
+  assert.deepEqual(ready.blockedReasons, []);
 });
 
 test("HANDLING: genau drei Nockerl verlangen small-soft-pieces und bleiben oral soft-breakdown", () => {

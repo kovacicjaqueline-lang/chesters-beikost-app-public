@@ -80,13 +80,13 @@
   <div class="row"><div class="grow"><div class="eyebrow">FÜR DEN GEFRIERSCHRANK</div><h3>Rezepte auf Vorrat</h3><div class="small">Nur Rezepte, die sich sinnvoll portionsweise einfrieren lassen.</div></div><button class="btn secondary smallbtn" id="prepOpenFreezerRecipes">Alle</button></div>
   <div id="freezerRecipes"></div>
  </div>
- <div class="card collapsible-card"><details class="panel-details"><summary><span><b>Stärken richtig vorbereiten</b><small>Reis, Hafer, Hirse, Polenta & mehr</small></span></summary><div class="panel-body"><div id="starchGuide" class="guide-grid"></div></details></div>
+ <div class="card collapsible-card"><details class="panel-details"><summary><span><b>Stärken richtig vorbereiten</b><small>Reis, Hafer, Hirse, Polenta & mehr</small></span></summary><div class="panel-body"><div id="starchGuide" class="guide-grid"></div></div></details></div>
  <div class="card"><div class="row"><div class="grow"><h3>Gefriervorrat</h3><div class="small">Älteste Portionen werden zuerst verbraucht.</div></div></div><div id="inventoryList"></div><details class="accordion"><summary>Sicher abkühlen, einfrieren und auftauen</summary><p class="small">Gekochtes rasch in kleine Portionen teilen und innerhalb von etwa 1–2 Stunden kühlen oder einfrieren; Reis innerhalb einer Stunde. Pur einfrieren; Muttermilch, Pre und Öl erst nach dem Erwärmen ergänzen. Aufgetautes innerhalb von 24 Stunden verwenden und nicht erneut einfrieren.</p></details></div>
 </section>
 <section id="foods" class="view">
- <div class="catalog-switch" id="catalogSwitch" role="tablist" aria-label="Lebensmittel oder Rezepte anzeigen">
-  <button type="button" class="active" role="tab" data-catalog-mode="foods" aria-controls="foodsCatalogSection" aria-selected="true">Lebensmittel</button>
-  <button type="button" role="tab" data-catalog-mode="recipes" aria-controls="recipesSection" aria-selected="false" tabindex="-1">Rezepte</button>
+ <div class="catalog-switch" id="catalogSwitch" role="group" aria-label="Lebensmittel oder Rezepte anzeigen">
+  <button type="button" class="active" data-catalog-mode="foods" aria-controls="foodsCatalogSection" aria-pressed="true">Lebensmittel</button>
+  <button type="button" data-catalog-mode="recipes" aria-controls="recipesSection" aria-pressed="false">Rezepte</button>
  </div>
  <div class="card" id="foodsCatalogSection">
   <div class="row food-header">

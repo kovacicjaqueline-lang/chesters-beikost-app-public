@@ -175,6 +175,7 @@ test("PLAN-08 review: erster sichtbarer Render erfolgt erst nach vollständiger 
         if (script.src.includes("planner-recipe-first")) context.installPlannerRecipeFirstRuntime = () => true;
         if (script.src.includes("planner-proactive-recipe")) context.installPlannerProactiveRecipeRuntime = () => true;
         if (script.src.includes("planner-food-role-stability")) context.installPlannerFoodRoleStabilityRuntime = () => true;
+        if (script.src.includes("planner-quality-rotation")) context.installPlannerQualityRotationRuntime = () => true;
         if (script.src.includes("food-handling")) {
           context.FOOD_HANDLING_CONTRACT = {};
           context.RECIPE_HANDLING_CONTRACT = {};
@@ -204,6 +205,7 @@ test("PLAN-08 review: erster sichtbarer Render erfolgt erst nach vollständiger 
     "js/planner-recipe-first.js?v=10.1.25",
     "js/planner-proactive-recipe.js?v=10.1.25",
     "js/planner-food-role-stability.js?v=10.1.25",
+    "js/planner-quality-rotation.js?v=10.1.26",
     "data/food-handling.js?v=10.1.25",
     "js/handling-readiness.js?v=10.1.25",
   ]);

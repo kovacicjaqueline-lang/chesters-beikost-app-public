@@ -24,7 +24,8 @@ test("Unified Log: Konsistenzstufen und Hilfe verwenden die neuen eindeutigen Be
   assert.equal(indexSource.includes("glatt / fein zerdrückt"), false);
   assert.equal(indexSource.includes("dick püriert / weich zerdrückt"), false);
   assert.equal(indexSource.includes("weich-stückig / Fingerfood"), false);
-  assert.ok(indexSource.includes("Neue Lebensmittel protokollieren"));
+  assert.equal(indexSource.includes("Neue Lebensmittel protokollieren"), false);
+  assert.ok(indexSource.includes("Neue Lebensmittel eintragen"));
   assert.ok(indexSource.includes("Bei freien Einträgen ist keine Mahlzeitenauswahl nötig."));
 });
 

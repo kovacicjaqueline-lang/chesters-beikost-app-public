@@ -593,11 +593,11 @@
         <span class="pill dim">Protokolliert</span>
       </div>
       <details class="completed-details">
-        <summary>Details oder Eintrag bearbeiten</summary>
+        <summary>Details oder Essen bearbeiten</summary>
         <div class="completed-body">
           <div class="small"><b>Tatsächlich enthalten:</b> ${esc(names || "nicht angegeben")}</div>
           ${log.note ? `<div class="small" style="margin-top:5px"><b>Notiz:</b> ${esc(log.note)}</div>` : ""}
-          <button class="btn secondary smallbtn editCompletedLog" data-log="${log.id}" style="margin-top:8px">Eintrag bearbeiten</button>
+          <button class="btn secondary smallbtn editCompletedLog" data-log="${log.id}" style="margin-top:8px">Essen bearbeiten</button>
         </div>
       </details>
     </div>`;
@@ -668,7 +668,7 @@
     if (meal.manualAdded) {
       return `<details class="manual-meal">
         <summary><div class="row"><div class="grow"><div class="manual-meal-title">${esc(mealDisplayTitle(meal))}</div><div class="small meal-type-text">${esc(mealTypeText(meal))} · ${mealName(meal.meal)}</div>${mealStatusText(meal) ? `<div class="small meal-status-text">${esc(mealStatusText(meal))}</div>` : ""}</div><div class="manual-summary-actions">${lockButton}<span class="manual-chevron">⌄</span></div></div></summary>
-        <div class="manual-meal-body">${inactiveMealWarningHtml(day, meal)}${compactMealRolesHtml(meal)}<div class="actionbar">${meal.source === "carried" ? "" : `<button class="btn secondary replaceMeal" data-date="${day.date}" data-meal="${meal.meal}" data-focus="${meal.focusId}">Mahlzeit bearbeiten</button>`}<button class="btn secondary moveMeal" data-move-payload="${movePayload}">Auf morgen</button></div><button class="btn full logMeal" data-plan="${planPayload}">Protokollieren</button>${meal.source === "carried" ? "" : `<button class="btn danger full removeManualMeal" data-date="${day.date}" data-meal="${meal.meal}">Zusatzmahlzeit entfernen</button>`}</div>
+        <div class="manual-meal-body">${inactiveMealWarningHtml(day, meal)}${compactMealRolesHtml(meal)}<div class="actionbar">${meal.source === "carried" ? "" : `<button class="btn secondary replaceMeal" data-date="${day.date}" data-meal="${meal.meal}" data-focus="${meal.focusId}">Mahlzeit bearbeiten</button>`}<button class="btn secondary moveMeal" data-move-payload="${movePayload}">Auf morgen</button></div><button class="btn full logMeal" data-plan="${planPayload}">Essen eintragen</button>${meal.source === "carried" ? "" : `<button class="btn danger full removeManualMeal" data-date="${day.date}" data-meal="${meal.meal}">Zusatzmahlzeit entfernen</button>`}</div>
       </details>`;
     }
 
@@ -676,8 +676,8 @@
     return `<div class="mealbox">
       <div class="row meal-summary-row"><div class="grow meal-summary-main"><div class="dish-title">${esc(mealDisplayTitle(meal))}</div><div class="small meal-type-text">${esc(mealTypeText(meal))} · ${mealName(meal.meal)}</div>${mealStatusText(meal) ? `<div class="small meal-status-text">${esc(mealStatusText(meal))}</div>` : ""}${stockBadgeHtml ? `<div class="meal-stock-row">${stockBadgeHtml}</div>` : ""}</div><div class="meal-summary-actions">${lockButton}</div></div>
       ${lock ? `<div class="tiny lock-label">${esc(lockText)}</div>` : ""}${inactiveMealWarningHtml(day, meal)}${compactMealRolesHtml(meal)}${whyDetailsHtml(meal)}
-      <div class="actionbar">${meal.source === "carried" ? "" : `<button class="btn secondary replaceMeal" data-date="${day.date}" data-meal="${meal.meal}" data-focus="${meal.focusId}">Bearbeiten</button>`}<button class="btn secondary moveMeal" data-move-payload="${movePayload}">Auf morgen</button></div>
-      <button class="btn full logMeal" data-plan="${planPayload}">Protokollieren</button>
+      <div class="actionbar">${meal.source === "carried" ? "" : `<button class="btn secondary replaceMeal" data-date="${day.date}" data-meal="${meal.meal}" data-focus="${meal.focusId}">Mahlzeit bearbeiten</button>`}<button class="btn secondary moveMeal" data-move-payload="${movePayload}">Auf morgen</button></div>
+      <button class="btn full logMeal" data-plan="${planPayload}">Essen eintragen</button>
     </div>`;
   };
 
@@ -733,13 +733,13 @@
           .filter((log) => completedLogIds.has(log.id))
           .reduce((sum, log) => sum + (Number(log.amount) || 0), 0);
         let label = day.date === today() ? "Heute" : nice(day.date, true);
-        return `<details class="card block completed-day"><summary><span><span class="completed-day-title">${esc(label)} erledigt</span><span class="small">${completedPlans.length} ${completedPlans.length === 1 ? "Mahlzeit" : "Mahlzeiten"}${total ? ` · ${total} g insgesamt` : ""}</span></span><span class="completed-day-chevron">▼</span></summary><div class="completed-day-body">${renderedEntries}${extra.length ? `<div class="add-meal-row"><button class="btn secondary smallbtn addExtraMeal" data-date="${day.date}">+ Mahlzeit ergänzen</button></div>` : ""}</div></details>`;
+        return `<details class="card block completed-day"><summary><span><span class="completed-day-title">${esc(label)} erledigt</span><span class="small">${completedPlans.length} ${completedPlans.length === 1 ? "Mahlzeit" : "Mahlzeiten"}${total ? ` · ${total} g insgesamt` : ""}</span></span><span class="completed-day-chevron">▼</span></summary><div class="completed-day-body">${renderedEntries}${extra.length ? `<div class="add-meal-row"><button class="btn secondary smallbtn addExtraMeal" data-date="${day.date}">+ Mahlzeit hinzufügen</button></div>` : ""}</div></details>`;
       }
 
       let completed = completedPlans.length;
       let dayBadge = completed && plans.length ? `<span class="pill ok">${completed}/${plans.length} erledigt</span>` : "";
       let empty = !entries.length ? '<div class="empty">Für diesen Tag gibt es weder einen offenen Plan noch einen Protokolleintrag.</div>' : "";
-      return `<div class="card block day-card"><div class="row day-head"><div class="grow"><div class="day-date">${nice(day.date, true)}</div><div class="small day-type-text">${day.introAssigned ? "Einführung / Wiederholung" : "Bekannter Tag"}</div></div>${dayBadge}</div>${renderedEntries}${empty}${extra.length ? `<div class="add-meal-row"><button class="btn secondary smallbtn addExtraMeal" data-date="${day.date}">+ Mahlzeit ergänzen</button></div>` : ""}</div>`;
+      return `<div class="card block day-card"><div class="row day-head"><div class="grow"><div class="day-date">${nice(day.date, true)}</div><div class="small day-type-text">${day.introAssigned ? "Einführung und Wiederholung" : "Bekannter Tag"}</div></div>${dayBadge}</div>${renderedEntries}${empty}${extra.length ? `<div class="add-meal-row"><button class="btn secondary smallbtn addExtraMeal" data-date="${day.date}">+ Mahlzeit hinzufügen</button></div>` : ""}</div>`;
     }).join("");
     bindPlannerRenderedActions();
   };

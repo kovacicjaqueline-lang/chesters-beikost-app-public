@@ -9,10 +9,12 @@ const ROOT = path.resolve(__dirname, "..");
 const wrapper = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
 const core = fs.readFileSync(path.join(ROOT, "sw-core.js"), "utf8");
 const icons = fs.readFileSync(path.join(ROOT, "js", "icons.js"), "utf8");
+const appVersion = JSON.parse(fs.readFileSync(path.join(ROOT, "VERSION.json"), "utf8")).version;
+const cacheVersion = appVersion.replace(/\./g, "-");
 
 test("finaler FOOD-Iconstand behält den frischen Service-Worker-Cache und die bestehende Kernlogik", () => {
   assert.match(wrapper, /importScripts\("\.\/sw-core\.js"\)/);
-  assert.match(core, /const CACHE='chester-beikost-v10-1-25-icons-final'/);
+  assert.match(core, new RegExp(`const CACHE='chester-beikost-v${cacheVersion}-icons-final'`));
   assert.match(core, /cache:'reload'/, "Kern-Precache muss Assets am HTTP-Cache vorbei frisch laden");
   assert.match(core, /keys\.filter\(key=>key!==CACHE\)\.map\(key=>caches\.delete\(key\)\)/, "alte App-Caches werden bei Aktivierung entfernt");
 });

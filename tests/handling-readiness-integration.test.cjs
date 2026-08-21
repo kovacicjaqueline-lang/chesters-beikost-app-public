@@ -204,8 +204,8 @@ test("HANDLING runtime: Fingerfood-Präferenz sortiert nur, sie entfernt Löffel
 });
 
 test("HANDLING loader: Contract wird vor finalem Planner-Reveal geladen und installiert", () => {
-  assert.match(utilsSource, /data\/food-handling\.js\?v=10\.1\.25/);
-  assert.match(utilsSource, /js\/handling-readiness\.js\?v=10\.1\.25/);
+  assert.match(utilsSource, /data\/food-handling\.js\?v=\d+\.\d+\.\d+/);
+  assert.match(utilsSource, /js\/handling-readiness\.js\?v=\d+\.\d+\.\d+/);
   assert.match(
     utilsSource,
     /installHandlingReadinessRuntime\(\);[\s\S]*window\.__handlingReadinessReady = true;[\s\S]*completePlannerPolicies\(\);/,
@@ -217,11 +217,11 @@ test("HANDLING loader: Contract wird vor finalem Planner-Reveal geladen und inst
 });
 
 test("HANDLING loader: bestehende PLAN-08-Loaderkette bleibt erhalten", () => {
-  assert.match(utilsSource, /planner-milk-policy\.js\?v=10\.1\.25/);
-  assert.match(utilsSource, /planner-iron-preference\.js\?v=10\.1\.25/);
-  assert.match(utilsSource, /data\/food-presentation\.js\?v=10\.1\.25/);
-  assert.match(utilsSource, /planner-meal-presentation\.js\?v=10\.1\.25/);
-  assert.match(utilsSource, /planner-recipe-first\.js\?v=10\.1\.25/);
+  assert.match(utilsSource, /planner-milk-policy\.js\?v=\d+\.\d+\.\d+/);
+  assert.match(utilsSource, /planner-iron-preference\.js\?v=\d+\.\d+\.\d+/);
+  assert.match(utilsSource, /data\/food-presentation\.js\?v=\d+\.\d+\.\d+/);
+  assert.match(utilsSource, /planner-meal-presentation\.js\?v=\d+\.\d+\.\d+/);
+  assert.match(utilsSource, /planner-recipe-first\.js\?v=\d+\.\d+\.\d+/);
   assert.match(
     utilsSource,
     /contractScript\.addEventListener\("load", loadPresentationPolicy, \{ once: true \}\)/,

@@ -213,9 +213,10 @@ test('Nektarine und alle 34 neuen Foods sind zentral auf eigene vorhandene Food-
   assert.notEqual(source('assets/illustrations-v2/foods/nektarine.svg'), source('assets/illustrations-v2/foods/pfirsich.svg'));
 });
 
-test('Service Worker precacht alle neuen Food-V2-Assets und verwendet Cache-Version 10.1.25', () => {
+test('Service Worker precacht alle neuen Food-V2-Assets und verwendet die aktuelle Cache-Version', () => {
   const sw = `${source('sw.js')}\n${source('sw-core.js')}`;
-  assert.match(sw, /chester-beikost-v10-1-25/);
+  const cacheVersion = JSON.parse(source('VERSION.json')).version.replaceAll('.', '-');
+  assert.match(sw, new RegExp(`chester-beikost-v${cacheVersion}`));
   for (const id of NEW_IDS) assert.ok(sw.includes(`./assets/illustrations-v2/foods/${id}.svg`), id);
 });
 

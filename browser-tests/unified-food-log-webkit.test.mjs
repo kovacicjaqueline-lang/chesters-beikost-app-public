@@ -11,7 +11,7 @@ const mimeTypes = {
   ".js": "text/javascript; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".json": "application/json; charset=utf-8",
-  ".webmanifest": "application/manifest+json; charset=utf-8",
+  ".webmanifest": "application/manifest+json",
   ".svg": "image/svg+xml",
   ".png": "image/png",
   ".webp": "image/webp",
@@ -167,7 +167,8 @@ try {
   await page.locator("#saveLog").click();
   assert.equal(await page.evaluate(() => window.__beikostTest.getState().logs.length), 0, "Mehrdeutige Rezeptzutaten dürfen nicht unbestätigt gespeichert werden");
   assert.equal(await page.locator(".log-recipe-choice-error").isVisible(), true);
-  await page.locator("[data-log-recipe-confirm]").check();
+  await page.getByText("Diese Zutaten wurden tatsächlich verwendet", { exact: true }).click();
+  assert.equal(await page.locator("[data-log-recipe-confirm]").isChecked(), true);
   await page.locator("#saveLog").click();
   await page.waitForFunction(() => window.__beikostTest.getState().logs.length === 1);
   const familyRecipe = await page.evaluate(() => window.__beikostTest.getState().logs[0]);
@@ -298,5 +299,3 @@ try {
   await browser.close();
   await new Promise((resolve) => server.close(resolve));
 }
-
-console.log("WebKit unified food log integration regression passed.");

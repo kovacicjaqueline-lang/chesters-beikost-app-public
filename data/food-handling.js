@@ -1,11 +1,12 @@
 "use strict";
 
 /*
- * Strukturierter FOOD-/Rezept-Handling- und Oral-Processing-Contract.
+ * Strukturierter FOOD-/Rezept-Handling-, Bite-Separation- und Oral-Processing-Contract.
  *
- * Handling, orale Verarbeitung, Safety und Altersorientierung bleiben getrennte
- * Dimensionen. Die Rezeptmigration basiert auf der Einzelprüfung aller 103
- * Laufzeitrezepte; aus Kategorien werden keine Gruppenregeln abgeleitet.
+ * Handling, Bissabtrennung, orale Verarbeitung, Safety und Altersorientierung
+ * bleiben getrennte Dimensionen. Die Rezeptmigration basiert auf
+ * Einzelentscheidungen; aus Kategorien, Alter oder stage werden keine
+ * Capability-Regeln abgeleitet.
  */
 
 const HANDLING_MODES = Object.freeze({
@@ -16,14 +17,21 @@ const HANDLING_MODES = Object.freeze({
   FINGER_SMALL_SOFT: "finger-small-soft",
 });
 
+const BITE_SEPARATION_PROFILES = Object.freeze({
+  LOW_RESISTANCE_SEPARATE: "low-resistance-separate",
+  EASY_BITE_SEPARATE: "easy-bite-separate",
+  GRADED_BITE_REQUIRED: "graded-bite-required",
+});
+
 const ORAL_PROCESSING_PROFILES = Object.freeze({
   SOFT_BREAKDOWN: "soft-breakdown",
-  EASY_BITE_SEPARATE: "easy-bite-separate",
+  EASY_CHEW: "easy-chew",
   STRUCTURED_CHEW_REQUIRED: "structured-chew-required",
 });
 
 const HANDLING_CAPABILITIES = Object.freeze({
   SMALL_SOFT_PIECES: "small-soft-pieces",
+  GRADED_BITE: "graded-bite",
   STRUCTURED_CHEW: "structured-chew",
 });
 
@@ -39,6 +47,21 @@ const FOOD_HANDLING_CONTRACT = Object.freeze({
 });
 
 const RECIPE_CONTRACT_GROUPS = Object.freeze({
+  fingerLowResistance: Object.freeze([
+    "Lachs-Kartoffel-Bällchen",
+    "Rote-Linsen-Gemüsebällchen",
+    "Tofu-Brokkoli-Bällchen",
+    "Brokkoli-Kartoffel-Taler",
+    "Kichererbsen-Kürbis-Taler",
+    "Süßkartoffel-Hirse-Sticks",
+    "Omelettstreifen",
+    "Zucchini-Omelett",
+    "Bangus-Kartoffel-Taler",
+    "Paprika-Omelettstreifen",
+    "Süßkartoffel-Linsen-Taler",
+    "Gebackene Saba-Banane",
+    "Bananen-Ei-Pancakes"
+  ]),
   fingerEasy: Object.freeze([
     "Obst-Hafer-Pancakes",
     "Birne-Hirse-Pancakes",
@@ -46,36 +69,23 @@ const RECIPE_CONTRACT_GROUPS = Object.freeze({
     "Zucchini-Hafer-Pancakes",
     "Ube-Bananen-Pancakes",
     "Geflügel-Gemüse-Hafer-Bällchen",
-    "Lachs-Kartoffel-Bällchen",
-    "Rote-Linsen-Gemüsebällchen",
-    "Tofu-Brokkoli-Bällchen",
-    "Brokkoli-Kartoffel-Taler",
     "Zucchini-Hafer-Puffer",
-    "Kichererbsen-Kürbis-Taler",
     "Rote-Linsen-Bratlinge",
     "Polenta-Zucchini-Sticks",
-    "Süßkartoffel-Hirse-Sticks",
-    "Omelettstreifen",
-    "Zucchini-Omelett",
-    "Bangus-Kartoffel-Taler",
     "Obst-Hafer-Muffins",
     "Gemüse-Hafer-Muffins",
     "Kürbis-Hirse-Muffins",
     "Kichererbsenmehl-Zucchini-Taler",
     "Eier-Finger",
-    "Paprika-Omelettstreifen",
     "Hummus mit weichen Gemüsesticks",
     "Buchweizen-Bananen-Pancakes",
-    "Süßkartoffel-Linsen-Taler",
-    "Gebackene Saba-Banane",
     "Bananen-Joghurt-Hafer-Pancakes",
     "Obst-Joghurt-Hafer-Ofenbites",
     "Zucchini-Joghurt-Hafer-Bites",
     "Joghurt-Hafer-Waffeln",
     "Gemüse-Joghurt-Mini-Muffins",
     "Süßkartoffel-Linsen-Muffins",
-    "Fleisch-Gemüse-Bällchen",
-    "Bananen-Ei-Pancakes"
+    "Fleisch-Gemüse-Bällchen"
   ]),
   structuredChew: Object.freeze([
     "Rind-Hafer-Bällchen",
@@ -176,6 +186,13 @@ const RECIPE_CONTRACT_OVERRIDES = Object.freeze({
     servingRequirement: "Vollständig durchgaren, weich halten und als kanonische Fingerfood-Form in breite, gut greifbare Streifen schneiden.",
     noteOverride: "Ei und fein geriebene Zucchini vollständig durchgaren, weich halten und in breite, gut greifbare Streifen schneiden. Kleine Stücke sind eine separate spätere Handlingform und nicht die kanonische Servierform.",
   }),
+  "Eier-Finger": Object.freeze({
+    servingRequirement: "Ei vollständig durchgaren und in gut greifbare längliche oder geviertelte Stücke schneiden. Frisch anbieten; nicht unnötig austrocknen oder gummiartig werden lassen.",
+    noteOverride: "Ei vollständig durchgaren, schälen und in gut greifbare längliche oder geviertelte Stücke schneiden. Frisch anbieten, nicht unnötig austrocknen lassen und nicht einfrieren.",
+  }),
+  "Hummus mit weichen Gemüsesticks": Object.freeze({
+    servingRequirement: "Hummus glatt anbieten. Die Gemüsesticks müssen in der konkret angebotenen Form mechanisch weich, sicher greifbar und frei von harten, zähen oder spröden Bissen sein; roh oder gegart ist beides möglich, wenn die konkrete Form diese Anforderung erfüllt.",
+  }),
   "Tinola-inspiriert": Object.freeze({
     servingRequirement: "Huhn vollständig garen und sehr fein zerpflücken oder zerkleinern; Sayote sehr weich garen und als kleine weiche Stückchen in der Löffelmahlzeit belassen.",
     noteOverride: "Huhn vollständig garen und sehr fein zerpflücken oder zerkleinern. Sayote sehr weich garen und in kleinen weichen Stückchen belassen; Malunggay fein einarbeiten. Babyportion ohne Salz, Brühewürfel oder Fischsauce als weich-stückige Löffelmahlzeit anbieten.",
@@ -210,33 +227,42 @@ const RECIPE_CONTRACT_OVERRIDES = Object.freeze({
   }),
 });
 
-function freezeRecipeContract(modes, oralProcessing, extra = {}) {
+function freezeRecipeContract(modes, biteSeparation, oralProcessing, extra = {}) {
   return Object.freeze({
     modes: Object.freeze([...modes]),
+    ...(biteSeparation ? { biteSeparation } : {}),
     oralProcessing,
     ...extra,
   });
 }
 
 const recipeContractEntries = [];
-function addRecipeContractGroup(names, modes, oralProcessing, extra = {}) {
+function addRecipeContractGroup(names, modes, biteSeparation, oralProcessing, extra = {}) {
   for (const name of names) {
     const override = RECIPE_CONTRACT_OVERRIDES[name] || {};
     recipeContractEntries.push([
       name,
-      freezeRecipeContract(modes, oralProcessing, { ...extra, ...override }),
+      freezeRecipeContract(modes, biteSeparation, oralProcessing, { ...extra, ...override }),
     ]);
   }
 }
 
 addRecipeContractGroup(
+  RECIPE_CONTRACT_GROUPS.fingerLowResistance,
+  [HANDLING_MODES.FINGER_GRASPABLE],
+  BITE_SEPARATION_PROFILES.LOW_RESISTANCE_SEPARATE,
+  ORAL_PROCESSING_PROFILES.EASY_CHEW,
+);
+addRecipeContractGroup(
   RECIPE_CONTRACT_GROUPS.fingerEasy,
   [HANDLING_MODES.FINGER_GRASPABLE],
-  ORAL_PROCESSING_PROFILES.EASY_BITE_SEPARATE,
+  BITE_SEPARATION_PROFILES.EASY_BITE_SEPARATE,
+  ORAL_PROCESSING_PROFILES.EASY_CHEW,
 );
 addRecipeContractGroup(
   RECIPE_CONTRACT_GROUPS.structuredChew,
   [HANDLING_MODES.FINGER_GRASPABLE],
+  BITE_SEPARATION_PROFILES.EASY_BITE_SEPARATE,
   ORAL_PROCESSING_PROFILES.STRUCTURED_CHEW_REQUIRED,
   {
     oralRequiredCapability: HANDLING_CAPABILITIES.STRUCTURED_CHEW,
@@ -246,33 +272,39 @@ addRecipeContractGroup(
 addRecipeContractGroup(
   RECIPE_CONTRACT_GROUPS.spoonSmoothMash,
   [HANDLING_MODES.SPOON_SMOOTH, HANDLING_MODES.SPOON_MASHED],
+  "",
   ORAL_PROCESSING_PROFILES.SOFT_BREAKDOWN,
 );
 addRecipeContractGroup(
   RECIPE_CONTRACT_GROUPS.spoonSoftLumpyLater,
   [HANDLING_MODES.SPOON_SOFT_LUMPY],
+  "",
   ORAL_PROCESSING_PROFILES.SOFT_BREAKDOWN,
   { laterKind: "soft-orientation" },
 );
 addRecipeContractGroup(
   RECIPE_CONTRACT_GROUPS.spoonMash,
   [HANDLING_MODES.SPOON_MASHED],
+  "",
   ORAL_PROCESSING_PROFILES.SOFT_BREAKDOWN,
 );
 addRecipeContractGroup(
   RECIPE_CONTRACT_GROUPS.spoonMashLumpy,
   [HANDLING_MODES.SPOON_MASHED, HANDLING_MODES.SPOON_SOFT_LUMPY],
+  "",
   ORAL_PROCESSING_PROFILES.SOFT_BREAKDOWN,
 );
 addRecipeContractGroup(
   RECIPE_CONTRACT_GROUPS.fingerEasyLater,
   [HANDLING_MODES.FINGER_GRASPABLE],
-  ORAL_PROCESSING_PROFILES.EASY_BITE_SEPARATE,
+  BITE_SEPARATION_PROFILES.EASY_BITE_SEPARATE,
+  ORAL_PROCESSING_PROFILES.EASY_CHEW,
   { laterKind: "soft-orientation" },
 );
 addRecipeContractGroup(
   RECIPE_CONTRACT_GROUPS.fingerSmallSoft,
   [HANDLING_MODES.FINGER_SMALL_SOFT],
+  "",
   ORAL_PROCESSING_PROFILES.SOFT_BREAKDOWN,
   {
     requiredCapabilities: Object.freeze({
@@ -289,6 +321,7 @@ const RECIPE_HANDLING_CONTRACT = Object.freeze(
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     HANDLING_MODES,
+    BITE_SEPARATION_PROFILES,
     ORAL_PROCESSING_PROFILES,
     HANDLING_CAPABILITIES,
     FOOD_HANDLING_CONTRACT,

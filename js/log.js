@@ -74,7 +74,7 @@ function renderLogsCore() {
               ${l.note ? `<details class="log-note-details"><summary>Notiz</summary><div class="small">${esc(l.note)}</div></details>` : ""}
             </div>
             <div class="log-entry-actions">
-              <button class="iconbtn editLog" aria-label="Bearbeiten">✎</button>
+              <button class="iconbtn editLog" aria-label="Essen bearbeiten">✎</button>
               <button class="iconbtn deleteLog" aria-label="Löschen">×</button>
             </div>
           </div>
@@ -254,10 +254,7 @@ function requestLogDateChange(nextDate, previousDate) {
 function renderLogs() {
   renderLogsCore();
   let button = document.getElementById("freeLog");
-  if (button) {
-    button.textContent = "+ Essen eintragen";
-    button.onclick = (event) => { event.preventDefault(); openLog(null); };
-  }
+  if (button) button.onclick = (event) => { event.preventDefault(); openLog(null); };
 }
 
 function plannedLogContext(input) {

@@ -26,6 +26,9 @@ test("Flow-Terminologie trennt Planung und tatsächliches Essen", () => {
 
   assert.ok(logSource.includes('document.getElementById("logTitle").textContent = p.editId ? "Essen bearbeiten" : "Essen eintragen";'));
   assert.ok(logSource.includes('id="saveLog">${p.editId ? "Änderungen speichern" : "Speichern"}</button>'));
+  assert.ok(logSource.includes('class="iconbtn editLog" aria-label="Essen bearbeiten"'));
+  assert.equal(logSource.includes('class="iconbtn editLog" aria-label="Bearbeiten"'), false);
+  assert.equal(logSource.includes('button.textContent = "+ Essen eintragen";'), false);
   assert.equal(indexSource.includes("Neue Lebensmittel protokollieren"), false);
   assert.equal(indexSource.includes("beim Protokollieren"), false);
 });

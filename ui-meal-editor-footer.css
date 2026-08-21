@@ -175,3 +175,250 @@
 #plan .plan-secondary-actions > summary {
   padding: 8px 0;
 }
+
+/* Recipe-V2 Brei-Icons: sichtbare Hauptausdehnung auf 80 % des 128×128-Canvas
+ * normalisieren und die sichtbare Bounding Box mittig ausrichten. Die eingebetteten
+ * PNG-Motive bleiben unverändert; nur ihre Darstellung im bestehenden Icon-Viewport
+ * wird skaliert und versetzt. */
+.illustration-icon--recipe {
+  position: relative;
+  overflow: hidden;
+}
+
+.illustration-icon--recipe > .illustration-icon__asset[src*="/recipes/"][src*="brei"] {
+  position: absolute;
+  left: var(--recipe-brei-left, 0);
+  top: var(--recipe-brei-top, 0);
+  width: var(--recipe-brei-size, 100%);
+  height: var(--recipe-brei-size, 100%);
+  max-width: none;
+}
+
+.illustration-icon__asset[src*="/recipes/apfel-hirse-brei-mit-mandelmus.svg"] {
+  --recipe-brei-size: 101.386%;
+  --recipe-brei-left: -1.089%;
+  --recipe-brei-top: -0.693%;
+}
+.illustration-icon__asset[src*="/recipes/bananen-haferbrei-mit-erdnussmus.svg"] {
+  --recipe-brei-size: 99.417%;
+  --recipe-brei-left: 0.680%;
+  --recipe-brei-top: 0.680%;
+}
+.illustration-icon__asset[src*="/recipes/buttermilch-griess-obstbrei.svg"] {
+  --recipe-brei-size: 113.778%;
+  --recipe-brei-left: -6.889%;
+  --recipe-brei-top: -7.778%;
+}
+.illustration-icon__asset[src*="/recipes/buttermilch-hafer-obstbrei.svg"] {
+  --recipe-brei-size: 116.364%;
+  --recipe-brei-left: -8.182%;
+  --recipe-brei-top: -8.636%;
+}
+.illustration-icon__asset[src*="/recipes/buttermilch-hirse-obstbrei.svg"] {
+  --recipe-brei-size: 115.056%;
+  --recipe-brei-left: -7.978%;
+  --recipe-brei-top: -7.528%;
+}
+.illustration-icon__asset[src*="/recipes/karotte-suesskartoffel-brei.svg"] {
+  --recipe-brei-size: 129.620%;
+  --recipe-brei-left: -16.329%;
+  --recipe-brei-top: -15.823%;
+}
+.illustration-icon__asset[src*="/recipes/karotten-hirse-brei-mit-tahin.svg"] {
+  --recipe-brei-size: 131.282%;
+  --recipe-brei-left: -14.615%;
+  --recipe-brei-top: -16.154%;
+}
+.illustration-icon__asset[src*="/recipes/karotten-polenta-brei.svg"] {
+  --recipe-brei-size: 170.667%;
+  --recipe-brei-left: -35.333%;
+  --recipe-brei-top: -38.000%;
+}
+.illustration-icon__asset[src*="/recipes/kuerbis-hafer-brei.svg"] {
+  --recipe-brei-size: 152.836%;
+  --recipe-brei-left: -27.015%;
+  --recipe-brei-top: -27.015%;
+}
+.illustration-icon__asset[src*="/recipes/milch-getreide-brei.svg"] {
+  --recipe-brei-size: 222.609%;
+  --recipe-brei-left: -61.304%;
+  --recipe-brei-top: -59.565%;
+}
+.illustration-icon__asset[src*="/recipes/monggo-kalabasa-brei.svg"] {
+  --recipe-brei-size: 200.784%;
+  --recipe-brei-left: -51.176%;
+  --recipe-brei-top: -51.176%;
+}
+.illustration-icon__asset[src*="/recipes/monggo-suesskartoffel-brei.svg"] {
+  --recipe-brei-size: 182.857%;
+  --recipe-brei-left: -41.429%;
+  --recipe-brei-top: -42.857%;
+}
+.illustration-icon__asset[src*="/recipes/obst-buchweizenbrei.svg"] {
+  --recipe-brei-size: 204.800%;
+  --recipe-brei-left: -50.800%;
+  --recipe-brei-top: -54.800%;
+}
+.illustration-icon__asset[src*="/recipes/obst-griessbrei.svg"] {
+  --recipe-brei-size: 173.559%;
+  --recipe-brei-left: -36.102%;
+  --recipe-brei-top: -37.458%;
+}
+.illustration-icon__asset[src*="/recipes/obst-haferbrei.svg"] {
+  --recipe-brei-size: 102.400%;
+  --recipe-brei-left: -1.200%;
+  --recipe-brei-top: -0.800%;
+}
+.illustration-icon__asset[src*="/recipes/obst-hirsebrei.svg"] {
+  --recipe-brei-size: 200.784%;
+  --recipe-brei-left: -49.608%;
+  --recipe-brei-top: -53.529%;
+}
+.illustration-icon__asset[src*="/recipes/obst-polentabrei.svg"] {
+  --recipe-brei-size: 182.857%;
+  --recipe-brei-left: -40.000%;
+  --recipe-brei-top: -42.857%;
+}
+.illustration-icon__asset[src*="/recipes/obst-quinoabrei.svg"] {
+  --recipe-brei-size: 157.538%;
+  --recipe-brei-left: -29.385%;
+  --recipe-brei-top: -33.077%;
+}
+.illustration-icon__asset[src*="/recipes/obst-reisbrei.svg"] {
+  --recipe-brei-size: 193.208%;
+  --recipe-brei-left: -45.849%;
+  --recipe-brei-top: -46.604%;
+}
+.illustration-icon__asset[src*="/recipes/suesskartoffel-rote-linsen-brei.svg"] {
+  --recipe-brei-size: 213.333%;
+  --recipe-brei-left: -56.667%;
+  --recipe-brei-top: -64.167%;
+}
+.illustration-icon__asset[src*="/recipes/tilapia-reis-brei.svg"] {
+  --recipe-brei-size: 196.923%;
+  --recipe-brei-left: -48.462%;
+  --recipe-brei-top: -50.000%;
+}
+.illustration-icon__asset[src*="/recipes/ube-hafer-brei.svg"] {
+  --recipe-brei-size: 186.182%;
+  --recipe-brei-left: -43.818%;
+  --recipe-brei-top: -45.273%;
+}
+.illustration-icon__asset[src*="/recipes/zucchini-kartoffel-brei.svg"] {
+  --recipe-brei-size: 193.208%;
+  --recipe-brei-left: -45.849%;
+  --recipe-brei-top: -51.887%;
+}
+.illustration-icon__asset[src*="/recipes/zucchini-quinoa-brei.svg"] {
+  --recipe-brei-size: 213.333%;
+  --recipe-brei-left: -56.667%;
+  --recipe-brei-top: -67.500%;
+}
+
+/* Recipe-V2 Stampf-Icons: dieselbe 80-%-Normalisierung wie bei den Breien. */
+.illustration-icon--recipe > .illustration-icon__asset[src*="/recipes/"][src*="stampf"] {
+  position: absolute;
+  left: var(--recipe-stampf-left, 0);
+  top: var(--recipe-stampf-top, 0);
+  width: var(--recipe-stampf-size, 100%);
+  height: var(--recipe-stampf-size, 100%);
+  max-width: none;
+}
+
+.illustration-icon__asset[src*="/recipes/bohnen-kartoffel-stampf.svg"] {
+  --recipe-stampf-size: 102.400%;
+  --recipe-stampf-left: -1.200%;
+  --recipe-stampf-top: -0.800%;
+}
+.illustration-icon__asset[src*="/recipes/brokkoli-kartoffel-stampf.svg"] {
+  --recipe-stampf-size: 121.905%;
+  --recipe-stampf-left: -10.952%;
+  --recipe-stampf-top: -11.905%;
+}
+.illustration-icon__asset[src*="/recipes/erbsen-kartoffel-stampf.svg"] {
+  --recipe-stampf-size: 99.417%;
+  --recipe-stampf-left: -0.097%;
+  --recipe-stampf-top: -0.097%;
+}
+.illustration-icon__asset[src*="/recipes/karfiol-kartoffel-stampf.svg"] {
+  --recipe-stampf-size: 111.304%;
+  --recipe-stampf-left: -5.652%;
+  --recipe-stampf-top: -5.652%;
+}
+.illustration-icon__asset[src*="/recipes/lachs-suesskartoffel-stampf.svg"] {
+  --recipe-stampf-size: 124.878%;
+  --recipe-stampf-left: -12.439%;
+  --recipe-stampf-top: -13.902%;
+}
+
+/* Recipe-V2 Bällchen: nur die drei im optischen Review klar zu kleinen, kompakten
+ * Motive werden auf die sichtbare Breite der kleineren bereits passenden Familien-
+ * Referenz vergrößert. Daraus folgt kein allgemeiner Prozent-Zielwert für Recipes. */
+.illustration-icon--recipe > .illustration-icon__asset[src*="/recipes/lachs-kartoffel-baellchen.svg"],
+.illustration-icon--recipe > .illustration-icon__asset[src*="/recipes/rote-linsen-gemuesebaellchen.svg"],
+.illustration-icon--recipe > .illustration-icon__asset[src*="/recipes/tofu-brokkoli-baellchen.svg"] {
+  position: absolute;
+  left: var(--recipe-baellchen-left, 0);
+  top: var(--recipe-baellchen-top, 0);
+  width: var(--recipe-baellchen-size, 100%);
+  height: var(--recipe-baellchen-size, 100%);
+  max-width: none;
+}
+
+.illustration-icon__asset[src*="/recipes/lachs-kartoffel-baellchen.svg"] {
+  --recipe-baellchen-size: 126.582%;
+  --recipe-baellchen-left: -13.786%;
+  --recipe-baellchen-top: -13.786%;
+}
+.illustration-icon__asset[src*="/recipes/rote-linsen-gemuesebaellchen.svg"] {
+  --recipe-baellchen-size: 107.527%;
+  --recipe-baellchen-left: -3.343%;
+  --recipe-baellchen-top: -5.864%;
+}
+.illustration-icon__asset[src*="/recipes/tofu-brokkoli-baellchen.svg"] {
+  --recipe-baellchen-size: 116.279%;
+  --recipe-baellchen-left: -8.140%;
+  --recipe-baellchen-top: -12.227%;
+}
+
+/* Recipe-V2 Lugaw: Huhn-Lugaw bleibt als bereits passende Familienreferenz unverändert.
+ * Nur die beiden deutlich kleineren kompakten Schüssel-Motive werden auf dieselbe
+ * sichtbare Breite angeglichen und anhand ihrer Alpha-Bounding-Box zentriert. */
+.illustration-icon--recipe > .illustration-icon__asset[src*="/recipes/kuerbis-lugaw.svg"],
+.illustration-icon--recipe > .illustration-icon__asset[src*="/recipes/lugaw-basis.svg"] {
+  position: absolute;
+  left: var(--recipe-lugaw-left, 0);
+  top: var(--recipe-lugaw-top, 0);
+  width: var(--recipe-lugaw-size, 100%);
+  height: var(--recipe-lugaw-size, 100%);
+  max-width: none;
+}
+
+.illustration-icon__asset[src*="/recipes/kuerbis-lugaw.svg"] {
+  --recipe-lugaw-size: 167.273%;
+  --recipe-lugaw-left: -34.261%;
+  --recipe-lugaw-top: -36.250%;
+}
+.illustration-icon__asset[src*="/recipes/lugaw-basis.svg"] {
+  --recipe-lugaw-size: 121.053%;
+  --recipe-lugaw-left: -10.526%;
+  --recipe-lugaw-top: -10.033%;
+}
+
+/* Recipe-V2 Omelett: die beiden bereits großen Motive bleiben unverändert. Nur das
+ * deutlich zu kleine Paprika-Omelett wird an die kleinere gute Familienreferenz
+ * Zucchini-Omelett (109 px sichtbare Breite) angeglichen und zentriert. */
+.illustration-icon--recipe > .illustration-icon__asset[src*="/recipes/paprika-omelettstreifen.svg"] {
+  position: absolute;
+  left: var(--recipe-omelett-left, 0);
+  top: var(--recipe-omelett-top, 0);
+  width: var(--recipe-omelett-size, 100%);
+  height: var(--recipe-omelett-size, 100%);
+  max-width: none;
+}
+
+.illustration-icon__asset[src*="/recipes/paprika-omelettstreifen.svg"] {
+  --recipe-omelett-size: 170.313%;
+  --recipe-omelett-left: -35.156%;
+  --recipe-omelett-top: -35.822%;
+}

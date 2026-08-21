@@ -1,6 +1,6 @@
-# FOOD-Icon-Leitlinie
+# Icon-Leitlinie
 
-Diese Leitlinie gilt verbindlich für neue und überarbeitete FOOD-Illustrationen der Beikost-App.
+Diese Leitlinie gilt verbindlich für neue und überarbeitete FOOD-Illustrationen der Beikost-App sowie für die technischen Größen- und Zentrierungsregeln von Recipe-V2-Illustrationen.
 
 ## Vollständigkeitsregel für neue FOODs und Rezepte
 
@@ -72,6 +72,29 @@ Ziel ist eine freundliche FOOD-Illustration für eine Baby-/Beikost-App, nicht e
 - Jedes kanonische FOOD erhält ein eigenes Asset und eine eindeutige zentrale Zuordnung.
 - Keine Kategorie-Fallbacks für kanonische FOODs, wenn ein eigenes Asset vorgesehen ist.
 
+## Sichtbare Motivgröße und Zentrierung
+
+Für die Messung zählt die sichtbare Alpha-Bounding-Box ab Alpha ≥ 16; sehr schwache Anti-Aliasing-Randpixel bestimmen die Geometrie damit nicht künstlich.
+
+### FOOD-V2
+
+- Maßgeblich ist die **längere sichtbare Motivachse** innerhalb des 128×128-Canvas, nicht die gesamte rechteckige Fläche des Motivs.
+- **Zielwert sind 80 %** der Canvas-Kantenlänge.
+- Für technische Prüfungen gilt ein Zielkorridor von **78–82 %**.
+- Die sichtbare Bounding-Box wird horizontal und vertikal auf die Canvas-Mitte ausgerichtet. Als technische Toleranz gelten höchstens **2 px Abweichung je Achse** auf dem 128×128-Canvas.
+- Skalierung oder Zentrierung darf das eigentliche Motiv nicht abschneiden.
+
+### Recipe-V2
+
+Recipe-Illustrationen dürfen je nach Motivform deutlich unterschiedlich viel Canvas nutzen. Ein flaches Pancake-/Teller-Motiv kann bei rund 94–95 % sichtbarer Breite richtig wirken, während ein kompakteres Motiv mit demselben Prozentwert zu groß wäre. Deshalb gibt es für Recipe-V2 **keinen festen Prozent-Zielwert**.
+
+- Maßgeblich ist zuerst ein sauberer transparenter Rand zum Canvas: **Ziel sind mindestens 3 px sichtbarer Freiraum an jeder Seite**.
+- Für die technische Messung gilt wegen Pixel- und Alpha-Rundungen eine Untergrenze von **2 px je Seite**.
+- Kein sichtbarer Teil des Motivs darf den Canvas berühren oder abgeschnitten werden.
+- Zentrierung wird **optisch** beurteilt. Die Alpha-Bounding-Box dient als Mess- und Review-Hilfe, ist bei Recipe-V2 aber kein eigener harter ±px-Grenzwert.
+- Zu viel transparenter Leerraum bleibt ebenfalls ein Review-Grund: Ein in der kleinen App-Darstellung sichtbar zu kleines Motiv soll vergrößert werden, solange der Mindest-Rand erhalten bleibt. Dafür gibt es bewusst keinen festen Mindest-Prozentwert.
+- Bereits geprüfte Recipe-V2-Gruppen: **Brei** und **Stampf** wurden wegen deutlich zu großer Leerräume vergrößert und neu zentriert. **Pancakes**, **Taler** und **Muffins** werden ausdrücklich nicht auf einen gemeinsamen Prozentwert vereinheitlicht; ihre unterschiedlichen Motivgrößen bleiben erhalten, solange die Randregel erfüllt ist und der optische Review keinen Änderungsbedarf zeigt. Bei den **Bällchen** bleiben die drei bereits ausreichend großen Motive unverändert; die drei klar zu klein angelegten kompakten Motive Lachs-Kartoffel, Rote-Linsen-Gemüse und Tofu-Brokkoli werden innerhalb ihrer Familie vergrößert und neu zentriert, ohne daraus einen allgemeinen Recipe-Prozentwert abzuleiten. Bei **Lugaw** bleibt Huhn-Lugaw als bereits passende Familienreferenz unverändert; Lugaw-Basis und Kürbis-Lugaw werden als deutlich kleinere, gleichartig kompakte Schüssel-Motive auf ungefähr dieselbe sichtbare Familienbreite vergrößert und neu positioniert. Bei der **Omelett**-Familie bleiben Omelettstreifen und Zucchini-Omelett in ihrer bereits großen Originaldarstellung; nur Paprika-Omelettstreifen wird als klar zu kleines, gleichartig breites Motiv an die kleinere gute Familienreferenz von Zucchini-Omelett angeglichen und neu zentriert. Aus keiner dieser Familienreferenzen folgt ein allgemeiner Recipe-Prozentwert.
+
 ## Review-Kriterien vor Freigabe
 
 Ein Icon wird nur freigegeben, wenn alle folgenden Punkte erfüllt sind:
@@ -80,6 +103,7 @@ Ein Icon wird nur freigegeben, wenn alle folgenden Punkte erfüllt sind:
 2. Stil passt zum bestehenden Food-V2-Bestand.
 3. Transparenter Hintergrund ohne eingebrannte Kachel.
 4. In kleiner Darstellung noch gut lesbar.
-5. Keine unnötige Deko oder visuelle Verwechslung mit einem Rezept.
-6. Fleisch/Fisch: gegart, appetitlich und baby-app-freundlich.
-7. Keine unappetitlichen, drastischen oder rohen Darstellungen.
+5. Sichtbare Motivgröße, Rand und Zentrierung entsprechen der jeweils geltenden FOOD-V2- oder Recipe-V2-Regel.
+6. Keine unnötige Deko oder visuelle Verwechslung mit einem Rezept.
+7. Fleisch/Fisch: gegart, appetitlich und baby-app-freundlich.
+8. Keine unappetitlichen, drastischen oder rohen Darstellungen.

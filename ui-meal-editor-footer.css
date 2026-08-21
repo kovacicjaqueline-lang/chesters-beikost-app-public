@@ -8,7 +8,8 @@
  * manuelle Editor deckt deshalb den Bereich hinter dem Sheet selbst vollständig ab,
  * statt Header/Main/Nav über einen ancestor-:has()-Selektor auszublenden. Letzteres
  * kann WebKit beim Schließen verzögert neu berechnen und kurz einen leeren App-Screen
- * hinterlassen. Der modal-eigene Backdrop verschwindet dagegen atomar mit .modal.open.
+ * hinterlassen. Der opake Backdrop entspricht optisch dem bisherigen dunklen Overlay
+ * über var(--bg), verschwindet aber atomar mit .modal.open.
  */
 #genericModal:has(#cancelManualMeal) {
   z-index: 90;
@@ -21,13 +22,9 @@
   content: "";
   position: fixed;
   inset: -100vh 0;
-  background: var(--bg);
+  background: #9e988f;
   z-index: 0;
   pointer-events: none;
-}
-
-#genericModal:has(#mealSelectorSearch:focus)::before {
-  background: #9e988f;
 }
 
 /* Kein eigener flex-/innerer Scroll-Viewport mehr: Das Sheet selbst scrollt wie beim

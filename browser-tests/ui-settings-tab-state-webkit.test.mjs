@@ -83,6 +83,14 @@ try {
       `Konsistenzbezeichnungen müssen bei ${width}px exakt dem freigegebenen Text entsprechen`,
     );
 
+    const textureCoach = page.locator("#textureCoachCard");
+    await textureCoach.locator("details").evaluate((details) => { details.open = true; });
+    const textureCoachText = await textureCoach.innerText();
+    assert.match(textureCoachText, /Nächster kleiner Schritt:/, `Texture Coach muss bei ${width}px den nächsten kleinen Schritt zeigen`);
+    assert.match(textureCoachText, /Geeignetes weiches Fingerfood kann unabhängig von dieser Konsistenzstufe parallel angeboten werden/, `Texture Coach muss bei ${width}px Fingerfood als parallelen Weg erklären`);
+    assert.doesNotMatch(textureCoachText, /positive Texturerfahrung/, `Texture Coach darf bei ${width}px keinen FOOD-basierten Texturerfolgszähler zeigen`);
+    assert.doesNotMatch(textureCoachText, /Test möglich/, `Texture Coach darf bei ${width}px keine unbegründete Bereitschaftsampel zeigen`);
+
     await openSettings(page);
     assert.equal(await page.locator("#feedingApproach").count(), 1, `Beikostform muss bei ${width}px vorhanden sein`);
     assert.equal(await page.locator("#smallSoftPiecesCapability").count(), 1, `Small-Soft-Fähigkeit muss bei ${width}px vorhanden sein`);

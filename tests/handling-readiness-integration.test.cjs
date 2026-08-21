@@ -175,6 +175,14 @@ test("HANDLING runtime: Karotte bietet bei textureStage 1 parallel Löffel und w
   assert.ok(options.some((option) => option.key === "standard"));
 });
 
+test("HANDLING runtime: textureStage 2 bevorzugt bei Löffelkost Karotte zerdrückt statt glatt", () => {
+  const ctx = runtime([], { feedingApproach: "spoon", textureStage: 2 });
+  const options = ctx.followUpPreparationOptions("karotte");
+  assert.equal(options[0].mode, "spoon-mashed");
+  assert.equal(options[1].mode, "spoon-smooth");
+  assert.ok(options.some((option) => option.mode === "finger-graspable"));
+});
+
 test("HANDLING runtime: spoon-soft-lumpy bleibt an Texturentwicklung gekoppelt, finger-graspable nicht", () => {
   const ctx = runtime([]);
   assert.equal(

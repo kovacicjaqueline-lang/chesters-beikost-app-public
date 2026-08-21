@@ -1,14 +1,14 @@
 # FOOD Handling Readiness – technisches Soll- und Laufzeitmodell
 
-Stand: 2026-08-20  
-Status: Handling- und Oral-Processing-Contract für alle 103 Laufzeitrezepte migriert  
+Stand: 2026-08-21  
+Status: Handling-, Bite-Separation- und Oral-Processing-Modell fachlich freigegeben  
 Bezug: `docs/FOOD_HANDLING_ORAL_PROCESSING_CONTRACT.md` und `docs/PLANNER_FACHKONZEPT.md`
 
 ## Ziel
 
 Löffelkost und geeignetes Fingerfood werden parallel abgebildet, ohne Beikostphase, Alter, Allergene, Mahlzeiteneignung, FOOD-Sicherheit oder Planner-Locks abzuschwächen.
 
-Das Modell ersetzt weder die Beikostphase noch führt es eine lineare Skill-Leiter ein.
+Das Modell führt ausdrücklich **keine lineare Skill-Leiter** ein.
 
 ## 1. Getrennte Dimensionen
 
@@ -26,16 +26,22 @@ Die Laufzeit trennt:
    - `finger-graspable`
    - `finger-small-soft`
 
-3. **Orales Verarbeitungsprofil**
-   - `soft-breakdown`
+3. **Bite Separation** für zusammenhängende Fingerfoods
+   - `low-resistance-separate`
    - `easy-bite-separate`
+   - `graded-bite-required`
+
+4. **Orales Verarbeitungsprofil nach dem Abtrennen**
+   - `soft-breakdown`
+   - `easy-chew`
    - `structured-chew-required`
 
-4. **Beobachtete Fähigkeiten**
+5. **Beobachtete Fähigkeiten**
    - `small-soft-pieces`
+   - `graded-bite`
    - `structured-chew`
 
-5. **Unabhängige bestehende Gates**
+6. **Unabhängige bestehende Gates**
    - Zutatenstatus
    - Allergene
    - Mahlzeiteneignung
@@ -47,48 +53,35 @@ Keine dieser Dimensionen darf aus einer anderen automatisch abgeleitet werden.
 
 ## 2. Feeding-Präferenz
 
-`feedingApproach` steuert ausschließlich die Reihenfolge bereits geeigneter Darreichungsformen.
+`feedingApproach` steuert ausschließlich die Reihenfolge bereits geeigneter Darreichungsformen:
 
 ```js
 feedingApproach: "mixed"
 ```
 
-Semantik:
-
 - `spoon`: geeignete Löffelformen bevorzugen;
 - `fingerfood`: geeignete Fingerfoodformen bevorzugen;
 - `mixed`: beide gleichwertig behandeln.
 
-Die Präferenz darf keine Safety-, Handling- oder Oral-Capability umgehen.
+Die Präferenz darf keine Safety-, Handling-, Bite- oder Oral-Capability umgehen.
 
 ## 3. Handling-Contract
 
-Der strukturierte Contract liegt in:
-
-`data/food-handling.js`
+Der strukturierte Contract liegt in `data/food-handling.js`.
 
 Ein Rezept erhält explizit einen oder mehrere Modi. Die Zuordnung basiert auf Einzelentscheidungen und nicht auf `category` oder `stage`.
 
-Beispiel:
-
-```js
-"Obst-Hafer-Pancakes": {
-  modes: ["finger-graspable"],
-  oralProcessing: "easy-bite-separate"
-}
-```
-
 ### `spoon-soft-lumpy`
 
-Dieser Modus bleibt an die bestehende Texturentwicklung gekoppelt. Das ist eine Textur-/Handlingfrage und keine Altersregel.
+Bleibt an die bestehende Texturentwicklung gekoppelt. Das ist eine Textur-/Handlingfrage und keine Altersregel.
 
 ### `finger-graspable`
 
-Dieser Modus ist keine spätere Stufe. Ein weiches gut greifbares Fingerfood kann bei allgemeiner Beikostreife geeignet sein.
+Ist keine spätere Stufe. Für diese zusammenhängenden Formen muss zusätzlich `biteSeparation` explizit angegeben sein.
 
 ### `finger-small-soft`
 
-Dieser Modus wird nur dort verwendet, wo kleine weiche Einzelstücke Teil der kanonischen Form sind und die zusätzliche Handlingfähigkeit individuell freigegeben wurde.
+Wird nur verwendet, wenn kleine weiche Einzelstücke Teil der kanonischen Form sind.
 
 Aktuell:
 
@@ -96,7 +89,7 @@ Aktuell:
 - Rind-Karotten-Nockerl
 - Linsen-Süßkartoffel-Nockerl
 
-Diese drei verlangen:
+Diese drei verlangen ausschließlich:
 
 ```js
 requiredCapabilities: {
@@ -104,73 +97,111 @@ requiredCapabilities: {
 }
 ```
 
-## 4. Orale Verarbeitungsdimension
+`small-soft-pieces` beschreibt Aufnehmen/Selbstfüttern, nicht eine zusätzliche orale Small-Piece-Fähigkeit.
 
-`oralProcessing` ist unabhängig vom Handlingmodus.
+## 4. Bite Separation
 
-Für die vollständige fachliche Definition gilt:
+Technisches Beispiel ohne Bite-Capability:
 
-`docs/FOOD_HANDLING_ORAL_PROCESSING_CONTRACT.md`
+```js
+{
+  modes: ["finger-graspable"],
+  biteSeparation: "easy-bite-separate",
+  oralProcessing: "easy-chew"
+}
+```
 
-Nur vier konkrete Rezepte verlangen aktuell `structured-chew`:
+Nur `graded-bite-required` kann zusätzlich tragen:
+
+```js
+biteRequiredCapability: "graded-bite"
+```
+
+Die Capability wird unabhängig von Handling und Oral Processing geprüft.
+
+Der bestehende Katalog enthält nach dem gezielten Recheck:
+
+- 13 × `low-resistance-separate`
+- 28 × `easy-bite-separate`
+- 0 × `graded-bite-required`
+
+Damit erzeugt die neue Capability **keine neue Sperre für Bestandsrezepte**.
+
+## 5. Oral Processing
+
+`oralProcessing` beschreibt ausschließlich den bereits abgetrennten Bissen.
+
+`easy-bite-separate` ist deshalb kein Oral-Profil mehr. Sein bisher vermischter post-separation-Anteil wird als `easy-chew` modelliert.
+
+Nur vier bestehende Rezepte verlangen `structured-chew`:
 
 - Rind-Hafer-Bällchen
 - Baby-Bananenbrot
 - Weiche Joghurt-Fladen
 - Huhn-Gemüse-Muffins
 
+Alle vier wurden unabhängig auf Bite Separation nachgeprüft und sind dort `easy-bite-separate`.
+
 Technische Form:
 
 ```js
 {
   modes: ["finger-graspable"],
+  biteSeparation: "easy-bite-separate",
   oralProcessing: "structured-chew-required",
   oralRequiredCapability: "structured-chew"
 }
 ```
 
-Alle anderen zusammenhängenden Fingerfoods werden nicht aufgrund ihrer Kategorie pauschal hochgestuft.
+Daraus folgt ausdrücklich nicht `structured-chew => graded-bite`.
 
-## 5. Nutzerfähigkeiten
+## 6. Nutzerfähigkeiten und Persistenz
 
-Die beiden Fähigkeiten werden unabhängig gespeichert:
+Die drei Fähigkeiten werden unabhängig gespeichert:
 
 ```js
 handlingCapabilities: {
   smallSoftPieces: false,
+  gradedBite: false,
   structuredChew: false
 }
 ```
 
 Fehlende Altwerte werden konservativ als `false` normalisiert.
 
-Die Nutzerin bestätigt die Fähigkeiten in den Einstellungen nur dann, wenn sie tatsächlich beobachtet wurden.
+Die Settings-UI enthält drei getrennte beobachtbare Bestätigungen:
+
+- kleine weiche Stücke gezielt aufnehmen und zum Mund führen;
+- bei weichen formstabilen Stücken gezielt einen passenden Bissen abtrennen;
+- strukturierte weiche Bissen sicher im Mund bewegen und wiederholt zerkleinern.
+
+Eine neue Storage-Schema-Version ist nicht erforderlich, weil `gradedBite` additiv ist.
 
 Wichtig:
 
 - kein Auto-Unlock nach Alter;
 - kein Auto-Unlock aus `textureStage`;
 - kein Auto-Unlock aus `feedingApproach`;
-- `smallSoftPieces` schaltet Structured Chew nicht frei;
-- `structuredChew` schaltet kleine Stücke nicht frei.
+- keine Capability entsperrt eine andere;
+- Zähne sind kein Capability-Gate.
 
-## 6. Vollmigration der 103 Laufzeitrezepte
+## 7. Vollmigration der 103 Laufzeitrezepte
 
-Der vorherige Wave-1-Zwischenstand ist abgeschlossen.
+Der Contract enthält weiterhin genau **103 Rezeptnamen** und muss exakt mit dem normalisierten Laufzeitkatalog übereinstimmen.
 
-Der aktuelle Contract enthält genau **103 Rezeptnamen** und muss exakt mit dem normalisierten Laufzeitkatalog übereinstimmen.
+Die bestehende Later-Matrix bleibt unverändert:
 
-Auditmatrix:
-
-| Gruppe | Anzahl | Technische Wirkung |
+| Gruppe | Anzahl | technische Wirkung |
 | --- | ---: | --- |
-| kein zusätzliches späteres Gate | 87 | expliziter Handling-/Oral-Contract, historische Stage-Sperre entfällt handlingseitig |
+| kein zusätzliches späteres Gate | 87 | expliziter Handling-/Bite-/Oral-Contract |
 | `structured-chew` | 4 | harte beobachtete orale Capability |
 | `small-soft-pieces` | 3 | harte beobachtete Handling-Capability |
-| weiche spätere Formorientierung | 9 | keine neue Capability; kanonische Form/`minMonths`-Orientierung bleibt erhalten |
+| weiche spätere Formorientierung | 9 | keine neue Capability; Form/`minMonths`-Orientierung bleibt erhalten |
 | offen | 0 | – |
 
-Die neun weichen späteren Formfälle sind:
+`graded-bite` kommt in dieser Matrix noch nicht als Bestands-Gate vor.
+
+Die neun weichen späteren Formfälle bleiben:
 
 - Gemüse-Nudel-Sauce
 - Baby-Linsen-Bolognese
@@ -182,20 +213,22 @@ Die neun weichen späteren Formfälle sind:
 - Tinola-inspiriert
 - Sayote-Huhn-Reis
 
-## 7. Zentrale Eligibility
+## 8. Zentrale Eligibility
 
-`js/handling-readiness.js` bleibt die zentrale Policy.
+`js/handling-readiness.js` bleibt die einzige zentrale Policy.
 
 Ablauf für ein migriertes Rezept:
 
 1. Contract nach Rezeptname lesen;
 2. Modi gegen Textur- und Handlingvoraussetzungen prüfen;
-3. orale Capability unabhängig prüfen;
-4. Feeding-Präferenz nur auf bereits geeignete Modi anwenden;
-5. alte `Konsistenz:`-Stage-Sperre für das migrierte Rezept entfernen;
-6. unabhängige Zutaten-/Alters-/Safety-Gates unverändert lassen.
+3. `biteRequiredCapability` unabhängig prüfen;
+4. `oralRequiredCapability` unabhängig prüfen;
+5. wenn beide fehlen, beide Blockgründe erhalten;
+6. Feeding-Präferenz nur auf bereits geeignete Modi anwenden;
+7. alte `Konsistenz:`-Stage-Sperre für das migrierte Rezept entfernen;
+8. Zutaten-/Alters-/Safety-Gates unverändert lassen.
 
-Ein fehlender Contract behält weiterhin den konservativen Legacy-Fallback. Im aktuellen Laufzeitkatalog soll dieser Fall durch die 103/103-Migration jedoch nicht mehr vorkommen.
+Ein fehlender Contract behält den konservativen Legacy-Fallback.
 
 ### Blockgründe
 
@@ -205,66 +238,59 @@ Handling-Capability:
 Darreichungsform: kleine weiche Stücke noch nicht bestätigt
 ```
 
+Bite-Capability:
+
+```text
+Bissabtrennung: gezieltes Abtrennen eines passenden Bissens noch nicht bestätigt
+```
+
 Orale Capability:
 
 ```text
 Orale Verarbeitung: strukturiertes Kauen noch nicht bestätigt
 ```
 
-Diese Blockgründe ersetzen nicht unabhängige andere Sperren.
+Mehrere unabhängige Capability-Gründe dürfen gleichzeitig vorhanden sein.
 
-## 8. Rezept-Serving-Guidance
+## 9. Rezept-Serving-Guidance
 
-Der Contract darf für individuell geprüfte Fälle strukturierte Serving-Guidance tragen.
+Der Contract darf individuell geprüfte Serving-/Safety-Guidance tragen. Freitext wird nie zurück in Steuerlogik geparst.
 
-Dazu gehören insbesondere:
+Besonders relevant bleiben:
 
-- eindeutige breite Streifen beim Zucchini-Omelett;
+- breite Streifen beim Zucchini-Omelett;
 - saftige flache/längliche Form bei Geflügel- und Fleischbällchen;
-- weich-stückige kanonische Form bei Tinola und Sayote-Huhn-Reis;
-- Safety-Ausschluss klebrig-teigiger Krume beim Baby-Bananenbrot;
-- Ausschluss klebrig/roh-teigiger Mitte bei Joghurt-Fladen;
-- Safety-/Texturkontrolle der drei Nockerl.
+- nicht klebrig-teigige Krume beim Baby-Bananenbrot;
+- keine rohe/klebrige Mitte bei Joghurt-Fladen;
+- Safety-/Texturkontrolle der drei Nockerl;
+- Eier-Finger vollständig gegart, aber nicht unnötig trocken/gummiartig;
+- bei Hummus-Sticks ist „weich“ eine mechanische Eigenschaft: roh oder gegart möglich, wenn die konkret angebotene Form weich und sicher ist.
 
-Die Runtime darf diese strukturierte Guidance als angezeigten Zubereitungs-/Sicherheitstext verwenden. Freitext wird niemals zurück in Steuerlogik geparst.
-
-## 9. Integration in `recipeStatesCore()`
+## 10. Integration in `recipeStatesCore()`
 
 Die bestehende zentrale Rezeptfreigabe wird weiterhin gewrappt.
 
 Für migrierte Rezepte:
 
 - historische `Konsistenz:`-Sperre entfernen;
-- Handling-/Oral-Eligibility anwenden;
+- Handling-/Bite-/Oral-Eligibility anwenden;
 - `hardMinMonths` unverändert lassen;
 - `ingredientMissing` unverändert lassen;
 - `unlocked` anschließend aus allen verbleibenden Gründen neu bestimmen.
 
-Dadurch verwenden Rezeptliste, Vorrat und PLAN-08 Recipe-first dieselbe zentrale Entscheidung.
+Rezeptliste, Vorrat und PLAN-08 Recipe-first verwenden damit dieselbe zentrale Entscheidung. Keine zweite Bite-/Oral-Schranke in `planner-recipe-first.js` einbauen.
 
-Keine zweite parallele Oral-/Handling-Schranke in `planner-recipe-first.js` einbauen.
+## 11. Presentation Mode
 
-## 10. Presentation Mode
-
-Eine automatisch erzeugte Mahlzeit kann additiv tragen:
+Eine automatisch erzeugte Mahlzeit kann weiterhin additiv tragen:
 
 ```js
 presentationMode: "finger-graspable"
 ```
 
-Das Feld kann in neue Auto-Locks und Logs übernommen werden.
+`presentationMode` beschreibt Handling, nicht Bite-/Oral-Capabilities.
 
 Bestehende Locks und Logs ohne dieses Feld bleiben gültig. Aus historischem `textureStage` darf kein `presentationMode` rückwirkend erfunden werden.
-
-## 11. Settings-UI und Persistenz
-
-Die Settings-UI enthält:
-
-- Beikostform;
-- Bestätigung für kleine weiche Stücke;
-- Bestätigung für strukturiertes Kauen.
-
-Die beiden Capability-Werte werden im bestehenden Settings-Objekt gespeichert. Eine neue Storage-Schema-Version ist dafür nicht erforderlich, weil die Felder additiv sind und fehlende Altwerte konservativ normalisiert werden.
 
 ## 12. Safety bleibt unabhängig
 
@@ -283,17 +309,18 @@ Mindestens abzusichern:
 
 1. 103 Runtime-Rezepte = 103 Contract-Einträge;
 2. keine Doppelzuordnung;
-3. Auditmatrix 87 / 4 / 3 / 9;
-4. vier Structured-Chew-Fälle ohne Capability gesperrt und mit Capability freigegeben;
-5. drei Nockerl nur durch `small-soft-pieces` freigegeben;
-6. die beiden Fähigkeiten entsperren sich nicht gegenseitig;
-7. Feeding-Präferenz umgeht keine Capability;
-8. weiche Referenz-Fingerfoods bleiben ohne zusätzliche Capability möglich;
-9. `spoon-soft-lumpy` bleibt an Texturentwicklung gekoppelt;
-10. `hardMinMonths` und fehlende Zutaten bleiben unabhängig aktiv;
-11. Safety-/Serving-Guidance für Bananenbrot und weitere Einzelentscheidungen bleibt erhalten;
-12. Settings speichern beide Capability-Werte getrennt und Reload erhält sie;
-13. PLAN-08-Rezeptidentität und bestehende Locks bleiben stabil.
+3. bestehende Later-Matrix 87 / 4 / 3 / 9;
+4. 41 `finger-graspable` = 13 low-resistance / 28 easy-bite / 0 graded-bite;
+5. jeder `finger-graspable`-Contract hat Bite Separation;
+6. vier Structured-Chew-Fälle bleiben bite-seitig `easy-bite-separate`;
+7. synthetisches `graded-bite-required` bleibt ohne `gradedBite` gesperrt;
+8. `gradedBite` und `structuredChew` entsperren sich nicht gegenseitig;
+9. drei Nockerl nur durch `small-soft-pieces` freigegeben;
+10. Feeding-Präferenz umgeht keine Capability;
+11. `spoon-soft-lumpy` bleibt an Texturentwicklung gekoppelt;
+12. `hardMinMonths` und fehlende Zutaten bleiben unabhängig aktiv;
+13. Settings speichern alle drei Capability-Werte getrennt und Reload erhält sie;
+14. PLAN-08-Rezeptidentität und bestehende Locks bleiben stabil.
 
 Nach Produktivänderungen in diesem Bereich gelten gemäß `AGENTS.md` / `docs/AI_WORKFLOW.md`:
 

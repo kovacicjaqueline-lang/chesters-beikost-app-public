@@ -26,6 +26,7 @@ test("aktive Asset-Querystrings verwenden durchgehend die kanonische App-Version
     "index.html",
     "js/utils.js",
     "js/planner-log-rollover-cascade.js",
+    "sw.js",
   ];
 
   for (const file of runtimeSources) {
@@ -41,4 +42,13 @@ test("Service-Worker-Cache verwendet die kanonische App-Version", () => {
 
   assert.ok(cacheVersion, "sw-core.js muss einen versionierten App-Cache definieren");
   assert.equal(cacheVersion, version);
+});
+
+test("Top-Level-Service-Worker importiert den Core mit der kanonischen App-Version", () => {
+  const version = JSON.parse(source("VERSION.json")).version;
+  const worker = source("sw.js");
+  const match = worker.match(/importScripts\("\.\/sw-core\.js\?v=([^"\)]+)"\)/);
+
+  assert.ok(match, "sw.js muss sw-core.js mit explizitem Versionsparameter importieren");
+  assert.equal(match[1], version, "sw-core.js-Import muss der kanonischen App-Version entsprechen");
 });

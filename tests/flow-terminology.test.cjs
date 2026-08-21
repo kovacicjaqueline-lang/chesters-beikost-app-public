@@ -9,6 +9,8 @@ const root = path.resolve(__dirname, "..");
 const indexSource = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const uiSource = fs.readFileSync(path.join(root, "js", "ui.js"), "utf8");
 const logSource = fs.readFileSync(path.join(root, "js", "log.js"), "utf8");
+const prepSource = fs.readFileSync(path.join(root, "js", "prep.js"), "utf8");
+const rolloverSource = fs.readFileSync(path.join(root, "js", "planner-log-rollover.js"), "utf8");
 const migrationSource = fs.readFileSync(path.join(root, "js", "migrations.js"), "utf8");
 
 test("Flow-Terminologie trennt Planung und tatsächliches Essen", () => {
@@ -29,6 +31,23 @@ test("Flow-Terminologie trennt Planung und tatsächliches Essen", () => {
   assert.ok(logSource.includes('class="iconbtn editLog" aria-label="Essen bearbeiten"'));
   assert.equal(logSource.includes('class="iconbtn editLog" aria-label="Bearbeiten"'), false);
   assert.equal(logSource.includes('button.textContent = "+ Essen eintragen";'), false);
+
+  assert.ok(prepSource.includes('<summary>Details oder Essen bearbeiten</summary>'));
+  assert.ok(prepSource.includes('>Essen bearbeiten</button>'));
+  assert.equal(prepSource.includes('<summary>Details oder Eintrag bearbeiten</summary>'), false);
+  assert.equal(prepSource.includes('>Eintrag bearbeiten</button>'), false);
+
+  assert.ok(rolloverSource.includes('<summary>Details oder Essen bearbeiten</summary>'));
+  assert.ok(rolloverSource.includes('>Essen bearbeiten</button>'));
+  assert.ok(rolloverSource.includes('>Essen eintragen</button>'));
+  assert.ok(rolloverSource.includes('>Mahlzeit bearbeiten</button>'));
+  assert.ok(rolloverSource.includes('>+ Mahlzeit hinzufügen</button>'));
+  assert.ok(rolloverSource.includes('"Einführung und Wiederholung"'));
+  assert.equal(rolloverSource.includes('>Protokollieren</button>'), false);
+  assert.equal(rolloverSource.includes('>Bearbeiten</button>'), false);
+  assert.equal(rolloverSource.includes('>+ Mahlzeit ergänzen</button>'), false);
+  assert.equal(rolloverSource.includes('"Einführung / Wiederholung"'), false);
+
   assert.equal(indexSource.includes("Neue Lebensmittel protokollieren"), false);
   assert.equal(indexSource.includes("beim Protokollieren"), false);
 });
@@ -38,6 +57,8 @@ test("Kostprobe existiert nicht mehr als eigener UX- oder Erstellflow", () => {
   assert.equal(uiSource.includes("Kostprobe"), false);
   assert.equal(logSource.includes("Kostprobe"), false);
   assert.equal(logSource.includes('entryType: "sample"'), false);
+  assert.equal(prepSource.includes("Aus nicht angebotenen Kostproben"), false);
+  assert.ok(prepSource.includes("Nicht angebotene Lebensmittel"));
   assert.ok(indexSource.includes("Bei freien Einträgen ist keine Mahlzeitenauswahl nötig."));
   assert.ok(logSource.includes('recipeName: "", recipeInventoryId: "", entryType: "food", foodOutcomes: {}'));
   assert.match(

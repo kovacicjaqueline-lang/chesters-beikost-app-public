@@ -81,11 +81,11 @@ function completedMealHtml(date, meal, log) {
       <span class="pill ok">Erledigt</span>
     </div>
     <details class="completed-details">
-      <summary>Details oder Eintrag bearbeiten</summary>
+      <summary>Details oder Essen bearbeiten</summary>
       <div class="completed-body">
         <div class="small"><b>Tatsächlich enthalten:</b> ${esc(names || "nicht angegeben")}</div>
         ${log.note ? `<div class="small" style="margin-top:5px"><b>Notiz:</b> ${esc(log.note)}</div>` : ""}
-        <button class="btn secondary smallbtn editCompletedLog" data-log="${log.id}" style="margin-top:8px">Eintrag bearbeiten</button>
+        <button class="btn secondary smallbtn editCompletedLog" data-log="${log.id}" style="margin-top:8px">Essen bearbeiten</button>
       </div>
     </details>
   </div>`;
@@ -716,7 +716,7 @@ function renderPrep() {
   let shoppingBox = document.getElementById("shoppingList");
   let hints = Object.values(state.shoppingHints || {}).filter((hint) => hint.status === "needed" && food(hint.foodId));
   if (shoppingBox && hints.length) {
-    shoppingBox.insertAdjacentHTML("afterbegin", `<div class="shopping-followups"><div class="small shopping-followup-title">Aus nicht angebotenen Kostproben</div>${hints.map((hint) => { let f = food(hint.foodId); return `<label class="shopping-row shopping-priority"><input class="ds-toggle-input" type="checkbox" data-shopping-hint="${f.id}"><div><b>${esc(f.name)}</b><div class="small">Zutat nicht verfügbar · nach Kauf wieder einplanen</div></div><span class="shopping-toggle" aria-hidden="true"></span></label>`; }).join("")}</div>`);
+    shoppingBox.insertAdjacentHTML("afterbegin", `<div class="shopping-followups"><div class="small shopping-followup-title">Nicht angebotene Lebensmittel</div>${hints.map((hint) => { let f = food(hint.foodId); return `<label class="shopping-row shopping-priority"><input class="ds-toggle-input" type="checkbox" data-shopping-hint="${f.id}"><div><b>${esc(f.name)}</b><div class="small">Zutat nicht verfügbar · nach Kauf wieder einplanen</div></div><span class="shopping-toggle" aria-hidden="true"></span></label>`; }).join("")}</div>`);
     document.querySelectorAll("[data-shopping-hint]").forEach((checkbox) => checkbox.onchange = () => {
       if (!checkbox.checked) return;
       let id = checkbox.dataset.shoppingHint;

@@ -1,4 +1,4 @@
-# Texture Progression Coach – Umsetzungsvorschlag
+# Texture Progression Coach – vereinfachter Umsetzungsvorschlag
 
 Stand: 2026-08-21  
 Status: fachlich-technischer Umsetzungsvorschlag, noch keine Produktivlogik  
@@ -6,21 +6,21 @@ Ausgangsbasis: `main` `a4f33a663721442cd38ad01bb9f7836c9cafcaf6`, Version `10.1.
 
 ## Ziel
 
-Die App soll den Übergang von glatter Löffelkost zu zunehmend strukturierter Löffelkost aktiv begleiten, ohne erneut eine lineare Entwicklung `Brei -> Fingerfood` einzuführen.
+Die App soll den Übergang von glatter Löffelkost zu zunehmend strukturierter Löffelkost sinnvoll begleiten, **ohne dafür neue Bedienebenen, neue Bewertungsfelder oder eine zweite Progressionslogik einzuführen**.
 
-Der bestehende Handling-/Oral-Processing-Unterbau bleibt maßgeblich:
+Der bestehende Unterbau bleibt maßgeblich:
 
-- **Löffeltextur** bleibt die eigene `textureStage`-Dimension.
-- **Darreichungsform** bleibt über Handlingmodi getrennt.
-- **Fingerfood** bleibt parallel möglich und wird nicht zu einer späteren Texturstufe.
-- **Kleine weiche Stücke** und **strukturiertes Kauen** bleiben an die bestehenden beobachteten Capabilities gebunden.
-- Die App empfiehlt kleine nächste Übungsschritte, schaltet aber nichts allein aufgrund von Alter, Zeitablauf oder Zählerständen automatisch frei.
+- `textureStage` beschreibt die aktuelle Konsistenz-/Löffeltextur;
+- Handlingmodi beschreiben die Darreichungsform;
+- `feedingApproach` bleibt Präferenz für Löffel / Fingerfood / gemischt;
+- Fingerfood bleibt parallel möglich und wird nicht zur späteren Texturstufe;
+- `smallSoftPieces` und `structuredChew` bleiben eigenständige beobachtete Fähigkeiten.
 
 ## Ausgangslage im aktuellen main
 
-### 1. Handling und Fingerfood sind bereits getrennt
+### 1. Fachlicher Unterbau ist bereits vorhanden
 
-Der aktuelle Contract unterscheidet:
+`js/handling-readiness.js` trennt bereits:
 
 - `spoon-smooth`
 - `spoon-mashed`
@@ -28,241 +28,94 @@ Der aktuelle Contract unterscheidet:
 - `finger-graspable`
 - `finger-small-soft`
 
-Dazu kommen unabhängig:
+Damit braucht der Texture Coach **kein neues Datenmodell für Essformen**.
 
-- `small-soft-pieces`
-- `structured-chew`
+### 2. Der aktuelle Textur-Coach zählt das Falsche
 
-Alle 103 Laufzeitrezepte sind bereits in den strukturierten Rezept-Contract migriert. Bei Einzel-FOODs ist die strukturierte Handling-Migration dagegen noch nicht vollständig; bestehende Legacy-FOODs dürfen durch diesen Vorschlag nicht implizit neu klassifiziert werden.
+`textureSuccessCount()` zählt positive FOOD-Outcomes auf einer `textureStage` als positive Texturerfahrungen.
 
-### 2. Der aktuelle Textur-Coach verwendet zu grobe Evidenz
+Ein Lebensmittel zu essen oder zu probieren beweist aber nicht, dass eine bestimmte Struktur gut bewältigt wurde.
 
-`textureSuccessCount()` zählt positive FOOD-Ergebnisse auf der aktuellen `textureStage` als positive Texturerfahrungen.
+Der aktuelle Schwellwert `successes >= 4` erzeugt dadurch eine scheinbar objektive Freigabe, die fachlich nicht sauber begründet ist.
 
-Damit kann ein Eintrag als Texturerfolg zählen, obwohl er nur aussagt, dass ein Lebensmittel gegessen oder probiert wurde. Lebensmittelakzeptanz und tatsächliche Bewältigung einer Löffelstruktur sind unterschiedliche Informationen.
+### 3. Die aktuelle Texturstufe beeinflusst die bevorzugte Löffelform nicht vollständig
 
-### 3. `textureStage` ordnet geeignete Löffelmodi noch nicht passend
+`spoon-soft-lumpy` ist bereits an eine passende `textureStage` gekoppelt. Bei `spoon-smooth` und `spoon-mashed` bleibt aber die ursprüngliche Contract-Reihenfolge erhalten.
 
-Die Handling-Eligibility berücksichtigt `textureStage` derzeit nur als Gate für `spoon-soft-lumpy`.
+Dadurch kann bei Stufe 2 weiterhin `spoon-smooth` bevorzugt werden, obwohl `spoon-mashed` besser zur eingestellten Textur passt.
 
-Ein bereits strukturierter FOOD-Contract mit
+## Vereinfachtes Sollbild
 
-```text
-spoon-smooth, spoon-mashed, finger-graspable
-```
+Es werden **nur drei kleine Änderungen** umgesetzt.
 
-kann daher auch bei `textureStage = 2` weiterhin `spoon-smooth` als bevorzugte Löffelform liefern.
+## Änderung 1 – Coach-Zähler entfernen statt neues Tracking einzuführen
 
-### 4. Das Log trennt Darreichungsform und Löffeltextur noch nicht vollständig
+`textureSuccessCount()` und der daraus abgeleitete Schwellwert `successes >= 4` werden aus dem Home-Coach entfernt.
 
-Bei positiven FOOD-Outcomes verlangt das Protokoll derzeit grundsätzlich eine `textureStage`.
+Es wird **kein Ersatzfeld wie `textureExperience`** eingeführt.
 
-Für frühes Fingerfood ist das semantisch unsauber: Ein tatsächlich als `finger-graspable` angebotenes Lebensmittel soll nicht künstlich einer Löffelstufe zugeordnet werden und anschließend die Löffeltextur-Progression beeinflussen.
+Es gibt auch:
 
-### 5. Der Home-Coach zeigt nur eine lineare Texturleiste
+- keine neue Frage im Essensprotokoll;
+- keine neue Statistik;
+- keine neue Verlaufsauswertung;
+- keine automatische Bereitschaftsentscheidung.
 
-Die Home-Karte zeigt `Stufe 1 -> 2 -> 3 -> 4`, aber nicht sichtbar den parallelen Weg geeigneten Fingerfoods.
+Der Coach zeigt nur:
 
-## Sollbild
+- die aktuell eingestellte Stufe;
+- den nächsten möglichen kleinen Testschritt;
+- die bestehenden Buttons zum Zurückgehen bzw. Testen der nächsten Stufe.
 
-Die Home-Karte wird zu **„Konsistenz & Essform“**.
-
-Sie zeigt zwei getrennte Wege.
-
-### A. Löffelstruktur
-
-Beispiel:
+Beispiel Stufe 1:
 
 ```text
-Aktuelle Löffelstruktur
+Konsistenz
 Stufe 1 · glatt / fein
 
-Nächster kleiner Schritt
-Eine kleine Teilportion etwas dicker oder weich zerdrückt anbieten.
+Nächster kleiner Schritt:
+Eine kleine Menge etwas dicker oder weich zerdrückt anbieten.
+Vertraute Konsistenzen dürfen parallel bleiben.
 ```
 
-### B. Parallele Essform
-
-Wenn für eine aktuelle oder nächste konkrete Mahlzeit ein strukturierter `finger-graspable`-Modus fachlich verfügbar ist:
+Beispiel Stufe 2:
 
 ```text
-Parallel möglich
-Weiches, gut greifbares Fingerfood
+Nächster kleiner Schritt:
+Bei einer passenden Mahlzeit kleine weiche Stückchen testen.
 ```
 
-Diese Information ist **kein nächster Level-Schritt** und darf nicht hinter `textureStage >= 3` versteckt werden.
+Der Wechsel auf die nächste Stufe bleibt wie bisher eine bewusste Nutzerentscheidung.
 
-Wenn keine passende konkrete strukturierte Mahlzeit existiert, wird kein generischer Fingerfood-Hinweis erzeugt.
+## Änderung 2 – Fingerfood nur mit einem kurzen Hinweis parallel sichtbar machen
 
-## Produktsemantik
+Der bestehende Coach bleibt **eine einzige Karte**.
 
-### Keine automatische Progression
+Keine zweite Spur, kein zweiter Fortschrittsbalken und keine dynamische Suche nach einer passenden nächsten Fingerfood-Mahlzeit.
 
-`textureStage` wird niemals automatisch erhöht aufgrund von:
-
-- Alter;
-- Zeitablauf;
-- Beikostphase;
-- Feeding-Präferenz;
-- Lebensmittelanzahl;
-- FOOD-Outcomes;
-- Anzahl positiver Texturerfahrungen.
-
-Der Wechsel bleibt eine Nutzerentscheidung.
-
-### Kein fixer Zeitplan
-
-Keine Regeln wie „nach sieben Tagen wechseln“, „ab acht Monaten stückig“ oder „erst Brei, dann Fingerfood“.
-
-Stattdessen: kleine Tests, vertraute Konsistenzen parallel möglich.
-
-### Fingerfood bleibt parallel
-
-`feedingApproach` behält seine bestehende Bedeutung:
-
-- `spoon`: geeignete Löffelformen bevorzugen;
-- `fingerfood`: geeignete Fingerfoodformen bevorzugen;
-- `mixed`: beide Wege zulassen.
-
-Keine Safety-, Handling- oder Oral-Capability darf dadurch umgangen werden.
-
-### Capabilities bleiben beobachtet
-
-`smallSoftPieces` und `structuredChew` werden nie aus Logs, Alter, `textureStage` oder `feedingApproach` automatisch abgeleitet.
-
-## Änderung 1 – tatsächliche Darreichungsform im Log nutzen
-
-`presentationMode` existiert bereits für automatische Mahlzeiten und Logs. Diese Dimension soll im tatsächlichen Protokoll konsequenter verwendet werden, **aber nur dort, wo eine strukturierte Handling-Eligibility vorhanden ist**.
-
-### Vollständig migrierte Rezepte
-
-Für Rezeptlogs wird die tatsächlich angebotene Darreichungsform aus dem bestehenden Rezept-Contract angezeigt bzw. gewählt.
-
-Beispiel:
+Stattdessen steht unter der Texturinfo ein kurzer statischer Hinweis:
 
 ```text
-Darreichungsform
-○ Weich zerdrückt
-○ Weiches Fingerfood
+Geeignetes weiches Fingerfood kann unabhängig von dieser Konsistenzstufe parallel angeboten werden.
 ```
 
-Regeln:
-
-- geplantes `presentationMode` vorauswählen;
-- nur andere bereits geeignete Modi anbieten;
-- Capability-gesperrte Modi nicht auswählbar machen;
-- keine Modi aus Freitext erzeugen;
-- Safety-/Serving-Guidance unabhängig erhalten.
-
-### Strukturierte FOOD-only-Mahlzeiten
-
-Nur wenn alle für die tatsächliche Mahlzeit relevanten FOODs über strukturierte Handlingdaten verfügen und eine gemeinsame geeignete Form bestimmt werden kann, gilt dieselbe Logik.
-
-### Legacy-FOOD-Fallback
-
-Bei FOOD-only-Logs ohne vollständigen strukturierten Handling-Contract bleibt der bestehende konservative Log-Pfad erhalten.
-
-Das bedeutet für den ersten Umsetzungsschritt:
-
-- kein neues `presentationMode` erzwingen;
-- bestehende `textureStage`-Erfassung nicht automatisch entfernen;
-- solche Legacy-Logs **nicht** als neue explizite Löffeltextur-Evidenz für den Coach interpretieren;
-- keine Darreichungsform aus `safeForm`-Freitext, Kategorie oder Alter ableiten.
-
-Damit wird die bestehende Nutzung nicht blockiert und eine spätere Einzelmigration der FOODs bleibt möglich.
-
-### Löffeltextur bei strukturierten Modi
-
-Wenn ein strukturierter tatsächlicher Modus vorliegt:
-
-- bei `spoon-*` wird `textureStage` als Löffelstruktur erfasst;
-- bei `finger-graspable` oder `finger-small-soft` wird keine künstliche Löffelstufe verlangt.
-
-Alte Logs werden rückwirkend nicht umgedeutet.
-
-## Änderung 2 – echte Löffeltexturerfahrung protokollieren
-
-Neues optionales Log-Feld:
-
-```js
-textureExperience: "comfortable" | "learning"
-```
-
-Bedeutung:
-
-- `comfortable`: Mit der tatsächlich angebotenen Löffelstruktur kam das Kind gut zurecht.
-- `learning`: Die Struktur ist noch ungewohnt und soll weiter in kleinen Mengen geübt werden.
-
-Das ist keine medizinische Sicherheitsbewertung und keine Lebensmittelakzeptanz.
-
-### UI
-
-Nur bei **strukturiert bestätigtem `spoon-*`-Handling** und dokumentierter `textureStage`:
+Optional etwas konkreter:
 
 ```text
-Wie hat die Löffelstruktur geklappt?
-○ Gut zurechtgekommen
-○ Noch ungewohnt
-○ Nicht beurteilen
+Geeignetes weiches Fingerfood bleibt parallel möglich. Die sichere Form richtet sich nach dem jeweiligen Lebensmittel oder Rezept.
 ```
 
-„Nicht beurteilen“ speichert kein `textureExperience`.
+Damit wird die fachlich wichtige Parallelität sichtbar, ohne zusätzliche UI-Mechanik einzubauen.
 
-Bei Legacy-FOOD-Logs ohne strukturierten Modus wird diese neue Frage im MVP nicht als Progressionssignal verwendet.
+Die bestehende Handling-/Safety-Logik entscheidet weiterhin, welche konkrete Form tatsächlich geeignet ist.
 
-Freitextnotizen oder Symptome werden nicht automatisch in Safety-, Capability- oder Progressionsentscheidungen übersetzt.
+## Änderung 3 – bereits geeignete Löffelmodi passend zur `textureStage` sortieren
 
-## Änderung 3 – Textur-Evidenz semantisch korrigieren
+Die bestehende Eligibility wird **nicht** verändert.
 
-`textureSuccessCount()` wird nicht mehr aus `logPositiveOutcome()` gespeist.
+Es wird nur die Reihenfolge bereits geeigneter Löffelmodi innerhalb von `preferredHandlingModes()` bzw. einer kleinen zentralen Hilfsfunktion angepasst.
 
-Neue rein beschreibende Auswertung, z. B.:
-
-```js
-textureComfortCount(stage)
-textureLearningCount(stage)
-```
-
-Gezählt werden nur explizit strukturierte Löffellogs:
-
-```js
-handlingModeFamily(log.presentationMode) === "spoon"
-log.textureStage === stage
-log.textureExperience === "comfortable"
-```
-
-bzw. `"learning"`.
-
-Nicht gezählt werden:
-
-- FOOD-Outcomes ohne `textureExperience`;
-- Fingerfood-Logs;
-- Legacy-Logs ohne strukturiertes `presentationMode`;
-- rückwirkend geschätzte Altwerte.
-
-Die Zähler sind **keine Eligibility-Gates**.
-
-Erlaubte Copy:
-
-```text
-Diese Stufe: 3-mal gut zurechtgekommen · 1-mal noch ungewohnt
-```
-
-Nicht erlaubt:
-
-```text
-Jetzt bereit für Stufe 2
-```
-
-## Änderung 4 – Löffelmodus an `textureStage` ausrichten
-
-Nur die Reihenfolge **bereits geeigneter** Löffelmodi wird geändert. Eligibility bleibt unverändert.
-
-Zentrale Hilfsfunktion, z. B.:
-
-```js
-spoonModePreference(textureStage)
-```
+Empfohlene Reihenfolge:
 
 | `textureStage` | bevorzugte Löffelmodi |
 | --- | --- |
@@ -271,253 +124,130 @@ spoonModePreference(textureStage)
 | 3 | `spoon-soft-lumpy` -> `spoon-mashed` -> `spoon-smooth` |
 | 4 | `spoon-soft-lumpy` -> `spoon-mashed` -> `spoon-smooth` |
 
-Für Stufe 4 wird kein neuer Handlingmodus eingeführt. `weiche Familienkost` bleibt breiter; die kanonische FOOD-/Rezeptform bleibt maßgeblich.
+Regeln:
 
-### Zusammenspiel mit `feedingApproach`
+1. zuerst unverändert bestehende Handling-/Oral-/Capability-Eligibility;
+2. `feedingApproach` bestimmt weiterhin die bevorzugte Familie;
+3. nur innerhalb der Löffelfamilie wird nach `textureStage` sortiert;
+4. kein Modus wird durch die Sortierung neu freigegeben;
+5. Fingerfood bleibt unabhängig von der Texturstufe möglich, sofern bereits eligible.
 
-1. bestehende Eligibility;
-2. `feedingApproach` bestimmt die bevorzugte Familie;
-3. innerhalb der Löffelfamilie ordnet `textureStage` die geeigneten Löffelmodi;
-4. Fingerfood-Reihenfolge bleibt contractbasiert.
+Beispiele:
 
-Für `mixed` bleibt die Familienneutralität erhalten; nur mehrere Löffelmodi werden untereinander an `textureStage` ausgerichtet.
+```text
+Contract: smooth, mashed, finger
+spoon + Stage 1 -> smooth, mashed, finger
+spoon + Stage 2 -> mashed, smooth, finger
+fingerfood + Stage 1 -> finger, smooth, mashed
+```
+
+Für `mixed` wird ebenfalls nur die relative Reihenfolge vorhandener Löffelmodi angepasst; es entsteht kein neues Auswahlmodell.
+
+## Was ausdrücklich nicht umgesetzt wird
+
+Der frühere größere Vorschlag wird bewusst reduziert.
+
+Nicht Teil des MVP:
+
+- kein neues `textureExperience`-Feld;
+- keine neue Frage „Wie hat die Konsistenz geklappt?“;
+- keine Komfort-/Learning-Zähler;
+- keine neue Darreichungsform-Auswahl im Log;
+- keine neue Log-Migration;
+- keine dynamische Fingerfood-Empfehlung aus der nächsten Mahlzeit;
+- keine zweite Coach-Spur;
+- kein neues `trialStage`;
+- keine automatische Stufenerhöhung;
+- kein fixer Wochenplan;
+- keine neue Capability-Ableitung;
+- keine neue FOOD-Klassifikation;
+- keine neue Storage-Schema-Version;
+- keine Änderung von Alters-, Safety-, Planner- oder Mahlzeiteneignungsregeln.
+
+## Umgang mit dem bestehenden Log
+
+Das bestehende Log bleibt im MVP unverändert.
+
+Dass `textureStage` dort derzeit allgemein als Konsistenz dokumentiert wird, wird **nicht** im selben Auftrag neu modelliert. Da der neue Coach keine Fortschrittszähler mehr aus Logs ableitet, entsteht daraus für die vorgeschlagene Progressionshilfe kein falsches Unlock- oder Empfehlungssignal mehr.
+
+Falls sich die Log-Darstellung von Fingerfood später im echten Gebrauch als störend erweist, kann das separat und klein gelöst werden. Es ist keine Voraussetzung für diesen Coach.
+
+## Stufe 3 -> 4
+
+`weiche Familienkost` bleibt breiter als eine reine Löffeltextur.
+
+Im MVP braucht dafür keine neue Speziallogik gebaut zu werden. Die vorhandene Stufe bleibt bestehen; die Copy soll lediglich vermeiden, sie als automatische nächste grobe Konsistenz darzustellen.
 
 Beispiel:
 
 ```text
-Contract: smooth, mashed, finger
-mixed + Stage 2 -> mashed, smooth, finger
-spoon + Stage 2 -> mashed, smooth, finger
-fingerfood + Stage 2 -> finger, mashed, smooth
+Nächster Schritt:
+Zunehmend weiche familiennahe Formen ausprobieren, wenn das konkrete Lebensmittel oder Rezept dafür geeignet ist.
 ```
 
-Kein Modus wird dadurch neu eligible.
-
-## Änderung 5 – Coach statt Schwellenautomat
-
-### Stufe 1 -> 2
-
-```text
-Nächster kleiner Schritt
-Eine kleine Teilportion weniger fein bzw. weich zerdrückt anbieten.
-Vertraute Konsistenzen dürfen parallel bleiben.
-```
-
-### Stufe 2 -> 3
-
-```text
-Nächster kleiner Schritt
-Bei einer geeigneten Löffelmahlzeit kleine weiche Stückchen testen.
-```
-
-### Stufe 3 -> 4
-
-Nicht als bloß „noch gröbere Löffelstufe“ darstellen.
-
-Stufe 4 ist breiter und familiennäher. Eine konkrete Testidee erscheint nur, wenn eine bereits geeignete geplante FOOD-/Rezeptform dafür vorhanden ist.
-
-```text
-Familiennahe weiche Struktur ausprobieren
-Bei der nächsten geeigneten Mahlzeit eine bereits freigegebene weiche Originalform anbieten.
-```
-
-Kein neuer Handlingmodus und keine pauschale Freigabe von Familienessen.
-
-### Erfahrung statt Freigabeampel
-
-Explizite `textureExperience`-Logs werden nur beschreibend zusammengefasst. Es gibt keinen harten Mindestzähler.
-
-### Aktionen
-
-- `Testidee ansehen`
-- `Stufe X als Standard verwenden`
-- `Zurück` bei Stufe > 1
-
-`Testidee ansehen` verändert keinen Zustand.
-
-Nur `Stufe X als Standard verwenden` ändert `textureStage` explizit.
-
-Ein persistentes `trialStage` ist im MVP nicht nötig.
-
-## Änderung 6 – paralleles Fingerfood sichtbar machen
-
-Eine konkrete parallele Fingerfood-Option wird nur gezeigt, wenn sie aus der bestehenden strukturierten Eligibility einer tatsächlich geplanten Mahlzeit hervorgeht.
-
-Verbindliche Grenzen:
-
-- nur strukturierte `finger-graspable`-Eligibility;
-- kein Parsing von `safeForm`-Freitext;
-- `finger-small-soft` nur bei `smallSoftPieces`;
-- `structured-chew-required` nur bei `structuredChew`;
-- keine neue Ableitung für unmigrierte Legacy-FOODs;
-- Sample-/Einführungsmahlzeiten, manuelle Locks und Planner-Sonderfälle nicht umgehen.
-
-Technisch soll der Coach dieselbe zentrale Handling-Eligibility verwenden wie der Planner, aber über eine **nicht mutierende Alternative-Modes-Abfrage**.
-
-Die Funktion baut keine Mahlzeit neu, verändert keinen Lock und ersetzt keine Rezeptidentität.
-
-Ohne passende konkrete strukturierte Mahlzeit erscheint kein Ersatzhinweis.
-
-## Datenmodell und Migration
-
-### Neu
-
-Optional:
-
-```js
-textureExperience
-```
-
-`presentationMode` bleibt das bestehende Feld und wird nur für tatsächlich strukturierte Fälle konsequenter verwendet.
-
-### Keine rückwirkende Ableitung
-
-Aus alten Logs werden weder `presentationMode` noch `textureExperience` rekonstruiert.
-
-### Bestehende Daten bleiben gültig
-
-- Logs ohne `textureExperience`;
-- Logs ohne `presentationMode`;
-- Legacy-FOOD-Logs;
-- bestehende `textureStage` und `textureStageSince`;
-- bestehende `feedingApproach`;
-- bestehende `handlingCapabilities`;
-- bestehende Plan-Locks.
-
-Eine Storage-Schemaerhöhung ist für additive Felder voraussichtlich nicht nötig.
+Keine neue Rezeptfreigabe und kein neuer Handlingmodus.
 
 ## Technische Zielstellen
 
-Voraussichtlich betroffen:
+Voraussichtlich nur:
 
 - `js/ui.js`
-  - `textureSuccessCount()` ersetzen;
-  - `renderTextureCoach()` in zwei Wege aufteilen;
-  - `openTextureAdvance()` semantisch schärfen.
-- `js/log.js`
-  - strukturiertes tatsächliches `presentationMode` anzeigen/auswählen;
-  - bei strukturierten Fingerfood-Logs keine Löffelstufe erzwingen;
-  - Legacy-FOOD-Fallback erhalten;
-  - `textureExperience` erfassen/bearbeiten;
-  - Darreichungsform in der Log-Anzeige ergänzen.
+  - `textureSuccessCount()` aus dem Coach entfernen;
+  - Schwellenlogik `successes >= 4` entfernen;
+  - kurze neutrale Next-Step-Copy und Fingerfood-Hinweis ergänzen.
 - `js/handling-readiness.js`
-  - stageabhängige Löffelreihenfolge;
-  - nicht mutierende Abfrage geeigneter Modi für Coach/Log;
-  - keine Eligibility-Regel lockern.
-- `js/log-core.js`
-  - gemeinsame Helper nur falls sinnvoll.
-- `js/state.js` / Migration
-  - Kompatibilität prüfen, keine Pflichtfelder.
-- passende Node- und Browser-Regressionen.
+  - Reihenfolge bereits geeigneter Löffelmodi an `textureStage` ausrichten.
+- gezielte Tests für diese beiden Verhaltensänderungen.
 
-## Nicht Teil dieses Vorschlags
+Kein `js/log.js`-Umbau im MVP.
+Kein neues Datenfeld.
+Keine Migration.
 
-- keine neue Beikostphase;
-- keine Gruppenmigration bestehender FOODs;
-- keine neue Rezept-/FOOD-Einstufung;
-- keine Änderung von `hardMinMonths`, `minMonths`, `autoPlan` oder Mahlzeiteneignung;
-- keine automatische Capability-Erkennung;
-- keine automatische Stufenerhöhung;
-- kein fixer Wochenplan;
-- kein täglicher Fingerfood-Zwang;
-- keine Ableitung aus `safeForm`-Freitext;
-- keine neue medizinische Bewertungslogik;
-- keine Statistik-Neukonzeption;
-- keine Schemaerhöhung ohne technischen Zwang.
+## Akzeptanzkriterien
 
-## Regressionen / Akzeptanzkriterien
+### Coach
 
-### P0 – Trennung und Kompatibilität
+1. Der Home-Coach zeigt keinen angeblichen Texturerfolgszähler mehr.
+2. FOOD-Outcomes lösen keine Empfehlung oder Freigabe der nächsten Stufe aus.
+3. Die nächste Stufe wird weiterhin nur manuell bestätigt.
+4. Vertraute Konsistenzen dürfen laut Copy parallel bleiben.
+5. Ein kurzer Hinweis macht sichtbar, dass geeignetes Fingerfood unabhängig von der Löffelstufe parallel möglich ist.
+6. Keine zweite Coach-Spur und keine zusätzliche Nutzerentscheidung entstehen.
 
-1. FOOD-Outcomes ohne `textureExperience` zählen nicht als Texturerfolg.
-2. Strukturierte Fingerfood-Logs zählen nicht zur Löffeltextur-Progression.
-3. Ein strukturierter positiver Fingerfood-Log benötigt keine künstliche Löffel-`textureStage`.
-4. Ein strukturierter `spoon-*`-Log kann `textureStage` plus optional `textureExperience` dokumentieren.
-5. Ein alter Log ohne `presentationMode` oder `textureExperience` bleibt gültig.
-6. Ein Legacy-FOOD-Log ohne Handling-Contract bleibt speicher- und editierbar.
-7. Legacy-FOOD-Logs erzeugen keine erfundene neue Progressions-Evidenz.
-8. Aus alten Daten wird nichts rückwirkend abgeleitet.
-9. `textureExperience = learning` erhöht keine Stufe und setzt keine Capability.
-10. Kein Alter, keine Phase und kein Zähler erhöht `textureStage` automatisch.
+### Handling
 
-### P0 – Handling und Planner
-
-11. Karotte mit `feedingApproach = spoon`, `textureStage = 1` bevorzugt `spoon-smooth`.
-12. Karotte mit `feedingApproach = spoon`, `textureStage = 2` bevorzugt `spoon-mashed`.
-13. Karotte mit `feedingApproach = fingerfood`, `textureStage = 1` bevorzugt weiterhin `finger-graspable`.
-14. `spoon-soft-lumpy` bleibt unterhalb der vorgesehenen Texturstufe nicht eligible.
-15. `smallSoftPieces` und `structuredChew` bleiben unabhängige harte Voraussetzungen.
-16. Reihenfolgeänderungen verändern keine Rezeptidentität, FOOD-Auswahl, Rollen oder Locks.
-17. Coach-Alternativmodi umgehen keine Sample-/Einführungs- oder Lock-Semantik.
-18. Unmigrierte FOODs erhalten keine neue Gruppen- oder Freitextklassifikation.
-
-### P1 – Log-UX
-
-19. Geplantes strukturiertes `presentationMode` wird vorausgewählt.
-20. Nutzerin kann nur auf andere bereits geeignete strukturierte Modi wechseln.
-21. Capability-gesperrte Modi sind nicht auswählbar.
-22. Legacy-FOODs bleiben im bisherigen konservativen Log-Pfad.
-23. `textureExperience` kann gespeichert und bearbeitet werden.
-24. „Nicht beurteilen“ speichert keinen künstlichen Wert.
-25. FOOD-Outcomes, `presentationMode`, `textureStage` und `textureExperience` bleiben getrennte Felder.
-
-### P1 – Coach-UI
-
-26. Coach zeigt Löffelstruktur und paralleles Fingerfood getrennt.
-27. `Testidee ansehen` verändert `textureStage` nicht.
-28. Erst `Stufe X als Standard verwenden` verändert `textureStage`.
-29. Erfahrungszähler werden nicht als Bereitschaftsnachweis bezeichnet.
-30. Stage 3 -> 4 wird nicht als bloße gröbere Löffelstufe dargestellt.
-31. Ohne konkrete geeignete strukturierte `finger-graspable`-Mahlzeit entsteht kein Fingerfood-Hinweis.
+7. `feedingApproach = spoon`, Stage 1 bevorzugt bei Karotte `spoon-smooth` vor `spoon-mashed`.
+8. `feedingApproach = spoon`, Stage 2 bevorzugt bei Karotte `spoon-mashed` vor `spoon-smooth`.
+9. `feedingApproach = fingerfood`, Stage 1 bevorzugt weiterhin ein bereits geeignetes `finger-graspable`.
+10. `spoon-soft-lumpy` bleibt nur dort eligible, wo die bestehende Texturregel es erlaubt.
+11. `smallSoftPieces` und `structuredChew` bleiben unverändert harte, unabhängige Capabilities.
+12. Rezeptidentität, FOOD-Auswahl, Planner-Rollen und Locks ändern sich durch die Sortierung nicht.
 
 ## Testmatrix bei späterer Implementierung
 
-Da Produktivlogik, Datenfluss und UI betroffen wären:
+Da zentrale Handling-Logik und Home-UI betroffen wären:
 
-1. gezielte Node-Tests für Log-Semantik, Legacy-Fallback, Texture-Evidence und Handling-Reihenfolge;
-2. gezielte UI-/Browser-Tests für Log und Coach;
+1. gezielte Node-Tests für `preferredHandlingModes` / Löffelreihenfolge;
+2. gezielte UI-/Browser-Regression für den Texture Coach;
 3. `npm run verify:fast`;
 4. `npm run verify:app`;
-5. kein `verify:deploy`, solange keine Deployment-Datei verändert wird;
-6. `npm run verify` nur bei zusätzlichem Querschnitts-/Release-Scope.
+5. kein `verify:deploy` ohne Deployment-Scope.
 
-## Empfohlene Umsetzungsreihenfolge
+## Empfohlener Implementierungsschnitt
 
-### Schritt 1 – Log-Semantik und Legacy-Fallback
+Ein einziger kleiner Implementierungsauftrag ist ausreichend:
 
-- strukturiertes `presentationMode` im tatsächlichen Log führen;
-- strukturierte Fingerfood-Logs nicht zu einer Löffelstufe zwingen;
-- Legacy-FOOD-Pfad erhalten;
-- `textureExperience` additiv einführen;
-- Alt-Daten-Kompatibilität absichern.
+1. falschen Texturerfolgszähler entfernen;
+2. Coach-Copy vereinfachen und Parallelität von Fingerfood erwähnen;
+3. Löffelmodus-Reihenfolge an die bestehende Texturstufe anpassen;
+4. gezielte Regressionen ausführen.
 
-### Schritt 2 – Textur-Evidenz
+## Ergebnis
 
-- FOOD-Outcomes aus der Progressionsauswertung entfernen;
-- nur explizite strukturierte `spoon-*`-Texturerfahrungen zählen;
-- keine Schwellenfreigabe.
+Der Nutzer bekommt genau die Information, die im Alltag gebraucht wird:
 
-### Schritt 3 – Handling-Präferenz
+- **Wo stehen wir bei der Konsistenz?**
+- **Was kann ich als kleinen nächsten Schritt probieren?**
+- **Fingerfood darf parallel stattfinden.**
 
-- stageabhängige Reihenfolge der Löffelmodi zentral ergänzen;
-- Eligibility unverändert lassen;
-- Multi-Mode-Referenzfälle absichern.
-
-### Schritt 4 – Coach
-
-- duale Darstellung `Löffelstruktur` + `parallel mögliche Essform`;
-- Testidee ohne Zustandsmutation;
-- Stufe 3 -> 4 separat behandeln;
-- Fingerfood-Hinweis nur aus bestehender strukturierter Meal-/Handling-Eligibility.
-
-## Erwarteter Nutzen
-
-Die App unterstützt danach den nächsten sinnvollen Schritt, ohne ihre getrennten Dimensionen wieder zu vermischen:
-
-- vertraute Löffelstruktur bleibt möglich;
-- anspruchsvollere Löffelstruktur kann in kleiner Menge getestet werden;
-- geeignetes Fingerfood kann parallel sichtbar werden;
-- tatsächliche Darreichungsform wird dort korrekt erfasst, wo sie strukturiert bekannt ist;
-- Legacy-FOODs bleiben kompatibel statt implizit neu klassifiziert zu werden;
-- Löffeltexturerfahrung bleibt getrennt von Geschmack, Verträglichkeit und Fingerfood;
-- keine automatische „Bereitschaft“ aus Alter oder Zählerstand.
+Dafür entstehen keine neuen Log-Fragen, keine neuen Entwicklungswerte und keine zusätzliche Bedienebene.

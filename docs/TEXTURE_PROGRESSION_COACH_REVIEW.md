@@ -1,198 +1,144 @@
-# Review – Texture Progression Coach
+# Review – vereinfachter Texture Progression Coach
 
 Stand: 2026-08-21  
-Review-Basis: `docs/TEXTURE_PROGRESSION_COACH_PROPOSAL.md` auf `docs/texture-progression-coach-proposal`  
-Ausgangs-main: `a4f33a663721442cd38ad01bb9f7836c9cafcaf6`, Version `10.1.26`
+Review-Basis: tatsächlicher Branch-Diff gegen `main` `6376520be9993c0f1960b80411c8cf1de4119ad4`  
+Arbeitsbranch: `docs/texture-progression-coach-proposal`
 
-## Review-Ergebnis
+## Ergebnis
 
-**Der vorherige Vorschlag war fachlich korrekt, aber für die App unnötig komplex.**
+**Kein fachlicher oder technischer Blocker im reduzierten MVP.**
 
-Nach dem erneuten UX-/Komplexitätsreview wurde er deutlich reduziert.
+Der zuvor größere Entwurf wurde bewusst verworfen. Die implementierte Variante beschränkt sich auf drei Dinge:
 
-Der jetzt empfohlene MVP benötigt:
+1. keine FOOD-basierte Textur-Bereitschaftsampel mehr;
+2. eine einzige bestehende Coach-Karte mit kurzer Next-Step-Copy und Fingerfood-Hinweis;
+3. passend zur `textureStage` sortierte, aber bereits vorher eligible Löffelmodi.
 
-1. keinen neuen Log-Wert;
-2. keine neue Log-Frage;
-3. keine zweite Coach-Spur;
-4. keine dynamische Fingerfood-Empfehlungsengine;
-5. keine Migration;
-6. keine neue Storage-Schema-Version.
+Keine neue persistente Produktdimension wurde eingeführt.
 
-Es bleiben nur drei kleine Produktänderungen:
+## Review-Findings
 
-- falschen Texturerfolgszähler entfernen;
-- Coach-Copy um nächsten kleinen Schritt + paralleles Fingerfood ergänzen;
-- bereits geeignete Löffelmodi passend zur vorhandenen `textureStage` sortieren.
+### 1. Produktkomplexität – PASS
 
-## Findings des erneuten Reviews
+Keine neue tägliche Eingabe und keine zusätzliche Bedienebene.
 
-### P1 – neues `textureExperience` wäre Overengineering
-
-Der vorige Vorschlag wollte zusätzlich zu FOOD-Outcomes, `textureStage`, `presentationMode`, `feedingApproach` und Capabilities noch
-
-```text
-textureExperience = comfortable | learning
-```
-
-speichern und im Log abfragen.
-
-Das wäre zwar semantisch sauber, erzeugt aber für den aktuellen Nutzen unverhältnismäßig viel UX- und Datenkomplexität.
-
-**Entscheidung:** vollständig aus dem MVP entfernt.
-
-Die App muss nicht messen, wie oft eine Struktur „gut geklappt“ hat. Es reicht, keine falsche Sicherheit aus FOOD-Outcomes abzuleiten.
-
-### P1 – dualer Coach wäre zu viel Oberfläche
-
-Der vorige Vorschlag plante getrennte Wege für Löffelstruktur und dynamisch ermittelte parallele Fingerfood-Angebote.
-
-Das hätte zusätzliche Abfragen, Sonderfälle und visuelle Elemente erzeugt.
-
-**Entscheidung:** entfernt.
-
-Die bestehende einzelne Konsistenzkarte bleibt. Ein kurzer Hinweis erklärt nur:
-
-> Geeignetes weiches Fingerfood kann unabhängig von dieser Konsistenzstufe parallel angeboten werden.
-
-Die konkrete Eligibility bleibt weiterhin dort, wo sie heute bereits strukturiert entschieden wird.
-
-### P1 – Log-Umbau ist für dieses Ziel nicht erforderlich
-
-Der vorige Vorschlag wollte `presentationMode` im tatsächlichen Log auswählbar machen und Fingerfood-Logs von der Löffeltextur trennen.
-
-Das ist ein eigenständiges UX-/Datenproblem. Es ist **nicht notwendig**, um den Texture Coach fachlich zu korrigieren.
-
-Sobald der Coach seine Empfehlung nicht mehr aus Log-Outcomes berechnet, entsteht aus dem bestehenden Log kein falscher Progressions-Unlock mehr.
-
-**Entscheidung:** `js/log.js` bleibt im MVP außerhalb des Scopes.
-
-Wenn die Log-Darstellung im Alltag später tatsächlich stört, separat lösen.
-
-### P0 – bestehender `textureSuccessCount()` sollte trotzdem weg
-
-Der aktuelle `textureSuccessCount()` zählt positive FOOD-Outcomes als Texturerfahrung und setzt ab vier Erfolgen `Test möglich`.
-
-Das ist eine fachlich unbegründete Verknüpfung und suggeriert mehr Sicherheit, als die Daten hergeben.
-
-**Empfehlung:** Zähler und Schwelle entfernen, nicht durch eine neue Messlogik ersetzen.
-
-Das ist gleichzeitig fachlich sauberer und technisch einfacher.
-
-### P1 – stageabhängige Löffelreihenfolge bleibt sinnvoll
-
-Diese Änderung hat einen klaren Nutzen bei sehr geringer Komplexität.
-
-Beispiel Karotte:
-
-- Stage 1 + Löffel -> `spoon-smooth` bevorzugen;
-- Stage 2 + Löffel -> `spoon-mashed` bevorzugen;
-- Fingerfood-Präferenz bleibt davon unabhängig.
-
-Dabei wird keine Eligibility verändert und kein neuer Modus eingeführt.
-
-**Entscheidung:** im MVP behalten.
-
-### P2 – Stufe 3 -> 4 nicht technisch aufblasen
-
-`weiche Familienkost` ist fachlich breiter als nur eine weitere Löffelstufe.
-
-Der vorige Vorschlag wollte dafür bereits konkrete geplante Originalformen dynamisch suchen.
-
-**Entscheidung:** nicht nötig.
-
-Im MVP reicht passende Copy. Bestehende Rezept-/Handlingregeln bleiben maßgeblich.
-
-## Komplexitätsvergleich
-
-### Vorheriger Vorschlag
-
-Geplante neue bzw. ausgeweitete Konzepte:
+Nicht eingeführt wurden insbesondere:
 
 - `textureExperience`;
-- zusätzliche Log-Frage;
-- Darreichungsform-Auswahl im Log;
-- Comfort-/Learning-Zähler;
-- dualer Coach;
-- dynamische nächste Fingerfood-Mahlzeit;
-- Alternative-Modes-Abfrage für den Coach;
-- Legacy-Log-Sonderpfade.
+- neue Log-Fragen;
+- neue Fortschrittszähler;
+- zweite Coach-Spur;
+- dynamische Fingerfood-Empfehlungsengine;
+- neue Migration oder Schemaerhöhung.
 
-### Vereinfachter Vorschlag
+Damit bleibt der sichtbare Alltagsflow praktisch unverändert.
 
-Nur:
+### 2. FOOD-Outcomes als Texturerfolg – PASS nach Entfernung
 
-- bestehende falsche Zählerlogik entfernen;
-- vorhandene Coach-Karte textlich verbessern;
-- vorhandene Handling-Reihenfolge besser an vorhandene `textureStage` anbinden.
+Der alte sichtbare Coach leitete aus positiven FOOD-Outcomes einen Texturerfolgszähler und ab vier Einträgen `Test möglich` ab.
 
-Kein neues persistentes Produktkonzept.
+Die implementierte Coach-Darstellung verwendet diese Information nicht mehr.
 
-## Architektur-Review
+Es gibt bewusst **keine Ersatzmessung**. Der Coach berät nur und entscheidet nicht, dass ein Kind „bereit“ ist.
 
-### Bestehende Semantik bleibt erhalten – PASS
+### 3. Fingerfood bleibt parallel – PASS
+
+Der neue Hinweis erklärt ausdrücklich, dass geeignetes weiches Fingerfood unabhängig von der Löffel-Konsistenzstufe parallel angeboten werden kann.
+
+Technisch bleibt unverändert:
+
+- `finger-graspable` wird nicht aus `textureStage` abgeleitet;
+- `feedingApproach` bleibt nur Präferenz;
+- Safety- und Capability-Gates bleiben wirksam.
+
+### 4. Löffelmodus-Sortierung – PASS
+
+`textureStage` verändert nur die Reihenfolge bereits geeigneter Löffelmodi.
+
+Geprüfte Referenzfälle:
+
+- Stage 1 + `spoon`: Karotte -> `spoon-smooth` vor `spoon-mashed`;
+- Stage 2 + `spoon`: Karotte -> `spoon-mashed` vor `spoon-smooth`;
+- Stage 2 + Auto-Mahlzeit: `presentationMode = spoon-mashed`;
+- `fingerfood`: `finger-graspable` bleibt unabhängig davon bevorzugbar.
+
+Die eigentliche `eligibleModes`-Liste bleibt unverändert.
+
+### 5. Mixed-Semantik – PASS
+
+Bei `mixed` werden nur die vorhandenen Löffelplätze untereinander nach Texturstufe umsortiert. Fingerfood wird nicht zu einer späteren Familie verschoben.
+
+Damit bleibt die freigegebene Parallelität erhalten.
+
+### 6. Capabilities und Safety – PASS
 
 Unverändert bleiben:
 
-- Beikostphase;
-- `textureStage`;
-- `feedingApproach`;
-- Handlingmodi;
+- `spoon-soft-lumpy`-Texturgate;
 - `smallSoftPieces`;
 - `structuredChew`;
-- Safety-/Alters-/Planner-Gates;
-- bestehende Logs und Backups.
+- Recipe-/FOOD-Safety;
+- Zutaten- und Altersgates.
 
-### Kein zweites System – PASS
+Die neue Sortierung erzeugt keine Eligibility.
 
-Die vorgeschlagene Sortierung gehört zentral in `js/handling-readiness.js`.
+### 7. Planner-/Lock-Scope – PASS
 
-Keine parallele Coach-Eligibility und keine Freitextableitung.
+Keine Änderung an:
 
-### UI-Komplexität – PASS nach Reduktion
+- Kandidatenbildung;
+- Rezeptidentität;
+- FOOD-Rollen;
+- manuellen Locks;
+- bestehenden gespeicherten `presentationMode`-Werten.
 
-Die Home-Ansicht behält eine einzelne Konsistenzkarte.
+Nur neue automatisch bestimmte Presentation Modes verwenden die verfeinerte Präferenzreihenfolge.
 
-Keine neue Auswahl im täglichen Protokoll und keine zusätzliche Fortschrittsanzeige.
+### 8. UI-Architektur – PASS mit bewusst kleinem Runtime-Integrationspunkt
 
-### Datenmodell – PASS
+Die finale sichtbare App wird bereits heute erst nach Installation der Planner-/Handling-Policy-Kette erneut gerendert.
 
-Keine neuen Felder.
-Keine Migration.
-Keine Schemaerhöhung.
+Der vereinfachte Coach wird deshalb über `installTextureCoachRuntime()` innerhalb derselben bestehenden Handling-Runtime installiert, bevor der finale sichtbare `renderAll()` läuft.
 
-## Empfohlener Implementierungsscope
+Vorteile:
 
-Voraussichtlich nur:
+- keine zusätzliche JS-Datei;
+- keine neue Persistenz;
+- keine neue UI-Komponente;
+- keine Änderung am Log;
+- bestehende Policy-Ladekette bleibt erhalten.
 
-- `js/ui.js`;
-- `js/handling-readiness.js`;
-- direkt betroffene Node-/Browser-Tests.
+Der ursprüngliche Coach in `js/ui.js` ist nur Teil des initial versteckten Pre-Policy-Renders; die sichtbare finale Darstellung verwendet die vereinfachte Runtime-Version.
 
-Nicht anfassen:
+### 9. Scope – PASS
+
+Produktivdatei:
+
+- `js/handling-readiness.js`
+
+Regressionen:
+
+- `tests/handling-planner-preference.test.cjs`
+- `tests/handling-readiness-integration.test.cjs`
+- `tests/ui-texture-settings-tab-state.test.cjs`
+- `browser-tests/ui-settings-tab-state-webkit.test.mjs`
+
+Nicht angefasst:
 
 - `js/log.js`;
 - FOOD-/Recipe-Daten;
-- Planner-Kandidatenlogik;
 - Persistenzschema;
-- Statistik.
+- Statistik;
+- Deployment-Konfiguration.
 
-## Testanforderung bei späterer Umsetzung
+## Noch zu prüfen
 
-Gemäß aktueller Testmatrix:
+Gemäß aktueller Testmatrix muss der tatsächliche PR-CI-Lauf `npm run verify:app` erfolgreich durchlaufen.
 
-- gezielte Node-Tests für Handling-Reihenfolge;
-- gezielte UI-/Browser-Regression für den Coach;
-- `npm run verify:fast`;
-- `npm run verify:app`;
-- kein Deployment-Gate ohne Deployment-Scope.
+Kein `verify:deploy` erforderlich, da keine Deployment-Datei geändert wurde.
 
 ## Schlussurteil
 
-**Die vereinfachte Variante ist der bessere Produktentscheid.**
+**Die vereinfachte Implementierung ist dem früheren größeren Entwurf klar vorzuziehen.**
 
-Der vorherige Entwurf war nicht falsch, aber er hätte für einen kleinen Alltagsnutzen zu viele neue Zustände und Entscheidungen eingeführt.
-
-Der reduzierte MVP behebt den eigentlichen fachlichen Fehler und macht die gewünschte Progression sichtbar, ohne die App spürbar komplizierter zu machen.
-
-Keine Produktivlogik wurde in diesem Branch verändert.
+Sie behebt den fachlichen Fehler, verbessert die tatsächliche Darreichungspräferenz und erklärt die Parallelität von Fingerfood, ohne die App für die Nutzerin mit neuen Feldern oder Entscheidungen zu belasten.

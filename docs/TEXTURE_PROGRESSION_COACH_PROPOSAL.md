@@ -1,121 +1,65 @@
-# Texture Progression Coach – vereinfachter Umsetzungsvorschlag
+# Texture Progression Coach – freigegebener MVP
 
 Stand: 2026-08-21  
-Status: fachlich-technischer Umsetzungsvorschlag, noch keine Produktivlogik  
-Ausgangsbasis: `main` `a4f33a663721442cd38ad01bb9f7836c9cafcaf6`, Version `10.1.26`
+Status: auf `docs/texture-progression-coach-proposal` implementiert, Draft-PR #38  
+Ausgangsbasis: `main` `6376520be9993c0f1960b80411c8cf1de4119ad4`, Version `10.1.26`
 
 ## Ziel
 
-Die App soll den Übergang von glatter Löffelkost zu zunehmend strukturierter Löffelkost sinnvoll begleiten, **ohne dafür neue Bedienebenen, neue Bewertungsfelder oder eine zweite Progressionslogik einzuführen**.
+Die App begleitet die Entwicklung der Löffeltextur, ohne eine neue Entwicklungslogik oder zusätzliche tägliche Eingaben einzuführen.
 
-Der bestehende Unterbau bleibt maßgeblich:
+Bestehende Dimensionen bleiben getrennt:
 
-- `textureStage` beschreibt die aktuelle Konsistenz-/Löffeltextur;
-- Handlingmodi beschreiben die Darreichungsform;
-- `feedingApproach` bleibt Präferenz für Löffel / Fingerfood / gemischt;
-- Fingerfood bleibt parallel möglich und wird nicht zur späteren Texturstufe;
-- `smallSoftPieces` und `structuredChew` bleiben eigenständige beobachtete Fähigkeiten.
+- `textureStage`: aktuelle Konsistenz-/Löffeltextur;
+- Handlingmodus: konkrete Darreichungsform;
+- `feedingApproach`: Präferenz für Löffel / Fingerfood / gemischt;
+- `smallSoftPieces` und `structuredChew`: beobachtete Fähigkeiten;
+- Safety-, Alters-, Zutaten- und Planner-Gates: unverändert.
 
-## Ausgangslage im aktuellen main
+Fingerfood bleibt ein paralleler Weg und wird nicht zur späteren Texturstufe.
 
-### 1. Fachlicher Unterbau ist bereits vorhanden
+## Implementierter MVP
 
-`js/handling-readiness.js` trennt bereits:
+### 1. Keine FOOD-basierte Bereitschaftsampel mehr
 
-- `spoon-smooth`
-- `spoon-mashed`
-- `spoon-soft-lumpy`
-- `finger-graspable`
-- `finger-small-soft`
+Der sichtbare Texture Coach verwendet nicht mehr den bisherigen FOOD-basierten Texturerfolgszähler und keinen Schwellwert `successes >= 4`.
 
-Damit braucht der Texture Coach **kein neues Datenmodell für Essformen**.
+Es gibt keinen Ersatz-Zähler und kein neues Trackingfeld.
 
-### 2. Der aktuelle Textur-Coach zählt das Falsche
+Der Coach zeigt stattdessen nur:
 
-`textureSuccessCount()` zählt positive FOOD-Outcomes auf einer `textureStage` als positive Texturerfahrungen.
+- die aktuelle Stufe;
+- einen kleinen nächsten Testschritt;
+- die bestehenden manuellen Aktionen `Zurück` und `Stufe X testen`.
 
-Ein Lebensmittel zu essen oder zu probieren beweist aber nicht, dass eine bestimmte Struktur gut bewältigt wurde.
+Beispiele:
 
-Der aktuelle Schwellwert `successes >= 4` erzeugt dadurch eine scheinbar objektive Freigabe, die fachlich nicht sauber begründet ist.
+- Stufe 1: kleine Menge etwas dicker oder weich zerdrückt anbieten;
+- Stufe 2: bei einer passenden Mahlzeit kleine weiche Stückchen testen;
+- Stufe 3: zunehmend weiche familiennahe Formen ausprobieren, wenn FOOD/Rezept dafür geeignet ist;
+- Stufe 4: geeignete weiche familiennahe Formen weiter variieren.
 
-### 3. Die aktuelle Texturstufe beeinflusst die bevorzugte Löffelform nicht vollständig
+Die App erhöht `textureStage` nie automatisch.
 
-`spoon-soft-lumpy` ist bereits an eine passende `textureStage` gekoppelt. Bei `spoon-smooth` und `spoon-mashed` bleibt aber die ursprüngliche Contract-Reihenfolge erhalten.
+### 2. Fingerfood wird in derselben Karte als parallel erklärt
 
-Dadurch kann bei Stufe 2 weiterhin `spoon-smooth` bevorzugt werden, obwohl `spoon-mashed` besser zur eingestellten Textur passt.
+Die bestehende Konsistenzkarte bleibt eine einzelne Karte.
 
-## Vereinfachtes Sollbild
+Zusätzlicher Hinweis:
 
-Es werden **nur drei kleine Änderungen** umgesetzt.
+> Geeignetes weiches Fingerfood kann unabhängig von dieser Konsistenzstufe parallel angeboten werden. Die sichere Form richtet sich nach dem jeweiligen Lebensmittel oder Rezept.
 
-## Änderung 1 – Coach-Zähler entfernen statt neues Tracking einzuführen
+Es gibt:
 
-`textureSuccessCount()` und der daraus abgeleitete Schwellwert `successes >= 4` werden aus dem Home-Coach entfernt.
+- keine zweite Fortschrittsspur;
+- keine dynamische Suche nach einer nächsten Fingerfood-Mahlzeit;
+- keine neue Nutzerentscheidung.
 
-Es wird **kein Ersatzfeld wie `textureExperience`** eingeführt.
+Die bestehende Handling-/Safety-Eligibility bleibt maßgeblich.
 
-Es gibt auch:
+### 3. Bereits geeignete Löffelmodi passen zur `textureStage`
 
-- keine neue Frage im Essensprotokoll;
-- keine neue Statistik;
-- keine neue Verlaufsauswertung;
-- keine automatische Bereitschaftsentscheidung.
-
-Der Coach zeigt nur:
-
-- die aktuell eingestellte Stufe;
-- den nächsten möglichen kleinen Testschritt;
-- die bestehenden Buttons zum Zurückgehen bzw. Testen der nächsten Stufe.
-
-Beispiel Stufe 1:
-
-```text
-Konsistenz
-Stufe 1 · glatt / fein
-
-Nächster kleiner Schritt:
-Eine kleine Menge etwas dicker oder weich zerdrückt anbieten.
-Vertraute Konsistenzen dürfen parallel bleiben.
-```
-
-Beispiel Stufe 2:
-
-```text
-Nächster kleiner Schritt:
-Bei einer passenden Mahlzeit kleine weiche Stückchen testen.
-```
-
-Der Wechsel auf die nächste Stufe bleibt wie bisher eine bewusste Nutzerentscheidung.
-
-## Änderung 2 – Fingerfood nur mit einem kurzen Hinweis parallel sichtbar machen
-
-Der bestehende Coach bleibt **eine einzige Karte**.
-
-Keine zweite Spur, kein zweiter Fortschrittsbalken und keine dynamische Suche nach einer passenden nächsten Fingerfood-Mahlzeit.
-
-Stattdessen steht unter der Texturinfo ein kurzer statischer Hinweis:
-
-```text
-Geeignetes weiches Fingerfood kann unabhängig von dieser Konsistenzstufe parallel angeboten werden.
-```
-
-Optional etwas konkreter:
-
-```text
-Geeignetes weiches Fingerfood bleibt parallel möglich. Die sichere Form richtet sich nach dem jeweiligen Lebensmittel oder Rezept.
-```
-
-Damit wird die fachlich wichtige Parallelität sichtbar, ohne zusätzliche UI-Mechanik einzubauen.
-
-Die bestehende Handling-/Safety-Logik entscheidet weiterhin, welche konkrete Form tatsächlich geeignet ist.
-
-## Änderung 3 – bereits geeignete Löffelmodi passend zur `textureStage` sortieren
-
-Die bestehende Eligibility wird **nicht** verändert.
-
-Es wird nur die Reihenfolge bereits geeigneter Löffelmodi innerhalb von `preferredHandlingModes()` bzw. einer kleinen zentralen Hilfsfunktion angepasst.
-
-Empfohlene Reihenfolge:
+Die Eligibility wird nicht verändert. Nur die Reihenfolge bereits geeigneter Löffelmodi wird angepasst:
 
 | `textureStage` | bevorzugte Löffelmodi |
 | --- | --- |
@@ -126,128 +70,64 @@ Empfohlene Reihenfolge:
 
 Regeln:
 
-1. zuerst unverändert bestehende Handling-/Oral-/Capability-Eligibility;
+1. bestehende Handling-/Oral-/Capability-Eligibility zuerst;
 2. `feedingApproach` bestimmt weiterhin die bevorzugte Familie;
-3. nur innerhalb der Löffelfamilie wird nach `textureStage` sortiert;
-4. kein Modus wird durch die Sortierung neu freigegeben;
-5. Fingerfood bleibt unabhängig von der Texturstufe möglich, sofern bereits eligible.
+3. nur vorhandene Löffelmodi werden nach `textureStage` umsortiert;
+4. kein Modus wird neu freigegeben;
+5. Fingerfood bleibt parallel, sofern bereits eligible.
 
-Beispiele:
+Beispiel Karotte:
 
-```text
-Contract: smooth, mashed, finger
-spoon + Stage 1 -> smooth, mashed, finger
-spoon + Stage 2 -> mashed, smooth, finger
-fingerfood + Stage 1 -> finger, smooth, mashed
-```
+- `spoon` + Stage 1 -> `spoon-smooth` zuerst;
+- `spoon` + Stage 2 -> `spoon-mashed` zuerst;
+- `fingerfood` + Stage 1 -> `finger-graspable` bleibt zuerst.
 
-Für `mixed` wird ebenfalls nur die relative Reihenfolge vorhandener Löffelmodi angepasst; es entsteht kein neues Auswahlmodell.
+## Technische Umsetzung
 
-## Was ausdrücklich nicht umgesetzt wird
+Produktiv geändert wird zentral `js/handling-readiness.js`:
 
-Der frühere größere Vorschlag wird bewusst reduziert.
+- `spoonModePreference()` und `sortSpoonModesByTexture()` ordnen nur bereits eligible Löffelmodi;
+- `preferredHandlingModes()` erhält `textureStage` als reine Sortierinformation;
+- `installTextureCoachRuntime()` installiert vor dem finalen sichtbaren `renderAll()` die vereinfachte einzelne Coach-Darstellung.
 
-Nicht Teil des MVP:
+Die vorhandene Planner-Policy-Ladekette installiert `handling-readiness.js`, bevor die App nach dem initial versteckten Render sichtbar wird. Dadurch wird keine zusätzliche UI-Datei oder zweite persistente Coach-Architektur benötigt.
 
-- kein neues `textureExperience`-Feld;
-- keine neue Frage „Wie hat die Konsistenz geklappt?“;
-- keine Komfort-/Learning-Zähler;
-- keine neue Darreichungsform-Auswahl im Log;
-- keine neue Log-Migration;
-- keine dynamische Fingerfood-Empfehlung aus der nächsten Mahlzeit;
-- keine zweite Coach-Spur;
+## Bewusst nicht umgesetzt
+
+- kein `textureExperience`;
+- keine neue Log-Frage;
+- keine Darreichungsform-Auswahl im Log;
+- keine Log-Migration;
 - kein neues `trialStage`;
 - keine automatische Stufenerhöhung;
 - kein fixer Wochenplan;
 - keine neue Capability-Ableitung;
-- keine neue FOOD-Klassifikation;
+- keine neue FOOD-/Recipe-Klassifikation;
 - keine neue Storage-Schema-Version;
-- keine Änderung von Alters-, Safety-, Planner- oder Mahlzeiteneignungsregeln.
+- keine Änderung von `js/log.js`;
+- keine Änderung der Planner-Kandidatenlogik;
+- keine Änderung von Alters-, Safety- oder Mahlzeiteneignungsregeln.
 
-## Umgang mit dem bestehenden Log
+## Regressionen
 
-Das bestehende Log bleibt im MVP unverändert.
+Abgedeckt werden mindestens:
 
-Dass `textureStage` dort derzeit allgemein als Konsistenz dokumentiert wird, wird **nicht** im selben Auftrag neu modelliert. Da der neue Coach keine Fortschrittszähler mehr aus Logs ableitet, entsteht daraus für die vorgeschlagene Progressionshilfe kein falsches Unlock- oder Empfehlungssignal mehr.
+1. Stage 1 + `spoon` bevorzugt bei Karotte `spoon-smooth`;
+2. Stage 2 + `spoon` bevorzugt bei Karotte `spoon-mashed`;
+3. eine neue Auto-Mahlzeit erhält bei Stage 2 entsprechend `presentationMode = spoon-mashed`;
+4. `fingerfood` bleibt bei Stage 1 parallel bevorzugbar;
+5. Eligibility-Listen bleiben durch die Sortierung unverändert;
+6. `spoon-soft-lumpy` bleibt an die bestehende Texturregel gebunden;
+7. `smallSoftPieces` und `structuredChew` bleiben unabhängige harte Capabilities;
+8. der sichtbare Coach zeigt keinen FOOD-basierten Erfolgszähler und kein `Test möglich`;
+9. der sichtbare Coach zeigt den kleinen nächsten Schritt und den parallelen Fingerfood-Hinweis.
 
-Falls sich die Log-Darstellung von Fingerfood später im echten Gebrauch als störend erweist, kann das separat und klein gelöst werden. Es ist keine Voraussetzung für diesen Coach.
+## Testmatrix
 
-## Stufe 3 -> 4
+Für die Implementierung gelten gemäß `AGENTS.md` / `docs/AI_WORKFLOW.md`:
 
-`weiche Familienkost` bleibt breiter als eine reine Löffeltextur.
-
-Im MVP braucht dafür keine neue Speziallogik gebaut zu werden. Die vorhandene Stufe bleibt bestehen; die Copy soll lediglich vermeiden, sie als automatische nächste grobe Konsistenz darzustellen.
-
-Beispiel:
-
-```text
-Nächster Schritt:
-Zunehmend weiche familiennahe Formen ausprobieren, wenn das konkrete Lebensmittel oder Rezept dafür geeignet ist.
-```
-
-Keine neue Rezeptfreigabe und kein neuer Handlingmodus.
-
-## Technische Zielstellen
-
-Voraussichtlich nur:
-
-- `js/ui.js`
-  - `textureSuccessCount()` aus dem Coach entfernen;
-  - Schwellenlogik `successes >= 4` entfernen;
-  - kurze neutrale Next-Step-Copy und Fingerfood-Hinweis ergänzen.
-- `js/handling-readiness.js`
-  - Reihenfolge bereits geeigneter Löffelmodi an `textureStage` ausrichten.
-- gezielte Tests für diese beiden Verhaltensänderungen.
-
-Kein `js/log.js`-Umbau im MVP.
-Kein neues Datenfeld.
-Keine Migration.
-
-## Akzeptanzkriterien
-
-### Coach
-
-1. Der Home-Coach zeigt keinen angeblichen Texturerfolgszähler mehr.
-2. FOOD-Outcomes lösen keine Empfehlung oder Freigabe der nächsten Stufe aus.
-3. Die nächste Stufe wird weiterhin nur manuell bestätigt.
-4. Vertraute Konsistenzen dürfen laut Copy parallel bleiben.
-5. Ein kurzer Hinweis macht sichtbar, dass geeignetes Fingerfood unabhängig von der Löffelstufe parallel möglich ist.
-6. Keine zweite Coach-Spur und keine zusätzliche Nutzerentscheidung entstehen.
-
-### Handling
-
-7. `feedingApproach = spoon`, Stage 1 bevorzugt bei Karotte `spoon-smooth` vor `spoon-mashed`.
-8. `feedingApproach = spoon`, Stage 2 bevorzugt bei Karotte `spoon-mashed` vor `spoon-smooth`.
-9. `feedingApproach = fingerfood`, Stage 1 bevorzugt weiterhin ein bereits geeignetes `finger-graspable`.
-10. `spoon-soft-lumpy` bleibt nur dort eligible, wo die bestehende Texturregel es erlaubt.
-11. `smallSoftPieces` und `structuredChew` bleiben unverändert harte, unabhängige Capabilities.
-12. Rezeptidentität, FOOD-Auswahl, Planner-Rollen und Locks ändern sich durch die Sortierung nicht.
-
-## Testmatrix bei späterer Implementierung
-
-Da zentrale Handling-Logik und Home-UI betroffen wären:
-
-1. gezielte Node-Tests für `preferredHandlingModes` / Löffelreihenfolge;
-2. gezielte UI-/Browser-Regression für den Texture Coach;
-3. `npm run verify:fast`;
-4. `npm run verify:app`;
-5. kein `verify:deploy` ohne Deployment-Scope.
-
-## Empfohlener Implementierungsschnitt
-
-Ein einziger kleiner Implementierungsauftrag ist ausreichend:
-
-1. falschen Texturerfolgszähler entfernen;
-2. Coach-Copy vereinfachen und Parallelität von Fingerfood erwähnen;
-3. Löffelmodus-Reihenfolge an die bestehende Texturstufe anpassen;
-4. gezielte Regressionen ausführen.
-
-## Ergebnis
-
-Der Nutzer bekommt genau die Information, die im Alltag gebraucht wird:
-
-- **Wo stehen wir bei der Konsistenz?**
-- **Was kann ich als kleinen nächsten Schritt probieren?**
-- **Fingerfood darf parallel stattfinden.**
-
-Dafür entstehen keine neuen Log-Fragen, keine neuen Entwicklungswerte und keine zusätzliche Bedienebene.
+- gezielte Node-Regressionen;
+- gezielte Browser-Regression für den Coach;
+- `npm run verify:fast`;
+- `npm run verify:app`;
+- kein Deployment-Gate ohne Deployment-Scope.

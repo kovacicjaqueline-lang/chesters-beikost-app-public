@@ -142,6 +142,19 @@ test("textureStage: sortiert nur bereits geeignete Löffelmodi, Fingerfood bleib
     "spoon-smooth",
   ]);
 
+  const spoonDay = autoDay();
+  handling.applyPresentationModesToDay(
+    spoonDay,
+    settings("spoon", { textureStage: 2 }),
+    FOOD_HANDLING_CONTRACT,
+    RECIPE_HANDLING_CONTRACT,
+  );
+  assert.equal(
+    spoonDay.meals[0].presentationMode,
+    "spoon-mashed",
+    "neue Auto-Mahlzeiten müssen die zur Texturstufe passende bereits geeignete Löffelform verwenden",
+  );
+
   assert.deepEqual(
     handling.preferredHandlingModes(
       ["spoon-smooth", "finger-graspable", "spoon-soft-lumpy", "spoon-mashed"],

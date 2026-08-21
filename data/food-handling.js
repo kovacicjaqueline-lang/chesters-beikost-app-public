@@ -172,14 +172,14 @@ const RECIPE_CONTRACT_GROUPS = Object.freeze({
 
 const RECIPE_CONTRACT_OVERRIDES = Object.freeze({
   "Rind-Hafer-Bällchen": Object.freeze({
-    servingRequirement: "Sehr weich, saftig und flach oder länglich anbieten; keine runden festen Kugeln und keine harte Kruste. Erst anbieten, wenn strukturierte weiche Bissen sicher im Mund positioniert und wiederholt zerkleinert werden.",
+    servingRequirement: "Sehr weich, saftig und flach oder länglich anbieten; keine runden festen Kugeln und keine harte Kruste. Erst anbieten, wenn bei der formstabilen weichen Form gezielt ein passender Bissen abgetrennt und der strukturierte Bissen anschließend sicher im Mund positioniert und wiederholt zerkleinert werden kann.",
   }),
   "Geflügel-Gemüse-Hafer-Bällchen": Object.freeze({
     servingRequirement: "Flach oder länglich und eher dünn formen, vollständig durchgaren und saftig halten. Der abgetrennte Bissen muss weich auseinanderfallen; besonders die Pute-Karotte-Variante darf innen nicht kompakt oder federnd bleiben.",
     noteOverride: "Kleine flache oder längliche und eher dünne Stücke statt fester runder Kugeln formen. Vollständig durchgaren, saftig halten und harte Kruste vermeiden. Vor dem Servieren prüfen, dass der abgetrennte Bissen weich auseinanderfällt und innen nicht kompakt oder federnd bleibt.",
   }),
   "Baby-Bananenbrot": Object.freeze({
-    servingRequirement: "Vollständig durchbacken und vollständig auskühlen lassen. Die Krume darf nicht klebrig, teigig oder ballend sein; eine solche Charge nicht anbieten. In gut greifbare Stücke schneiden und erst bei sicherem strukturiertem Kauen anbieten.",
+    servingRequirement: "Vollständig durchbacken und vollständig auskühlen lassen. Die Krume darf nicht klebrig, teigig oder ballend sein; eine solche Charge nicht anbieten. In gut greifbare Stücke schneiden und erst anbieten, wenn aus der weichen formstabilen Scheibe gezielt ein passender Bissen abgetrennt und dieser anschließend sicher strukturiert gekaut werden kann.",
     noteOverride: "Zu einem weichen Teig verrühren und vollständig durchbacken. Ohne Zucker, Honig und Salz. Vollständig auskühlen lassen und in gut greifbare Stücke schneiden. Die Krume muss durchgebacken sein und darf nicht klebrig, teigig oder ballend sein; andernfalls nicht anbieten.",
   }),
   "Zucchini-Omelett": Object.freeze({
@@ -205,11 +205,11 @@ const RECIPE_CONTRACT_OVERRIDES = Object.freeze({
     servingRequirement: "Vollständig durchbacken und weich halten; Champignons sehr fein und weich vorbereiten. Die Cup-Form bleibt die kanonische Form; keine harte oder trockene Kruste.",
   }),
   "Weiche Joghurt-Fladen": Object.freeze({
-    servingRequirement: "Vollständig, aber weich durchbacken; die Mitte darf nicht roh, klebrig oder teigig bleiben und es darf keine harte Kruste entstehen. Erst bei sicherem strukturiertem Kauen anbieten.",
+    servingRequirement: "Vollständig, aber weich durchbacken; die Mitte darf nicht roh, klebrig oder teigig bleiben und es darf keine harte Kruste entstehen. Erst anbieten, wenn aus dem weichen formstabilen Fladen gezielt ein passender Bissen abgetrennt und dieser anschließend sicher strukturiert gekaut werden kann.",
     noteOverride: "Kleine flache Portionen vollständig, aber weich durchbacken. Die Mitte muss vollständig durchgegart und darf nicht klebrig oder teigig sein; keine harte oder dunkle Kruste.",
   }),
   "Huhn-Gemüse-Muffins": Object.freeze({
-    servingRequirement: "Vollständig durchbacken, innen saftig halten und harte Kruste vermeiden. Die Hühnerfasern bleiben Teil des abgetrennten Bissens; erst bei sicherem strukturiertem Kauen anbieten.",
+    servingRequirement: "Vollständig durchbacken, innen saftig halten und harte Kruste vermeiden. Erst anbieten, wenn aus dem weichen formstabilen Muffin gezielt ein passender Bissen abgetrennt werden kann; die Hühnerfasern bleiben Teil des abgetrennten Bissens und verlangen anschließend sicheres strukturiertes Kauen.",
     noteOverride: "Kleine Muffins vollständig durchbacken und innen saftig halten; keine harte Kruste. Vor dem Servieren prüfen, dass die Krume vollständig durchgegart und nicht klebrig-teigig ist.",
   }),
   "Fleisch-Gemüse-Bällchen": Object.freeze({
@@ -262,11 +262,12 @@ addRecipeContractGroup(
 addRecipeContractGroup(
   RECIPE_CONTRACT_GROUPS.structuredChew,
   [HANDLING_MODES.FINGER_GRASPABLE],
-  BITE_SEPARATION_PROFILES.EASY_BITE_SEPARATE,
+  BITE_SEPARATION_PROFILES.GRADED_BITE_REQUIRED,
   ORAL_PROCESSING_PROFILES.STRUCTURED_CHEW_REQUIRED,
   {
+    biteRequiredCapability: HANDLING_CAPABILITIES.GRADED_BITE,
     oralRequiredCapability: HANDLING_CAPABILITIES.STRUCTURED_CHEW,
-    laterKind: "oral-capability",
+    laterKind: "bite-and-oral-capability",
   },
 );
 addRecipeContractGroup(

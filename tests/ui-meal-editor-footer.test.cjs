@@ -55,14 +55,22 @@ test('Mahlzeit-Editor-Footer bleibt im nativen Sheet-Scroll sichtbar und berück
   );
 });
 
-test('iPhone-Tastatur darf weiterhin keinen Planinhalt hinter dem Editor durchscheinen lassen', () => {
-  assert.match(
+test('iPhone-Tastatur wird vom Editor abgedeckt, ohne die App-Shell beim Schließen versteckt zu lassen', () => {
+  assert.doesNotMatch(
     css,
-    /body:has\(#genericModal\.open #cancelManualMeal\) > \.app-header,[^]*body:has\(#genericModal\.open #cancelManualMeal\) > main,[^]*body:has\(#genericModal\.open #cancelManualMeal\) > nav,[^]*\{[^}]*visibility:\s*hidden;/,
+    /body:has\(#genericModal\.open #cancelManualMeal\)[^]*visibility:\s*hidden;/,
   );
   assert.match(
     css,
-    /#genericModal:has\(#mealSelectorSearch:focus\)\s*\{[^}]*background:\s*#9e988f;/,
+    /#genericModal:has\(#cancelManualMeal\)::before\s*\{[^}]*position:\s*fixed;[^}]*inset:\s*-100vh 0;[^}]*background:\s*#9e988f;/,
+  );
+  assert.match(
+    css,
+    /#genericModal:has\(#cancelManualMeal\)\s*\{[^}]*z-index:\s*90;/,
+  );
+  assert.doesNotMatch(
+    css,
+    /#genericModal:has\(#mealSelectorSearch:focus\)::before/,
   );
   assert.doesNotMatch(
     css,

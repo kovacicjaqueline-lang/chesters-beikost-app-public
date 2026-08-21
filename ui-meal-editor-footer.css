@@ -5,31 +5,35 @@
  * einen Scroll-Kontexts am unteren Rand sichtbar.
  */
 
-/* Die iOS-Tastatur samt Eingabe-Navigationsleiste ist teilweise transparent und kann
- * Bereiche unterhalb des von Safari verkleinerten Viewports sichtbar machen.
- * Deshalb bleibt die App im DOM an ihrer Position, wird hinter dem manuellen Editor
- * aber vollständig unsichtbar. So kann dort nur die einheitliche Body-Fläche durchscheinen.
+/* Die iOS-Tastatur samt Eingabe-Navigationsleiste ist teilweise transparent. Der
+ * manuelle Editor deckt deshalb den Bereich hinter dem Sheet selbst vollständig ab,
+ * statt Header/Main/Nav über einen ancestor-:has()-Selektor auszublenden. Letzteres
+ * kann WebKit beim Schließen verzögert neu berechnen und kurz einen leeren App-Screen
+ * hinterlassen. Der opake Backdrop entspricht optisch dem bisherigen dunklen Overlay
+ * über var(--bg), verschwindet aber atomar mit .modal.open.
  */
-body:has(#genericModal.open #cancelManualMeal) > .app-header,
-body:has(#genericModal.open #cancelManualMeal) > main,
-body:has(#genericModal.open #cancelManualMeal) > nav,
-body:has(#genericModal.open #cancelManualMeal) > .toast,
-body:has(#genericModal.open #cancelManualMeal) > #logModal {
-  visibility: hidden;
-}
-
 #genericModal:has(#cancelManualMeal) {
+  z-index: 90;
   overscroll-behavior: contain;
+  isolation: isolate;
+  background: transparent;
 }
 
-#genericModal:has(#mealSelectorSearch:focus) {
+#genericModal:has(#cancelManualMeal)::before {
+  content: "";
+  position: fixed;
+  inset: -100vh 0;
   background: #9e988f;
+  z-index: 0;
+  pointer-events: none;
 }
 
 /* Kein eigener flex-/innerer Scroll-Viewport mehr: Das Sheet selbst scrollt wie beim
  * Protokollieren. Gerade auf iOS vermeidet das Fokus-Panning in einem verschachtelten
  * Scrollcontainer und hält die horizontalen Sheet-Kanten stabil. */
 #genericModal:has(#cancelManualMeal) .sheet {
+  position: relative;
+  z-index: 1;
   display: block;
   height: auto;
   max-height: 92vh;

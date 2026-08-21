@@ -11,7 +11,10 @@ self.addEventListener = (type, listener, options) => {
   if (type === "fetch") coreFetchHandler = listener;
 };
 
-importScripts("./sw-core.js");
+// Der Core-Import ist absichtlich mit derselben App-Version versehen wie die Runtime-Assets.
+// Damit kann ein bereits installierter Worker beim Update nicht einen alten sw-core.js aus
+// dem HTTP-/Import-Cache übernehmen, obwohl der neue Top-Level-Worker schon geladen wurde.
+importScripts("./sw-core.js?v=10.1.26");
 
 self.addEventListener = nativeAddEventListener;
 if (coreFetchHandler) nativeRemoveEventListener("fetch", coreFetchHandler);

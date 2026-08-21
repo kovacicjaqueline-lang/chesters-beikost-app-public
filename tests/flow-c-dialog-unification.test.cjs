@@ -37,8 +37,11 @@ test("gemeinsame Header-Hierarchie trennt Aktionstitel vom Mahlzeitenkontext", (
 });
 
 test("FLOW-C dekoriert nur DOM-Struktur und überschreibt keine fachlichen Controller", () => {
-  for (const symbol of ["openGeneric =", "closeGeneric =", "openManualMealSelector =", "renderLogForm =", "saveLog ="])
-    assert.equal(runtime.includes(symbol), false, `${symbol} darf nicht überschrieben werden`);
+  const controllerAssignment = /^\s*(?:openGeneric|closeGeneric|openManualMealSelector|renderLogForm|saveLog)\s*=/m;
+  assert.doesNotMatch(runtime, controllerAssignment, "FLOW-C darf keine bestehenden Controller-Funktionen neu zuweisen");
+  assert.doesNotMatch(runtime, /\boriginal(?:OpenGeneric|CloseGeneric|OpenManualMealSelector|RenderLogForm)\b/, "FLOW-C darf Controller nicht über Wrapper ersetzen");
+  assert.match(runtime, /new MutationObserver\(syncGeneric\)/);
+  assert.match(runtime, /new MutationObserver\(syncLog\)/);
   assert.equal(runtime.includes("state.logs"), false);
   assert.equal(runtime.includes("pendingLog.meal"), false);
   assert.equal(runtime.includes("foodRoles"), false);

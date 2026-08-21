@@ -129,6 +129,64 @@ function plannerQualityChooseResult(results, ctx, on, diffFn, focusId = "") {
     .sort((a, b) => plannerQualityCompareTuple(a.tuple, b.tuple))[0]?.result || null;
 }
 
+function plannerQualityKnownCandidatePriorityTuple(
+  result,
+  on,
+  ctx,
+  options = {},
+) {
+  let item = result?.f || result;
+  if (!item) return null;
+
+  let settings = options.settings || (typeof state !== "undefined" ? state?.settings : null) || {};
+  let diffFn = options.diffFn || (typeof diffDays === "function" ? diffDays : null);
+  let inventoryPortionsFn = options.inventoryPortionsFn ||
+    (typeof inventoryPortions === "function" ? inventoryPortions : null);
+  let usageCountFn = options.usageCountFn || (typeof usageCount === "function" ? usageCount : null);
+  let effectivePriorityFn = options.effectivePriorityFn ||
+    (typeof effectivePriority === "function" ? effectivePriority : null);
+  if (typeof usageCountFn !== "function" || typeof effectivePriorityFn !== "function") return null;
+
+  let recentFocusPenalty = 0;
+  let last = ctx?.lastFocus?.get(item.id);
+  if (last) {
+    if (typeof diffFn !== "function") return null;
+    let distance = diffFn(on, last);
+    if (distance <= 0) recentFocusPenalty = 500;
+    else if (distance === 1) recentFocusPenalty = 250;
+    else if (distance === 2) recentFocusPenalty = 80;
+  }
+
+  let inventoryPreference = 0;
+  if (settings.preferInventoryInPlan) {
+    if (typeof inventoryPortionsFn !== "function") return null;
+    let reserved = ctx?.inventoryReserved?.get(item.id) || 0;
+    if (inventoryPortionsFn(item.id) > reserved) inventoryPreference = -160;
+  }
+
+  return [
+    recentFocusPenalty,
+    inventoryPreference,
+    Number(ctx?.plannedUse?.get(item.id) || 0),
+    Number(usageCountFn(item.id) || 0),
+    Number(effectivePriorityFn(item, on) || 0),
+  ];
+}
+
+function plannerQualityChooseKnownResult(results, ctx, on, diffFn, priorityOptions = {}) {
+  if (!Array.isArray(results) || !results.length) return null;
+  if (results.length < 2) return results[0] || null;
+
+  let baseline = plannerQualityKnownCandidatePriorityTuple(results[0], on, ctx, priorityOptions);
+  if (!baseline) return results[0] || null;
+  let samePriority = results.filter((result) => {
+    let tuple = plannerQualityKnownCandidatePriorityTuple(result, on, ctx, priorityOptions);
+    return tuple && plannerQualityCompareTuple(tuple, baseline) === 0;
+  });
+  if (!samePriority.length) return results[0] || null;
+  return plannerQualityChooseResult(samePriority, ctx, on, diffFn) || results[0] || null;
+}
+
 function plannerQualityNormalizeQualityDays(days) {
   return (days || []).map((day) => ({
     ...day,
@@ -247,7 +305,7 @@ function installPlannerQualityRotationRuntime() {
   knownCandidate = function plannerQualityKnownCandidate(meal, on, ctx, exclude = []) {
     let results = collectKnownResults(meal, on, ctx, exclude);
     if (!activeQualityContext || results.length < 2) return results[0] || null;
-    return plannerQualityChooseResult(results, activeQualityContext, on, diffDays) || results[0] || null;
+    return plannerQualityChooseKnownResult(results, activeQualityContext, on, diffDays) || results[0] || null;
   };
 
   let collectCompanionResults = (focus, meal, on, focusType) => {
@@ -422,6 +480,8 @@ if (typeof module !== "undefined" && module.exports) {
     plannerQualityCandidateTuple,
     plannerQualityCompareTuple,
     plannerQualityChooseResult,
+    plannerQualityKnownCandidatePriorityTuple,
+    plannerQualityChooseKnownResult,
     plannerQualityNormalizeQualityDays,
     plannerQualityRewriteIssue,
     installPlannerQualityRotationRuntime,

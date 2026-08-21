@@ -128,13 +128,13 @@ Der Zwei-Finger-Test bleibt ein nützlicher Konsistenzhinweis, reicht aber allei
 
 ## 5. Ergebnis des gezielten Bite-Separation-Rechecks
 
-Alle **41 bestehenden zusammenhängenden `finger-graspable`-Rezepte** wurden für die neue Dimension einzeln geprüft.
+Alle **41 bestehenden zusammenhängenden `finger-graspable`-Rezepte** wurden für die neue Dimension einzeln anhand ihrer kanonischen Rezeptur und Servierform geprüft.
 
 | Bite Separation | Anzahl | zusätzliche Bite-Capability |
 | --- | ---: | --- |
 | `low-resistance-separate` | 13 | keine |
-| `easy-bite-separate` | 28 | keine |
-| `graded-bite-required` | 0 | `graded-bite` nur bei künftig individuell freigegebenem Fall |
+| `easy-bite-separate` | 24 | keine |
+| `graded-bite-required` | 4 | `graded-bite` |
 
 Die 13 `low-resistance-separate`-Fälle sind:
 
@@ -152,24 +152,31 @@ Die 13 `low-resistance-separate`-Fälle sind:
 - Gebackene Saba-Banane
 - Bananen-Ei-Pancakes
 
-Alle übrigen bestehenden zusammenhängenden Fingerfoods sind `easy-bite-separate`.
+Die vier `graded-bite-required`-Fälle sind:
 
-Wichtig: Der Bestandskatalog bekommt durch die Einführung von `graded-bite` **kein neues zusätzliches Gate**. Die Capability ist vorhanden, damit künftig konkret geprüfte formstabile weiche Servierformen korrekt modelliert werden können.
+- Rind-Hafer-Bällchen
+- Baby-Bananenbrot
+- Weiche Joghurt-Fladen
+- Huhn-Gemüse-Muffins
 
-## 6. Vier bestehende Structured-Chew-Fälle
+Die übrigen 24 zusammenhängenden Fingerfoods sind `easy-bite-separate`.
 
-Die vier bereits freigegebenen `structured-chew`-Rezepte wurden auf Bite Separation **separat** nachgeprüft:
+Die vier `graded-bite`-Zuordnungen wurden **nicht** aus `structured-chew`, Alter, `stage`, Rezeptkategorie oder Backmethode abgeleitet. Entscheidend war jeweils die konkrete weiche, aber ausreichend formstabile beziehungsweise kohäsive kanonische Form, aus der ein beherrschbarer Bissen gezielt abgetrennt werden muss.
 
-| Rezept | Bite Separation | Oral Processing | Capability |
-| --- | --- | --- | --- |
-| Rind-Hafer-Bällchen | `easy-bite-separate` | `structured-chew-required` | `structured-chew` |
-| Baby-Bananenbrot | `easy-bite-separate` | `structured-chew-required` | `structured-chew` |
-| Weiche Joghurt-Fladen | `easy-bite-separate` | `structured-chew-required` | `structured-chew` |
-| Huhn-Gemüse-Muffins | `easy-bite-separate` | `structured-chew-required` | `structured-chew` |
+## 6. Vier Fälle mit zwei unabhängigen Capabilities
 
-Keines dieser vier Rezepte verlangt allein wegen `structured-chew` zusätzlich `graded-bite`.
+Dieselben vier Rezepte benötigen nach der getrennten Einzelprüfung zusätzlich `structured-chew` für den bereits abgetrennten Bissen:
 
-Das ist ein verbindliches Gegenbeispiel gegen eine lineare Skill-Leiter.
+| Rezept | Bite Separation | Bite-Capability | Oral Processing | Oral-Capability |
+| --- | --- | --- | --- | --- |
+| Rind-Hafer-Bällchen | `graded-bite-required` | `graded-bite` | `structured-chew-required` | `structured-chew` |
+| Baby-Bananenbrot | `graded-bite-required` | `graded-bite` | `structured-chew-required` | `structured-chew` |
+| Weiche Joghurt-Fladen | `graded-bite-required` | `graded-bite` | `structured-chew-required` | `structured-chew` |
+| Huhn-Gemüse-Muffins | `graded-bite-required` | `graded-bite` | `structured-chew-required` | `structured-chew` |
+
+Dass beide Vierergruppen im aktuellen Katalog identisch sind, ist **kein Kopplungsprinzip**. Beide Achsen wurden separat geprüft. Aus diesem Bestandsbefund darf weder `graded-bite => structured-chew` noch `structured-chew => graded-bite` abgeleitet werden.
+
+Das Zielmodell muss ausdrücklich auch andere Kombinationen zulassen, beispielsweise eine formstabile weiche Servierform mit `graded-bite-required` + `easy-chew` oder eine leicht abtrennbare Form mit `easy-bite-separate` + `structured-chew-required`.
 
 ### Safety-Zusatz Baby-Bananenbrot
 
@@ -226,7 +233,7 @@ Beispiel ohne zusätzliche Capability:
 }
 ```
 
-Beispiel mit Bite-Capability:
+Beispiel nur mit Bite-Capability:
 
 ```js
 {
@@ -237,12 +244,24 @@ Beispiel mit Bite-Capability:
 }
 ```
 
-Beispiel mit Structured Chew:
+Beispiel nur mit Structured Chew:
 
 ```js
 {
   modes: ["finger-graspable"],
   biteSeparation: "easy-bite-separate",
+  oralProcessing: "structured-chew-required",
+  oralRequiredCapability: "structured-chew"
+}
+```
+
+Beispiel mit beiden unabhängigen Capabilities:
+
+```js
+{
+  modes: ["finger-graspable"],
+  biteSeparation: "graded-bite-required",
+  biteRequiredCapability: "graded-bite",
   oralProcessing: "structured-chew-required",
   oralRequiredCapability: "structured-chew"
 }

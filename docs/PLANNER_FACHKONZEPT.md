@@ -1,7 +1,7 @@
 # Chesters Beikost-App – kanonisches Planner-Fachkonzept
 
-Stand: 20.08.2026  
-Dokumentationsbasis: Statusabgleich gegen `main` bis `8106621cc9bc130b2907cc0bad563cb6eff7311e`, einschließlich gemergter Handling-/BLW-Schicht, dokumentiertem Oral-Processing-Contract, gemergtem Nuss-/Samen-/Topping-Block, vollständiger österreichischer `seasonMonths`-Matrix und aktuellem FOOD-COUNT-Identitätsstand; historischer Phasenmodell-v2-Stand `f9f886c82af2ce267c10571e5e89df787037c6b0`.
+Stand: 21.08.2026  
+Dokumentationsbasis: Statusabgleich gegen `main` bis `07b7ffdc5e32d92135698c7c208c56d50687fbca`, einschließlich gemergter Handling-/BLW-Schicht, gemergtem Nuss-/Samen-/Topping-Block, vollständiger österreichischer `seasonMonths`-Matrix und aktuellem FOOD-COUNT-Identitätsstand; zusätzlich fachlich freigegebener und im Integrations-PR umgesetzter Bite-Separation-/Oral-Processing-Stand. Historischer Phasenmodell-v2-Stand: `f9f886c82af2ce267c10571e5e89df787037c6b0`.
 
 Dieses Dokument führt die bisher über Phasenmodell, PLAN-07, PLAN-08, MILK-01, TODO3-Regressionen und spätere Fachentscheidungen verteilte Planner-Semantik an einer Stelle zusammen.
 
@@ -454,7 +454,7 @@ Für Nuss-/Samen-Toppings gilt zusätzlich: Eine automatisch gelockte Kostprobe 
 
 # 16. Darreichungsweg / Handling ✅ main
 
-Die Handling-/BLW-Schicht ist seit PR #45 auf `main` integriert.
+Die allgemeine Handling-/BLW-Schicht ist auf `main` integriert.
 
 Verbindlicher Vertrag:
 
@@ -471,48 +471,83 @@ Strukturiertes `presentationMode` ist additiv und wird nur dort gesetzt, wo für
 
 Historische Locks/Logs ohne Feld bleiben unverändert und historische `textureStage`-Werte werden nicht umgedeutet. Die Steuerlogik leitet Handling nicht aus `safeForm`-/`note`-Freitexten ab.
 
-FOODs und Rezepte werden nur über explizit geprüfte strukturierte Handling-Contracts migriert. SAFETY-REVIEW- und LATER-REVIEW-Rezepte werden dadurch **nicht pauschal früher freigegeben** und bleiben bis zur jeweiligen Einzelprüfung im bisherigen Verhalten.
+### 16.1 Bite Separation und orale Verarbeitung 🟡 Branch/Integrations-PR
 
-### 16.1 Orale Verarbeitungsdimension 🟡 fachlich freigegeben, noch nicht Runtime
-
-Für zusammenhängende Fingerfoods ist der Handlingmodus allein nicht ausreichend. Die fachlich freigegebene additive Detailreferenz ist:
+Für zusammenhängende Fingerfoods reicht der Handlingmodus allein nicht aus. Die fachlich freigegebene Detailreferenz ist:
 
 `docs/FOOD_HANDLING_ORAL_PROCESSING_CONTRACT.md`
 
-Sie unterscheidet orthogonal zum Handlingmodus:
+Der Integrations-PR trennt drei unabhängige Ebenen:
+
+1. **Handling** – z. B. `finger-graspable` oder `finger-small-soft`;
+2. **Bite Separation** – was das gezielte Abtrennen eines Bissens aus der zusammenhängenden Form verlangt;
+3. **Oral Processing** – was der bereits abgetrennte Bissen im Mund verlangt.
+
+Bite Separation verwendet für zusammenhängende `finger-graspable`-Formen:
+
+- `low-resistance-separate`;
+- `easy-bite-separate`;
+- `graded-bite-required`.
+
+Nur `graded-bite-required` verlangt die beobachtete Capability `graded-bite`.
+
+Post-separation-Oral-Processing verwendet:
 
 - `soft-breakdown`;
-- `easy-bite-separate`;
+- `easy-chew`;
 - `structured-chew-required`.
 
-Diese Profile sind **keine lineare Entwicklungs- oder Altersleiter**. Insbesondere gilt:
+Nur `structured-chew-required` verlangt die beobachtete Capability `structured-chew`.
 
-- `finger-graspable` bedeutet nicht automatisch eine bestimmte orale Anforderung;
-- bloßes Abbeißen ist kein Grund für eine spätere Freigabe;
-- entscheidend für die Abgrenzung zu `structured-chew-required` ist das Verhalten des tatsächlich abgetrennten Bissens;
-- Zwei-Finger-Zerdrückbarkeit, Rezeptkategorie, `stage` oder `minMonths` reichen allein nicht zur Einstufung;
-- eine zusätzliche orale Capability darf nur nach konkreter Einzelprüfung eines Rezeptes beziehungsweise einer Servierform eingeführt werden;
-- resistive Übungsformen werden durch diesen Contract nicht pauschal freigegeben.
+Zusätzlich bleibt `small-soft-pieces` ausschließlich eine Handling-/Selbstfütterungs-Capability für `finger-small-soft`: kleine weiche Stücke gezielt aufnehmen und zum Mund führen.
 
-Die fachliche Erweiterung ändert noch keine Produktlogik, Rezeptdaten oder Planner-Auswahl. Eine spätere technische Abbildung muss die orale Dimension getrennt von `presentationMode`, `feedingApproach`, Texturstage und unabhängigen Safety-/Alters-/Zutatengates behandeln.
+Alle drei Capabilities werden getrennt gespeichert:
 
-Die dynamisch geladene Handling-Contract-/Runtime-Schicht wird zusammen mit der Planner-Policy-Kette vor dem finalen sichtbaren Render installiert und für den ersten Offline-Start vorgecached.
+```js
+handlingCapabilities: {
+  smallSoftPieces: false,
+  gradedBite: false,
+  structuredChew: false
+}
+```
+
+Verbindlich gilt:
+
+- keine lineare Skill-Leiter;
+- `graded-bite` impliziert nicht `structured-chew` und umgekehrt;
+- keine Capability wird aus einer anderen Capability, Alter, Zähnen, `textureStage`, Rezeptkategorie, `stage` oder `minMonths` abgeleitet;
+- `minMonths` bleibt Altersorientierung, `hardMinMonths` bleibt echten unabhängigen Alters-/Safety-Gates vorbehalten;
+- Zwei-Finger-Zerdrückbarkeit ist ein relevantes Prüfmerkmal, aber keine automatische Einstufungsregel;
+- die konkrete kanonische Servierform entscheidet, nicht der bloße Rezepttyp.
+
+Der gezielte Recheck der 41 bestehenden zusammenhängenden `finger-graspable`-Rezepte ergibt im Integrations-PR:
+
+- 13 × `low-resistance-separate`;
+- 24 × `easy-bite-separate`;
+- 4 × `graded-bite-required`.
+
+Die vier `graded-bite-required`-Fälle sind:
+
+- Rind-Hafer-Bällchen;
+- Baby-Bananenbrot;
+- Weiche Joghurt-Fladen;
+- Huhn-Gemüse-Muffins.
+
+Dieselben vier verlangen nach **separater** Prüfung des abgetrennten Bissens zusätzlich `structured-chew`. Die identische Vierergruppe ist ein Bestandsbefund, keine Kopplungsregel.
+
+Die drei Nockerl bleiben `finger-small-soft` + `small-soft-pieces` und oral `soft-breakdown`; Bite Separation ist für bereits einzeln angebotene kleine Stücke nicht anwendbar.
+
+Die dynamisch geladene Handling-/Bite-/Oral-Contract-/Runtime-Schicht wird zusammen mit der Planner-Policy-Kette vor dem finalen sichtbaren Render installiert und für den ersten Offline-Start vorgecached. Recipe-first verwendet dieselbe zentrale Eligibility und erhält keine zweite parallele Bite-/Oral-Schranke.
 
 ---
 
 # 17. Bewusst offene Planner-Punkte
 
-## 17.1 Fachlich noch offen
-
-Aktuell nicht als erledigt behandeln:
-
-1. 🔴 Einzelprüfung der noch bewusst zurückgestellten SAFETY-REVIEW-/LATER-REVIEW-Rezepte vor Aufnahme in den strukturierten Handling-Contract. Diese Prüfung läuft ausschließlich im separaten Handling-/Oral-Arbeitsstrang und wird in diesem Planner-Track nicht parallel neu bewertet.
-
-Die vollständige österreichische `seasonMonths`-Matrix und die Nuss-/Samen-Rollen- und Toppingregel sind auf `main` integriert und nicht mehr als offene Planner-Blöcke zu behandeln. Die allgemeine Handling-/BLW-Schicht ist **keine offene Fachfrage mehr**. Der Oral-Processing-Contract ist fachlich auf `main` dokumentiert; Review, Einzelmigrationen und eine spätere technische Runtime-Abbildung bleiben ein separater Handling-/Oral-Arbeitsstrang und sind nicht Teil dieses Planner-Statusabgleichs.
-
-## 17.2 Fachlich beschlossen, aber noch nicht vollständig auf main nachgewiesen
+## 17.1 Fachlich beschlossen, aber noch nicht vollständig auf main nachgewiesen
 
 1. ⚠️ **PHASE-TRANSITION:** entwicklungsorientierte Empfehlung des nächsten Phasenwechsels plus bewusste Bestätigung. Bestätigung und manueller Wechsel sind vorhanden; eine eigenständige Entwicklungs-Empfehlungslogik ist noch nicht nachgewiesen.
+
+Für den Handling-/Bite-/Oral-Bereich besteht im Integrations-PR keine offene Gruppenmigration mehr: alle 103 Laufzeitrezepte sind explizit im Contract vertreten; die 41 zusammenhängenden Fingerfoods wurden gezielt für Bite Separation nachgeprüft. Neue FOODs/Rezepte benötigen weiterhin ihre eigene explizite Einzelklassifikation gemäß `AGENTS.md`.
 
 Weitere offene FOOD-Datenfragen werden separat im FOOD-Fachregel-Track geklärt und dürfen nicht als implizite Planner-Regel erfunden werden.
 
@@ -548,10 +583,13 @@ Weitere offene FOOD-Datenfragen werden separat im FOOD-Fachregel-Track geklärt 
 - keine historische Lock-/Log-/`textureStage`-Semantik wird durch Handling umgedeutet;
 - `presentationMode` bleibt additiv und persistiert nur, wenn es strukturiert gesetzt wurde;
 - PLAN-08-Auswahl, Rollen und Rezeptidentität bleiben durch Handling unverändert;
-- Handling-Contract und -Runtime stehen vor finalem sichtbaren Render sowie beim ersten Offline-Start zur Verfügung;
-- bei späterer Umsetzung der oralen Dimension bleiben `soft-breakdown` und `easy-bite-separate` nicht-lineare Profile ohne implizite Altersleiter;
-- Omelettstreifen bleiben Referenzfall für `finger-graspable` + `easy-bite-separate` ohne zusätzliche orale Capability;
-- `structured-chew-required` darf nur aus konkret freigegebener Struktur abgeleitet werden, nicht aus Rezeptkategorie, `stage`, `minMonths` oder bloßem Zwei-Finger-Test.
+- Handling-/Bite-/Oral-Contract und -Runtime stehen vor finalem sichtbaren Render sowie beim ersten Offline-Start zur Verfügung;
+- 41 `finger-graspable`-Rezepte bleiben explizit 13 `low-resistance-separate` / 24 `easy-bite-separate` / 4 `graded-bite-required` zugeordnet;
+- `graded-bite` und `structured-chew` bleiben unabhängige Capabilities und entsperren sich nicht gegenseitig;
+- die vier aktuellen Dual-Capability-Bestandsfälle bleiben gesperrt, solange nur eine der beiden Fähigkeiten bestätigt ist;
+- die drei `finger-small-soft`-Nockerl werden nur durch `small-soft-pieces` freigegeben;
+- Omelettstreifen bleiben ein Gegenbeispiel gegen Kategorienlogik: `finger-graspable` + `low-resistance-separate` ohne zusätzliche Bite-/Oral-Capability;
+- keine Bite-/Oral-Einstufung wird aus Rezeptkategorie, `stage`, `minMonths`, Zähnen oder bloßem Zwei-Finger-Test abgeleitet.
 
 ---
 

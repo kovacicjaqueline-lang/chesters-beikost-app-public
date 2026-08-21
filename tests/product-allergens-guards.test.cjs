@@ -228,9 +228,9 @@ test("schema 6 without product marker is still rejected as newer", async () => {
 test("guard module loads after product model and before app start and is precached", () => {
   const indexSource = fs.readFileSync(path.join(root, "index.html"), "utf8");
   const swSource = fs.readFileSync(path.join(root, "sw.js"), "utf8");
-  const modelPos = indexSource.indexOf('js/product-allergens.js?v=10.1.25');
-  const guardPos = indexSource.indexOf('js/product-allergens-guards.js?v=10.1.25');
-  const appPos = indexSource.indexOf('app.js?v=10.1.25');
+  const modelPos = indexSource.indexOf('src="js/product-allergens.js?v=');
+  const guardPos = indexSource.indexOf('src="js/product-allergens-guards.js?v=');
+  const appPos = indexSource.indexOf('src="app.js?v=');
   assert.ok(modelPos >= 0 && guardPos > modelPos && appPos > guardPos);
   assert.match(swSource, /\.\/js\/product-allergens-guards\.js/);
 });

@@ -32,9 +32,9 @@ function browserCatalog() {
 }
 
 test("Bananen-Ei-Pancakes: Rezeptkatalog ist vor app.js und damit vor ersten Auto-Locks vollständig", () => {
-  const dataRecipes = indexSource.indexOf('data/recipes.js?v=10.1.25');
-  const recipeRuntime = indexSource.indexOf('js/recipes.js?v=10.1.25');
-  const appRuntime = indexSource.indexOf('app.js?v=10.1.25');
+  const dataRecipes = indexSource.indexOf('src="data/recipes.js?v=');
+  const recipeRuntime = indexSource.indexOf('src="js/recipes.js?v=');
+  const appRuntime = indexSource.indexOf('src="app.js?v=');
   assert.ok(dataRecipes >= 0 && recipeRuntime > dataRecipes && appRuntime > recipeRuntime);
   assert.ok(browserCatalog().recipe, "Rezept muss bereits nach js/recipes.js vorhanden sein, nicht erst nach der späten Handling-Policy");
 });

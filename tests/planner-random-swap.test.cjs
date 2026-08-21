@@ -114,7 +114,7 @@ test('RANDOM-SWAP-05: Browser-Loader, Heute-Zugang und Offline-Precache enthalte
   const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
   const source = fs.readFileSync(path.join(root, 'js', 'planner-random-swap.js'), 'utf8');
 
-  assert.match(cascade, /planner-random-swap\.js\?v=10\.1\.25/);
+  assert.match(cascade, /planner-random-swap\.js\?v=\d+\.\d+\.\d+/);
   assert.match(sw, /\.\/js\/planner-random-swap\.js/);
   assert.match(source, /class="btn secondary randomizeMeal"/);
   assert.match(source, /today-randomize-meal/);

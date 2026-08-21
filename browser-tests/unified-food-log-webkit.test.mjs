@@ -129,7 +129,55 @@ try {
   assert.equal(reloaded.textureStage, 2);
   assert.equal(reloaded.foodRoles.karotte, "sample");
 
-  // 2. Legacy-Kostprobe: unbekannte historische Textur bleibt beim Bearbeiten unbekannt.
+  // 2. Rezept kann an einem vergangenen Datum frei protokolliert werden.
+  await reset(page);
+  await page.evaluate(() => window.openLog(null));
+  assert.equal(await page.locator("#logRecipeSearch").count(), 1, "Freier Eintrag muss eine Rezeptauswahl anbieten");
+  const retrospectiveDate = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  await page.locator("#logDate").fill(retrospectiveDate);
+  await page.locator("#logDate").dispatchEvent("change");
+  await page.locator("#logRecipeSearch").fill("Birne-Hirse-Pancakes");
+  const recipeResult = page.locator(".selectLogRecipeResult").filter({ hasText: "Birne-Hirse-Pancakes" }).first();
+  await recipeResult.waitFor();
+  await recipeResult.click();
+  assert.match(await page.locator("#logForm").innerText(), /Birne-Hirse-Pancakes/);
+  await page.locator("#logTexture").selectOption("2");
+  await page.locator("#saveLog").click();
+  await page.waitForFunction(() => window.__beikostTest.getState().logs.length === 1);
+  const retrospectiveRecipe = await page.evaluate(() => window.__beikostTest.getState().logs[0]);
+  assert.equal(retrospectiveRecipe.date, retrospectiveDate);
+  assert.equal(retrospectiveRecipe.recipeName, "Birne-Hirse-Pancakes");
+  assert.equal(retrospectiveRecipe.entryType, "food");
+  assert.equal(retrospectiveRecipe.meal, "", "Nachträgliches Rezept darf keinen Mahlzeitenslot erfinden");
+  assert.deepEqual([...retrospectiveRecipe.foodIds].sort(), ["birne", "ei", "hirse"]);
+  assert.equal(retrospectiveRecipe.textureStage, 2);
+  assert.equal(await page.evaluate(() => successfulMealSlotCount(today())), 0);
+
+  // 3. Rezeptfamilien speichern nur die ausdrücklich bestätigten tatsächlichen Zutaten.
+  await reset(page);
+  await page.evaluate(() => window.openLog(null));
+  await page.locator("#logRecipeSearch").fill("Obst-Hafer-Pancakes");
+  const familyRecipeResult = page.locator(".selectLogRecipeResult").filter({ hasText: "Obst-Hafer-Pancakes" }).first();
+  await familyRecipeResult.waitFor();
+  await familyRecipeResult.click();
+  assert.equal(await page.locator("[data-log-recipe-oneof]").count(), 1);
+  assert.equal(await page.locator("[data-log-recipe-confirm]").count(), 1);
+  await page.locator("[data-log-recipe-oneof]").selectOption("mango");
+  await page.locator("#logTexture").selectOption("2");
+  await page.locator("#saveLog").click();
+  assert.equal(await page.evaluate(() => window.__beikostTest.getState().logs.length), 0, "Mehrdeutige Rezeptzutaten dürfen nicht unbestätigt gespeichert werden");
+  assert.equal(await page.locator(".log-recipe-choice-error").isVisible(), true);
+  await page.locator("[data-log-recipe-confirm]").check();
+  await page.locator("#saveLog").click();
+  await page.waitForFunction(() => window.__beikostTest.getState().logs.length === 1);
+  const familyRecipe = await page.evaluate(() => window.__beikostTest.getState().logs[0]);
+  assert.equal(familyRecipe.recipeName, "Obst-Hafer-Pancakes");
+  assert.equal(familyRecipe.meal, "");
+  assert.deepEqual([...familyRecipe.foodIds].sort(), ["ei", "hafer", "mango"]);
+  assert.equal(familyRecipe.foodIds.includes("banane"), false);
+  assert.equal(familyRecipe.foodIds.includes("apfel"), false);
+
+  // 4. Legacy-Kostprobe: unbekannte historische Textur bleibt beim Bearbeiten unbekannt.
   await reset(page);
   await page.evaluate(() => {
     const state = window.__beikostTest.getState();
@@ -162,7 +210,7 @@ try {
   assert.equal(savedLegacy.textureKnown, false);
   assert.equal(Object.hasOwn(savedLegacy, "textureStage"), false);
 
-  // 3. Nicht angeboten: keine Konsistenzpflicht.
+  // 5. Nicht angeboten: keine Konsistenzpflicht.
   await reset(page);
   await page.evaluate(() => window.openLog(null));
   await selectFood(page, "Karotte");
@@ -190,7 +238,7 @@ try {
   assert.equal(changedToTried.textureKnown, true);
   assert.equal(changedToTried.textureStage, 2);
 
-  // 4. Ablehnung und Reaktion: Konsistenz ist optional und zählt nicht als positive Texturerfahrung.
+  // 6. Ablehnung und Reaktion: Konsistenz ist optional und zählt nicht als positive Texturerfahrung.
   for (const outcome of ["not_accepted", "reaction"]) {
     await reset(page);
     await page.evaluate(() => window.openLog(null));
@@ -204,7 +252,7 @@ try {
     assert.equal(Object.hasOwn(saved, "textureStage"), false);
   }
 
-  // 5. Geplanter Eintrag: Slot wird übernommen und nicht erneut gewählt.
+  // 7. Geplanter Eintrag: Slot wird übernommen und nicht erneut gewählt.
   await reset(page);
   await page.evaluate(() => window.openLog({
     date: window.__beikostTest.today(),
@@ -218,6 +266,7 @@ try {
     entryType: "meal",
   }));
   assert.equal(await page.locator("#logMeal").count(), 0);
+  assert.equal(await page.locator("#logRecipeSearch").count(), 0, "Geplanter Slot darf keine freie Rezeptauswahl anzeigen");
   assert.match(await page.locator("#logForm").innerText(), /Geplante Mahlzeit[\s\S]*Mittag/);
   await page.locator("#logTexture").selectOption("1");
   await page.locator("#saveLog").click();
@@ -228,7 +277,7 @@ try {
   assert.equal(planned.foodRoles.karotte, "base");
   assert.equal(await page.evaluate(() => successfulMealSlotCount(today())), 1);
 
-  // 6. Familienstatus: zwei freie Gaben am selben Tag bleiben zwei Expositionen.
+  // 8. Familienstatus: zwei freie Gaben am selben Tag bleiben zwei Expositionen.
   await reset(page);
   await page.evaluate(() => {
     const state = window.__beikostTest.getState();

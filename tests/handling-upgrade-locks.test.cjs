@@ -58,15 +58,15 @@ function runtime({
   return context;
 }
 
-test("HANDLING upgrade: alter Auto-Lock wird verworfen, wenn neue Bite-/Oral-Capability fehlt", () => {
-  const ctx = runtime();
+test("HANDLING upgrade: alter Auto-Lock wird verworfen, wenn structured-chew fehlt", () => {
+  const ctx = runtime({ gradedBite: true, structuredChew: false });
   assert.equal(ctx.lockedMeal("2026-08-22", "lunch"), null);
   assert.equal(ctx.state.planLocks[key], undefined);
   assert.equal(ctx.saveCalls, 1);
 });
 
-test("HANDLING upgrade: Auto-Lock bleibt bestehen, wenn beide benötigten Fähigkeiten bestätigt sind", () => {
-  const ctx = runtime({ gradedBite: true, structuredChew: true });
+test("HANDLING upgrade: Auto-Lock bleibt mit structured-chew auch ohne graded-bite bestehen", () => {
+  const ctx = runtime({ gradedBite: false, structuredChew: true });
   assert.equal(ctx.lockedMeal("2026-08-22", "lunch").recipeName, "Baby-Bananenbrot");
   assert.ok(ctx.state.planLocks[key]);
   assert.equal(ctx.saveCalls, 0);

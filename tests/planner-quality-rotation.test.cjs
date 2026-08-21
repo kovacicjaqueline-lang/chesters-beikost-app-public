@@ -248,9 +248,11 @@ test("Runtime: fälliges Allergen wird außerhalb newFoodEvery eingeplant und ni
 test("Browser-Loader und Offline-Precache enthalten die neue Policy nach Rollenstabilität", () => {
   const utils = fs.readFileSync(path.join(root, "js", "utils.js"), "utf8");
   const sw = fs.readFileSync(path.join(root, "sw.js"), "utf8");
-  const roleIndex = utils.indexOf("installPlannerFoodRoleStabilityRuntime");
-  const qualityIndex = utils.indexOf("installPlannerQualityRotationRuntime");
-  assert.ok(roleIndex >= 0 && qualityIndex > roleIndex, "Quality-Policy muss nach Rollenstabilität installiert werden");
+  assert.match(
+    utils,
+    /installPlannerFoodRoleStabilityRuntime\(\);\s*loadQualityPolicy\(\);/,
+    "Quality-Policy muss unmittelbar nach installierter Rollenstabilität weitergeladen werden",
+  );
   assert.match(utils, /planner-quality-rotation\.js\?v=10\.1\.26/);
   assert.match(sw, /\.\/js\/planner-quality-rotation\.js/);
 });

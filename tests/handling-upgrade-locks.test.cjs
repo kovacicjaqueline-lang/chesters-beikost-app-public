@@ -11,7 +11,12 @@ const contractSource = fs.readFileSync(path.join(root, "data", "food-handling.js
 const policySource = fs.readFileSync(path.join(root, "js", "handling-readiness.js"), "utf8");
 const key = "2026-08-22|lunch";
 
-function runtime({ mode = "auto", structuredChew = false, followUpFoodId = "" } = {}) {
+function runtime({
+  mode = "auto",
+  gradedBite = false,
+  structuredChew = false,
+  followUpFoodId = "",
+} = {}) {
   const context = {
     console,
     saveCalls: 0,
@@ -19,7 +24,7 @@ function runtime({ mode = "auto", structuredChew = false, followUpFoodId = "" } 
       settings: {
         textureStage: 3,
         feedingApproach: "mixed",
-        handlingCapabilities: { smallSoftPieces: false, structuredChew },
+        handlingCapabilities: { smallSoftPieces: false, gradedBite, structuredChew },
       },
       planLocks: {
         [key]: {
@@ -53,15 +58,15 @@ function runtime({ mode = "auto", structuredChew = false, followUpFoodId = "" } 
   return context;
 }
 
-test("HANDLING upgrade: alter Auto-Lock wird verworfen, wenn neue Oral-Capability fehlt", () => {
+test("HANDLING upgrade: alter Auto-Lock wird verworfen, wenn neue Bite-/Oral-Capability fehlt", () => {
   const ctx = runtime();
   assert.equal(ctx.lockedMeal("2026-08-22", "lunch"), null);
   assert.equal(ctx.state.planLocks[key], undefined);
   assert.equal(ctx.saveCalls, 1);
 });
 
-test("HANDLING upgrade: Auto-Lock bleibt bestehen, wenn die benötigte Fähigkeit bestätigt ist", () => {
-  const ctx = runtime({ structuredChew: true });
+test("HANDLING upgrade: Auto-Lock bleibt bestehen, wenn beide benötigten Fähigkeiten bestätigt sind", () => {
+  const ctx = runtime({ gradedBite: true, structuredChew: true });
   assert.equal(ctx.lockedMeal("2026-08-22", "lunch").recipeName, "Baby-Bananenbrot");
   assert.ok(ctx.state.planLocks[key]);
   assert.equal(ctx.saveCalls, 0);

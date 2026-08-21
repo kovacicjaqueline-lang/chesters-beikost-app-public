@@ -106,6 +106,7 @@ const UNIFIED_LOG_PRECACHE = [
 // Zusätzliche UI-/Flow-Dateien, die nicht im statischen FILES-Stamm von sw-core.js liegen.
 const UI_PRECACHE = [
   "./ui-meal-editor-footer.css",
+  "./catalog-navigation.css",
   "./js/manual-meal-flow.js",
   "./js/planned-recipe-details.js",
   "./js/recipe-frozen-ingredient-stock.js",
@@ -115,6 +116,7 @@ const UI_PRECACHE = [
   "./js/planner-random-swap.js",
   "./js/product-allergens.js",
   "./js/product-allergens-guards.js",
+  "./js/catalog-navigation.js",
 ];
 
 self.addEventListener("install", (event) => {

@@ -108,6 +108,7 @@ const UI_PRECACHE = [
   "./ui-meal-editor-footer.css",
   "./js/manual-meal-flow.js",
   "./js/planned-recipe-details.js",
+  "./js/recipe-frozen-ingredient-stock.js",
   "./js/planner-log-rollover.js",
   "./js/planner-log-rollover-cascade.js",
   "./js/planner-log-rollover-review-fixes.js",

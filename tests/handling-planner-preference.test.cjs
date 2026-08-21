@@ -102,6 +102,57 @@ test("feedingApproach: Preference entfernt keine bereits sichere Darreichungsfor
   ]);
 });
 
+test("textureStage: sortiert nur bereits geeignete Löffelmodi, Fingerfood bleibt parallel", () => {
+  const mixed = handling.foodHandlingEligibility(
+    "karotte",
+    settings("mixed", { textureStage: 2 }),
+    FOOD_HANDLING_CONTRACT,
+  );
+  const spoon = handling.foodHandlingEligibility(
+    "karotte",
+    settings("spoon", { textureStage: 2 }),
+    FOOD_HANDLING_CONTRACT,
+  );
+  const finger = handling.foodHandlingEligibility(
+    "karotte",
+    settings("fingerfood", { textureStage: 2 }),
+    FOOD_HANDLING_CONTRACT,
+  );
+
+  assert.deepEqual(mixed.eligibleModes, [
+    "spoon-smooth",
+    "spoon-mashed",
+    "finger-graspable",
+  ]);
+  assert.deepEqual(spoon.eligibleModes, mixed.eligibleModes);
+  assert.deepEqual(finger.eligibleModes, mixed.eligibleModes);
+  assert.deepEqual(mixed.preferredModes, [
+    "spoon-mashed",
+    "spoon-smooth",
+    "finger-graspable",
+  ]);
+  assert.deepEqual(spoon.preferredModes, [
+    "spoon-mashed",
+    "spoon-smooth",
+    "finger-graspable",
+  ]);
+  assert.deepEqual(finger.preferredModes, [
+    "finger-graspable",
+    "spoon-mashed",
+    "spoon-smooth",
+  ]);
+
+  assert.deepEqual(
+    handling.preferredHandlingModes(
+      ["spoon-smooth", "finger-graspable", "spoon-soft-lumpy", "spoon-mashed"],
+      "mixed",
+      3,
+    ),
+    ["spoon-soft-lumpy", "finger-graspable", "spoon-mashed", "spoon-smooth"],
+    "mixed darf Fingerfood nicht zur späteren Familie machen und soll nur die Löffelplätze umsortieren",
+  );
+});
+
 test("feedingApproach: Präferenz umgeht weder structured-chew noch small-soft-pieces", () => {
   for (const feedingApproach of ["mixed", "spoon", "fingerfood"]) {
     const chew = handling.recipeHandlingEligibility(

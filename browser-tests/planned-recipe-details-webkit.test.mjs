@@ -169,17 +169,19 @@ try {
     "Rezepttitel-Dekoration darf Planner und sichtbare Woche nicht erneut aufbauen",
   );
 
-  // Heute: Rezeptname selbst ist das Touchziel und öffnet auch eine nicht-erste oneOf-Auswahl korrekt.
+  // Heute: Rezeptname bleibt Tastaturziel; zusätzlich ist der sichtbare Rezeptkopf antippbar.
   let date = await seedRecipeMeal(
     page,
     "Obst-Hafer-Pancakes",
     ["hafer", "ei", "apfel"],
     2,
   );
-  let homeRecipe = page.locator('#todayCard [data-planned-recipe-name="Obst-Hafer-Pancakes"]');
+  let homeRecipe = page.locator('#todayCard .planned-recipe-title[data-planned-recipe-name="Obst-Hafer-Pancakes"]');
   await homeRecipe.waitFor();
   await assertRecipeTitleLayout(page, homeRecipe);
-  await homeRecipe.click();
+  const homeHitArea = page.locator('#todayCard .planned-recipe-hit-area[data-planned-recipe-name="Obst-Hafer-Pancakes"]').first();
+  await homeHitArea.waitFor();
+  await homeHitArea.click({ position: { x: 8, y: Math.max(1, (await homeHitArea.boundingBox()).height - 5) } });
   await page.locator("#genericModal.open .recipe-card-v2[open]").waitFor();
   await openRecipeVariants(page);
   const fruitVariantText = await page.locator("#genericBody .recipe-option-list").innerText();
@@ -187,11 +189,11 @@ try {
   assert.doesNotMatch(fruitVariantText, /Vorausgewählt:\s*Banane/);
   await page.locator("#closeGeneric").click();
 
-  // Wochenplan: derselbe direkte Einstieg funktioniert ohne Zusatzbutton.
+  // Wochenplan: der komplette Rezeptkopf öffnet direkt das konkrete Rezept.
   await page.locator('nav button[data-view="plan"]').click();
-  const planRecipe = page.locator('#blockPlan [data-planned-recipe-name="Obst-Hafer-Pancakes"]').first();
-  await planRecipe.waitFor();
-  await planRecipe.click();
+  const planHitArea = page.locator('#blockPlan .planned-recipe-hit-area[data-planned-recipe-name="Obst-Hafer-Pancakes"]').first();
+  await planHitArea.waitFor();
+  await planHitArea.click({ position: { x: 8, y: Math.max(1, (await planHitArea.boundingBox()).height - 5) } });
   await page.locator("#genericModal.open .recipe-card-v2[open]").waitFor();
   assert.match(await page.locator("#genericBody").innerText(), /Obst-Hafer-Pancakes/);
   await page.locator("#closeGeneric").click();
@@ -204,7 +206,7 @@ try {
     ["pute", "karotte", "hafer"],
     3,
   );
-  const familyRecipe = page.locator('#todayCard [data-planned-recipe-name="Geflügel-Gemüse-Hafer-Bällchen"]');
+  const familyRecipe = page.locator('#todayCard .planned-recipe-title[data-planned-recipe-name="Geflügel-Gemüse-Hafer-Bällchen"]');
   await familyRecipe.waitFor();
   await assertRecipeTitleLayout(page, familyRecipe);
   await familyRecipe.click();

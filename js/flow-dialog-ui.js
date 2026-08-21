@@ -2,36 +2,35 @@
 
 /* FLOW-C: gemeinsame UI-Schicht für fachlich getrennte Eingabe-/Bearbeitungsdialoge.
  *
- * Die Runtime vereinheitlicht ausschließlich Dialog-Shell, Header-Hierarchie,
- * Abschnittsklassen und Actionbar. Planner- und Protokoll-Controller, Persistenz,
- * Rollen, Safety sowie Mahlzeiteneignung bleiben bewusst in ihren bestehenden Flows.
+ * Die Runtime dekoriert ausschließlich die bereits gerenderten Dialoge. Planner- und
+ * Protokoll-Controller, Persistenz, Rollen, Safety sowie Mahlzeiteneignung bleiben
+ * unverändert und werden weder gewrappt noch ersetzt.
  */
 (function installFlowDialogUi() {
   if (typeof document === "undefined" || typeof globalThis === "undefined") return;
   if (globalThis.__flowDialogUiInstalled) return;
-  if (
-    typeof openGeneric !== "function" ||
-    typeof closeGeneric !== "function" ||
-    typeof openManualMealSelector !== "function" ||
-    typeof renderLogForm !== "function"
-  ) return;
 
-  let manualContext = null;
+  const genericModal = document.getElementById("genericModal");
+  const logModal = document.getElementById("logModal");
+  const genericTitle = document.getElementById("genericTitle");
+  const genericBody = document.getElementById("genericBody");
+  const logBody = document.getElementById("logForm");
+  if (!genericModal || !logModal || !genericTitle || !genericBody || !logBody) return;
 
-  function flowDialogVisibleDate(date) {
-    return typeof nice === "function" ? nice(date, true) : String(date || "");
+  function setText(node, value) {
+    if (node && node.textContent !== value) node.textContent = value;
   }
 
-  function flowDialogMealName(meal) {
-    return meal && typeof mealName === "function" ? mealName(meal) : "";
+  function setHidden(node, hidden) {
+    if (node && node.hidden !== hidden) node.hidden = hidden;
   }
 
-  function flowDialogContextSubtitle(date, meal) {
-    return [flowDialogVisibleDate(date), flowDialogMealName(meal)].filter(Boolean).join(" · ");
+  function visibleDate(date) {
+    return date && typeof nice === "function" ? nice(date, true) : String(date || "");
   }
 
   function ensureGenericSubtitle() {
-    let heading = document.querySelector("#genericModal .sheethead .grow");
+    let heading = genericModal.querySelector(".sheethead .grow");
     if (!heading) return null;
     let subtitle = document.getElementById("genericSubtitle");
     if (!subtitle) {
@@ -43,26 +42,20 @@
     return subtitle;
   }
 
-  function markFlowDialogSections(body) {
-    if (!body) return;
+  function markSections(body) {
     body.querySelectorAll(".log-date-grid, .manual-meal-target-date").forEach((node) =>
       node.classList.add("flow-dialog-context"),
     );
     body.querySelectorAll(".meal-selector-tabs, .log-recipe-picker, .log-food-picker").forEach((node) =>
       node.classList.add("flow-dialog-selection"),
     );
-    body.querySelectorAll(".manual-role-overview, .selected-target, .log-recipe-choice, .grouped-outcome, .sample-outcome-list").forEach((node) =>
+    body.querySelectorAll(".manual-role-overview, .selected-target, .log-recipe-choice").forEach((node) =>
       node.classList.add("flow-dialog-selected"),
     );
-    let actions = body.querySelector(".sticky-form-actions");
-    if (actions) actions.classList.add("flow-dialog-actions");
+    body.querySelector(".sticky-form-actions")?.classList.add("flow-dialog-actions");
   }
 
-  function decorateFlowDialog(modalId, bodyId, subtitleText = "") {
-    let modal = document.getElementById(modalId);
-    let body = document.getElementById(bodyId);
-    if (!modal || !body) return;
-
+  function decorate(modal, body, subtitle) {
     modal.classList.add("flow-dialog");
     modal.querySelector(".sheet")?.classList.add("flow-dialog-sheet");
     modal.querySelector(".sheethead")?.classList.add("flow-dialog-header");
@@ -70,87 +63,79 @@
     modal.querySelector(".sheethead h2")?.classList.add("flow-dialog-title");
     modal.querySelector(".sheethead .iconbtn")?.classList.add("flow-dialog-close");
     body.classList.add("flow-dialog-body");
-
-    let subtitle = modalId === "genericModal"
-      ? ensureGenericSubtitle()
-      : document.getElementById("logSubtitle");
     if (subtitle) {
       subtitle.classList.add("flow-dialog-subtitle");
-      if (modalId === "genericModal") subtitle.textContent = subtitleText;
-      subtitle.hidden = !String(subtitle.textContent || "").trim();
+      setHidden(subtitle, !String(subtitle.textContent || "").trim());
     }
-
-    markFlowDialogSections(body);
+    markSections(body);
   }
 
-  function resetGenericFlowDialog() {
-    let modal = document.getElementById("genericModal");
-    if (!modal) return;
-    modal.classList.remove("flow-dialog");
+  function resetGeneric() {
+    genericModal.classList.remove("flow-dialog");
+    delete genericModal.dataset.flowDialogContext;
     let subtitle = document.getElementById("genericSubtitle");
     if (subtitle) {
-      subtitle.textContent = "";
-      subtitle.hidden = true;
+      setText(subtitle, "");
+      setHidden(subtitle, true);
     }
   }
 
-  function syncManualHeader() {
-    if (!manualContext) return;
-    let subtitle = flowDialogContextSubtitle(manualContext.date, manualContext.meal);
-    decorateFlowDialog("genericModal", "genericBody", subtitle);
-  }
-
-  const originalOpenGeneric = openGeneric;
-  openGeneric = function flowDialogOpenGeneric(title, body, onClose = null) {
-    let manualTitle = manualContext && String(title || "").match(/^(Mahlzeit hinzufügen|Mahlzeit bearbeiten)(?:\s*·.*)?$/);
-    if (!manualTitle) {
-      let result = originalOpenGeneric.call(this, title, body, onClose);
-      resetGenericFlowDialog();
-      manualContext = null;
-      return result;
+  function syncGeneric() {
+    if (!genericModal.classList.contains("open")) {
+      resetGeneric();
+      return;
     }
 
-    let result = originalOpenGeneric.call(this, manualTitle[1], body, onClose);
-    syncManualHeader();
-    return result;
-  };
+    let rawTitle = String(genericTitle.textContent || "").trim();
+    let match = rawTitle.match(/^(Mahlzeit hinzufügen|Mahlzeit bearbeiten)\s*·\s*(.+)$/);
+    if (match) {
+      genericModal.dataset.flowDialogContext = match[2];
+      setText(genericTitle, match[1]);
+      rawTitle = match[1];
+    }
 
-  const originalCloseGeneric = closeGeneric;
-  closeGeneric = function flowDialogCloseGeneric(...args) {
-    let result = originalCloseGeneric.apply(this, args);
-    resetGenericFlowDialog();
-    manualContext = null;
-    return result;
-  };
+    let isMealEditor = /^(Mahlzeit hinzufügen|Mahlzeit bearbeiten)$/.test(rawTitle) &&
+      !!genericModal.dataset.flowDialogContext;
+    if (!isMealEditor) {
+      resetGeneric();
+      return;
+    }
 
-  const originalOpenManualMealSelector = openManualMealSelector;
-  openManualMealSelector = function flowDialogOpenManualMealSelector(date, meal, initialMeal = null) {
-    manualContext = { date, meal };
-    let result = originalOpenManualMealSelector.apply(this, arguments);
-    syncManualHeader();
-    return result;
-  };
+    let subtitle = ensureGenericSubtitle();
+    let date = document.getElementById("manualMealTargetDate")?.value || "";
+    setText(subtitle, [visibleDate(date), genericModal.dataset.flowDialogContext].filter(Boolean).join(" · "));
+    decorate(genericModal, genericBody, subtitle);
+  }
 
-  const originalRenderLogForm = renderLogForm;
-  renderLogForm = function flowDialogRenderLogForm(...args) {
-    let result = originalRenderLogForm.apply(this, args);
-    decorateFlowDialog("logModal", "logForm");
-    return result;
-  };
+  function syncLog() {
+    if (!logModal.classList.contains("open")) return;
+    let subtitle = document.getElementById("logSubtitle");
+    decorate(logModal, logBody, subtitle);
+  }
 
-  document.getElementById("genericModal")?.addEventListener("change", (event) => {
-    if (!manualContext || event.target?.id !== "manualMealTargetDate") return;
-    manualContext.date = event.target.value || manualContext.date;
-    syncManualHeader();
+  const genericObserver = new MutationObserver(syncGeneric);
+  genericObserver.observe(genericModal, {
+    attributes: true,
+    attributeFilter: ["class"],
+    childList: true,
+    subtree: true,
+    characterData: true,
   });
 
-  let genericBody = document.getElementById("genericBody");
-  if (genericBody && typeof MutationObserver !== "undefined") {
-    new MutationObserver(() => {
-      if (document.getElementById("genericModal")?.classList.contains("flow-dialog")) syncManualHeader();
-    }).observe(genericBody, { childList: true, subtree: true });
-  }
+  const logObserver = new MutationObserver(syncLog);
+  logObserver.observe(logModal, {
+    attributes: true,
+    attributeFilter: ["class"],
+    childList: true,
+    subtree: true,
+    characterData: true,
+  });
 
-  decorateFlowDialog("logModal", "logForm");
+  genericModal.addEventListener("change", (event) => {
+    if (event.target?.id === "manualMealTargetDate") syncGeneric();
+  });
+
+  syncGeneric();
+  syncLog();
   globalThis.__flowDialogUiInstalled = true;
 })();

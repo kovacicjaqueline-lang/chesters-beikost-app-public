@@ -25,15 +25,24 @@ test("Plan- und Log-Dialog verwenden dieselbe Shell statt vier Sondervarianten",
   assert.match(css, /#genericModal\.flow-dialog,\s*#logModal\.flow-dialog/);
   assert.match(css, /#genericModal\.flow-dialog \.flow-dialog-sheet,\s*#logModal\.flow-dialog \.flow-dialog-sheet/);
   assert.match(css, /#genericModal\.flow-dialog \.flow-dialog-actions,\s*#logModal\.flow-dialog \.flow-dialog-actions/);
-  assert.match(runtime, /decorateFlowDialog\("genericModal", "genericBody"/);
-  assert.match(runtime, /decorateFlowDialog\("logModal", "logForm"/);
+  assert.match(runtime, /decorate\(genericModal, genericBody, subtitle\)/);
+  assert.match(runtime, /decorate\(logModal, logBody, subtitle\)/);
 });
 
-test("gemeinsame Header-Hierarchie trennt Aktionstitel vom Datum- und Mahlzeitenkontext", () => {
-  assert.match(runtime, /\^\(Mahlzeit hinzufügen\|Mahlzeit bearbeiten\)/);
-  assert.match(runtime, /flowDialogContextSubtitle\(manualContext\.date, manualContext\.meal\)/);
+test("gemeinsame Header-Hierarchie trennt Aktionstitel vom Mahlzeitenkontext", () => {
+  assert.match(runtime, /\^\(Mahlzeit hinzufügen\|Mahlzeit bearbeiten\)\\s\*·\\s\*\(\.\+\)\$/);
+  assert.match(runtime, /genericModal\.dataset\.flowDialogContext/);
   assert.match(runtime, /flow-dialog-title/);
   assert.match(runtime, /flow-dialog-subtitle/);
+});
+
+test("FLOW-C dekoriert nur DOM-Struktur und überschreibt keine fachlichen Controller", () => {
+  for (const symbol of ["openGeneric =", "closeGeneric =", "openManualMealSelector =", "renderLogForm =", "saveLog ="])
+    assert.equal(runtime.includes(symbol), false, `${symbol} darf nicht überschrieben werden`);
+  assert.equal(runtime.includes("state.logs"), false);
+  assert.equal(runtime.includes("pendingLog.meal"), false);
+  assert.equal(runtime.includes("foodRoles"), false);
+  assert.equal(runtime.includes("textureStage"), false);
 });
 
 test("Mobile-Dialoge nutzen einen nativen Sheet-Scroll ohne verschachtelte Ergebnis-Scroller", () => {
@@ -44,12 +53,8 @@ test("Mobile-Dialoge nutzen einen nativen Sheet-Scroll ohne verschachtelte Ergeb
   assert.match(css, /\.selector-results,[\s\S]*\.log-food-results,[\s\S]*\.log-recipe-results\s*\{[\s\S]*max-height:\s*none;[\s\S]*overflow:\s*visible;/);
 });
 
-test("FLOW-C verändert keine Mahlzeiten- oder Persistenzsemantik des Unified Logs", () => {
-  assert.equal(runtime.includes("state.logs"), false);
-  assert.equal(runtime.includes("pendingLog.meal"), false);
-  assert.equal(runtime.includes("foodRoles"), false);
-  assert.equal(runtime.includes("textureStage"), false);
-  assert.equal(logSource.includes('id="logMeal"'), false, "freier Essenseintrag bleibt ohne erzwungene Mahlzeitenauswahl");
+test("freier Essenseintrag behält optionale Mahlzeitenzuordnung", () => {
+  assert.equal(logSource.includes('id="logMeal"'), false, "FLOW-C darf keine Mahlzeitenauswahl erzwingen");
 });
 
 test("FLOW-C Assets sind für den installierten PWA-Stand precached", () => {

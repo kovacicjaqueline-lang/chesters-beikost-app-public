@@ -69,10 +69,10 @@ try {
 
   // Freier Essenseintrag: gleiche Shell, aber weiterhin ohne erzwungenen Mahlzeitenkontext.
   await page.evaluate(() => { window.__beikostTest.reset(); window.openLog(null); });
+  await page.waitForFunction(() => document.getElementById("logForm")?.classList.contains("flow-dialog-body"));
   assert.equal(await page.locator("#logModal").evaluate((node) => node.classList.contains("flow-dialog")), true);
   assert.equal(await page.locator("#logTitle").textContent(), "Essen eintragen");
   assert.equal(await page.locator("#logMeal").count(), 0);
-  assert.equal(await page.locator("#logForm.flow-dialog-body").count(), 1);
   assert.equal(await page.locator("#logForm .flow-dialog-actions").count(), 1);
   assert.equal(await page.locator("#logFoodSearch").evaluate((node) => getComputedStyle(node).fontSize), "16px");
   assert.equal(await page.locator(".log-food-results").evaluate((node) => getComputedStyle(node).overflowY), "visible");
@@ -102,7 +102,7 @@ try {
     window.__beikostTest.setState(state);
     window.editLogEntry("flow-c-edit");
   });
-  assert.equal(await page.locator("#logTitle").textContent(), "Essen bearbeiten");
+  await page.waitForFunction(() => document.getElementById("logTitle")?.textContent === "Essen bearbeiten");
   assert.equal(await page.locator("#logModal .flow-dialog-header").count(), 1);
   assert.equal(await page.locator("#saveLog").textContent(), "Änderungen speichern");
   await page.locator("#cancelLog").click();
@@ -110,17 +110,17 @@ try {
 
   // Mahlzeit hinzufügen: Aktionstitel und Kontext sind getrennt, Shell/Actionbar identisch.
   await page.evaluate(() => window.__beikostTest.openManualMealSelector(window.__beikostTest.today(), "lunch"));
+  await page.waitForFunction(() => document.getElementById("genericTitle")?.textContent === "Mahlzeit hinzufügen");
   assert.equal(await page.locator("#genericModal").evaluate((node) => node.classList.contains("flow-dialog")), true);
-  assert.equal(await page.locator("#genericTitle").textContent(), "Mahlzeit hinzufügen");
   assert.match(await page.locator("#genericSubtitle").textContent(), /Mittag/);
   assert.equal(await page.locator("#genericBody.flow-dialog-body").count(), 1);
   assert.equal(await page.locator("#genericBody .flow-dialog-actions").count(), 1);
   assertInsideViewport(await page.locator("#genericBody .flow-dialog-actions").boundingBox(), width, height, "Plan-Aktionsleiste");
 
   await page.locator("#selectorFoods").click();
+  await page.waitForFunction(() => document.getElementById("genericTitle")?.textContent === "Mahlzeit hinzufügen");
   assert.equal(await page.locator("#mealSelectorSearch").evaluate((node) => getComputedStyle(node).fontSize), "16px");
   assert.equal(await page.locator(".selector-results").evaluate((node) => getComputedStyle(node).overflowY), "visible");
-  assert.equal(await page.locator("#genericTitle").textContent(), "Mahlzeit hinzufügen", "Rerender darf die Titelhierarchie nicht zurücksetzen");
   await page.locator("#cancelManualMeal").click();
   assert.equal(await page.locator("#genericModal").evaluate((node) => node.classList.contains("open")), false);
 
@@ -132,7 +132,7 @@ try {
     if (!meal) throw new Error("Test benötigt eine aktive geplante Mahlzeit");
     window.__beikostTest.openManualMealSelector(date, meal.meal, meal);
   });
-  assert.equal(await page.locator("#genericTitle").textContent(), "Mahlzeit bearbeiten");
+  await page.waitForFunction(() => document.getElementById("genericTitle")?.textContent === "Mahlzeit bearbeiten");
   assert.equal(await page.locator("#genericModal .flow-dialog-header").count(), 1);
   assert.equal(await page.locator("#confirmManualMeal").textContent(), "Änderungen speichern");
   await page.locator("#cancelManualMeal").click();

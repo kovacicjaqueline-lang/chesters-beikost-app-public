@@ -1,7 +1,7 @@
 "use strict";
 
 /* Gemeinsamer Katalog-Tab für Lebensmittel und Rezepte.
- * Verschiebt die bestehende Rezeptoberfläche aus „Mehr“ in den Lebensmittel-Tab,
+ * Verbindet die bestehende Rezeptoberfläche mit dem Lebensmittel-Tab,
  * ohne Rezeptdaten, Planner oder direkte Rezeptdetail-Dialoge zu duplizieren.
  */
 (function catalogNavigationModule(root) {
@@ -35,8 +35,7 @@
     switcher.querySelectorAll("[data-catalog-mode]").forEach((button) => {
       let active = button.dataset.catalogMode === next;
       button.classList.toggle("active", active);
-      button.setAttribute("aria-selected", String(active));
-      button.tabIndex = active ? 0 : -1;
+      button.setAttribute("aria-pressed", String(active));
     });
 
     if (scroll) window.scrollTo({ top: 0, behavior: "smooth" });
@@ -62,16 +61,16 @@
       switcher = document.createElement("div");
       switcher.id = "catalogSwitch";
       switcher.className = "catalog-switch";
-      switcher.setAttribute("role", "tablist");
+      switcher.setAttribute("role", "group");
       switcher.setAttribute("aria-label", "Lebensmittel oder Rezepte anzeigen");
       switcher.innerHTML = `
-        <button type="button" class="active" role="tab" data-catalog-mode="foods" aria-controls="foodsCatalogSection" aria-selected="true">Lebensmittel</button>
-        <button type="button" role="tab" data-catalog-mode="recipes" aria-controls="recipesSection" aria-selected="false" tabindex="-1">Rezepte</button>`;
+        <button type="button" class="active" data-catalog-mode="foods" aria-controls="foodsCatalogSection" aria-pressed="true">Lebensmittel</button>
+        <button type="button" data-catalog-mode="recipes" aria-controls="recipesSection" aria-pressed="false">Rezepte</button>`;
       view.insertBefore(switcher, foodsSection);
-      switcher.querySelectorAll("[data-catalog-mode]").forEach((button) => {
-        button.addEventListener("click", () => setCatalogMode(button.dataset.catalogMode));
-      });
     }
+    switcher.querySelectorAll("[data-catalog-mode]").forEach((button) => {
+      button.onclick = () => setCatalogMode(button.dataset.catalogMode);
+    });
 
     let details = document.getElementById("recipesDetails");
     if (details) details.open = true;

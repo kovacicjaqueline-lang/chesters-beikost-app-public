@@ -102,6 +102,19 @@
     return node;
   }
 
+  function markRecipeHitArea(node, recipeName, foodIds = []) {
+    if (!node || !recipeName) return node;
+    node.dataset.plannedRecipeName = String(recipeName);
+    node.dataset.plannedRecipeFoodIds = (foodIds || []).filter(Boolean).join(",");
+    node.classList?.add("planned-recipe-hit-area");
+    node.setAttribute?.("title", "Rezept öffnen");
+    if (node.style) {
+      node.style.cursor = "pointer";
+      node.style.touchAction = "manipulation";
+    }
+    return node;
+  }
+
   function markCompletedRecipeTitle(node, recipeName, foodIds = []) {
     if (!node || !recipeName) return null;
     if (node.querySelector?.("[data-planned-recipe-name]"))
@@ -136,11 +149,18 @@
     let completedTitle = mealNode.querySelector?.(".completed-title");
     if (completedTitle)
       return markCompletedRecipeTitle(completedTitle, context.recipeName, context.foodIds);
-    return markRecipeTitle(
+
+    let title = markRecipeTitle(
       mealNode.querySelector?.(".dish-title, .manual-meal-title"),
       context.recipeName,
       context.foodIds,
     );
+    let hitArea = mealNode.querySelector?.(
+      ".meal-summary-main, :scope > .row > .grow, :scope > summary .grow",
+    );
+    if (hitArea && hitArea !== title)
+      markRecipeHitArea(hitArea, context.recipeName, context.foodIds);
+    return title;
   }
 
   function decorateRecipeTitles(container, currentState = null) {
@@ -159,6 +179,7 @@
       completedLogRecipeContext,
       recipeContextHints,
       markRecipeTitle,
+      markRecipeHitArea,
       markCompletedRecipeTitle,
       recipeContextForMealNode,
       decorateMealRecipeTitle,

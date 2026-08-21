@@ -87,7 +87,7 @@ const RECIPE_CONTRACT_GROUPS = Object.freeze({
     "Süßkartoffel-Linsen-Muffins",
     "Fleisch-Gemüse-Bällchen"
   ]),
-  structuredChew: Object.freeze([
+  fingerGradedStructured: Object.freeze([
     "Rind-Hafer-Bällchen",
     "Baby-Bananenbrot",
     "Weiche Joghurt-Fladen",
@@ -260,7 +260,7 @@ addRecipeContractGroup(
   ORAL_PROCESSING_PROFILES.EASY_CHEW,
 );
 addRecipeContractGroup(
-  RECIPE_CONTRACT_GROUPS.structuredChew,
+  RECIPE_CONTRACT_GROUPS.fingerGradedStructured,
   [HANDLING_MODES.FINGER_GRASPABLE],
   BITE_SEPARATION_PROFILES.GRADED_BITE_REQUIRED,
   ORAL_PROCESSING_PROFILES.STRUCTURED_CHEW_REQUIRED,

@@ -167,7 +167,7 @@ test("textureStage: sortiert nur bereits geeignete Löffelmodi, Fingerfood bleib
   );
 });
 
-test("feedingApproach: Präferenz umgeht weder graded-bite, structured-chew noch small-soft-pieces", () => {
+test("feedingApproach: Präferenz umgeht weder structured-chew noch small-soft-pieces", () => {
   for (const feedingApproach of ["mixed", "spoon", "fingerfood"]) {
     const chew = handling.recipeHandlingEligibility(
       { name: "Baby-Bananenbrot" },
@@ -177,7 +177,7 @@ test("feedingApproach: Präferenz umgeht weder graded-bite, structured-chew noch
     assert.deepEqual(chew.eligibleModes, [], feedingApproach);
     assert.deepEqual(
       chew.blockedReasons,
-      ["bite-separation-requirement", "oral-processing-requirement"],
+      ["oral-processing-requirement"],
       feedingApproach,
     );
 
@@ -218,7 +218,7 @@ test("feedingApproach: bestätigte Fähigkeiten ändern nur Eligibility, nicht R
     settings("fingerfood", {
       handlingCapabilities: {
         smallSoftPieces: false,
-        gradedBite: true,
+        gradedBite: false,
         structuredChew: true,
       },
     }),

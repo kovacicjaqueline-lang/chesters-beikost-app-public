@@ -179,7 +179,7 @@ test("PLAN-08 audit: enumerate structurally possible automatic FOOD combinations
   assert.match(ironPolicy, /enforceSingleStarch\(focus, \[preferred\]\)\.length !== 1/);
   assert.match(ironPolicy, /ironCompanion = function centralizedIronCompanion\(\) \{\s*return null;\s*\}/);
   assert.doesNotMatch(ironPolicy, /ids\.push\(/);
-  assert.match(utils, /planner-iron-preference\.js\?v=10\.1\.25/);
+  assert.match(utils, /planner-iron-preference\.js\?v=\d+\.\d+\.\d+/);
   assert.match(utils, /ironScript\.addEventListener\("load", loadPresentationStack/);
 
   console.log("PLAN08_AUDIT_COUNTS", JSON.stringify({

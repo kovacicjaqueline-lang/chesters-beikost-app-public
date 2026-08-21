@@ -145,9 +145,9 @@ test("PLAN-08: Präsentationsvertrag enthält nur Einzel-FOOD-Schlüssel, keine 
 
 test("PLAN-08: Browser-Loader hängt PLAN-08 erst nach geladenem Präsentationsvertrag ein", () => {
   const utils = fs.readFileSync(path.join(root, "js", "utils.js"), "utf8");
-  assert.match(utils, /planner-milk-policy\.js\?v=10\.1\.25/);
-  assert.match(utils, /data\/food-presentation\.js\?v=10\.1\.25/);
-  assert.match(utils, /planner-meal-presentation\.js\?v=10\.1\.25/);
+  assert.match(utils, /planner-milk-policy\.js\?v=\d+\.\d+\.\d+/);
+  assert.match(utils, /data\/food-presentation\.js\?v=\d+\.\d+\.\d+/);
+  assert.match(utils, /planner-meal-presentation\.js\?v=\d+\.\d+\.\d+/);
   assert.match(utils, /contractScript\.addEventListener\("load", loadPresentationPolicy, \{ once: true \}\)/);
   assert.match(utils, /existingContract\.addEventListener\("load", loadPresentationPolicy, \{ once: true \}\)/);
   assert.match(utils, /if \(typeof FOOD_PRESENTATION_CONTRACT !== "undefined"\) \{\s*loadPresentationPolicy\(\);/s);

@@ -284,7 +284,7 @@ test("PLAN-08 recipe-first: frische Recipe-first-Mahlzeit verschwindet aus Einze
 
 test("PLAN-08 recipe-first: Loader-Reihenfolge setzt Recipe-first nach Präsentation", () => {
   const utils = fs.readFileSync(path.join(root, "js", "utils.js"), "utf8");
-  assert.match(utils, /planner-meal-presentation\.js\?v=10\.1\.25/);
-  assert.match(utils, /planner-recipe-first\.js\?v=10\.1\.25/);
+  assert.match(utils, /planner-meal-presentation\.js\?v=\d+\.\d+\.\d+/);
+  assert.match(utils, /planner-recipe-first\.js\?v=\d+\.\d+\.\d+/);
   assert.match(utils, /presentationScript\.addEventListener\("load", loadRecipeFirstPolicy/);
 });

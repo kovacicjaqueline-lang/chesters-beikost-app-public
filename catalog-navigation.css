@@ -1,0 +1,71 @@
+/* NAV-A: gemeinsamer Lebensmittel-/Rezept-Katalog */
+.catalog-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 0 0 11px;
+}
+
+.catalog-switch button {
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--muted);
+  font-weight: 750;
+  padding: 8px 12px;
+}
+
+.catalog-switch button.active {
+  border-color: #bdc4aa;
+  background: var(--accent2);
+  color: var(--ink);
+}
+
+#foodsCatalogSection[hidden],
+#foods #recipesSection[hidden] {
+  display: none !important;
+}
+
+#foods #recipesSection {
+  background: linear-gradient(160deg, #fffefa, #faf7ee);
+}
+
+#foods #recipesDetails > summary {
+  padding: 0 0 12px;
+  cursor: default;
+  pointer-events: none;
+}
+
+#foods #recipesDetails > summary::after {
+  display: none;
+}
+
+#foods #recipesDetails > summary b {
+  font-size: 21px;
+  line-height: 1.2;
+}
+
+#foods #recipesDetails > .panel-body {
+  padding: 0;
+  border-top: 0;
+}
+
+/* NAV-B: weniger visuelle Höhe, Safe-Area bleibt vollständig erhalten. */
+body {
+  padding-bottom: calc(58px + env(safe-area-inset-bottom));
+}
+
+nav {
+  padding: 3px 5px calc(3px + env(safe-area-inset-bottom));
+}
+
+nav button {
+  min-height: 44px;
+  padding: 4px 2px 3px;
+  line-height: 1.1;
+}
+
+nav button svg {
+  margin-bottom: 1px;
+}

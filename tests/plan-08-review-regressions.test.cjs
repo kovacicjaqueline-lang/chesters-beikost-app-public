@@ -7,6 +7,7 @@ const path = require("node:path");
 const vm = require("node:vm");
 
 const root = path.resolve(__dirname, "..");
+const appVersion = JSON.parse(fs.readFileSync(path.join(root, "VERSION.json"), "utf8")).version;
 const recipeFirst = require("../js/planner-recipe-first.js");
 const recipeFirstSource = fs.readFileSync(path.join(root, "js", "planner-recipe-first.js"), "utf8");
 const ironSource = fs.readFileSync(path.join(root, "js", "planner-iron-preference.js"), "utf8");
@@ -197,17 +198,17 @@ test("PLAN-08 review: erster sichtbarer Render erfolgt erst nach vollständiger 
   domReady();
 
   assert.deepEqual(appended, [
-    "js/planner-meal-eligibility.js?v=10.1.25",
-    "js/planner-milk-policy.js?v=10.1.25",
-    "js/planner-iron-preference.js?v=10.1.25",
-    "data/food-presentation.js?v=10.1.25",
-    "js/planner-meal-presentation.js?v=10.1.25",
-    "js/planner-recipe-first.js?v=10.1.25",
-    "js/planner-proactive-recipe.js?v=10.1.25",
-    "js/planner-food-role-stability.js?v=10.1.25",
-    "js/planner-quality-rotation.js?v=10.1.26",
-    "data/food-handling.js?v=10.1.25",
-    "js/handling-readiness.js?v=10.1.25",
+    `js/planner-meal-eligibility.js?v=${appVersion}`,
+    `js/planner-milk-policy.js?v=${appVersion}`,
+    `js/planner-iron-preference.js?v=${appVersion}`,
+    `data/food-presentation.js?v=${appVersion}`,
+    `js/planner-meal-presentation.js?v=${appVersion}`,
+    `js/planner-recipe-first.js?v=${appVersion}`,
+    `js/planner-proactive-recipe.js?v=${appVersion}`,
+    `js/planner-food-role-stability.js?v=${appVersion}`,
+    `js/planner-quality-rotation.js?v=${appVersion}`,
+    `data/food-handling.js?v=${appVersion}`,
+    `js/handling-readiness.js?v=${appVersion}`,
   ]);
   assert.equal(context.__handlingReadinessReady, true);
   assert.equal(context.__plannerPoliciesReady, true);

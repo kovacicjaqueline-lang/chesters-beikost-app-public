@@ -58,15 +58,15 @@ test('iPhone-Tastatur wird vom Editor abgedeckt, ohne die App-Shell beim Schlie√
   );
   assert.match(
     css,
-    /#genericModal:has\(#cancelManualMeal\)::before\s*\{[^}]*position:\s*fixed;[^}]*inset:\s*-100vh 0;[^}]*background:\s*var\(--bg\);/,
-  );
-  assert.match(
-    css,
-    /#genericModal:has\(#mealSelectorSearch:focus\)::before\s*\{[^}]*background:\s*#9e988f;/,
+    /#genericModal:has\(#cancelManualMeal\)::before\s*\{[^}]*position:\s*fixed;[^}]*inset:\s*-100vh 0;[^}]*background:\s*#9e988f;/,
   );
   assert.match(
     css,
     /#genericModal:has\(#cancelManualMeal\)\s*\{[^}]*z-index:\s*90;/,
+  );
+  assert.doesNotMatch(
+    css,
+    /#genericModal:has\(#mealSelectorSearch:focus\)::before/,
   );
   assert.doesNotMatch(
     css,

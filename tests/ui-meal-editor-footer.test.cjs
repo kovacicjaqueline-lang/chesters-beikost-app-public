@@ -44,10 +44,14 @@ test('Suchergebnisse erzeugen keinen zweiten verschachtelten Scrollbereich', () 
   );
 });
 
-test('Mahlzeit-Editor-Footer belegt echten Layoutplatz und berücksichtigt die iPhone-Safe-Area', () => {
+test('Mahlzeit-Editor-Footer bleibt im nativen Sheet-Scroll sichtbar und berücksichtigt die iPhone-Safe-Area', () => {
   assert.match(
     css,
-    /#genericModal:has\(#cancelManualMeal\) \.sticky-form-actions\s*\{[^}]*position:\s*static;[^}]*safe-area-inset-bottom[^}]*background:\s*var\(--bg\) !important;[^}]*z-index:\s*auto;/,
+    /#genericModal:has\(#cancelManualMeal\) \.sheet\s*\{[^}]*scroll-padding-bottom:\s*calc\(118px \+ env\(safe-area-inset-bottom\)\);/,
+  );
+  assert.match(
+    css,
+    /#genericModal:has\(#cancelManualMeal\) \.sticky-form-actions\s*\{[^}]*position:\s*sticky;[^}]*bottom:\s*0;[^}]*safe-area-inset-bottom[^}]*background:\s*var\(--bg\) !important;[^}]*z-index:\s*5;/,
   );
 });
 

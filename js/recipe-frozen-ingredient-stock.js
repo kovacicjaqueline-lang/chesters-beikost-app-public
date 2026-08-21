@@ -12,6 +12,31 @@
  * und nicht erneut als neuer Gefriervorrat angeboten.
  */
 (function recipeFrozenIngredientStockModule(root) {
+  const LEGACY_ERBSEN_LABEL = "Erbsen (TK möglich)";
+  const CANONICAL_ERBSEN_LABEL = "Erbsen";
+
+  function canonicalFoodDisplayName(name) {
+    return name === LEGACY_ERBSEN_LABEL ? CANONICAL_ERBSEN_LABEL : name;
+  }
+
+  function canonicalizeRecipeIngredientLabels(recipe) {
+    if (!recipe) return recipe;
+    let canonicalize = (names) => (names || []).map(canonicalFoodDisplayName);
+    recipe.requires = canonicalize(recipe.requires);
+    if (Array.isArray(recipe.alternatives))
+      recipe.alternatives = recipe.alternatives.map((set) => canonicalize(set));
+    if (Array.isArray(recipe.oneOf)) recipe.oneOf = canonicalize(recipe.oneOf);
+    if (Array.isArray(recipe.milkChoices)) recipe.milkChoices = canonicalize(recipe.milkChoices);
+    return recipe;
+  }
+
+  function applyCanonicalFoodLabels(foods = [], recipes = []) {
+    let peas = (foods || []).find((item) => item?.id === "erbsen-tk-moeglich") || null;
+    if (peas) peas.name = CANONICAL_ERBSEN_LABEL;
+    for (let recipe of recipes || []) canonicalizeRecipeIngredientLabels(recipe);
+    return { peas, recipes };
+  }
+
   const RECIPE_FROZEN_INGREDIENT_GUIDANCE = Object.freeze({
     "Gemüse-Hafer-Pancakes": Object.freeze({
       ingredients: Object.freeze(["Kürbis", "Süßkartoffel"]),
@@ -98,7 +123,7 @@
       note: "Sehr weich gegarte Zucchini und Kartoffel vollständig auftauen, wegen der Zucchini überschüssige Flüssigkeit abgießen, durcherhitzen und passend pürieren. Nicht erneut einfrieren.",
     }),
     "Erbsen-Kartoffel-Stampf": Object.freeze({
-      ingredients: Object.freeze(["Erbsen (TK möglich)", "Kartoffel"]),
+      ingredients: Object.freeze(["Erbsen", "Kartoffel"]),
       note: "Sehr weich gegarte Erbsen und Kartoffel vollständig auftauen, gemeinsam durcherhitzen und passend zerdrücken. Nicht erneut einfrieren.",
     }),
     "Kürbis-Linsen-Suppe": Object.freeze({
@@ -127,7 +152,7 @@
   function recipeFrozenIngredientCompatible(recipe, foodRecord) {
     if (!recipe || !foodRecord) return false;
     let guidance = recipeFrozenIngredientGuidance(recipe);
-    return !!guidance && guidance.ingredients.includes(foodRecord.name);
+    return !!guidance && guidance.ingredients.includes(canonicalFoodDisplayName(foodRecord.name));
   }
 
   function recipeIngredientStockSource(recipe, foodRecord, pantryState = {}, frozenPortions = 0) {
@@ -158,10 +183,13 @@
     inventoryPortionsFn = () => 0,
   ) {
     if (!recipe) return { matches: false, sources: [] };
-    let byName = new Map((foods || []).map((item) => [item.name, item]));
+    let byName = new Map((foods || []).map((item) => [canonicalFoodDisplayName(item.name), item]));
     let requirementSets = [recipe.requires || [], ...(recipe.alternatives || [])]
+      .map((set) => set.map(canonicalFoodDisplayName))
       .filter((set, index) => set.length || index === 0);
-    let choiceGroups = [recipe.oneOf || [], recipe.milkChoices || []].filter((group) => group.length);
+    let choiceGroups = [recipe.oneOf || [], recipe.milkChoices || []]
+      .filter((group) => group.length)
+      .map((group) => group.map(canonicalFoodDisplayName));
 
     for (let set of requirementSets) {
       let sources = set.map((name) => stockSourceForName(recipe, name, byName, pantryState, inventoryPortionsFn));
@@ -292,6 +320,9 @@
 
   let api = {
     RECIPE_FROZEN_INGREDIENT_GUIDANCE,
+    canonicalFoodDisplayName,
+    canonicalizeRecipeIngredientLabels,
+    applyCanonicalFoodLabels,
     recipeFrozenIngredientGuidance,
     recipeFrozenIngredientCompatible,
     recipeIngredientStockSource,
@@ -305,6 +336,11 @@
 
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   root.__recipeFrozenIngredientStock = api;
+
+  let browserFoods = typeof FOOD_DB !== "undefined" ? FOOD_DB : [];
+  let browserRecipes = typeof RECIPES !== "undefined" ? RECIPES : [];
+  applyCanonicalFoodLabels(browserFoods, browserRecipes);
+  if (typeof state !== "undefined" && Array.isArray(state?.foods)) applyCanonicalFoodLabels(state.foods, browserRecipes);
 
   if (typeof document !== "undefined") installRecipeFrozenIngredientStockRuntime();
 })(typeof window !== "undefined" ? window : globalThis);

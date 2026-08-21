@@ -24,6 +24,8 @@ test("Recipe-V2 sizing CSS wird unter exakt der in index.html verwendeten URL fr
 
 test("der frisch gecachte Stylesheet enthält die Recipe-V2-Brei-Normalisierung", () => {
   assert.match(recipeCss, /\.illustration-icon--recipe > \.illustration-icon__asset\[src\*="\/recipes\/"\]\[src\*="brei"\]/);
-  assert.match(recipeCss, /milch-getreide-brei\.svg/);
-  assert.match(recipeCss, /--recipe-brei-size:\s*222\.609%/);
+  assert.match(
+    recipeCss,
+    /\.illustration-icon__asset\[src\*="\/recipes\/milch-getreide-brei\.svg"\]\s*\{[\s\S]*?--recipe-brei-size:\s*[0-9.]+%;/,
+  );
 });

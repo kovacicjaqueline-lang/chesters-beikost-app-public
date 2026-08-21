@@ -143,6 +143,85 @@ function logFoodCandidates(query) {
   return [...ranked, ...remainder].slice(0, 6);
 }
 
+function logRecipeSearchScore(recipe, query) {
+  let q = normalizeName(query);
+  if (!q || !recipe) return Number.POSITIVE_INFINITY;
+  let name = normalizeName(recipe.name || "");
+  let aliases = recipeAliasValues(recipe).map((alias) => normalizeName(alias));
+  if (name === q) return 0;
+  if (aliases.some((alias) => alias === q)) return 1;
+  if (name.startsWith(q)) return 2;
+  if (aliases.some((alias) => alias.startsWith(q))) return 3;
+  return normalizeName(recipeSearchText(recipe)).includes(q) ? 4 : Number.POSITIVE_INFINITY;
+}
+function logRecipeCandidates(query) {
+  let q = normalizeName(query);
+  if (!q) return [];
+  return RECIPES
+    .map((recipe) => ({ recipe, score: logRecipeSearchScore(recipe, q) }))
+    .filter((item) => Number.isFinite(item.score))
+    .sort((a, b) => a.score - b.score || a.recipe.name.localeCompare(b.recipe.name, "de"))
+    .slice(0, 8)
+    .map((item) => item.recipe);
+}
+function logRecipeBaseSets(recipe) {
+  return [recipe?.requires || [], ...(recipe?.alternatives || [])].filter((set, index) => set.length || index === 0);
+}
+function logRecipeNeedsExplicitChoice(recipe) {
+  return logRecipeBaseSets(recipe).length > 1 || (recipe?.oneOf || []).length > 1 || (recipe?.milkChoices || []).length > 1;
+}
+function logRecipeFoodIdByName(name) {
+  if (typeof foodByName === "function") return foodByName(name, state?.foods || [])?.id || "";
+  let normalized = normalizeName(name);
+  return (state?.foods || []).find((item) => normalizeName(item?.name) === normalized)?.id || "";
+}
+function logRecipeChoiceState(recipe, presetFoodIds = []) {
+  let preset = new Set(Array.isArray(presetFoodIds) ? presetFoodIds : []);
+  let baseSets = logRecipeBaseSets(recipe);
+  let baseIds = baseSets.map((set) => set.map(logRecipeFoodIdByName).filter(Boolean));
+  let variantIndex = 0;
+  let bestScore = -1;
+  baseIds.forEach((ids, index) => {
+    let score = ids.filter((id) => preset.has(id)).length + (ids.length && ids.every((id) => preset.has(id)) ? 1000 : 0);
+    if (score > bestScore) { bestScore = score; variantIndex = index; }
+  });
+  let defaultIds = typeof recipeFoodIds === "function" ? recipeFoodIds(recipe) : [];
+  if (!preset.size && defaultIds.length) {
+    let defaults = new Set(defaultIds);
+    let found = baseIds.findIndex((ids) => ids.length && ids.every((id) => defaults.has(id)));
+    if (found >= 0) variantIndex = found;
+  }
+  let chooseFrom = (names) => {
+    let ids = (names || []).map(logRecipeFoodIdByName).filter(Boolean);
+    return ids.find((id) => preset.has(id)) || ids.find((id) => defaultIds.includes(id)) || ids[0] || "";
+  };
+  return { variantIndex, oneOfId: chooseFrom(recipe?.oneOf), milkChoiceId: chooseFrom(recipe?.milkChoices) };
+}
+function logRecipeActualFoodIds(recipe, choice) {
+  if (!recipe) return [];
+  let sets = logRecipeBaseSets(recipe);
+  let selectedSet = sets[Math.max(0, Math.min(sets.length - 1, Number(choice?.variantIndex) || 0))] || [];
+  let ids = selectedSet.map(logRecipeFoodIdByName).filter(Boolean);
+  for (let id of [choice?.oneOfId, choice?.milkChoiceId]) if (id && !ids.includes(id)) ids.push(id);
+  return [...new Set(ids)];
+}
+function logRecipeChoiceHtml(recipe, choice) {
+  if (!recipe || !choice || !logRecipeNeedsExplicitChoice(recipe)) return "";
+  let parts = [];
+  let sets = logRecipeBaseSets(recipe);
+  if (sets.length > 1) {
+    parts.push(`<div class="field"><label>Tatsächlich zubereitete Variante</label><select data-log-recipe-variant>${sets.map((set, index) => `<option value="${index}" ${index === Number(choice.variantIndex) ? "selected" : ""}>${esc(recipe.variantLabels?.[index] || set.join(" + ") || `Variante ${index + 1}`)}</option>`).join("")}</select></div>`);
+  }
+  let choiceSelect = (label, names, value, attr) => {
+    let options = (names || []).map((name) => ({ name, id: logRecipeFoodIdByName(name) })).filter((item) => item.id);
+    if (options.length <= 1) return "";
+    return `<div class="field"><label>${esc(label)}</label><select ${attr}>${options.map((item) => `<option value="${esc(item.id)}" ${item.id === value ? "selected" : ""}>${esc(item.name)}</option>`).join("")}</select></div>`;
+  };
+  parts.push(choiceSelect("Tatsächlich verwendete Auswahl", recipe.oneOf, choice.oneOfId, "data-log-recipe-oneof"));
+  parts.push(choiceSelect("Tatsächlich verwendetes Milchprodukt", recipe.milkChoices, choice.milkChoiceId, "data-log-recipe-milk"));
+  return `<div class="log-recipe-choice"><div class="notice olive"><b>Tatsächliche Rezeptzutaten</b><div class="small">Für den Protokolleintrag wird gespeichert, was wirklich enthalten war, nicht die Planner-Vorauswahl.</div></div>${parts.filter(Boolean).join("")}<label class="toggleline"><input class="ds-toggle-input" type="checkbox" data-log-recipe-confirm ${choice.confirmed ? "checked" : ""}><span class="toggle-copy"><b>Diese Zutaten wurden tatsächlich verwendet</b><span class="small">Bitte die gewählte Variante vor dem Speichern bestätigen.</span></span><span class="toggle-state" aria-hidden="true"></span></label><div class="field-error-message log-recipe-choice-error" style="display:none"></div></div>`;
+}
+
 function closeLog() {
   document.getElementById("logModal").classList.remove("open");
 }
@@ -204,6 +283,8 @@ function openLog(plan) {
   pendingLog.__legacyEntryType = legacyEntryType;
   pendingLog.__originalMeal = originalMeal;
   pendingLog.__legacyTextureUnknown = !!pendingLog.editId && logTextureStage(plan) === null && logPositiveOutcome(plan, outcomeForFood);
+  pendingLog.__recipeQuery = "";
+  pendingLog.__recipeChoice = pendingLog.__recipeChoice || null;
   pendingLog.foodRoles = { ...foodRolesFor(roles.ids, roles.bases, roles.samples), ...(pendingLog.foodRoles || {}) };
   pendingLog.foodOutcomes = { ...(pendingLog.foodOutcomes || {}) };
   pendingLog.individualRatings = !!pendingLog.individualRatings;
@@ -240,6 +321,12 @@ function logFoodResultsHtml() {
     return `<button class="live-result addLogFoodResult log-food-result" data-food="${f.id}" aria-label="${esc(f.name)} hinzufügen, ${esc(meta)}"><span class="log-result-emoji" aria-hidden="true">${foodEmoji(f)}</span><span class="grow log-result-copy"><b class="log-result-name">${esc(f.name)}</b><span class="small log-result-meta">${esc(meta)}</span></span><span class="log-result-add" aria-hidden="true">＋</span></button>`;
   }).join("");
 }
+function logRecipeResultsHtml(query = pendingLog?.__recipeQuery || "") {
+  if (!normalizeName(query)) return "";
+  let recipes = logRecipeCandidates(query);
+  if (!recipes.length) return '<div class="small">Kein passendes Rezept gefunden.</div>';
+  return recipes.map((recipe) => `<button type="button" class="live-result selectLogRecipeResult log-food-result" data-recipe="${esc(recipe.name)}" aria-label="${esc(recipe.name)} auswählen"><span class="grow log-result-copy"><b class="log-result-name">${esc(recipe.name)}</b><span class="small log-result-meta">Rezept und tatsächliche Zutaten übernehmen</span></span><span class="log-result-add" aria-hidden="true">＋</span></button>`).join("");
+}
 
 function addLogFoodFromResult(id) {
   captureLogDraft();
@@ -262,9 +349,65 @@ function addLogFoodFromResult(id) {
   renderLogForm();
 }
 
+function applyLogRecipeChoice(recipe, choice) {
+  if (!recipe || !pendingLog) return;
+  let p = pendingLog;
+  let previousOutcomes = { ...(p.foodOutcomes || {}) };
+  let ids = logRecipeActualFoodIds(recipe, choice).filter((id) => !!food(id));
+  let samples = ids.filter((id) => rank(food(id)) < 2);
+  let bases = ids.filter((id) => !samples.includes(id));
+  p.recipeName = recipe.name;
+  p.foodIds = [...ids];
+  p.sampleFoodIds = [...samples];
+  p.baseFoodIds = [...bases];
+  p.foodRoles = foodRolesFor(ids, bases, samples);
+  p.foodOutcomes = Object.fromEntries(ids.map((id) => [id, previousOutcomes[id] || (rank(food(id)) >= 1 ? "eaten" : "tried")]));
+  p.focusId = samples.includes(p.focusId) || bases.includes(p.focusId) ? p.focusId : (samples[0] || bases[0] || ids[0] || "");
+  p.individualRatings = false;
+  p.__recipeChoice = choice;
+  selectedLogFoods = new Set(ids);
+  selectedRecipeInventoryId = "";
+  selectedInventoryFoods = new Set(ids.filter((id) => inventoryPortions(id) > 0));
+  logFoodQuery = "";
+}
+function selectLogRecipeFromResult(name) {
+  captureLogDraft();
+  let recipe = recipeByName(name);
+  if (!recipe) return;
+  let choice = logRecipeChoiceState(recipe);
+  choice.confirmed = !logRecipeNeedsExplicitChoice(recipe);
+  pendingLog.__recipeQuery = "";
+  applyLogRecipeChoice(recipe, choice);
+  renderLogForm();
+}
+function updateLogRecipeChoice(patch) {
+  captureLogDraft();
+  let recipe = recipeByName(pendingLog?.recipeName || "");
+  if (!recipe) return;
+  let choice = { ...(pendingLog.__recipeChoice || logRecipeChoiceState(recipe)), ...patch, confirmed: false };
+  applyLogRecipeChoice(recipe, choice);
+  renderLogForm();
+}
+
 function bindLogFoodResultActions(root = document) {
   root.querySelectorAll(".addLogFoodResult").forEach((button) => {
     button.onclick = () => addLogFoodFromResult(button.dataset.food);
+  });
+}
+function bindLogRecipeResultActions(root = document) {
+  root.querySelectorAll(".selectLogRecipeResult").forEach((button) => {
+    button.onclick = () => selectLogRecipeFromResult(button.dataset.recipe);
+  });
+}
+function bindLogRecipeChoiceActions(root = document) {
+  root.querySelector("[data-log-recipe-variant]")?.addEventListener("change", (event) => updateLogRecipeChoice({ variantIndex: Number(event.target.value) || 0 }));
+  root.querySelector("[data-log-recipe-oneof]")?.addEventListener("change", (event) => updateLogRecipeChoice({ oneOfId: event.target.value }));
+  root.querySelector("[data-log-recipe-milk]")?.addEventListener("change", (event) => updateLogRecipeChoice({ milkChoiceId: event.target.value }));
+  root.querySelector("[data-log-recipe-confirm]")?.addEventListener("change", (event) => {
+    pendingLog.__recipeChoice ||= {};
+    pendingLog.__recipeChoice.confirmed = !!event.target.checked;
+    let error = root.querySelector(".log-recipe-choice-error");
+    if (error) { error.textContent = ""; error.style.display = "none"; }
   });
 }
 
@@ -275,6 +418,16 @@ function renderLogFoodResults() {
   label.textContent = logFoodQuery ? "Suchergebnisse" : "Vorschläge aus Plan und Verlauf";
   results.innerHTML = logFoodResultsHtml();
   bindLogFoodResultActions(results);
+}
+function renderLogRecipeResults() {
+  let input = document.getElementById("logRecipeSearch");
+  let label = document.querySelector("#logForm .log-recipe-results-label");
+  let results = document.querySelector("#logForm .log-recipe-results");
+  if (!input || !label || !results) return;
+  pendingLog.__recipeQuery = input.value;
+  label.textContent = pendingLog.__recipeQuery ? "Suchergebnisse" : "Rezeptnamen eingeben";
+  results.innerHTML = logRecipeResultsHtml(pendingLog.__recipeQuery);
+  bindLogRecipeResultActions(results);
 }
 
 function logLearningLabel(id) {
@@ -302,12 +455,21 @@ function renderLogForm() {
   let mainBlock = mainIds.length ? `<div class="field"><label>${mainIds.length === 1 ? "Lebensmittel bewerten" : "Mahlzeit bewerten"}</label><div class="grouped-outcome"><div><b>${mainIds.map((id) => esc(food(id)?.name || id)).join(" + ")}</b><span>${mainIds.length === 1 ? "Ergebnis" : "gemeinsam bewertet"}</span></div><select id="mainOutcome">${outcomeOptions.map(([value, title]) => `<option value="${value}" ${mainDefault === value ? "selected" : ""}>${title}</option>`).join("")}</select></div>${mainIds.length > 1 ? `<details class="individual-rating"><summary>Zutaten einzeln bewerten</summary><label class="toggleline compact-toggle"><input class="ds-toggle-input" type="checkbox" id="individualRatings" ${p.individualRatings ? "checked" : ""}><span class="toggle-copy"><b>Einzelne Ergebnisse verwenden</b><span class="small">Nur bei relevanten Unterschieden nötig.</span></span><span class="toggle-state" aria-hidden="true"></span></label><div id="individualOutcomeRows" style="display:${p.individualRatings ? "block" : "none"}">${mainIds.map((id) => `<div class="food-outcome-row"><div class="food-outcome-name"><b>${esc(food(id)?.name || id)}</b><span>Bestandteil</span></div><select data-individual-result="${id}">${outcomeOptions.map(([value, title]) => `<option value="${value}" ${(p.foodOutcomes[id] || mainDefault) === value ? "selected" : ""}>${title}</option>`).join("")}</select><span></span></div>`).join("")}</div></details>` : ""}</div>` : "";
   let sampleBlock = sampleIds.length ? `<div class="field"><label>Einführung und Wiederholung</label><div class="sample-outcome-list">${sampleIds.map((id) => `<div class="food-outcome-row"><div class="food-outcome-name"><b>${esc(food(id)?.name || id)}</b><span>${esc(logLearningLabel(id))}</span></div><select data-sample-result="${id}">${outcomeOptions.map(([value, title]) => `<option value="${value}" ${(p.foodOutcomes[id] || "tried") === value ? "selected" : ""}>${title}</option>`).join("")}</select><button class="iconbtn" data-remove-log-food="${id}" aria-label="${esc(food(id)?.name || id)} entfernen">×</button></div>`).join("")}</div></div>` : "";
   let mealContext = p.__mealContext ? `<div class="field"><label>Geplante Mahlzeit</label><div class="selected-target"><b>${esc(mealName(p.meal))}</b><div class="small">Wird automatisch aus dem Plan übernommen.</div></div></div>` : "";
+  let freeRecipePicker = !p.editId && !p.__mealContext ? `<div class="field log-recipe-picker"><label>Rezept auswählen (optional)</label><input id="logRecipeSearch" value="${esc(p.__recipeQuery || "")}" placeholder="Rezeptnamen eingeben" autocomplete="off"><div class="small log-recipe-results-label">${p.__recipeQuery ? "Suchergebnisse" : "Rezeptnamen eingeben"}</div><div class="log-recipe-results">${logRecipeResultsHtml(p.__recipeQuery || "")}</div></div>` : "";
+  let freeRecipe = !p.editId && !p.__mealContext && p.recipeName ? recipeByName(p.recipeName) : null;
+  if (freeRecipe && !p.__recipeChoice) {
+    p.__recipeChoice = logRecipeChoiceState(freeRecipe, p.foodIds || []);
+    p.__recipeChoice.confirmed = !logRecipeNeedsExplicitChoice(freeRecipe);
+  }
+  let freeRecipeChoice = freeRecipe ? logRecipeChoiceHtml(freeRecipe, p.__recipeChoice) : "";
   let currentTexture = logTextureStage(p);
   let textureValue = p.__textureValue !== undefined ? p.__textureValue : (currentTexture || "");
 
   document.getElementById("logForm").innerHTML = `
     <div class="${p.__mealContext ? "grid2" : ""} log-date-grid"><div class="field"><label>Datum</label><input type="date" id="logDate" value="${p.date}"></div>${mealContext}</div>
-    ${p.recipeName ? `<div class="selected-target"><b>${esc(p.recipeName)}</b><div class="small">Bekannte Bestandteile gemeinsam, Einführungen und Wiederholungen separat bewerten.</div></div>` : ""}
+    ${freeRecipePicker}
+    ${p.recipeName ? `<div class="selected-target"><div class="row"><b class="grow">${esc(p.recipeName)}</b>${!p.editId && !p.__mealContext ? '<button class="iconbtn" id="clearLogRecipe" type="button" aria-label="Rezeptzuordnung entfernen">×</button>' : ""}</div><div class="small">Bekannte Bestandteile gemeinsam, Einführungen und Wiederholungen separat bewerten.</div></div>` : ""}
+    ${freeRecipeChoice}
     ${mainBlock}${sampleBlock}
     <div class="field log-food-picker"><label>Lebensmittel hinzufügen</label><input id="logFoodSearch" value="${esc(logFoodQuery)}" placeholder="Tippen und Treffer auswählen" autocomplete="off"><div class="field-error-message" id="logFoodError" style="display:none"></div><button class="btn secondary smallbtn log-add-custom-food" id="addCustomLogFood" type="button">Eigenes Lebensmittel hinzufügen</button><div class="small log-food-results-label">${logFoodQuery ? "Suchergebnisse" : "Vorschläge aus Plan und Verlauf"}</div><div class="log-food-results">${logFoodResultsHtml()}</div></div>
     <div class="field"><label>Gesamtmenge in g (optional)</label><input id="logAmount" type="number" min="0" step="1" inputmode="decimal" value="${esc(p.amount || "")}" placeholder="z. B. 5"></div>
@@ -321,6 +483,8 @@ function renderLogForm() {
   document.getElementById("logDate").onchange = (event) => requestLogDateChange(event.target.value, p.date);
   document.getElementById("individualRatings")?.addEventListener("change", (event) => { p.individualRatings = event.target.checked; document.getElementById("individualOutcomeRows").style.display = event.target.checked ? "block" : "none"; });
   document.querySelectorAll("[data-remove-log-food]").forEach((button) => button.onclick = () => { captureLogDraft(); let id = button.dataset.removeLogFood; selectedLogFoods.delete(id); selectedInventoryFoods.delete(id); p.sampleFoodIds = (p.sampleFoodIds || []).filter((x) => x !== id); p.baseFoodIds = (p.baseFoodIds || []).filter((x) => x !== id); delete p.foodOutcomes[id]; renderLogForm(); });
+  document.getElementById("logRecipeSearch")?.addEventListener("input", renderLogRecipeResults);
+  document.getElementById("clearLogRecipe")?.addEventListener("click", () => { captureLogDraft(); p.recipeName = ""; p.__recipeQuery = ""; p.__recipeChoice = null; selectedRecipeInventoryId = ""; renderLogForm(); });
   document.getElementById("logFoodSearch").oninput = (event) => {
     captureLogDraft(); logFoodQuery = event.target.value; renderLogFoodResults();
   };
@@ -339,6 +503,8 @@ function renderLogForm() {
     });
   };
   bindLogFoodResultActions(document.getElementById("logForm"));
+  bindLogRecipeResultActions(document.getElementById("logForm"));
+  bindLogRecipeChoiceActions(document.getElementById("logForm"));
   document.querySelectorAll("[data-inventory-food]").forEach((checkbox) => checkbox.onchange = () => { if (checkbox.checked) selectedInventoryFoods.add(checkbox.dataset.inventoryFood); else selectedInventoryFoods.delete(checkbox.dataset.inventoryFood); });
   document.getElementById("cancelLog")?.addEventListener("click", closeLog);
   document.getElementById("saveLog").onclick = saveLog;
@@ -372,6 +538,18 @@ function captureLogDraft(options = {}) {
 
 function saveLog() {
   captureLogDraft();
+  let freeRecipe = !pendingLog.editId && !pendingLog.__mealContext && pendingLog.recipeName ? recipeByName(pendingLog.recipeName) : null;
+  let recipeChoiceError = document.querySelector(".log-recipe-choice-error");
+  if (recipeChoiceError) { recipeChoiceError.textContent = ""; recipeChoiceError.style.display = "none"; }
+  if (freeRecipe && logRecipeNeedsExplicitChoice(freeRecipe) && !pendingLog.__recipeChoice?.confirmed) {
+    if (recipeChoiceError) {
+      recipeChoiceError.textContent = "Bitte bestätigen, welche Rezeptzutaten tatsächlich verwendet wurden.";
+      recipeChoiceError.style.display = "block";
+    }
+    document.querySelector("[data-log-recipe-confirm]")?.focus();
+    return;
+  }
+
   let ids = [...selectedLogFoods];
   let foodPicker = document.querySelector(".log-food-picker");
   let foodError = document.getElementById("logFoodError");

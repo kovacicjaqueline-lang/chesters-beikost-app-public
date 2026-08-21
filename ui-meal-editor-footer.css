@@ -11,6 +11,7 @@
  * hinterlassen. Der modal-eigene Backdrop verschwindet dagegen atomar mit .modal.open.
  */
 #genericModal:has(#cancelManualMeal) {
+  z-index: 90;
   overscroll-behavior: contain;
   isolation: isolate;
   background: transparent;

@@ -8,6 +8,8 @@ const vm = require("node:vm");
 
 const {
   RECIPE_FROZEN_INGREDIENT_GUIDANCE,
+  canonicalFoodDisplayName,
+  applyCanonicalFoodLabels,
   recipeFrozenIngredientCompatible,
   recipeIngredientStockSource,
   recipeStockResolution,
@@ -28,6 +30,23 @@ const foods = [
 ];
 
 const portions = (stock) => (id) => Number(stock[id] || 0);
+
+test("Erbsen behalten ihre stabile ID, werden aber ohne TK-Zusatz angezeigt", () => {
+  const peaFoods = [{ id: "erbsen-tk-moeglich", name: "Erbsen (TK möglich)" }];
+  const peaRecipes = [
+    { name: "Erbsen-Kartoffel-Stampf", requires: ["Erbsen (TK möglich)", "Kartoffel"] },
+    { name: "Lachs-Reis-Erbsen", requires: ["Lachs", "Reis", "Erbsen (TK möglich)"] },
+  ];
+
+  applyCanonicalFoodLabels(peaFoods, peaRecipes);
+
+  assert.equal(peaFoods[0].id, "erbsen-tk-moeglich");
+  assert.equal(peaFoods[0].name, "Erbsen");
+  assert.equal(canonicalFoodDisplayName("Erbsen (TK möglich)"), "Erbsen");
+  assert.deepEqual(peaRecipes[0].requires, ["Erbsen", "Kartoffel"]);
+  assert.deepEqual(peaRecipes[1].requires, ["Lachs", "Reis", "Erbsen"]);
+  assert.equal(recipeFrozenIngredientCompatible(peaRecipes[0], peaFoods[0]), true);
+});
 
 test("Gefriervorrat erfüllt eine Rezeptzutat nur bei expliziter Rezeptfreigabe", () => {
   const compatible = { name: "Kürbis-Hafer-Brei", requires: ["Kürbis", "Hafer"] };
@@ -138,11 +157,28 @@ test("explizit rohe oder frisch geriebene Rezeptformen bleiben für FOOD-Gefrier
   }
 });
 
-test("jede freigegebene Gefrierzutat existiert im echten Rezept und trägt einen Re-Freeze-Hinweis", () => {
+test("jede freigegebene Gefrierzutat existiert im kanonisierten echten Rezept und trägt einen Re-Freeze-Hinweis", () => {
+  const foodSource = fs.readFileSync(path.join(ROOT, "data", "foods.js"), "utf8");
   const recipeSource = fs.readFileSync(path.join(ROOT, "data", "recipes.js"), "utf8");
   const sandbox = {};
-  vm.runInNewContext(`${recipeSource}\n;globalThis.__recipes = RECIPES;`, sandbox);
+  vm.runInNewContext(
+    `${foodSource}\n${recipeSource}\n;globalThis.__foods = FOOD_DB; globalThis.__recipes = RECIPES;`,
+    sandbox,
+  );
+  applyCanonicalFoodLabels(sandbox.__foods, sandbox.__recipes);
   const catalog = sandbox.__recipes;
+  const peas = sandbox.__foods.find((item) => item.id === "erbsen-tk-moeglich");
+
+  assert.equal(peas?.name, "Erbsen");
+  assert.equal(
+    catalog.some((recipe) => [
+      ...(recipe.requires || []),
+      ...(recipe.oneOf || []),
+      ...(recipe.milkChoices || []),
+      ...(recipe.alternatives || []).flat(),
+    ].includes("Erbsen (TK möglich)")),
+    false,
+  );
 
   const entries = Object.entries(RECIPE_FROZEN_INGREDIENT_GUIDANCE);
   assert.ok(entries.length > 0);

@@ -1,7 +1,7 @@
 # Chesters Beikost-App – kanonisches Planner-Fachkonzept
 
 Stand: 21.08.2026  
-Dokumentationsbasis: Statusabgleich gegen `main` bis `07b7ffdc5e32d92135698c7c208c56d50687fbca`, einschließlich gemergter Handling-/BLW-Schicht, gemergtem Nuss-/Samen-/Topping-Block, vollständiger österreichischer `seasonMonths`-Matrix und aktuellem FOOD-COUNT-Identitätsstand; zusätzlich fachlich freigegebener und im Integrations-PR umgesetzter Bite-Separation-/Oral-Processing-Stand. Historischer Phasenmodell-v2-Stand: `f9f886c82af2ce267c10571e5e89df787037c6b0`.
+Dokumentationsbasis: Statusabgleich gegen `main` bis `76f67e476aa8d4d13bcf9636898a4fd828215ed2`, einschließlich gemergter Handling-/BLW-Schicht, gemergtem Nuss-/Samen-/Topping-Block, vollständiger österreichischer `seasonMonths`-Matrix und aktuellem FOOD-COUNT-Identitätsstand; zusätzlich fachlich freigegebener und im Integrations-PR umgesetzter Bite-Separation-/Oral-Processing-Stand. Historischer Phasenmodell-v2-Stand: `f9f886c82af2ce267c10571e5e89df787037c6b0`.
 
 Dieses Dokument führt die bisher über Phasenmodell, PLAN-07, PLAN-08, MILK-01, TODO3-Regressionen und spätere Fachentscheidungen verteilte Planner-Semantik an einer Stelle zusammen.
 
@@ -480,7 +480,7 @@ Für zusammenhängende Fingerfoods reicht der Handlingmodus allein nicht aus. Di
 Der Integrations-PR trennt drei unabhängige Ebenen:
 
 1. **Handling** – z. B. `finger-graspable` oder `finger-small-soft`;
-2. **Bite Separation** – was das gezielte Abtrennen eines Bissens aus der zusammenhängenden Form verlangt;
+2. **Bite Separation** – was ein kontrolliertes Halten oder Abtrennen eines beherrschbaren Bissens aus der zusammenhängenden Form verlangt;
 3. **Oral Processing** – was der bereits abgetrennte Bissen im Mund verlangt.
 
 Bite Separation verwendet für zusammenhängende `finger-graspable`-Formen:
@@ -489,7 +489,7 @@ Bite Separation verwendet für zusammenhängende `finger-graspable`-Formen:
 - `easy-bite-separate`;
 - `graded-bite-required`.
 
-Nur `graded-bite-required` verlangt die beobachtete Capability `graded-bite`.
+Nur `graded-bite-required` verlangt die beobachtete Capability `graded-bite`: einen gezielt dosierten Kieferschluss bei einer zusammenhängenden formstabilen Form. Das ist keine Alters-, Zahn- oder Rezeptkategorie-Regel.
 
 Post-separation-Oral-Processing verwendet:
 
@@ -523,17 +523,17 @@ Verbindlich gilt:
 Der gezielte Recheck der 41 bestehenden zusammenhängenden `finger-graspable`-Rezepte ergibt im Integrations-PR:
 
 - 13 × `low-resistance-separate`;
-- 24 × `easy-bite-separate`;
-- 4 × `graded-bite-required`.
+- 28 × `easy-bite-separate`;
+- 0 × `graded-bite-required`.
 
-Die vier `graded-bite-required`-Fälle sind:
+Damit erhält **kein bestehendes Laufzeitrezept aktuell einen `graded-bite`-Hard-Gate**. Die Capability bleibt für neue oder später einzeln geprüfte zusammenhängende Formen verfügbar, wenn die konkrete Servierform tatsächlich dosierten Kieferschluss verlangt.
+
+Vier bestehende Rezepte verlangen nach separater Prüfung des bereits abgetrennten Bissens weiterhin `structured-chew`, bleiben Bite-seitig aber `easy-bite-separate`:
 
 - Rind-Hafer-Bällchen;
 - Baby-Bananenbrot;
 - Weiche Joghurt-Fladen;
 - Huhn-Gemüse-Muffins.
-
-Dieselben vier verlangen nach **separater** Prüfung des abgetrennten Bissens zusätzlich `structured-chew`. Die identische Vierergruppe ist ein Bestandsbefund, keine Kopplungsregel.
 
 Die drei Nockerl bleiben `finger-small-soft` + `small-soft-pieces` und oral `soft-breakdown`; Bite Separation ist für bereits einzeln angebotene kleine Stücke nicht anwendbar.
 
@@ -584,9 +584,9 @@ Weitere offene FOOD-Datenfragen werden separat im FOOD-Fachregel-Track geklärt 
 - `presentationMode` bleibt additiv und persistiert nur, wenn es strukturiert gesetzt wurde;
 - PLAN-08-Auswahl, Rollen und Rezeptidentität bleiben durch Handling unverändert;
 - Handling-/Bite-/Oral-Contract und -Runtime stehen vor finalem sichtbaren Render sowie beim ersten Offline-Start zur Verfügung;
-- 41 `finger-graspable`-Rezepte bleiben explizit 13 `low-resistance-separate` / 24 `easy-bite-separate` / 4 `graded-bite-required` zugeordnet;
-- `graded-bite` und `structured-chew` bleiben unabhängige Capabilities und entsperren sich nicht gegenseitig;
-- die vier aktuellen Dual-Capability-Bestandsfälle bleiben gesperrt, solange nur eine der beiden Fähigkeiten bestätigt ist;
+- 41 `finger-graspable`-Rezepte bleiben explizit 13 `low-resistance-separate` / 28 `easy-bite-separate` / 0 `graded-bite-required` zugeordnet;
+- `graded-bite` bleibt als eigenständige Capability technisch prüfbar und darf nicht aus Alter, Zähnen, Rezeptkategorie oder `structured-chew` abgeleitet werden;
+- die vier bestehenden `structured-chew`-Fälle bleiben Bite-seitig `easy-bite-separate` und benötigen kein `graded-bite`;
 - die drei `finger-small-soft`-Nockerl werden nur durch `small-soft-pieces` freigegeben;
 - Omelettstreifen bleiben ein Gegenbeispiel gegen Kategorienlogik: `finger-graspable` + `low-resistance-separate` ohne zusätzliche Bite-/Oral-Capability;
 - keine Bite-/Oral-Einstufung wird aus Rezeptkategorie, `stage`, `minMonths`, Zähnen oder bloßem Zwei-Finger-Test abgeleitet.

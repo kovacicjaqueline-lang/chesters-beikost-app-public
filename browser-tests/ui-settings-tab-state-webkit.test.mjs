@@ -11,7 +11,7 @@ const mimeTypes = {
   ".js": "text/javascript; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".json": "application/json; charset=utf-8",
-  ".webmanifest": "application/manifest+json; charset=utf-8",
+  ".webmanifest": "application/manifest+json",
   ".svg": "image/svg+xml",
   ".png": "image/png",
   ".webp": "image/webp",
@@ -94,6 +94,7 @@ try {
     await openSettings(page);
     assert.equal(await page.locator("#feedingApproach").count(), 1, `Beikostform muss bei ${width}px vorhanden sein`);
     assert.equal(await page.locator("#smallSoftPiecesCapability").count(), 1, `Small-Soft-Fähigkeit muss bei ${width}px vorhanden sein`);
+    assert.equal(await page.locator("#gradedBiteCapability").count(), 1, `Graded-Bite-Fähigkeit muss bei ${width}px vorhanden sein`);
     assert.equal(await page.locator("#structuredChewCapability").count(), 1, `Structured-Chew-Fähigkeit muss bei ${width}px vorhanden sein`);
 
     const actionbar = page.locator("#settingsActionbar");
@@ -144,19 +145,21 @@ try {
 
   await openSettings(page);
   await page.locator("#smallSoftPiecesCapability").check();
+  await page.locator("#gradedBiteCapability").check();
   await page.locator("#structuredChewCapability").check();
   await page.locator("#saveSettings").click();
 
   assert.deepEqual(
     await page.evaluate(() => window.__beikostTest.getState().settings.handlingCapabilities),
-    { smallSoftPieces: true, structuredChew: true },
-    "beide beobachteten Fähigkeiten müssen separat im State gespeichert werden",
+    { smallSoftPieces: true, gradedBite: true, structuredChew: true },
+    "alle drei beobachteten Fähigkeiten müssen separat im State gespeichert werden",
   );
 
   await page.reload({ waitUntil: "load" });
   await waitForApp(page);
   await openSettings(page);
   assert.equal(await page.locator("#smallSoftPiecesCapability").isChecked(), true, "Small-Soft-Fähigkeit muss Reload überleben");
+  assert.equal(await page.locator("#gradedBiteCapability").isChecked(), true, "Graded-Bite-Fähigkeit muss Reload überleben");
   assert.equal(await page.locator("#structuredChewCapability").isChecked(), true, "Structured-Chew-Fähigkeit muss Reload überleben");
 
   await page.locator('nav button[data-view="foods"]').click();
@@ -189,6 +192,7 @@ try {
   assert.equal(await page.locator("#recipeSearch").inputValue(), "", "Rezeptsuche darf Reload nicht überleben");
   assert.ok(await page.locator('#recipeFilter button[data-recipe-filter="available"]').evaluate((button) => button.classList.contains("active")), "Rezeptfilter muss nach Reload wieder auf Jetzt passend stehen");
   assert.equal(await page.locator("#smallSoftPiecesCapability").isChecked(), true, "gespeicherte Small-Soft-Fähigkeit darf durch UI-Tab-State-Reset nicht verloren gehen");
+  assert.equal(await page.locator("#gradedBiteCapability").isChecked(), true, "gespeicherte Graded-Bite-Fähigkeit darf durch UI-Tab-State-Reset nicht verloren gehen");
   assert.equal(await page.locator("#structuredChewCapability").isChecked(), true, "gespeicherte Structured-Chew-Fähigkeit darf durch UI-Tab-State-Reset nicht verloren gehen");
 
   await context.close();

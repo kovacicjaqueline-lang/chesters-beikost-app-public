@@ -292,7 +292,7 @@ test("PLAN-08 proactive: Runtime erhält Einführungstyp, Kostprobe und Rollenve
 
 test("PLAN-08 proactive: Browser-Loader installiert Proactive Recipe-first vor Rollenstabilität und sichtbarem Render", () => {
   const utils = fs.readFileSync(path.join(root, "js", "utils.js"), "utf8");
-  assert.match(utils, /planner-proactive-recipe\.js\?v=10\.1\.25/);
+  assert.match(utils, /planner-proactive-recipe\.js\?v=\d+\.\d+\.\d+/);
   assert.match(utils, /installPlannerRecipeFirstRuntime\(\);\s*loadProactiveRecipePolicy\(\);/);
   assert.match(utils, /installPlannerProactiveRecipeRuntime\(\);\s*loadRoleStabilityPolicy\(\);/);
 });

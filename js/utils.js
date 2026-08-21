@@ -251,18 +251,44 @@ if (typeof window !== "undefined" && typeof document !== "undefined") {
         let loadRecipeFirstPolicy = () => {
           if (typeof installPlannerMealPresentationRuntime === "function") installPlannerMealPresentationRuntime();
 
+          let loadQualityPolicy = () => {
+            let existingQuality = document.querySelector('script[data-planner-quality-rotation="planner-quality"]');
+            let installQualityAndFinish = () => {
+              if (typeof installPlannerQualityRotationRuntime !== "function") {
+                failPlannerPolicies(new Error("Planner-Quality-Policy fehlt."));
+                return;
+              }
+              installPlannerQualityRotationRuntime();
+              finishPlannerPolicies();
+            };
+            if (existingQuality) {
+              if (typeof installPlannerQualityRotationRuntime === "function") installQualityAndFinish();
+              else {
+                existingQuality.addEventListener("load", installQualityAndFinish, { once: true });
+                attachPlannerLoadError(existingQuality);
+              }
+              return;
+            }
+            let qualityScript = document.createElement("script");
+            qualityScript.src = "js/planner-quality-rotation.js?v=10.1.26";
+            qualityScript.dataset.plannerQualityRotation = "planner-quality";
+            qualityScript.addEventListener("load", installQualityAndFinish, { once: true });
+            attachPlannerLoadError(qualityScript);
+            document.head.appendChild(qualityScript);
+          };
+
           let loadRoleStabilityPolicy = () => {
             let existingRoles = document.querySelector('script[data-planner-food-role-stability="plan-08-p0"]');
             if (existingRoles) {
               if (typeof installPlannerFoodRoleStabilityRuntime === "function") {
                 installPlannerFoodRoleStabilityRuntime();
-                finishPlannerPolicies();
+                loadQualityPolicy();
               } else {
                 existingRoles.addEventListener(
                   "load",
                   () => {
                     if (typeof installPlannerFoodRoleStabilityRuntime === "function") installPlannerFoodRoleStabilityRuntime();
-                    finishPlannerPolicies();
+                    loadQualityPolicy();
                   },
                   { once: true },
                 );
@@ -277,7 +303,7 @@ if (typeof window !== "undefined" && typeof document !== "undefined") {
               "load",
               () => {
                 if (typeof installPlannerFoodRoleStabilityRuntime === "function") installPlannerFoodRoleStabilityRuntime();
-                finishPlannerPolicies();
+                loadQualityPolicy();
               },
               { once: true },
             );

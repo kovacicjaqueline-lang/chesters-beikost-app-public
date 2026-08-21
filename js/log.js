@@ -254,7 +254,10 @@ function requestLogDateChange(nextDate, previousDate) {
 function renderLogs() {
   renderLogsCore();
   let button = document.getElementById("freeLog");
-  if (button) button.onclick = (event) => { event.preventDefault(); openLog(null); };
+  if (button) {
+    button.textContent = "+ Essen eintragen";
+    button.onclick = (event) => { event.preventDefault(); openLog(null); };
+  }
 }
 
 function plannedLogContext(input) {
@@ -444,7 +447,7 @@ function renderLogForm() {
   p.sampleFoodIds = sampleIds;
   p.baseFoodIds = [...new Set((p.baseFoodIds || []).filter((id) => mainIds.includes(id)))];
   if (!p.baseFoodIds.length) p.baseFoodIds = [...mainIds];
-  document.getElementById("logTitle").textContent = p.editId ? "Protokolleintrag bearbeiten" : "Essen eintragen";
+  document.getElementById("logTitle").textContent = p.editId ? "Essen bearbeiten" : "Essen eintragen";
   document.getElementById("logSubtitle").textContent = `${nice(p.date, true)}${p.__mealContext ? ` · ${mealName(p.meal)}` : ""}`;
   let stockedSelected = selected.filter((f) => inventoryPortions(f.id) > 0);
   selectedInventoryFoods = new Set([...selectedInventoryFoods].filter((id) => stockedSelected.some((f) => f.id === id)));
@@ -478,7 +481,7 @@ function renderLogForm() {
     <details class="accordion"><summary>Notiz ergänzen</summary><div class="field"><label>Notiz oder Reaktion</label><textarea id="logNote">${esc(p.note || "")}</textarea></div></details>
     ${!p.editId && recipeItem ? `<div class="field"><label>Aus dem Rezeptvorrat verwendet</label><label class="toggleline"><input class="ds-toggle-input" type="checkbox" id="useRecipeInventory" checked><span class="toggle-copy"><b>1 ${esc(recipeItem.size || "Portion")} ${esc(recipeItem.recipeName)}</b><span class="small">Eingefroren am ${shortDate(recipeItem.frozenDate)}</span></span><span class="toggle-state" aria-hidden="true"></span></label></div>` : ""}
     ${!p.editId && !recipeItem && stockedSelected.length ? `<div class="field"><label>Aus dem Gefriervorrat verwendet</label><div class="chips">${stockedSelected.map((f) => `<label class="chip toggle-chip"><input class="ds-toggle-input" type="checkbox" data-inventory-food="${f.id}" ${selectedInventoryFoods.has(f.id) ? "checked" : ""}><span>1 Portion ${esc(f.name)} <small>(${inventoryPortions(f.id)} vorhanden)</small></span></label>`).join("")}</div></div>` : ""}
-    <div class="sticky-form-actions"><div class="ds-actionbar"><button class="btn secondary" id="cancelLog" type="button">Abbrechen</button><button class="btn" id="saveLog">${p.editId ? "Änderungen speichern" : "Eintrag speichern"}</button></div><div class="small" style="margin-top:5px">Lebensmittelrollen und getrennte Bewertungen bleiben beim Bearbeiten erhalten.</div></div>`;
+    <div class="sticky-form-actions"><div class="ds-actionbar"><button class="btn secondary" id="cancelLog" type="button">Abbrechen</button><button class="btn" id="saveLog">${p.editId ? "Änderungen speichern" : "Speichern"}</button></div><div class="small" style="margin-top:5px">Lebensmittelrollen und getrennte Bewertungen bleiben beim Bearbeiten erhalten.</div></div>`;
   document.querySelectorAll("#logForm select").forEach((select) => select.addEventListener("change", updateConditionalQuestions));
   document.getElementById("logDate").onchange = (event) => requestLogDateChange(event.target.value, p.date);
   document.getElementById("individualRatings")?.addEventListener("change", (event) => { p.individualRatings = event.target.checked; document.getElementById("individualOutcomeRows").style.display = event.target.checked ? "block" : "none"; });

@@ -185,8 +185,8 @@ function renderHomeCore() {
     let done = completedLog(on, m.meal);
     if (done) return completedMealHtml(on, m.meal, done);
     let payload = encodeURIComponent(JSON.stringify({date:on,meal:m.meal,focusId:m.focusId,foodIds:m.foodIds,baseFoodIds:m.baseFoodIds||[],sampleFoodIds:m.sampleFoodIds||[],recipeName:m.recipeName||"",recipeInventoryId:m.recipeInventoryId||""}));
-    return `<div class="mealbox"><div class="row"><div class="grow"><div class="dish-title">${esc(mealDisplayTitle(m))}</div><div class="small meal-type-text">${esc(mealTypeText(m))} · ${mealName(m.meal)}</div>${mealStatusText(m) ? `<div class="small meal-status-text">${esc(mealStatusText(m))}</div>` : ""}</div>${stockBadges(m)}</div>${inactiveMealWarningHtml({date:on}, m)}${compactMealRolesHtml(m)}${whyDetailsHtml(m)}<button class="btn full homeLog" data-plan="${payload}">Protokollieren</button></div>`;
-  }).join("") : `<div class="empty"><b>Für heute ist nichts geplant.</b><div class="small">Die Heute-Ansicht zeigt ausschließlich den aktuellen Kalendertag.</div>${nextPlanned ? `<div class="small next-plan-hint">Nächster geplanter Tag: ${nice(nextPlanned, true)}</div>` : ""}</div><button class="btn full" id="homeFreeLog">Freien Eintrag anlegen</button>`;
+    return `<div class="mealbox"><div class="row"><div class="grow"><div class="dish-title">${esc(mealDisplayTitle(m))}</div><div class="small meal-type-text">${esc(mealTypeText(m))} · ${mealName(m.meal)}</div>${mealStatusText(m) ? `<div class="small meal-status-text">${esc(mealStatusText(m))}</div>` : ""}</div>${stockBadges(m)}</div>${inactiveMealWarningHtml({date:on}, m)}${compactMealRolesHtml(m)}${whyDetailsHtml(m)}<button class="btn full homeLog" data-plan="${payload}">Essen eintragen</button></div>`;
+  }).join("") : `<div class="empty"><b>Für heute ist nichts geplant.</b><div class="small">Die Heute-Ansicht zeigt ausschließlich den aktuellen Kalendertag.</div>${nextPlanned ? `<div class="small next-plan-hint">Nächster geplanter Tag: ${nice(nextPlanned, true)}</div>` : ""}</div><button class="btn full" id="homeFreeLog">Essen eintragen</button>`;
   let todayHeading = active.length && openMeals.length === 0 ? "Heute erledigt" : "Heute anbieten";
   let todayBadge = active.length && openMeals.length === 0
     ? '<span class="pill ok">Vollständig</span>'
@@ -194,7 +194,7 @@ function renderHomeCore() {
   let progressStatus = active.length && openMeals.length < active.length && openMeals.length > 0
     ? `<div class="status-chips"><span class="pill ok">${active.length-openMeals.length} erledigt</span></div>`
     : "";
-  document.getElementById("todayCard").innerHTML = `<div class="row"><div class="grow"><h2>${todayHeading}</h2><div class="small">${nice(on, true)} · ${age} Monate</div></div>${todayBadge}</div>${progressStatus}${todayHtml}<div class="add-meal-row"><button class="btn secondary smallbtn" id="homeAddEntry">＋ Eintrag</button></div>`;
+  document.getElementById("todayCard").innerHTML = `<div class="row"><div class="grow"><h2>${todayHeading}</h2><div class="small">${nice(on, true)} · ${age} Monate</div></div>${todayBadge}</div>${progressStatus}${todayHtml}<div class="add-meal-row"><button class="btn secondary smallbtn" id="homeAddEntry">＋ Essen eintragen</button></div>`;
   document.querySelectorAll(".homeLog").forEach((b) => b.onclick = () => openLog(JSON.parse(decodeURIComponent(b.dataset.plan))));
   document.querySelectorAll(".editCompletedLog").forEach((b) => b.onclick = () => editLogEntry(b.dataset.log));
   bindInactiveMealActions();
@@ -485,7 +485,7 @@ function renderPlanCore() {
           </summary>
           <div class="completed-day-body">
             ${d.meals.map((m) => renderMeal(d, m)).join("")}
-            ${extra.length ? `<div class="add-meal-row"><button class="btn secondary smallbtn addExtraMeal" data-date="${d.date}">+ Mahlzeit ergänzen</button></div>` : ""}
+            ${extra.length ? `<div class="add-meal-row"><button class="btn secondary smallbtn addExtraMeal" data-date="${d.date}">+ Mahlzeit hinzufügen</button></div>` : ""}
           </div>
         </details>`;
       }
@@ -499,7 +499,7 @@ function renderPlanCore() {
           ${dayBadge}
         </div>
         ${d.meals.map((m) => renderMeal(d, m)).join("")}
-        ${extra.length ? `<div class="add-meal-row"><button class="btn secondary smallbtn addExtraMeal" data-date="${d.date}">+ Mahlzeit ergänzen</button></div>` : ""}
+        ${extra.length ? `<div class="add-meal-row"><button class="btn secondary smallbtn addExtraMeal" data-date="${d.date}">+ Mahlzeit hinzufügen</button></div>` : ""}
       </div>`;
     })
     .join("");
@@ -635,7 +635,7 @@ function renderMealCore(day, m) {
         ${inactiveMealWarningHtml(day, m)}
         ${compactMealRolesHtml(m)}
         <div class="actionbar"><button class="btn secondary replaceMeal" data-date="${day.date}" data-meal="${m.meal}" data-focus="${m.focusId}">Mahlzeit bearbeiten</button><button class="btn secondary moveMeal" data-move-payload="${movePayload}">Auf morgen</button></div>
-        <button class="btn full logMeal" data-plan="${planPayload}">Protokollieren</button>
+        <button class="btn full logMeal" data-plan="${planPayload}">Essen eintragen</button>
         <button class="btn danger full removeManualMeal" data-date="${day.date}" data-meal="${m.meal}">Zusatzmahlzeit entfernen</button>
       </div>
     </details>`;
@@ -651,8 +651,8 @@ function renderMealCore(day, m) {
     ${inactiveMealWarningHtml(day, m)}
     ${compactMealRolesHtml(m)}
     ${whyDetailsHtml(m)}
-    <div class="actionbar"><button class="btn secondary replaceMeal" data-date="${day.date}" data-meal="${m.meal}" data-focus="${m.focusId}">Bearbeiten</button><button class="btn secondary moveMeal" data-move-payload="${movePayload}">Auf morgen</button></div>
-    <button class="btn full logMeal" data-plan="${planPayload}">Protokollieren</button>
+    <div class="actionbar"><button class="btn secondary replaceMeal" data-date="${day.date}" data-meal="${m.meal}" data-focus="${m.focusId}">Mahlzeit bearbeiten</button><button class="btn secondary moveMeal" data-move-payload="${movePayload}">Auf morgen</button></div>
+    <button class="btn full logMeal" data-plan="${planPayload}">Essen eintragen</button>
   </div>`;
 }
 function manualLearningRoleText(foodOrId, type = "") {
@@ -901,8 +901,8 @@ function openManualMealSelector(date, meal, initialMeal = null) {
               : '<div class="empty">Kein Lebensmittel gefunden.</div>'
         }
       </div>
-      <div class="sticky-form-actions ds-actionbar"><button class="btn secondary" id="cancelManualMeal" type="button">Abbrechen</button><button class="btn" id="confirmManualMeal" ${((tab === "recipes" && !selectedRecipe) || !validation.ok) ? "disabled" : ""}>${isNewManualSlot ? "Mahlzeit übernehmen" : "Gesamte Mahlzeit speichern"}</button></div>`;
-    openGeneric(isNewManualSlot ? `${mealName(meal)} auswählen` : `${mealName(meal)} bearbeiten`, body);
+      <div class="sticky-form-actions ds-actionbar"><button class="btn secondary" id="cancelManualMeal" type="button">Abbrechen</button><button class="btn" id="confirmManualMeal" ${((tab === "recipes" && !selectedRecipe) || !validation.ok) ? "disabled" : ""}>${isNewManualSlot ? "Mahlzeit hinzufügen" : "Änderungen speichern"}</button></div>`;
+    openGeneric(isNewManualSlot ? `Mahlzeit hinzufügen · ${mealName(meal)}` : `Mahlzeit bearbeiten · ${mealName(meal)}`, body);
     document.getElementById("cancelManualMeal")?.addEventListener("click", closeGeneric);
     document.getElementById("selectorRecipes").onclick = () => { tab = "recipes"; query = ""; renderSelector(); };
     document.getElementById("selectorFoods").onclick = () => { tab = "foods"; query = ""; renderSelector(); };

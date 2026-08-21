@@ -264,58 +264,5 @@
 <script src="js/planned-recipe-details.js?v=10.1.26"></script>
 <script src="js/product-allergens.js?v=10.1.26"></script>
 <script src="js/product-allergens-guards.js?v=10.1.26"></script>
-<script>
-(() => {
-  const setText = (selector, text) => {
-    document.querySelectorAll(selector).forEach((element) => { element.textContent = text; });
-  };
-
-  const originalRenderHome = renderHome;
-  renderHome = function (...args) {
-    const result = originalRenderHome.apply(this, args);
-    setText(".homeLog", "Essen eintragen");
-    setText("#homeFreeLog", "Essen eintragen");
-    setText("#homeAddEntry", "＋ Essen eintragen");
-    return result;
-  };
-
-  const originalRenderPlan = renderPlan;
-  renderPlan = function (...args) {
-    const result = originalRenderPlan.apply(this, args);
-    setText("#blockPlan .logMeal", "Essen eintragen");
-    setText("#blockPlan .replaceMeal", "Mahlzeit bearbeiten");
-    setText("#blockPlan .addExtraMeal", "+ Mahlzeit hinzufügen");
-    return result;
-  };
-
-  const originalRenderLogForm = renderLogForm;
-  renderLogForm = function (...args) {
-    const result = originalRenderLogForm.apply(this, args);
-    const editing = !!pendingLog?.editId;
-    const title = document.getElementById("logTitle");
-    const save = document.getElementById("saveLog");
-    if (title) title.textContent = editing ? "Essen bearbeiten" : "Essen eintragen";
-    if (save) save.textContent = editing ? "Änderungen speichern" : "Speichern";
-    return result;
-  };
-
-  const originalOpenGeneric = openGeneric;
-  openGeneric = function (title, body, onClose = null) {
-    let nextTitle = title;
-    let nextBody = body;
-    if (String(body || "").includes('id="confirmManualMeal"')) {
-      const match = String(title || "").match(/^(.*) (auswählen|bearbeiten)$/);
-      if (match) {
-        const editing = match[2] === "bearbeiten";
-        nextTitle = `Mahlzeit ${editing ? "bearbeiten" : "hinzufügen"} · ${match[1]}`;
-        nextBody = String(body)
-          .replace("Mahlzeit übernehmen", "Mahlzeit hinzufügen")
-          .replace("Gesamte Mahlzeit speichern", "Änderungen speichern");
-      }
-    }
-    return originalOpenGeneric(nextTitle, nextBody, onClose);
-  };
-})();
-</script>
 <script src="app.js?v=10.1.26"></script>
 </body></html>

@@ -104,8 +104,11 @@ const UNIFIED_LOG_PRECACHE = [
 ];
 
 // Zusätzliche UI-/Flow-Dateien, die nicht im statischen FILES-Stamm von sw-core.js liegen.
+// Die UI-CSS wird mit exakt derselben Versions-URL wie in index.html precached. Dadurch
+// überschreibt ein Service-Worker-Update auch einen bereits vorhandenen direkten Cache-
+// Treffer dieser URL und liefert die aktuelle Recipe-Icon-Geometrie beim nächsten Start.
 const UI_PRECACHE = [
-  "./ui-meal-editor-footer.css",
+  "./ui-meal-editor-footer.css?v=10.1.26",
   "./catalog-navigation.css",
   "./js/manual-meal-flow.js",
   "./js/planned-recipe-details.js",

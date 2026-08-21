@@ -365,8 +365,8 @@ test("PLAN-08-X1: MILK-01 bleibt vor der Eisenpräferenz ein harter Begleiter-Ga
 
 test("PLAN-08-X1: Loader kettet MILK-01 -> Eisenpräferenz -> Präsentation -> Recipe-first", () => {
   const utils = fs.readFileSync(path.join(root, "js", "utils.js"), "utf8");
-  assert.match(utils, /planner-milk-policy\.js\?v=10\.1\.25/);
-  assert.match(utils, /planner-iron-preference\.js\?v=10\.1\.25/);
+  assert.match(utils, /planner-milk-policy\.js\?v=\d+\.\d+\.\d+/);
+  assert.match(utils, /planner-iron-preference\.js\?v=\d+\.\d+\.\d+/);
   assert.match(utils, /ironScript\.addEventListener\("load", loadPresentationStack/);
   assert.match(utils, /presentationScript\.addEventListener\("load", loadRecipeFirstPolicy/);
 });

@@ -293,7 +293,7 @@ function mergeRecipeHandlingState(recipeState, settings = {}, contractMap = null
   if (!handling.eligibleModes.length) {
     let capabilityReason = false;
     if (handling.blockedReasons.includes("bite-separation-requirement")) {
-      requirementMissing.push("Bissabtrennung: gezieltes Abtrennen eines passenden Bissens noch nicht bestätigt");
+      requirementMissing.push("Bissabtrennung: kontrollierter dosierter Biss noch nicht bestätigt");
       capabilityReason = true;
     }
     if (handling.blockedReasons.includes("oral-processing-requirement")) {
@@ -400,7 +400,7 @@ function ensureFeedingApproachControl() {
     capabilityField.id = "handlingCapabilitiesField";
     capabilityField.innerHTML = `<label>Aktuelle Essfähigkeiten</label>
       <label class="check-row"><input type="checkbox" id="smallSoftPiecesCapability"> Kleine weiche Stücke gezielt aufnehmen und sicher zum Mund führen</label>
-      <label class="check-row"><input type="checkbox" id="gradedBiteCapability"> Bei weichen formstabilen Stücken gezielt einen passenden Bissen abtrennen</label>
+      <label class="check-row"><input type="checkbox" id="gradedBiteCapability"> Bei einem zusammenhängenden formstabilen Stück den Biss gezielt dosieren und einen beherrschbaren Bissen kontrolliert halten oder abtrennen</label>
       <label class="check-row"><input type="checkbox" id="structuredChewCapability"> Strukturierte weiche Bissen sicher im Mund bewegen und wiederholt zerkleinern</label>
       <div class="small" style="margin-top:5px">Nur bestätigen, wenn die Fähigkeit tatsächlich beobachtet wurde. Die Auswahl ist keine Altersstufe; Zähne sind keine Voraussetzung.</div>`;
     field.insertAdjacentElement("afterend", capabilityField);

@@ -51,9 +51,40 @@ function eligibleHandlingModes(contract, settings = {}) {
   );
 }
 
-function preferredHandlingModes(modes, feedingApproach = "mixed") {
+function spoonModePreference(textureStage = 1) {
+  let stage = Math.max(1, Math.min(4, Number(textureStage) || 1));
+  if (stage >= 3)
+    return ["spoon-soft-lumpy", "spoon-mashed", "spoon-smooth"];
+  if (stage === 2)
+    return ["spoon-mashed", "spoon-smooth", "spoon-soft-lumpy"];
+  return ["spoon-smooth", "spoon-mashed", "spoon-soft-lumpy"];
+}
+
+function sortSpoonModesByTexture(modes, textureStage = 1) {
+  let list = [...(modes || [])];
+  let preference = spoonModePreference(textureStage);
+  let rank = (mode) => {
+    let index = preference.indexOf(mode);
+    return index >= 0 ? index : preference.length;
+  };
+  let spoons = list
+    .filter((mode) => handlingModeFamily(mode) === "spoon")
+    .map((mode, index) => ({ mode, index }))
+    .sort((a, b) => rank(a.mode) - rank(b.mode) || a.index - b.index)
+    .map((item) => item.mode);
+  let spoonIndex = 0;
+  return list.map((mode) =>
+    handlingModeFamily(mode) === "spoon" ? spoons[spoonIndex++] : mode,
+  );
+}
+
+function preferredHandlingModes(
+  modes,
+  feedingApproach = "mixed",
+  textureStage = 1,
+) {
   let approach = normalizeFeedingApproach(feedingApproach);
-  let list = [...new Set(modes || [])];
+  let list = sortSpoonModesByTexture([...new Set(modes || [])], textureStage);
   if (approach === "mixed") return list;
   return list
     .map((mode, index) => ({
@@ -96,6 +127,7 @@ function handlingEligibility(contract, settings = {}) {
     preferredModes: preferredHandlingModes(
       eligibleModes,
       settings.feedingApproach,
+      settings.textureStage,
     ),
     oralProcessing: String(contract.oralProcessing || ""),
     oralRequiredCapability,
@@ -149,6 +181,7 @@ function presentationModeForMeal(
     return preferredHandlingModes(
       handling.eligibleModes,
       settings.feedingApproach,
+      settings.textureStage,
     )[0] || "";
   }
 
@@ -167,6 +200,7 @@ function presentationModeForMeal(
   return preferredHandlingModes(
     commonModes || [],
     settings.feedingApproach,
+    settings.textureStage,
   )[0] || "";
 }
 
@@ -343,6 +377,65 @@ function ensureFeedingApproachControl() {
   let structuredChew = document.getElementById("structuredChewCapability");
   if (smallPieces) smallPieces.checked = state.settings.handlingCapabilities.smallSoftPieces;
   if (structuredChew) structuredChew.checked = state.settings.handlingCapabilities.structuredChew;
+}
+
+function textureCoachNextStep(stage = 1) {
+  return {
+    1: "Eine kleine Menge etwas dicker oder weich zerdrückt anbieten. Vertraute Konsistenzen dürfen parallel bleiben.",
+    2: "Bei einer passenden Mahlzeit kleine weiche Stückchen testen. Vertraute Konsistenzen dürfen parallel bleiben.",
+    3: "Zunehmend weiche familiennahe Formen ausprobieren, wenn das konkrete Lebensmittel oder Rezept dafür geeignet ist.",
+    4: "Weiche familiennahe Formen passend zum jeweiligen Lebensmittel oder Rezept weiter anbieten.",
+  }[Math.max(1, Math.min(4, Number(stage) || 1))];
+}
+
+function renderSimplifiedTextureCoach() {
+  if (typeof document === "undefined" || typeof state === "undefined") return;
+  let card = document.getElementById("textureCoachCard");
+  if (!card) return;
+  let stage = Math.max(1, Math.min(4, Number(state.settings.textureStage) || 1));
+  let next = Math.min(4, stage + 1);
+  let progress = [1, 2, 3, 4]
+    .map(
+      (n) =>
+        `<span class="texture-step ${n <= stage ? "done" : n === next ? "next" : ""}"></span>`,
+    )
+    .join("");
+  let guidanceLabel = stage < 4 ? "Nächster kleiner Schritt:" : "Aktueller Fokus:";
+  card.innerHTML = `<details class="home-control-details">
+    <summary>
+      <span>
+        <small>Konsistenz</small>
+        <b>Stufe ${stage} · ${esc(textureName(stage))}</b>
+      </span>
+      <span class="pill dim">Aktuell</span>
+    </summary>
+    <div class="home-control-body">
+      <div class="texture-track" aria-label="Konsistenzstufe ${stage} von 4">${progress}</div>
+      <div class="small texture-coach-next-step"><b>${guidanceLabel}</b> ${esc(textureCoachNextStep(stage))}</div>
+      <div class="small texture-coach-fingerfood-hint">Geeignetes weiches Fingerfood kann unabhängig von dieser Konsistenzstufe parallel angeboten werden. Die sichere Form richtet sich nach dem jeweiligen Lebensmittel oder Rezept.</div>
+      <div class="texture-coach-actions">
+        ${stage > 1 ? `<button class="btn secondary" id="textureBack">Zurück</button>` : ""}
+        ${stage < 4 ? `<button class="btn secondary" id="textureNext">Stufe ${next} testen</button>` : ""}
+      </div>
+    </div>
+  </details>`;
+  if (document.getElementById("textureBack"))
+    document.getElementById("textureBack").onclick = () =>
+      setTextureStage(stage - 1);
+  if (document.getElementById("textureNext"))
+    document.getElementById("textureNext").onclick = () =>
+      openTextureAdvance(next);
+}
+
+function installTextureCoachRuntime() {
+  if (typeof renderTextureCoach !== "function") return false;
+  if (renderTextureCoach.__textureProgressionSimplified) return false;
+  let simplified = function simplifiedTextureCoachRuntime() {
+    return renderSimplifiedTextureCoach();
+  };
+  simplified.__textureProgressionSimplified = true;
+  renderTextureCoach = simplified;
+  return true;
 }
 
 function plannerPageStartedAt() {
@@ -524,6 +617,7 @@ function installHandlingReadinessRuntime() {
     };
   }
 
+  installTextureCoachRuntime();
   installPresentationModeRuntime();
   ensureFeedingApproachControl();
   let saveButton = typeof document !== "undefined"
@@ -573,6 +667,8 @@ if (typeof module !== "undefined" && module.exports) {
     oralCapabilitySatisfied,
     handlingModeTextureAllowed,
     eligibleHandlingModes,
+    spoonModePreference,
+    sortSpoonModesByTexture,
     preferredHandlingModes,
     handlingEligibility,
     recipeHandlingEligibility,
@@ -585,6 +681,9 @@ if (typeof module !== "undefined" && module.exports) {
     mergeRecipeHandlingState,
     handlingPreparationOptions,
     normalizeHandlingCapabilities,
+    textureCoachNextStep,
+    renderSimplifiedTextureCoach,
+    installTextureCoachRuntime,
     plannerPageStartedAt,
     pruneCurrentPagePrePolicyAutoLocks,
     installPresentationModeRuntime,

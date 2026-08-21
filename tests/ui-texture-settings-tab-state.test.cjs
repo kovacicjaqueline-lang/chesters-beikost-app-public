@@ -28,6 +28,22 @@ test("UI: Konsistenzbezeichnungen liegen zentral in textureName", () => {
   assert.doesNotMatch(handling, /textureName\s*=\s*function/);
 });
 
+test("UI: vereinfachter Texture Coach nutzt keine Erfolgs-Schwelle und hält Fingerfood parallel", () => {
+  const handling = read("js/handling-readiness.js");
+  const coach = functionSource(
+    handling,
+    "renderSimplifiedTextureCoach",
+    "installTextureCoachRuntime",
+  );
+
+  assert.match(coach, /Nächster kleiner Schritt:/);
+  assert.match(coach, /Aktueller Fokus:/);
+  assert.match(coach, /Geeignetes weiches Fingerfood kann unabhängig von dieser Konsistenzstufe parallel angeboten werden/);
+  assert.doesNotMatch(coach, /textureSuccessCount/);
+  assert.doesNotMatch(coach, /successes\s*>=\s*4/);
+  assert.doesNotMatch(coach, /Test möglich/);
+});
+
 test("UI: renderSettings übernimmt die zentralen Labels und beendet Sticky-Leerraum lokal", () => {
   const source = read("js/ui.js");
   const renderSettings = functionSource(source, "renderSettings", "renderAuditCore");

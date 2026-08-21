@@ -73,7 +73,18 @@
     });
 
     let details = document.getElementById("recipesDetails");
-    if (details) details.open = true;
+    if (details) {
+      details.open = true;
+      details.addEventListener("toggle", () => {
+        if (!details.open) details.open = true;
+      });
+      let heading = details.querySelector(":scope > summary");
+      if (heading) {
+        heading.tabIndex = -1;
+        heading.setAttribute("role", "heading");
+        heading.setAttribute("aria-level", "2");
+      }
+    }
     setCatalogMode(catalogMode);
     return true;
   }

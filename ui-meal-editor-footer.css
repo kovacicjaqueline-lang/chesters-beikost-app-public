@@ -1,7 +1,8 @@
 /* UI hotfix: Der manuelle Mahlzeit-Editor nutzt auf iPhone denselben nativen
  * Sheet-Scroll wie der funktionierende Protokoll-Dialog. Dadurch bleibt Safari beim
  * Tastatur-Fokus im normalen Visual-Viewport-Verhalten, statt einen separaten inneren
- * Scroll-/Layout-Kontext zu fokussieren. Die Aktionsleiste belegt echten Layoutplatz.
+ * Scroll-/Layout-Kontext zu fokussieren. Die Aktionsleiste bleibt innerhalb dieses
+ * einen Scroll-Kontexts am unteren Rand sichtbar.
  */
 
 /* Die iOS-Tastatur samt Eingabe-Navigationsleiste ist teilweise transparent. Der
@@ -42,7 +43,7 @@
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
   padding-bottom: 0;
-  scroll-padding-bottom: calc(18px + env(safe-area-inset-bottom));
+  scroll-padding-bottom: calc(118px + env(safe-area-inset-bottom));
 }
 
 #genericModal:has(#cancelManualMeal) #genericBody {
@@ -64,16 +65,18 @@
   overflow: visible;
 }
 
-/* Nicht sticky/überlagernd: Die Leiste ist Teil des normalen Scrollinhalts und kann
- * deshalb keine Lebensmittel verdecken. Die Safe-Area bleibt trotzdem berücksichtigt. */
+/* Sticky im nativen Sheet-Scroll statt als eigener/fixed Viewport: Speichern und
+ * Abbrechen bleiben auch bei langen Rezeptlisten sichtbar. Die Leiste bleibt im
+ * normalen Dokumentfluss, sodass der Listenabschluss vollständig darüber scrollen kann. */
 #genericModal:has(#cancelManualMeal) .sticky-form-actions {
-  position: static;
+  position: sticky;
+  bottom: 0;
   margin: 10px -15px 0;
   padding: 10px 15px calc(10px + env(safe-area-inset-bottom));
   border-top: 1px solid var(--line);
   background: var(--bg) !important;
   background-image: none !important;
-  z-index: auto;
+  z-index: 5;
 }
 
 /* Manueller Mahlzeiten-Flow: Der eigene Chevron ersetzt den nativen Details-Marker.

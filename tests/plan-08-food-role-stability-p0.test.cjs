@@ -257,10 +257,12 @@ test("PLAN-08 P0: Einführung behält sichere Basis und genau eine Kostprobe", (
   });
 });
 
-test("PLAN-08 P0: Loader installiert Proactive Recipe-first vor Rollenstabilität und sichtbarem Abschlussrender", () => {
+test("PLAN-08 P0: Loader installiert Proactive Recipe-first, Rollenstabilität und Qualitätsrotation vor dem sichtbaren Abschlussrender", () => {
   const utils = fs.readFileSync(path.join(root, "js", "utils.js"), "utf8");
   assert.match(utils, /planner-proactive-recipe\.js\?v=10\.1\.25/);
+  assert.match(utils, /planner-quality-rotation\.js\?v=10\.1\.26/);
   assert.match(utils, /installPlannerRecipeFirstRuntime\(\);\s*loadProactiveRecipePolicy\(\);/);
   assert.match(utils, /installPlannerProactiveRecipeRuntime\(\);\s*loadRoleStabilityPolicy\(\);/);
-  assert.match(utils, /installPlannerFoodRoleStabilityRuntime\(\);\s*finishPlannerPolicies\(\);/);
+  assert.match(utils, /installPlannerFoodRoleStabilityRuntime\(\);\s*loadQualityPolicy\(\);/);
+  assert.match(utils, /installPlannerQualityRotationRuntime\(\);\s*finishPlannerPolicies\(\);/);
 });

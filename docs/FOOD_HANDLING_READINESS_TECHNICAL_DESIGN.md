@@ -119,13 +119,20 @@ biteRequiredCapability: "graded-bite"
 
 Die Capability wird unabhängig von Handling und Oral Processing geprüft.
 
-Der bestehende Katalog enthält nach dem gezielten Recheck:
+Der bestehende Katalog enthält nach dem gezielten Einzel-Recheck:
 
 - 13 × `low-resistance-separate`
-- 28 × `easy-bite-separate`
-- 0 × `graded-bite-required`
+- 24 × `easy-bite-separate`
+- 4 × `graded-bite-required`
 
-Damit erzeugt die neue Capability **keine neue Sperre für Bestandsrezepte**.
+Die vier `graded-bite-required`-Rezepte sind:
+
+- Rind-Hafer-Bällchen
+- Baby-Bananenbrot
+- Weiche Joghurt-Fladen
+- Huhn-Gemüse-Muffins
+
+Diese Zuordnung entsteht aus der konkreten formstabilen beziehungsweise kohäsiven kanonischen Servierform, nicht aus Rezeptkategorie, Alter, `stage` oder einer anderen Capability.
 
 ## 5. Oral Processing
 
@@ -133,27 +140,28 @@ Damit erzeugt die neue Capability **keine neue Sperre für Bestandsrezepte**.
 
 `easy-bite-separate` ist deshalb kein Oral-Profil mehr. Sein bisher vermischter post-separation-Anteil wird als `easy-chew` modelliert.
 
-Nur vier bestehende Rezepte verlangen `structured-chew`:
+Dieselben vier bestehenden Rezepte verlangen nach separater Einzelprüfung zusätzlich `structured-chew`:
 
 - Rind-Hafer-Bällchen
 - Baby-Bananenbrot
 - Weiche Joghurt-Fladen
 - Huhn-Gemüse-Muffins
 
-Alle vier wurden unabhängig auf Bite Separation nachgeprüft und sind dort `easy-bite-separate`.
-
-Technische Form:
+Technische Form dieser vier aktuellen Bestandsfälle:
 
 ```js
 {
   modes: ["finger-graspable"],
-  biteSeparation: "easy-bite-separate",
+  biteSeparation: "graded-bite-required",
+  biteRequiredCapability: "graded-bite",
   oralProcessing: "structured-chew-required",
   oralRequiredCapability: "structured-chew"
 }
 ```
 
-Daraus folgt ausdrücklich nicht `structured-chew => graded-bite`.
+Die identische Vierergruppe ist ein Ergebnis zweier unabhängiger Einzelprüfungen und **keine Kopplungsregel**. Das Modell muss weiterhin auch `graded-bite-required` + `easy-chew` sowie `easy-bite-separate` + `structured-chew-required` abbilden können.
+
+Daraus folgt ausdrücklich weder `structured-chew => graded-bite` noch `graded-bite => structured-chew`.
 
 ## 6. Nutzerfähigkeiten und Persistenz
 
@@ -189,17 +197,15 @@ Wichtig:
 
 Der Contract enthält weiterhin genau **103 Rezeptnamen** und muss exakt mit dem normalisierten Laufzeitkatalog übereinstimmen.
 
-Die bestehende Later-Matrix bleibt unverändert:
+Die bestehende Later-Matrix bleibt insgesamt bei 87 / 4 / 3 / 9, die Vierergruppe verlangt jetzt jedoch zwei unabhängige Capabilities:
 
 | Gruppe | Anzahl | technische Wirkung |
 | --- | ---: | --- |
 | kein zusätzliches späteres Gate | 87 | expliziter Handling-/Bite-/Oral-Contract |
-| `structured-chew` | 4 | harte beobachtete orale Capability |
+| `graded-bite` + `structured-chew` | 4 | zwei unabhängige beobachtete Capabilities |
 | `small-soft-pieces` | 3 | harte beobachtete Handling-Capability |
 | weiche spätere Formorientierung | 9 | keine neue Capability; Form/`minMonths`-Orientierung bleibt erhalten |
 | offen | 0 | – |
-
-`graded-bite` kommt in dieser Matrix noch nicht als Bestands-Gate vor.
 
 Die neun weichen späteren Formfälle bleiben:
 
@@ -298,7 +304,7 @@ Ein Safety-Problem darf nie durch eine Capability freigeschaltet werden.
 
 Beispiel Baby-Bananenbrot:
 
-- `structuredChew: true` erlaubt nur eine korrekt gebackene, vollständig ausgekühlte, nicht klebrig-teigige Krume;
+- `gradedBite: true` und `structuredChew: true` erlauben nur eine korrekt gebackene, vollständig ausgekühlte, nicht klebrig-teigige Krume;
 - eine klebrig, teigig oder ballend geratene Charge bleibt ungeeignet.
 
 Dasselbe Prinzip gilt für harte Krusten, kompakt-federnde Bällchen oder gummiartige Nockerl.
@@ -310,11 +316,11 @@ Mindestens abzusichern:
 1. 103 Runtime-Rezepte = 103 Contract-Einträge;
 2. keine Doppelzuordnung;
 3. bestehende Later-Matrix 87 / 4 / 3 / 9;
-4. 41 `finger-graspable` = 13 low-resistance / 28 easy-bite / 0 graded-bite;
+4. 41 `finger-graspable` = 13 low-resistance / 24 easy-bite / 4 graded-bite;
 5. jeder `finger-graspable`-Contract hat Bite Separation;
-6. vier Structured-Chew-Fälle bleiben bite-seitig `easy-bite-separate`;
-7. synthetisches `graded-bite-required` bleibt ohne `gradedBite` gesperrt;
-8. `gradedBite` und `structuredChew` entsperren sich nicht gegenseitig;
+6. vier Einzelprüfungen verlangen sowohl `graded-bite` als auch `structured-chew`;
+7. `gradedBite` und `structuredChew` werden unabhängig geprüft und entsperren sich nicht gegenseitig;
+8. reales Bestandsrezept mit zwei Capabilities bleibt gesperrt, solange nur eine bestätigt ist;
 9. drei Nockerl nur durch `small-soft-pieces` freigegeben;
 10. Feeding-Präferenz umgeht keine Capability;
 11. `spoon-soft-lumpy` bleibt an Texturentwicklung gekoppelt;

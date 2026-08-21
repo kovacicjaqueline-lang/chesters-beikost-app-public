@@ -402,7 +402,7 @@
   function linkedCompletionForSlot(date, meal) {
     let candidates = CORE.allPlanInstances(state)
       .filter((plan) => plan.date === date && plan.meal === meal)
-      .map((plan) => CORE.linkedCompletionLog(state, plan.planId, date, plan.meal))
+      .map((plan) => CORE.linkedCompletionLog(state, plan.planId, date, meal))
       .filter(Boolean)
       .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
     return candidates[0] || null;

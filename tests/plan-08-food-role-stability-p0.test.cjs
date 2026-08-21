@@ -7,6 +7,7 @@ const path = require("node:path");
 const vm = require("node:vm");
 
 const root = path.resolve(__dirname, "..");
+const appVersion = JSON.parse(fs.readFileSync(path.join(root, "VERSION.json"), "utf8")).version;
 const planningSource = fs.readFileSync(path.join(root, "js", "planning.js"), "utf8");
 const appSource = fs.readFileSync(path.join(root, "app.js"), "utf8");
 const rolePolicySource = fs.readFileSync(path.join(root, "js", "planner-food-role-stability.js"), "utf8");
@@ -259,8 +260,8 @@ test("PLAN-08 P0: Einführung behält sichere Basis und genau eine Kostprobe", (
 
 test("PLAN-08 P0: Loader installiert Proactive Recipe-first, Rollenstabilität und Qualitätsrotation vor dem sichtbaren Abschlussrender", () => {
   const utils = fs.readFileSync(path.join(root, "js", "utils.js"), "utf8");
-  assert.match(utils, /planner-proactive-recipe\.js\?v=10\.1\.25/);
-  assert.match(utils, /planner-quality-rotation\.js\?v=10\.1\.26/);
+  assert.ok(utils.includes(`planner-proactive-recipe.js?v=${appVersion}`));
+  assert.ok(utils.includes(`planner-quality-rotation.js?v=${appVersion}`));
   assert.match(utils, /installPlannerRecipeFirstRuntime\(\);\s*loadProactiveRecipePolicy\(\);/);
   assert.match(utils, /installPlannerProactiveRecipeRuntime\(\);\s*loadRoleStabilityPolicy\(\);/);
   assert.match(utils, /installPlannerFoodRoleStabilityRuntime\(\);\s*loadQualityPolicy\(\);/);

@@ -173,7 +173,7 @@ if (typeof window !== "undefined" && typeof document !== "undefined") {
         return;
       }
       let policyScript = document.createElement("script");
-      policyScript.src = "js/handling-readiness.js?v=10.1.25";
+      policyScript.src = "js/handling-readiness.js?v=10.1.26";
       policyScript.dataset.handlingReadiness = "wave-1";
       policyScript.addEventListener("load", installHandlingAndFinish, { once: true });
       attachPlannerLoadError(policyScript);
@@ -194,7 +194,7 @@ if (typeof window !== "undefined" && typeof document !== "undefined") {
       return;
     }
     let handlingContractScript = document.createElement("script");
-    handlingContractScript.src = "data/food-handling.js?v=10.1.25";
+    handlingContractScript.src = "data/food-handling.js?v=10.1.26";
     handlingContractScript.dataset.foodHandlingContract = "wave-1";
     handlingContractScript.addEventListener("load", loadHandlingPolicy, { once: true });
     attachPlannerLoadError(handlingContractScript);
@@ -233,7 +233,7 @@ if (typeof window !== "undefined" && typeof document !== "undefined") {
           return;
         }
         let milkScript = document.createElement("script");
-        milkScript.src = "js/planner-milk-policy.js?v=10.1.25";
+        milkScript.src = "js/planner-milk-policy.js?v=10.1.26";
         milkScript.dataset.plannerMilkPolicy = "milk-01";
         milkScript.addEventListener(
           "load",
@@ -297,7 +297,7 @@ if (typeof window !== "undefined" && typeof document !== "undefined") {
               return;
             }
             let roleScript = document.createElement("script");
-            roleScript.src = "js/planner-food-role-stability.js?v=10.1.25";
+            roleScript.src = "js/planner-food-role-stability.js?v=10.1.26";
             roleScript.dataset.plannerFoodRoleStability = "plan-08-p0";
             roleScript.addEventListener(
               "load",
@@ -331,7 +331,7 @@ if (typeof window !== "undefined" && typeof document !== "undefined") {
               return;
             }
             let proactiveScript = document.createElement("script");
-            proactiveScript.src = "js/planner-proactive-recipe.js?v=10.1.25";
+            proactiveScript.src = "js/planner-proactive-recipe.js?v=10.1.26";
             proactiveScript.dataset.plannerProactiveRecipe = "plan-08-proactive";
             proactiveScript.addEventListener(
               "load",
@@ -364,7 +364,7 @@ if (typeof window !== "undefined" && typeof document !== "undefined") {
             return;
           }
           let recipeFirstScript = document.createElement("script");
-          recipeFirstScript.src = "js/planner-recipe-first.js?v=10.1.25";
+          recipeFirstScript.src = "js/planner-recipe-first.js?v=10.1.26";
           recipeFirstScript.dataset.plannerRecipeFirst = "plan-08";
           recipeFirstScript.addEventListener(
             "load",
@@ -389,7 +389,7 @@ if (typeof window !== "undefined" && typeof document !== "undefined") {
             return;
           }
           let presentationScript = document.createElement("script");
-          presentationScript.src = "js/planner-meal-presentation.js?v=10.1.25";
+          presentationScript.src = "js/planner-meal-presentation.js?v=10.1.26";
           presentationScript.dataset.plannerMealPresentation = "plan-08";
           presentationScript.addEventListener("load", loadRecipeFirstPolicy, { once: true });
           attachPlannerLoadError(presentationScript);
@@ -411,7 +411,7 @@ if (typeof window !== "undefined" && typeof document !== "undefined") {
           }
 
           let contractScript = document.createElement("script");
-          contractScript.src = "data/food-presentation.js?v=10.1.25";
+          contractScript.src = "data/food-presentation.js?v=10.1.26";
           contractScript.dataset.foodPresentationContract = "plan-08";
           contractScript.addEventListener("load", loadPresentationPolicy, { once: true });
           attachPlannerLoadError(contractScript);
@@ -429,7 +429,7 @@ if (typeof window !== "undefined" && typeof document !== "undefined") {
         }
 
         let ironScript = document.createElement("script");
-        ironScript.src = "js/planner-iron-preference.js?v=10.1.25";
+        ironScript.src = "js/planner-iron-preference.js?v=10.1.26";
         ironScript.dataset.plannerIronPreference = "plan-08-x1";
         ironScript.addEventListener("load", loadPresentationStack, { once: true });
         attachPlannerLoadError(ironScript);
@@ -447,7 +447,7 @@ if (typeof window !== "undefined" && typeof document !== "undefined") {
       }
 
       let script = document.createElement("script");
-      script.src = "js/planner-meal-eligibility.js?v=10.1.25";
+      script.src = "js/planner-meal-eligibility.js?v=10.1.26";
       script.dataset.plannerMealEligibility = "p0";
       script.addEventListener("load", loadMilkPolicy, { once: true });
       attachPlannerLoadError(script);

@@ -26,6 +26,7 @@ function runtime(recipeStates, settings = {}) {
         feedingApproach: "mixed",
         handlingCapabilities: {
           smallSoftPieces: false,
+          gradedBite: false,
           structuredChew: false,
         },
         ...settings,
@@ -61,7 +62,8 @@ test("HANDLING runtime: migrierter Pancake verliert nur die historische Konsiste
   assert.equal(recipe.unlocked, true);
   assert.equal(recipe.handlingMigrated, true);
   assert.deepEqual([...recipe.handlingModes], ["finger-graspable"]);
-  assert.equal(recipe.oralProcessing, "easy-bite-separate");
+  assert.equal(recipe.biteSeparation, "easy-bite-separate");
+  assert.equal(recipe.oralProcessing, "easy-chew");
 });
 
 test("HANDLING runtime: Alter und fehlende Zutaten bleiben trotz Migration harte Sperren", () => {
@@ -95,7 +97,7 @@ test("HANDLING runtime: Alter und fehlende Zutaten bleiben trotz Migration harte
   assert.equal(recipe.unlocked, false);
 });
 
-test("ORAL runtime: structured-chew ersetzt Stage nicht durch Alter, sondern durch konkrete Fähigkeit", () => {
+test("ORAL runtime: structured-chew bleibt von bite separation unabhängig", () => {
   const base = {
     name: "Rind-Hafer-Bällchen",
     stage: 3,
@@ -110,12 +112,23 @@ test("ORAL runtime: structured-chew ersetzt Stage nicht durch Alter, sondern dur
     "Orale Verarbeitung: strukturiertes Kauen noch nicht bestätigt",
   ]);
   assert.equal(blocked.unlocked, false);
+  assert.equal(blocked.biteSeparation, "easy-bite-separate");
+  assert.equal(blocked.biteRequiredCapability, "");
   assert.equal(blocked.oralProcessing, "structured-chew-required");
   assert.equal(blocked.oralRequiredCapability, "structured-chew");
 
+  const gradedOnly = runtime(
+    [base],
+    { handlingCapabilities: { smallSoftPieces: false, gradedBite: true, structuredChew: false } },
+  ).recipeStatesCore()[0];
+  assert.equal(gradedOnly.unlocked, false);
+  assert.deepEqual([...gradedOnly.requirementMissing], [
+    "Orale Verarbeitung: strukturiertes Kauen noch nicht bestätigt",
+  ]);
+
   const ready = runtime(
     [base],
-    { handlingCapabilities: { smallSoftPieces: false, structuredChew: true } },
+    { handlingCapabilities: { smallSoftPieces: false, gradedBite: false, structuredChew: true } },
   ).recipeStatesCore()[0];
   assert.deepEqual([...ready.requirementMissing], []);
   assert.equal(ready.unlocked, true);
@@ -137,11 +150,12 @@ test("HANDLING runtime: Nockerl werden nur durch small-soft-pieces freigegeben",
     "Darreichungsform: kleine weiche Stücke noch nicht bestätigt",
   ]);
   assert.equal(blocked.unlocked, false);
+  assert.equal(blocked.biteSeparation, "");
   assert.equal(blocked.oralProcessing, "soft-breakdown");
 
   const ready = runtime(
     [base],
-    { handlingCapabilities: { smallSoftPieces: true, structuredChew: false } },
+    { handlingCapabilities: { smallSoftPieces: true, gradedBite: false, structuredChew: false } },
   ).recipeStatesCore()[0];
   assert.deepEqual([...ready.requirementMissing], []);
   assert.equal(ready.unlocked, true);
@@ -185,14 +199,8 @@ test("HANDLING runtime: textureStage 2 bevorzugt bei Löffelkost Karotte zerdrü
 
 test("HANDLING runtime: spoon-soft-lumpy bleibt an Texturentwicklung gekoppelt, finger-graspable nicht", () => {
   const ctx = runtime([]);
-  assert.equal(
-    ctx.handlingModeTextureAllowed("spoon-soft-lumpy", { textureStage: 1 }),
-    false,
-  );
-  assert.equal(
-    ctx.handlingModeTextureAllowed("finger-graspable", { textureStage: 1 }),
-    true,
-  );
+  assert.equal(ctx.handlingModeTextureAllowed("spoon-soft-lumpy", { textureStage: 1 }), false);
+  assert.equal(ctx.handlingModeTextureAllowed("finger-graspable", { textureStage: 1 }), true);
 });
 
 test("HANDLING runtime: Fingerfood-Präferenz sortiert nur, sie entfernt Löffeloptionen nicht", () => {

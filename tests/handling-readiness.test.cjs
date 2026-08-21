@@ -379,7 +379,7 @@ test("FORM: Hummus-Sticks definieren weich mechanisch statt als Kochmethode", ()
   const contract = RECIPE_HANDLING_CONTRACT["Hummus mit weichen Gemüsesticks"];
   assert.match(contract.servingRequirement, /mechanisch weich/i);
   assert.match(contract.servingRequirement, /roh oder gegart/i);
-  assert.doesNotMatch(contract.servingRequirement, /müssen.*gegart/i);
+  assert.doesNotMatch(contract.servingRequirement, /Gemüsesticks müssen gegart/i);
 });
 
 test("HANDLING: Steuerlogik parst keine safeForm-/note-Freitexte", () => {

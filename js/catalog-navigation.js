@@ -1,10 +1,9 @@
 "use strict";
 
 /* Gemeinsamer Katalog-Tab für Lebensmittel und Rezepte.
- * Verbindet die bestehende Rezeptoberfläche mit dem Lebensmittel-Tab,
- * ohne Rezeptdaten, Planner oder direkte Rezeptdetail-Dialoge zu duplizieren.
+ * Rezeptdaten, Planner und direkte Rezeptdetail-Dialoge bleiben unverändert.
  */
-(function catalogNavigationModule(root) {
+(function catalogNavigationModule() {
   if (typeof document === "undefined") return;
 
   const MODE_FOODS = "foods";
@@ -12,100 +11,35 @@
   let catalogMode = MODE_FOODS;
   let openingRecipeCatalog = false;
 
-  function catalogNodes() {
-    return {
-      view: document.getElementById("foods"),
-      foodsSection: document.getElementById("foodsCatalogSection"),
-      recipesSection: document.getElementById("recipesSection"),
-      recipesDetails: document.getElementById("recipesDetails"),
-      switcher: document.getElementById("catalogSwitch"),
-    };
-  }
+  function setCatalogMode(mode) {
+    let foodsSection = document.getElementById("foodsCatalogSection");
+    let recipesSection = document.getElementById("recipesSection");
+    let recipesDetails = document.getElementById("recipesDetails");
+    let switcher = document.getElementById("catalogSwitch");
+    if (!foodsSection || !recipesSection || !switcher) return;
 
-  function setCatalogMode(mode, { scroll = false } = {}) {
-    let next = mode === MODE_RECIPES ? MODE_RECIPES : MODE_FOODS;
-    let { foodsSection, recipesSection, recipesDetails, switcher } = catalogNodes();
-    if (!foodsSection || !recipesSection || !switcher) return false;
-
-    catalogMode = next;
-    foodsSection.hidden = next !== MODE_FOODS;
-    recipesSection.hidden = next !== MODE_RECIPES;
-    if (next === MODE_RECIPES && recipesDetails) recipesDetails.open = true;
+    catalogMode = mode === MODE_RECIPES ? MODE_RECIPES : MODE_FOODS;
+    foodsSection.hidden = catalogMode !== MODE_FOODS;
+    recipesSection.hidden = catalogMode !== MODE_RECIPES;
+    if (catalogMode === MODE_RECIPES && recipesDetails) recipesDetails.open = true;
 
     switcher.querySelectorAll("[data-catalog-mode]").forEach((button) => {
-      let active = button.dataset.catalogMode === next;
+      let active = button.dataset.catalogMode === catalogMode;
       button.classList.toggle("active", active);
       button.setAttribute("aria-pressed", String(active));
     });
-
-    if (scroll) window.scrollTo({ top: 0, behavior: "smooth" });
-    return true;
   }
 
-  function setupCatalogDom() {
-    let view = document.getElementById("foods");
-    let recipesSection = document.getElementById("recipesSection");
-    if (!view || !recipesSection) return false;
-
-    let foodsSection = document.getElementById("foodsCatalogSection") ||
-      [...view.children].find((node) => node.classList?.contains("card") && node.id !== "recipesSection");
-    if (!foodsSection) return false;
-    foodsSection.id = "foodsCatalogSection";
-
-    if (recipesSection.parentElement !== view) view.appendChild(recipesSection);
-    recipesSection.classList.remove("collapsible-card");
-    recipesSection.classList.add("catalog-recipes-card");
-
-    let switcher = document.getElementById("catalogSwitch");
-    if (!switcher) {
-      switcher = document.createElement("div");
-      switcher.id = "catalogSwitch";
-      switcher.className = "catalog-switch";
-      switcher.setAttribute("role", "group");
-      switcher.setAttribute("aria-label", "Lebensmittel oder Rezepte anzeigen");
-      switcher.innerHTML = `
-        <button type="button" class="active" data-catalog-mode="foods" aria-controls="foodsCatalogSection" aria-pressed="true">Lebensmittel</button>
-        <button type="button" data-catalog-mode="recipes" aria-controls="recipesSection" aria-pressed="false">Rezepte</button>`;
-      view.insertBefore(switcher, foodsSection);
-    }
-    switcher.querySelectorAll("[data-catalog-mode]").forEach((button) => {
-      button.onclick = () => setCatalogMode(button.dataset.catalogMode);
-    });
-
-    let details = document.getElementById("recipesDetails");
-    if (details) {
-      details.open = true;
-      details.addEventListener("toggle", () => {
-        if (!details.open) details.open = true;
-      });
-      let heading = details.querySelector(":scope > summary");
-      if (heading) {
-        heading.tabIndex = -1;
-        heading.setAttribute("role", "heading");
-        heading.setAttribute("aria-level", "2");
-      }
-    }
-    setCatalogMode(catalogMode);
-    return true;
-  }
-
-  function fixPrepRecipeHint() {
-    let empty = document.querySelector("#cookNow .empty");
-    if (empty && /Unter „Mehr“/i.test(empty.textContent || "")) {
-      empty.textContent = "Noch kein Rezept vollständig freigeschaltet. Unter „Rezepte“ siehst du fast passende Rezepte.";
-    }
-  }
-
-  function openRecipeCatalog({ filter = "" } = {}) {
+  function openRecipeCatalog(filter = "") {
     if (filter && typeof recipeFilter !== "undefined") recipeFilter = filter;
     openingRecipeCatalog = true;
     try {
-      if (typeof showView === "function") showView("foods");
+      showView("foods");
     } finally {
       openingRecipeCatalog = false;
     }
     setCatalogMode(MODE_RECIPES);
-    if (typeof renderPrep === "function") renderPrep();
+    renderPrep();
     requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
   }
 
@@ -117,13 +51,18 @@
     if (prep) prep.onclick = () => openRecipeCatalog();
 
     let freezer = document.getElementById("prepOpenFreezerRecipes");
-    if (freezer) freezer.onclick = () => openRecipeCatalog({ filter: "freezer" });
+    if (freezer) freezer.onclick = () => openRecipeCatalog("freezer");
+  }
+
+  function fixPrepRecipeHint() {
+    let empty = document.querySelector("#cookNow .empty");
+    if (empty && /Unter „Mehr“/i.test(empty.textContent || "")) {
+      empty.textContent = "Noch kein Rezept vollständig freigeschaltet. Unter „Rezepte“ siehst du fast passende Rezepte.";
+    }
   }
 
   function refreshAuditNavigationCheck() {
-    let list = document.getElementById("auditList");
-    if (!list) return;
-    let row = [...list.querySelectorAll(".checkline")].find((node) =>
+    let row = [...document.querySelectorAll("#auditList .checkline")].find((node) =>
       /Protokoll und Rezepte liegen unter Mehr/.test(node.textContent || ""),
     );
     if (!row) return;
@@ -134,44 +73,48 @@
     row.innerHTML = `<span class="statusdot ${ok ? "good" : "warn"}"></span><div><b>${ok ? "Geprüft" : "Prüfen"}:</b> Protokoll liegt unter Mehr; Rezepte liegen im gemeinsamen Lebensmittel-Tab</div>`;
   }
 
-  setupCatalogDom();
+  let switcher = document.getElementById("catalogSwitch");
+  switcher?.querySelectorAll("[data-catalog-mode]").forEach((button) => {
+    button.onclick = () => setCatalogMode(button.dataset.catalogMode);
+  });
 
-  if (typeof showView === "function") {
-    let originalShowView = showView;
-    showView = function showViewWithCatalogDefault(id) {
-      originalShowView(id);
-      if (id === "foods" && !openingRecipeCatalog) setCatalogMode(MODE_FOODS);
-    };
+  let recipesDetails = document.getElementById("recipesDetails");
+  if (recipesDetails) {
+    recipesDetails.open = true;
+    recipesDetails.addEventListener("toggle", () => {
+      if (!recipesDetails.open) recipesDetails.open = true;
+    });
+    let heading = recipesDetails.querySelector(":scope > summary");
+    if (heading) {
+      heading.tabIndex = -1;
+      heading.setAttribute("role", "heading");
+      heading.setAttribute("aria-level", "2");
+    }
   }
+  setCatalogMode(MODE_FOODS);
 
-  if (typeof renderHome === "function") {
-    let originalRenderHome = renderHome;
-    renderHome = function renderHomeWithCatalogNavigation() {
-      originalRenderHome();
-      bindRecipeEntryButtons();
-    };
-  }
-
-  if (typeof renderPrep === "function") {
-    let originalRenderPrep = renderPrep;
-    renderPrep = function renderPrepWithCatalogNavigation() {
-      originalRenderPrep();
-      fixPrepRecipeHint();
-      bindRecipeEntryButtons();
-    };
-  }
-
-  if (typeof renderAuditCore === "function") {
-    let originalRenderAuditCore = renderAuditCore;
-    renderAuditCore = function renderAuditCoreWithCatalogNavigation() {
-      originalRenderAuditCore();
-      refreshAuditNavigationCheck();
-    };
-  }
-
-  root.__catalogNavigation = {
-    getMode: () => catalogMode,
-    setMode: (mode) => setCatalogMode(mode),
-    openRecipes: (options = {}) => openRecipeCatalog(options),
+  let originalShowView = showView;
+  showView = function showViewWithCatalogDefault(id) {
+    originalShowView(id);
+    if (id === "foods" && !openingRecipeCatalog) setCatalogMode(MODE_FOODS);
   };
-})(typeof window !== "undefined" ? window : globalThis);
+
+  let originalRenderHome = renderHome;
+  renderHome = function renderHomeWithCatalogNavigation() {
+    originalRenderHome();
+    bindRecipeEntryButtons();
+  };
+
+  let originalRenderPrep = renderPrep;
+  renderPrep = function renderPrepWithCatalogNavigation() {
+    originalRenderPrep();
+    fixPrepRecipeHint();
+    bindRecipeEntryButtons();
+  };
+
+  let originalRenderAuditCore = renderAuditCore;
+  renderAuditCore = function renderAuditCoreWithCatalogNavigation() {
+    originalRenderAuditCore();
+    refreshAuditNavigationCheck();
+  };
+})();

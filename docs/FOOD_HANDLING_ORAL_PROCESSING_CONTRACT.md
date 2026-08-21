@@ -54,27 +54,38 @@ Ein tatsächliches Abbeißen oder Abquetschen findet statt, die weiche Struktur 
 
 ### `graded-bite-required`
 
-Das Food ist weich, aber ausreichend formstabil beziehungsweise kohäsiv, dass das Kind es geeignet positionieren und durch kontrollierten Kieferschluss einen beherrschbaren Bissen gezielt abtrennen muss.
+Die konkrete zusammenhängende Form verlangt einen **gezielt dosierten Kieferschluss**, damit ein beherrschbarer Bissen kontrolliert gehalten oder abgetrennt werden kann. Typischerweise ist sie formstabiler, fester oder zäher als frühe leicht nachgebende Fingerfoods und trennt sich nicht bereits zuverlässig unter geringer Belastung.
 
 **Folge:** zusätzliche Capability `graded-bite`.
 
-`graded-bite` bedeutet **Kontrolle**, nicht „kräftiger beißen“.
+`graded-bite` bedeutet **Kontrolle des Kieferschlusses und der Bissgröße**, nicht „kräftiger beißen“.
 
 Beobachtbare Nutzersemantik:
 
-> Mein Kind kann bei einem weichen, aber formstabilen Stück gezielt einen passenden Bissen abtrennen.
+> Mein Kind kann bei einem zusammenhängenden, formstabilen Stück den Kieferschluss gezielt dosieren und dadurch einen beherrschbaren Bissen kontrolliert halten oder abtrennen.
 
 Nicht Bestandteil der Capability:
 
 - bestimmtes Alter;
 - bestimmte Zahl von Zähnen;
-- bestimmte Bisskraft;
+- bestimmte absolute Bisskraft;
 - Rotary Chew;
 - Verarbeitung eines danach faserigen/elastischen Bissens;
 - bloßes Zerreißen mit der Hand;
-- zufälliges Abbrechen eines extrem weichen Foods.
+- zufälliges Abbrechen eines sehr weichen Foods.
 
 Ein späteres `controlled-sustained-bite` wird im aktuellen Rezeptumfang bewusst **nicht** als weitere Capability modelliert.
+
+### Quellenorientierung für `graded-bite`
+
+Die PEAS-Entwicklungstabelle von Alberta Health Services beschreibt bei 9–12 Monaten einen **„graded bite through harder or chewy food“** und nennt dazu härtere beziehungsweise zähere Fingerfoods wie Brot, Pasta, Ei und Fleischformen. Dieselbe Quelle führt weiche frühe Fingerfoods bereits davor separat.
+
+Daraus folgt für die App:
+
+- `graded-bite` ist eine reale, eigenständige orale Fähigkeit;
+- die Quellen nennen **Lebensmittel-/Texturklassen, keine App-Rezeptnamen**;
+- ein Rezept erhält den Gate nur, wenn seine konkrete kanonische Servierform die entsprechende kontrollierte Bissdosierung tatsächlich verlangt;
+- „Muffin“, „Bällchen“, „Brot“, „Pasta“ oder „Fleisch“ allein sind keine Klassifikationsregel.
 
 ## 3. Oral Processing nach dem Abtrennen
 
@@ -115,7 +126,7 @@ Bei jeder Einzelentscheidung sind mindestens zu prüfen:
 3. Kohäsion beziehungsweise `cohesion`;
 4. Feuchtigkeit beziehungsweise `moisture`;
 5. Partikel-/Mischstruktur beziehungsweise `particleStructure`;
-6. Abtrennverhalten;
+6. Abtrennverhalten und notwendige Dosierung des Kieferschlusses;
 7. Verhalten des abgetrennten Bissens;
 8. Kruste, Haut, harte Kanten, Faserigkeit und Elastizität;
 9. Geometrie des entstehenden Bissens;
@@ -133,8 +144,8 @@ Alle **41 bestehenden zusammenhängenden `finger-graspable`-Rezepte** wurden fü
 | Bite Separation | Anzahl | zusätzliche Bite-Capability |
 | --- | ---: | --- |
 | `low-resistance-separate` | 13 | keine |
-| `easy-bite-separate` | 24 | keine |
-| `graded-bite-required` | 4 | `graded-bite` |
+| `easy-bite-separate` | 28 | keine |
+| `graded-bite-required` | 0 | `graded-bite` bleibt für konkret belegte spätere Formen verfügbar |
 
 Die 13 `low-resistance-separate`-Fälle sind:
 
@@ -152,31 +163,24 @@ Die 13 `low-resistance-separate`-Fälle sind:
 - Gebackene Saba-Banane
 - Bananen-Ei-Pancakes
 
-Die vier `graded-bite-required`-Fälle sind:
+Die übrigen 28 zusammenhängenden Fingerfoods sind `easy-bite-separate`.
 
-- Rind-Hafer-Bällchen
-- Baby-Bananenbrot
-- Weiche Joghurt-Fladen
-- Huhn-Gemüse-Muffins
+**Kein bestehendes Laufzeitrezept erhält derzeit einen `graded-bite`-Hard-Gate.** Das ist keine Aussage, dass die Capability unnötig wäre. Die Quellen stützen die Fähigkeit insbesondere für formstabilere/härtere/zähere spätere Fingerfoods; die derzeitigen 41 kanonischen Bestandsformen sind dagegen ausdrücklich weich beziehungsweise leicht nachgebend modelliert.
 
-Die übrigen 24 zusammenhängenden Fingerfoods sind `easy-bite-separate`.
+Neue oder später einzeln geprüfte zusammenhängende Brot-/Toast-/Pitta-/Wrap-/Fleischformen können `graded-bite-required` erhalten, wenn die konkrete Servierform tatsächlich dosierten Kieferschluss zur kontrollierten Bissabtrennung verlangt.
 
-Die vier `graded-bite`-Zuordnungen wurden **nicht** aus `structured-chew`, Alter, `stage`, Rezeptkategorie oder Backmethode abgeleitet. Entscheidend war jeweils die konkrete weiche, aber ausreichend formstabile beziehungsweise kohäsive kanonische Form, aus der ein beherrschbarer Bissen gezielt abgetrennt werden muss.
+## 6. Vier Fälle mit unabhängigem Structured-Chew-Gate
 
-## 6. Vier Fälle mit zwei unabhängigen Capabilities
-
-Dieselben vier Rezepte benötigen nach der getrennten Einzelprüfung zusätzlich `structured-chew` für den bereits abgetrennten Bissen:
+Vier bestehende Rezepte benötigen weiterhin `structured-chew` für den bereits abgetrennten Bissen, **ohne** deshalb Bite-seitig `graded-bite` zu verlangen:
 
 | Rezept | Bite Separation | Bite-Capability | Oral Processing | Oral-Capability |
 | --- | --- | --- | --- | --- |
-| Rind-Hafer-Bällchen | `graded-bite-required` | `graded-bite` | `structured-chew-required` | `structured-chew` |
-| Baby-Bananenbrot | `graded-bite-required` | `graded-bite` | `structured-chew-required` | `structured-chew` |
-| Weiche Joghurt-Fladen | `graded-bite-required` | `graded-bite` | `structured-chew-required` | `structured-chew` |
-| Huhn-Gemüse-Muffins | `graded-bite-required` | `graded-bite` | `structured-chew-required` | `structured-chew` |
+| Rind-Hafer-Bällchen | `easy-bite-separate` | keine | `structured-chew-required` | `structured-chew` |
+| Baby-Bananenbrot | `easy-bite-separate` | keine | `structured-chew-required` | `structured-chew` |
+| Weiche Joghurt-Fladen | `easy-bite-separate` | keine | `structured-chew-required` | `structured-chew` |
+| Huhn-Gemüse-Muffins | `easy-bite-separate` | keine | `structured-chew-required` | `structured-chew` |
 
-Dass beide Vierergruppen im aktuellen Katalog identisch sind, ist **kein Kopplungsprinzip**. Beide Achsen wurden separat geprüft. Aus diesem Bestandsbefund darf weder `graded-bite => structured-chew` noch `structured-chew => graded-bite` abgeleitet werden.
-
-Das Zielmodell muss ausdrücklich auch andere Kombinationen zulassen, beispielsweise eine formstabile weiche Servierform mit `graded-bite-required` + `easy-chew` oder eine leicht abtrennbare Form mit `easy-bite-separate` + `structured-chew-required`.
+Diese vier Fälle sind ein Referenzbeispiel dafür, dass Bite Separation und post-separation Oral Processing unabhängig sind.
 
 ### Safety-Zusatz Baby-Bananenbrot
 

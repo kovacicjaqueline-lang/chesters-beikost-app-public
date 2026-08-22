@@ -354,40 +354,33 @@
     return stripVisibleLockLabel(originalRenderMealCore(day, meal));
   };
 
-  function handleTodayMealAction(event) {
-    let card = document.getElementById("todayCard");
-    if (!card || !card.contains(event.target)) return;
-    let button = event.target.closest?.(
-      ".logMeal, .replaceMeal, .editCompletedLog, .meal-lock, .removeManualMeal",
-    );
-    if (!button) return;
-
-    if (button.classList.contains("logMeal")) {
-      openLog(JSON.parse(decodeURIComponent(button.dataset.plan)));
-      return;
-    }
-    if (button.classList.contains("replaceMeal")) {
-      chooseReplacement(button.dataset.date, button.dataset.meal, button.dataset.focus);
-      return;
-    }
-    if (button.classList.contains("editCompletedLog")) {
-      editLogEntry(button.dataset.log);
-      return;
-    }
-    if (button.classList.contains("meal-lock")) {
-      toggleMealLock(
+  function bindTodayMealActions(container) {
+    if (!container?.querySelectorAll) return;
+    container.querySelectorAll(".logMeal").forEach((button) => {
+      button.onclick = () => openLog(JSON.parse(decodeURIComponent(button.dataset.plan)));
+    });
+    container.querySelectorAll(".replaceMeal").forEach((button) => {
+      button.onclick = () => chooseReplacement(
+        button.dataset.date,
+        button.dataset.meal,
+        button.dataset.focus,
+      );
+    });
+    container.querySelectorAll(".editCompletedLog").forEach((button) => {
+      button.onclick = () => editLogEntry(button.dataset.log);
+    });
+    container.querySelectorAll(".meal-lock").forEach((button) => {
+      button.onclick = () => toggleMealLock(
         button.dataset.lockDate,
         button.dataset.lockMeal,
         JSON.parse(decodeURIComponent(button.dataset.lockPayload)),
       );
-      return;
-    }
-    if (button.classList.contains("removeManualMeal"))
-      removeManualMeal(button.dataset.date, button.dataset.meal);
+    });
+    container.querySelectorAll(".removeManualMeal").forEach((button) => {
+      button.onclick = () => removeManualMeal(button.dataset.date, button.dataset.meal);
+    });
+    // .moveMeal bleibt bewusst der nachfolgenden Rollover-Review-Schicht überlassen.
   }
-
-  let todayCard = document.getElementById("todayCard");
-  todayCard?.addEventListener("click", handleTodayMealAction);
 
   function renderUnifiedTodayCard() {
     let card = document.getElementById("todayCard");
@@ -428,6 +421,7 @@
     card.innerHTML = `<div class="row"><div class="grow"><h2>${todayHeading}</h2><div class="small">${nice(on, true)} · ${age} Monate</div></div>${todayBadge}</div>${progressStatus}${todayHtml}<div class="add-meal-row"><button class="btn secondary smallbtn" id="homeAddEntry">＋ Essen eintragen</button></div>`;
 
     decorateMealCards(card);
+    bindTodayMealActions(card);
     if (typeof bindInactiveMealActions === "function") bindInactiveMealActions();
     let freeLog = document.getElementById("homeFreeLog");
     if (freeLog) freeLog.onclick = () => openLog(null);
@@ -448,6 +442,7 @@
 
   root.__mealCardUnification = {
     compactStockBadgeData,
+    bindTodayMealActions,
     decorateMealCards,
     decoratePlanDays,
     renderUnifiedTodayCard,

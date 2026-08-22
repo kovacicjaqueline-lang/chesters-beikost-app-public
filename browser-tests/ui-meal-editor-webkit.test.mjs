@@ -152,7 +152,7 @@ try {
   await search.fill("Banane");
   await page.locator('.selectFood[data-food="banane"]').click();
   await page.locator("#confirmManualMeal").click();
-  await page.locator(`.removeManualMeal[data-date="${dates.today}"][data-meal="lunch"]`).waitFor();
+  await page.locator(`#todayCard .removeManualMeal[data-date="${dates.today}"][data-meal="lunch"]`).waitFor();
   let savedState = await page.evaluate(() => window.__beikostTest.getState());
   assert.ok(savedState.manualMeals[`${dates.today}|lunch`], "neu für heute angelegte Mahlzeit muss unter dem heutigen Schlüssel gespeichert sein");
 
@@ -203,7 +203,7 @@ try {
   assert.equal(savedState.planLocks[`${dates.today}|lunch`].foodPreparationKeys.pfirsich, editedPeachPreparationKey, "bearbeiteter Planner-Lock muss Pfirsich-Darreichung speichern");
   assert.equal(savedState.planLocks[`${dates.today}|lunch`].manualAdded, false, "bearbeiteter Planner-Slot bleibt von einer Zusatzmahlzeit unterscheidbar");
 
-  const lockedPlannerCard = page.locator(".mealbox").filter({
+  const lockedPlannerCard = page.locator("#blockPlan .mealbox").filter({
     has: page.locator(`.replaceMeal[data-date="${dates.today}"][data-meal="lunch"]`),
   });
   const lockedPlannerTitle = await lockedPlannerCard.locator(".dish-title").innerText();
@@ -252,11 +252,11 @@ try {
   await peachPreparation.selectOption(peachPreparationKey);
 
   await page.locator("#confirmManualMeal").click();
-  await page.locator(`.removeManualMeal[data-date="${dates.future}"][data-meal="breakfast"]`).waitFor();
+  await page.locator(`#blockPlan .removeManualMeal[data-date="${dates.future}"][data-meal="breakfast"]`).waitFor();
   assert.equal(await page.locator("#genericModal").evaluate((element) => element.classList.contains("open")), false, "Editor muss nach Save geschlossen sein");
   assert.notEqual(await page.locator("main").evaluate((element) => getComputedStyle(element).visibility), "hidden", "Plan darf nach Save nicht leer/unsichtbar bleiben");
 
-  let manualCard = page.locator(".manual-meal").filter({
+  let manualCard = page.locator("#blockPlan .manual-meal").filter({
     has: page.locator(`.removeManualMeal[data-date="${dates.future}"][data-meal="breakfast"]`),
   });
   assert.match(await manualCard.locator(".manual-meal-title").innerText(), /Banane.*Pfirsich.*Einführung/, "Kartentitel muss Hauptbasis und Einführung repräsentieren");
@@ -275,31 +275,31 @@ try {
   await page.locator("#manualMealTargetDate").fill(dates.today);
   await page.locator("#manualMealTargetDate").dispatchEvent("change");
   await page.locator("#confirmManualMeal").click();
-  await page.locator(`.removeManualMeal[data-date="${dates.today}"][data-meal="breakfast"]`).waitFor();
+  await page.locator(`#blockPlan .removeManualMeal[data-date="${dates.today}"][data-meal="breakfast"]`).waitFor();
 
   savedState = await page.evaluate(() => window.__beikostTest.getState());
   assert.equal(savedState.manualMeals[`${dates.future}|breakfast`], undefined, "alter Zukunftsschlüssel muss entfernt werden");
   assert.equal(savedState.manualMeals[`${dates.today}|breakfast`].foodPreparationKeys.banane, preparationKey, "Darreichung muss beim Verschieben auf heute erhalten bleiben");
   assert.equal(savedState.manualMeals[`${dates.today}|breakfast`].foodPreparationKeys.pfirsich, peachPreparationKey, "Kostproben-Darreichung muss beim Verschieben erhalten bleiben");
 
-  manualCard = page.locator(".manual-meal").filter({
+  manualCard = page.locator("#blockPlan .manual-meal").filter({
     has: page.locator(`.removeManualMeal[data-date="${dates.today}"][data-meal="breakfast"]`),
   });
   await manualCard.locator(".replaceMeal").click();
   await page.locator("#manualMealTargetDate").fill(dates.past);
   await page.locator("#manualMealTargetDate").dispatchEvent("change");
   await page.locator("#confirmManualMeal").click();
-  await page.locator(`.removeManualMeal[data-date="${dates.past}"][data-meal="breakfast"]`).waitFor();
+  await page.locator(`#blockPlan .removeManualMeal[data-date="${dates.past}"][data-meal="breakfast"]`).waitFor();
 
   savedState = await page.evaluate(() => window.__beikostTest.getState());
   assert.equal(savedState.settings.planFrom, dates.past, "vergangener Zieltag muss nach Save sichtbar gemacht werden");
   assert.equal(savedState.manualMeals[`${dates.today}|breakfast`], undefined, "heutiger Quellschlüssel muss nach Rückdatierung entfernt sein");
 
-  manualCard = page.locator(".manual-meal").filter({
+  manualCard = page.locator("#blockPlan .manual-meal").filter({
     has: page.locator(`.removeManualMeal[data-date="${dates.past}"][data-meal="breakfast"]`),
   });
   await manualCard.locator(".moveMeal").click();
-  await page.locator(`.removeManualMeal[data-date="${dates.today}"][data-meal="breakfast"]`).waitFor({ state: "attached" });
+  await page.locator(`#blockPlan .removeManualMeal[data-date="${dates.today}"][data-meal="breakfast"]`).waitFor({ state: "attached" });
   savedState = await page.evaluate(() => window.__beikostTest.getState());
   assert.equal(savedState.manualMeals[`${dates.today}|breakfast`].foodPreparationKeys.banane, preparationKey, "Auf morgen darf die explizite Darreichung nicht verlieren");
   assert.equal(savedState.manualMeals[`${dates.today}|breakfast`].foodPreparationKeys.pfirsich, peachPreparationKey, "Auf morgen darf die Kostproben-Darreichung nicht verlieren");
@@ -307,7 +307,7 @@ try {
 
   // Review-Regression: Wird im Protokoll ein Lebensmittel entfernt, darf dessen
   // vorher geplante Darreichung nicht als veralteter Schlüssel im Log verbleiben.
-  manualCard = page.locator(".manual-meal").filter({
+  manualCard = page.locator("#blockPlan .manual-meal").filter({
     has: page.locator(`.removeManualMeal[data-date="${dates.today}"][data-meal="breakfast"]`),
   });
   await manualCard.evaluate((element) => { element.open = true; });

@@ -423,24 +423,10 @@
   --recipe-omelett-top: -35.822%;
 }
 
-/* UI-08 Review: Der Wochenplan-Kopf bleibt eine einzelne Karte. Planbasis,
- * Lock-Status, Qualitätswarnung und seltene Aktionen werden nur über Reihenfolge,
- * Typografie und Abstand gewichtet – ohne zusätzliche Karten oder Pills. */
-#plan .plan-toolbar {
-  display: flex;
-  flex-direction: column;
-}
-
-#plan .plan-heading {
-  order: 1;
-}
-
-#plan .plan-controls {
-  order: 2;
-}
-
+/* UI-08 Review: Der Wochenplan-Kopf bleibt eine einzelne Karte. Planbasis und
+ * Lock-Status werden über Typografie und Abstand gewichtet; die DOM-Reihenfolge
+ * entspricht zugleich der sichtbaren und assistiven Lesereihenfolge. */
 #plan .plan-defaults.plan-defaults-compact {
-  order: 3;
   margin-top: 10px;
 }
 
@@ -451,7 +437,6 @@
 }
 
 #plan .plan-lock-strip {
-  order: 4;
   min-height: 0;
   margin-top: 4px;
   padding: 0;
@@ -469,12 +454,4 @@
   color: var(--muted);
   font-size: 12px;
   line-height: 1.35;
-}
-
-#plan #planQuality {
-  order: 5;
-}
-
-#plan .plan-secondary-actions {
-  order: 6;
 }

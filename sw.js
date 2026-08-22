@@ -122,10 +122,17 @@ const UI_PRECACHE = [
   "./js/catalog-navigation.js",
 ];
 
+// Laufzeitergänzte Rezepte haben eigene Recipe-V2-Assets und müssen ebenso beim
+// ersten Offline-Start verfügbar sein wie der statische Recipe-V2-Katalog.
+const RECIPE_RUNTIME_PRECACHE = [
+  "./assets/illustrations-v2/recipes/pizza-wrap.svg",
+  "./assets/illustrations-v2/recipes/chicken-fajita-wrap.svg",
+];
+
 self.addEventListener("install", (event) => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE);
-    await Promise.all([...PLAN08_PRECACHE, ...HANDLING_PRECACHE, ...UNIFIED_LOG_PRECACHE, ...UI_PRECACHE].map(async (url) => {
+    await Promise.all([...PLAN08_PRECACHE, ...HANDLING_PRECACHE, ...UNIFIED_LOG_PRECACHE, ...UI_PRECACHE, ...RECIPE_RUNTIME_PRECACHE].map(async (url) => {
       try {
         const response = await fetch(new Request(url, { cache: "reload" }));
         if (response && response.ok) await cache.put(url, response.clone());

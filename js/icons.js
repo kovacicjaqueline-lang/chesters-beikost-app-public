@@ -316,7 +316,10 @@ const RECIPE_ICON_PATHS = Object.freeze({
 });
 
 const RECIPE_RUNTIME_ICON_ALIASES = Object.freeze({
-  "Bananen-Ei-Pancakes": RECIPE_ICON_PATHS["Buchweizen-Bananen-Pancakes"]
+  "Bananen-Ei-Pancakes": RECIPE_ICON_PATHS["Buchweizen-Bananen-Pancakes"],
+  "Huhn-Zucchini-Nockerl": RECIPE_ICON_PATHS["Gemüse-Fleisch-Nockerl"],
+  "Rind-Karotten-Nockerl": "assets/illustrations-v2/recipes/rind-karotten-nockerl.svg",
+  "Linsen-Süßkartoffel-Nockerl": "assets/illustrations-v2/recipes/linsen-suesskartoffel-nockerl.svg"
 });
 
 function foodIllustrationPath(f){

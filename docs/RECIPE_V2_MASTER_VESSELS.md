@@ -61,4 +61,4 @@ Es darf im Rahmen dieser Regel **kein zusätzliches Master-Gefäß eigenmächtig
 
 ## Freigabe-Gate
 
-Diese Master-Gefäß-Festlegung ist Voraussetzung für jede weitere Recipe-V2-Arbeit, die eines dieser Gefäße verwendet. Neue entsprechende Recipe-V2-Icons sollen erst auf Basis dieser geklärten und freigegebenen Referenzzuordnung erzeugt werden.
+Diese Master-Gefäß-Festlegung ist Voraussetzung für jede weitere Recipe-V2-Arbeit, die eines dieser Gefäße verwendet. **Solange diese Referenzzuordnung nicht freigegeben und in den maßgeblichen Branch übernommen ist, dürfen keine neuen Recipe-V2-Icons auf Basis eines dieser Master-Gefäße erzeugt oder überarbeitet werden.**

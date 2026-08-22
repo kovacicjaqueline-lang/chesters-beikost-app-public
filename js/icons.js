@@ -316,7 +316,9 @@ const RECIPE_ICON_PATHS = Object.freeze({
 });
 
 const RECIPE_RUNTIME_ICON_ALIASES = Object.freeze({
-  "Bananen-Ei-Pancakes": RECIPE_ICON_PATHS["Buchweizen-Bananen-Pancakes"]
+  "Bananen-Ei-Pancakes": RECIPE_ICON_PATHS["Buchweizen-Bananen-Pancakes"],
+  "Pizza Wrap": "assets/illustrations-v2/recipes/pizza-wrap.svg",
+  "Chicken Fajita Wrap": "assets/illustrations-v2/recipes/chicken-fajita-wrap.svg"
 });
 
 function foodIllustrationPath(f){

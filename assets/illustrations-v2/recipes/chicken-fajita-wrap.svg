@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" fill="none">
+  <defs>
+    <linearGradient id="wrap" x1="31" y1="24" x2="93" y2="103" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F6DCA2"/>
+      <stop offset="1" stop-color="#D5A45C"/>
+    </linearGradient>
+    <linearGradient id="chicken" x1="52" y1="41" x2="74" y2="74" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F2C58B"/>
+      <stop offset="1" stop-color="#C98D58"/>
+    </linearGradient>
+  </defs>
+  <path d="M35 28C37 24 42 22 46 24L88 45C92 47 94 52 92 56L72 98C70 103 64 105 60 102L25 75C21 72 20 67 22 63L35 28Z" fill="url(#wrap)" stroke="#986A35" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M44 38L82 57L71 80L35 58L44 38Z" fill="#FFF4D2"/>
+  <path d="M50 40L60 45L52 62L42 57L50 40Z" fill="url(#chicken)" stroke="#A66C45" stroke-width="2"/>
+  <path d="M62 46L72 51L63 69L53 64L62 46Z" fill="url(#chicken)" stroke="#A66C45" stroke-width="2"/>
+  <path d="M73 51L83 57L74 75L64 69L73 51Z" fill="url(#chicken)" stroke="#A66C45" stroke-width="2"/>
+  <path d="M40 50C47 49 52 53 57 57" stroke="#D84D45" stroke-width="6" stroke-linecap="round"/>
+  <path d="M58 58C64 57 70 61 75 65" stroke="#D84D45" stroke-width="6" stroke-linecap="round"/>
+  <path d="M44 62C50 60 56 63 61 68" stroke="#C99355" stroke-width="5" stroke-linecap="round"/>
+  <path d="M47 70C53 68 60 72 65 76" stroke="#EFE7D7" stroke-width="4" stroke-linecap="round"/>
+  <path d="M25 75L60 102C64 105 70 103 72 98L78 86L40 62L25 75Z" fill="url(#wrap)" fill-opacity="0.96"/>
+  <path d="M78 86L90 92C94 94 96 99 94 103C92 107 87 109 83 107L72 101L78 86Z" fill="url(#wrap)" stroke="#986A35" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M78 87L87 91" stroke="#D84D45" stroke-width="3" stroke-linecap="round"/>
+  <path d="M76 94L84 98" stroke="#F1C184" stroke-width="3" stroke-linecap="round"/>
+</svg>

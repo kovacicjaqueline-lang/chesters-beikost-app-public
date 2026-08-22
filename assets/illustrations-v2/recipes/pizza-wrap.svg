@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" fill="none">
+  <defs>
+    <linearGradient id="tortilla" x1="30" y1="28" x2="96" y2="101" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F6D99B"/>
+      <stop offset="1" stop-color="#D9A85D"/>
+    </linearGradient>
+    <linearGradient id="cheese" x1="42" y1="55" x2="91" y2="82" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFE18A"/>
+      <stop offset="1" stop-color="#F2B84B"/>
+    </linearGradient>
+  </defs>
+  <path d="M24 35C24 28.9 28.9 24 35 24H91C97.1 24 102 28.9 102 35V75C102 81.1 97.1 86 91 86H35C28.9 86 24 81.1 24 75V35Z" fill="url(#tortilla)" stroke="#9C6A33" stroke-width="3"/>
+  <path d="M30 54H96V74C96 77.3 93.3 80 90 80H36C32.7 80 30 77.3 30 74V54Z" fill="#C94B3C"/>
+  <path d="M34 48C44 42 55 44 63 49C72 43 84 42 94 48V59C84 55 73 57 63 62C53 57 44 55 34 59V48Z" fill="url(#cheese)"/>
+  <ellipse cx="45" cy="59" rx="7" ry="5" fill="#A98267"/>
+  <path d="M44 54C44 49.6 47.6 46 52 46C56.4 46 60 49.6 60 54H44Z" fill="#B99B7D"/>
+  <path d="M72 48L82 52L78 62L68 58L72 48Z" fill="#79A85C"/>
+  <path d="M84 55L92 58L88 67L80 64L84 55Z" fill="#D85C48"/>
+  <path d="M28 85L63 61L99 85L63 104L28 85Z" fill="url(#tortilla)" stroke="#9C6A33" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M38 84L63 68L89 84L63 97L38 84Z" fill="#F2C46E"/>
+  <circle cx="53" cy="82" r="4" fill="#D85C48"/>
+  <circle cx="72" cy="84" r="4" fill="#79A85C"/>
+  <path d="M57 89C62 86 68 86 73 89" stroke="#F9E3A1" stroke-width="4" stroke-linecap="round"/>
+</svg>

@@ -10,6 +10,7 @@ const {
   clonePlain,
   duplicateGroups,
   evaluateDeclaredValue,
+  matchingBracket,
   normalizeRepoPath,
   parsePrecacheFiles,
   rawStringMappingEntries,
@@ -29,11 +30,23 @@ function v2SvgFiles(directory, prefix) {
     .sort();
 }
 
+function parseNamedStringArray(source, name) {
+  const marker = source.indexOf(`const ${name} = [`);
+  assert.notEqual(marker, -1, `${name}: Precache-Deklaration fehlt`);
+  const open = source.indexOf("[", marker);
+  const close = matchingBracket(source, open);
+  return Array.from(
+    vm.runInNewContext(source.slice(open, close + 1), Object.create(null), { timeout: 2_000 }),
+    normalizeRepoPath,
+  );
+}
+
 const iconSource = read("js/icons.js");
 const appSource = read("app.js");
 const foodDataSource = read("data/foods.js");
 const recipeDataSource = read("data/recipes.js");
 const serviceWorkerCore = read("sw-core.js");
+const serviceWorker = read("sw.js");
 const canonicalFoods = evaluateDeclaredValue(foodDataSource, "FOOD_DB", "data/foods.js");
 const recipes = evaluateDeclaredValue(recipeDataSource, "RECIPES", "data/recipes.js");
 
@@ -55,12 +68,13 @@ function loadEffectiveIconRuntime() {
   ]) context[name] = () => null;
 
   vm.createContext(context);
-  vm.runInContext(`${iconSource}\n;this.__icons = { FOOD_ICON_PATHS, RECIPE_ICON_PATHS };`, context, { filename: "js/icons.js", timeout: 2_000 });
+  vm.runInContext(`${iconSource}\n;this.__icons = { FOOD_ICON_PATHS, RECIPE_ICON_PATHS, RECIPE_RUNTIME_ICON_ALIASES };`, context, { filename: "js/icons.js", timeout: 2_000 });
   vm.runInContext(`${appSource}\n;this.__install = installFoodPolicyRuntime;`, context, { filename: "app.js", timeout: 2_000 });
   vm.runInContext("__install(); this.__foods = FOOD_DB; this.__foodPath = foodIllustrationPath;", context, { timeout: 2_000 });
   return {
     foodPaths: clonePlain(context.__icons.FOOD_ICON_PATHS),
     recipePaths: clonePlain(context.__icons.RECIPE_ICON_PATHS),
+    runtimeRecipePaths: clonePlain(context.__icons.RECIPE_RUNTIME_ICON_ALIASES),
     runtimeFoods: clonePlain(context.__foods),
     foodIllustrationPath: context.__foodPath,
   };
@@ -72,7 +86,8 @@ const recipeEntries = rawStringMappingEntries(iconSource, "RECIPE_ICON_PATHS");
 const foodAssets = v2SvgFiles(path.join(ROOT, "assets/illustrations-v2/foods"), "assets/illustrations-v2/foods");
 const recipeAssets = v2SvgFiles(path.join(ROOT, "assets/illustrations-v2/recipes"), "assets/illustrations-v2/recipes");
 const allAssets = [...foodAssets, ...recipeAssets].sort();
-const precacheFiles = parsePrecacheFiles(serviceWorkerCore);
+const corePrecacheFiles = parsePrecacheFiles(serviceWorkerCore);
+const runtimeRecipePrecache = parseNamedStringArray(serviceWorker, "RECIPE_RUNTIME_PRECACHE");
 
 function effectiveFoodMappingId(food) {
   if (food?.illustrationId && runtime.foodPaths[food.illustrationId]) return food.illustrationId;
@@ -100,6 +115,10 @@ test("aktive FOOD-/Recipe-Mappings zeigen auf existente V2-Assets", () => {
     assert.match(relativePath, /^assets\/illustrations-v2\/recipes\/[^/]+\.svg$/, `${name}: Recipe-Mapping außerhalb Recipe-V2`);
     assert.ok(fs.existsSync(path.join(ROOT, relativePath)), `${name}: Recipe-Asset fehlt: ${relativePath}`);
   }
+  for (const [name, relativePath] of Object.entries(runtime.runtimeRecipePaths)) {
+    assert.match(relativePath, /^assets\/illustrations-v2\/recipes\/[^/]+\.svg$/, `${name}: Runtime-Recipe-Mapping außerhalb Recipe-V2`);
+    assert.ok(fs.existsSync(path.join(ROOT, relativePath)), `${name}: Runtime-Recipe-Asset fehlt: ${relativePath}`);
+  }
 
   const activeFoodMappingIds = [...new Set(runtime.runtimeFoods
     .filter((food) => food.active !== false)
@@ -109,6 +128,9 @@ test("aktive FOOD-/Recipe-Mappings zeigen auf existente V2-Assets", () => {
 
   const activeRecipeNames = recipes.filter((recipe) => recipe.active !== false).map((recipe) => recipe.name).sort((a, b) => a.localeCompare(b, "de"));
   assert.deepEqual(Object.keys(runtime.recipePaths).sort((a, b) => a.localeCompare(b, "de")), activeRecipeNames, "RECIPE_ICON_PATHS enthält verwaiste oder fehlende aktive Mapping-Schlüssel");
+  assert.equal(runtime.runtimeRecipePaths["Pizza Wrap"], "assets/illustrations-v2/recipes/pizza-wrap.svg");
+  assert.equal(runtime.runtimeRecipePaths["Chicken Fajita Wrap"], "assets/illustrations-v2/recipes/chicken-fajita-wrap.svg");
+  assert.notEqual(runtime.runtimeRecipePaths["Pizza Wrap"], runtime.runtimeRecipePaths["Chicken Fajita Wrap"]);
 });
 
 test("Runtime-FOODs: keine dokumentierten V2-Soll/Ist-Gaps bleiben offen", () => {
@@ -137,10 +159,21 @@ test("Runtime-FOOD-Illustration berücksichtigt illustrationId und id-Fallback e
 });
 
 test("V2-Mappings, Dateibestand und Service-Worker-Precache sind exakt deckungsgleich", () => {
-  const referenced = [...Object.values(runtime.foodPaths), ...Object.values(runtime.recipePaths)].map(normalizeRepoPath).sort();
+  const referenced = [...new Set([
+    ...Object.values(runtime.foodPaths),
+    ...Object.values(runtime.recipePaths),
+    ...Object.values(runtime.runtimeRecipePaths),
+  ].map(normalizeRepoPath))].sort();
   assert.deepEqual(allAssets, referenced, "unreferenzierte V2-Assets oder Mapping auf nicht vorhandene V2-Datei");
-  const precached = precacheFiles.filter((item) => item.startsWith("assets/illustrations-v2/") && item.endsWith(".svg")).sort();
+
+  const precached = [...new Set([...corePrecacheFiles, ...runtimeRecipePrecache])]
+    .filter((item) => item.startsWith("assets/illustrations-v2/") && item.endsWith(".svg"))
+    .sort();
   assert.deepEqual(precached, allAssets, "V2-Precache enthält fehlende, doppelte oder veraltete Assetpfade");
+  assert.deepEqual(runtimeRecipePrecache.sort(), [
+    "assets/illustrations-v2/recipes/chicken-fajita-wrap.svg",
+    "assets/illustrations-v2/recipes/pizza-wrap.svg",
+  ]);
 });
 
 test("sämtliche Food-/Recipe-V2-SVGs erfüllen 128×128, PNG-CRC/Decode und Alpha-Integrität", () => {

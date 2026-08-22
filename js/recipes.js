@@ -2,10 +2,11 @@
 
 /* Rezepte und Allergenplanung
  * Rezeptfreigabe nach gegessenen Zutaten, Konsistenzregeln, Karten und Allergenplanung.
- * Forschungs-/Datenstand 2026-08-20:
+ * Forschungs-/Datenstand 2026-08-22:
  * - alle Laufzeitrezepte mit reproduzierbaren Mengenangaben
  * - weiche Altersorientierung getrennt von hardMinMonths
  * - Gemüse-Fleisch-Nockerl in drei eigenständige Rezepte aufgeteilt
+ * - zwei quellengestützte Wrap-Rezepte als echte graded-bite-Referenzfälle ergänzt
  */
 
 const RECIPE_CATALOG_ADDITIONS = Object.freeze([
@@ -19,6 +20,33 @@ const RECIPE_CATALOG_ADDITIONS = Object.freeze([
     note: "Banane fein zerdrücken, mit dem Ei zu einem gleichmäßigen Teig verrühren und kleine flache Pancakes bei niedriger Hitze vollständig, aber weich durchgaren. Keine harte oder stark gebräunte Kruste.",
     searchAliases: Object.freeze([]),
     skillRequirement: "Nur weich und gut greifbar anbieten. Das Stück muss zwischen zwei Fingern leicht zerdrückbar sein; nur aufrecht sitzend und direkt beaufsichtigt anbieten.",
+  }),
+  Object.freeze({
+    name: "Pizza Wrap",
+    category: "family",
+    requires: Object.freeze(["Weizen", "Tomate", "Käse"]),
+    oneOf: Object.freeze(["Champignon", "Paprika", "Zucchini"]),
+    stage: 4,
+    batch: "1 großer gefüllter Doppel-Wrap · 4–6 Stücke",
+    ingredients: "2 Vollkorn-Wraps aus Weizen, 2 EL Tomatenmark, 2 EL Wasser, 30 g geriebener pasteurisierter Käse, 1 mittelgroßer Champignon und/oder ¼ Paprika und/oder etwa 2,5 cm Zucchini, 1 TL Olivenöl",
+    note: "Gemüse sehr fein würfeln und in wenig Öl etwa 5 Minuten weich dünsten. Tomatenmark mit Wasser verrühren. Einen Wrap in die Pfanne legen, mit Tomatenmischung bestreichen, weiches Gemüse und Käse daraufgeben, zweiten Wrap auflegen und leicht andrücken. Nur so lange erwärmen, dass der Käse schmilzt und der Wrap zusammenhält; für die Babyportion nicht knusprig oder hart toasten. Kurz abkühlen lassen und in gut greifbare Stücke schneiden.",
+    freezable: false,
+    tags: Object.freeze(["Fingerfood", "Familiengericht", "Snack"]),
+    searchAliases: Object.freeze(["Pizza-Wrap", "Wrap-Pizza"]),
+    skillRequirement: "Nur als weichen, zusammenhängenden und leicht gepressten Wrap ohne harte oder spröde Ränder anbieten. Gemüse muss weich sein; nur aufrecht sitzend und direkt beaufsichtigt anbieten.",
+  }),
+  Object.freeze({
+    name: "Chicken Fajita Wrap",
+    category: "family",
+    requires: Object.freeze(["Huhn", "Paprika", "Zwiebel", "Knoblauch", "Weizen", "Naturjoghurt"]),
+    stage: 4,
+    batch: "4 Familienportionen · je ½ mittelgroßer Wrap",
+    ingredients: "1¼ rote Paprika, 1½ kleine Zwiebeln, ½ TL Paprikapulver, ¼ TL mildes Chilipulver, 1 kleine Knoblauchzehe, ½ TL gemahlener Kreuzkümmel, 2 TL Pflanzenöl, 2 kleine Hühnerbrustfilets, pro Portion ½ mittelgroßer Weizen-Tortilla-Wrap und ½ EL Naturjoghurt",
+    note: "Paprika und Zwiebel in Streifen, Huhn in Fingerstreifen schneiden. Mit Knoblauch, milden Gewürzen und Öl vermengen und 5 Minuten im Kühlschrank marinieren. Huhn und Gemüse bei mittlerer Hitze 10–15 Minuten garen, bis das Huhn vollständig durchgegart und das Gemüse weich ist. Für jede Portion Huhn und Gemüse mit etwas Naturjoghurt mittig auf eine weiche Tortilla geben, eng aufrollen und in kleinere gut greifbare Abschnitte schneiden. Tortilla nicht hart oder trocken werden lassen.",
+    freezable: false,
+    tags: Object.freeze(["Fingerfood", "Familiengericht"]),
+    searchAliases: Object.freeze(["Huhn-Fajita-Wrap", "Chicken Fajitas"]),
+    skillRequirement: "Huhn vollständig durchgaren und zart halten, Gemüse weich garen und die Tortilla weich lassen. Den eng gerollten Wrap nur in beherrschbaren Abschnitten und direkt beaufsichtigt anbieten.",
   }),
 ]);
 
@@ -137,6 +165,8 @@ const RECIPE_RESEARCH_GUIDANCE = Object.freeze({
   "Huhn-Zucchini-Nockerl": Object.freeze(["60 g vollständig gegartes fein zerkleinertes Huhn, 80 g sehr weich gegarte und gut ausgedrückte Zucchini, 1 Ei, 45 g Weizenmehl oder feiner Weizengrieß, 5 ml Rapsöl, bei Bedarf bis zu 15 ml Wasser", 7]),
   "Rind-Karotten-Nockerl": Object.freeze(["60 g vollständig gegartes fein zerkleinertes Rind, 80 g sehr weich gegarte Karotte oder Karottenpüree, 1 Ei, 45 g Weizenmehl oder feiner Weizengrieß, 5 ml Rapsöl, bei Bedarf bis zu 15 ml Wasser", 7]),
   "Linsen-Süßkartoffel-Nockerl": Object.freeze(["100 g sehr weich gekochte rote Linsen, 100 g Süßkartoffelpüree, 1 Ei, 40 g Weizenmehl oder feiner Weizengrieß, 5 ml Rapsöl", 7]),
+  "Pizza Wrap": Object.freeze(["2 Vollkorn-Wraps aus Weizen, 2 EL Tomatenmark, 2 EL Wasser, 30 g geriebener pasteurisierter Käse, 1 mittelgroßer Champignon und/oder ¼ Paprika und/oder etwa 2,5 cm Zucchini, 1 TL Olivenöl", 9]),
+  "Chicken Fajita Wrap": Object.freeze(["1¼ rote Paprika, 1½ kleine Zwiebeln, ½ TL Paprikapulver, ¼ TL mildes Chilipulver, 1 kleine Knoblauchzehe, ½ TL gemahlener Kreuzkümmel, 2 TL Pflanzenöl, 2 kleine Hühnerbrustfilets, pro Portion ½ mittelgroßer Weizen-Tortilla-Wrap und ½ EL Naturjoghurt", 12]),
 });
 
 const RECIPE_NOCKERL_SPLIT = Object.freeze([
@@ -215,7 +245,7 @@ function installRecipeResearchGuidance(recipes = typeof RECIPES !== "undefined" 
       recipe.minMonths = recommendation;
       changed = true;
     }
-    recipe.quantityGuidanceRevision = "2026-08-20";
+    recipe.quantityGuidanceRevision = "2026-08-22";
     recipe.ageGuidanceKind = "orientation";
   }
 

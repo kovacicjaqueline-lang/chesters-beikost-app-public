@@ -87,21 +87,9 @@
 
   globalScope.__plannerRolloverCascade = API;
 
-  // Die Review-Fixes müssen vor app.js und vor nachgelagerten UI-Dekoratoren laufen.
-  // Beim normalen Parser-Start lädt document.write die Zusatzmodule synchron.
-  const reviewFixSrc = "js/planner-log-rollover-review-fixes.js?v=10.1.26";
-  if (document.readyState === "loading") {
-    document.write(`<script src="${reviewFixSrc}"></scr` + `ipt>`);
-  } else {
-    let script = document.createElement("script");
-    script.src = reviewFixSrc;
-    script.async = false;
-    document.head.appendChild(script);
-  }
-
-  // Die gemeinsame Kartenpräsentation muss vor dem Tauschen-Dekorator stehen:
-  // So laufen Wochenplan und „Heute“ durch denselben renderMeal-/renderMealCore-Pfad
-  // und erhalten anschließend dieselbe Tauschen-Aktion ohne Today-Sondervariante.
+  // Die gemeinsame Kartenpräsentation wird zuerst installiert. Die nachfolgende
+  // Rollover-Review-Schicht bindet dadurch ihre bestehende „Auf morgen“-Semantik
+  // an die bereits vereinheitlichten Today-/Plan-Buttons statt an veraltetes DOM.
   const mealCardSrc = "js/meal-card-unification.js?v=10.1.26";
   if (document.readyState === "loading") {
     document.write(`<script src="${mealCardSrc}"></scr` + `ipt>`);
@@ -112,6 +100,20 @@
     document.head.appendChild(script);
   }
 
+  // Die Review-Fixes müssen weiterhin vor app.js und vor dem Tauschen-Dekorator
+  // laufen, damit bestehende Planner-/Rollover-Semantik unverändert bleibt.
+  const reviewFixSrc = "js/planner-log-rollover-review-fixes.js?v=10.1.26";
+  if (document.readyState === "loading") {
+    document.write(`<script src="${reviewFixSrc}"></scr` + `ipt>`);
+  } else {
+    let script = document.createElement("script");
+    script.src = reviewFixSrc;
+    script.async = false;
+    document.head.appendChild(script);
+  }
+
+  // Tauschen kommt zuletzt: Es erweitert denselben renderMealCore-Pfad, den
+  // sowohl der Wochenplan als auch „Heute“ bereits gemeinsam verwenden.
   const randomSwapSrc = "js/planner-random-swap.js?v=10.1.26";
   if (document.readyState === "loading") {
     document.write(`<script src="${randomSwapSrc}"></scr` + `ipt>`);

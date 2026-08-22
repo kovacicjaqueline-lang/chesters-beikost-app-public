@@ -48,6 +48,15 @@ test("FLOW-C dekoriert nur DOM-Struktur und überschreibt keine fachlichen Contr
   assert.equal(runtime.includes("textureStage"), false);
 });
 
+test("FLOW-C beobachtet den App-Boot nicht mit breiten Subtree-Observern", () => {
+  assert.match(runtime, /genericStateObserver\.observe\(genericModal,\s*\{\s*attributes:\s*true,\s*attributeFilter:\s*\["class"\],\s*\}\);/s);
+  assert.match(runtime, /logStateObserver\.observe\(logModal,\s*\{\s*attributes:\s*true,\s*attributeFilter:\s*\["class"\],\s*\}\);/s);
+  assert.match(runtime, /genericContentObserver\.observe\(genericBody,\s*\{\s*childList:\s*true,\s*subtree:\s*true,\s*characterData:\s*true,\s*\}\);/s);
+  assert.match(runtime, /logContentObserver\.observe\(logBody,\s*\{\s*childList:\s*true,\s*subtree:\s*true,\s*characterData:\s*true,\s*\}\);/s);
+  assert.doesNotMatch(runtime, /observe\(genericModal,[\s\S]{0,180}subtree:\s*true/);
+  assert.doesNotMatch(runtime, /observe\(logModal,[\s\S]{0,180}subtree:\s*true/);
+});
+
 test("Mobile-Dialoge nutzen einen nativen Sheet-Scroll ohne verschachtelte Ergebnis-Scroller", () => {
   assert.match(css, /max-height:\s*92dvh/);
   assert.match(css, /overflow-y:\s*auto/);

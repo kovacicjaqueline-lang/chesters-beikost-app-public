@@ -17,6 +17,11 @@
   const logBody = document.getElementById("logForm");
   if (!genericModal || !logModal || !genericTitle || !genericBody || !logBody) return;
 
+  let genericContentObserver = null;
+  let logContentObserver = null;
+  let genericOpen = genericModal.classList.contains("open");
+  let logOpen = logModal.classList.contains("open");
+
   function setText(node, value) {
     if (node && node.textContent !== value) node.textContent = value;
   }
@@ -70,6 +75,18 @@
     markSections(body);
   }
 
+  function stopGenericContentObservation() {
+    if (!genericContentObserver) return;
+    genericContentObserver.disconnect();
+    genericContentObserver = null;
+  }
+
+  function stopLogContentObservation() {
+    if (!logContentObserver) return;
+    logContentObserver.disconnect();
+    logContentObserver = null;
+  }
+
   function resetGeneric() {
     genericModal.classList.remove("flow-dialog");
     delete genericModal.dataset.flowDialogContext;
@@ -82,6 +99,7 @@
 
   function syncGeneric() {
     if (!genericModal.classList.contains("open")) {
+      stopGenericContentObservation();
       resetGeneric();
       return;
     }
@@ -97,6 +115,7 @@
     let isMealEditor = /^(Mahlzeit hinzufügen|Mahlzeit bearbeiten)$/.test(rawTitle) &&
       !!genericModal.dataset.flowDialogContext;
     if (!isMealEditor) {
+      stopGenericContentObservation();
       resetGeneric();
       return;
     }
@@ -105,30 +124,56 @@
     let date = document.getElementById("manualMealTargetDate")?.value || "";
     setText(subtitle, [visibleDate(date), genericModal.dataset.flowDialogContext].filter(Boolean).join(" · "));
     decorate(genericModal, genericBody, subtitle);
+
+    if (!genericContentObserver) {
+      genericContentObserver = new MutationObserver(syncGeneric);
+      genericContentObserver.observe(genericBody, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      });
+    }
   }
 
   function syncLog() {
-    if (!logModal.classList.contains("open")) return;
+    if (!logModal.classList.contains("open")) {
+      stopLogContentObservation();
+      return;
+    }
+
     let subtitle = document.getElementById("logSubtitle");
     decorate(logModal, logBody, subtitle);
+
+    if (!logContentObserver) {
+      logContentObserver = new MutationObserver(syncLog);
+      logContentObserver.observe(logBody, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      });
+    }
   }
 
-  const genericObserver = new MutationObserver(syncGeneric);
-  genericObserver.observe(genericModal, {
+  const genericStateObserver = new MutationObserver(() => {
+    const open = genericModal.classList.contains("open");
+    if (open === genericOpen) return;
+    genericOpen = open;
+    syncGeneric();
+  });
+  genericStateObserver.observe(genericModal, {
     attributes: true,
     attributeFilter: ["class"],
-    childList: true,
-    subtree: true,
-    characterData: true,
   });
 
-  const logObserver = new MutationObserver(syncLog);
-  logObserver.observe(logModal, {
+  const logStateObserver = new MutationObserver(() => {
+    const open = logModal.classList.contains("open");
+    if (open === logOpen) return;
+    logOpen = open;
+    syncLog();
+  });
+  logStateObserver.observe(logModal, {
     attributes: true,
     attributeFilter: ["class"],
-    childList: true,
-    subtree: true,
-    characterData: true,
   });
 
   genericModal.addEventListener("change", (event) => {

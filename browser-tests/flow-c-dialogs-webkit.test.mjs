@@ -68,7 +68,11 @@ try {
   await page.waitForFunction(() => !!window.__beikostTest?.getState && window.__flowDialogUiInstalled === true);
 
   // Freier Essenseintrag: gleiche Shell, aber weiterhin ohne erzwungenen Mahlzeitenkontext.
-  await page.evaluate(() => { window.__beikostTest.reset(); window.openLog(null); });
+  const freeLogBaseline = await page.evaluate(() => {
+    window.__beikostTest.reset();
+    return window.__beikostTest.getState().logs;
+  });
+  await page.evaluate(() => window.openLog(null));
   await page.waitForFunction(() => document.getElementById("logForm")?.classList.contains("flow-dialog-body"));
   assert.equal(await page.locator("#logModal").evaluate((node) => node.classList.contains("flow-dialog")), true);
   assert.equal(await page.locator("#logTitle").textContent(), "Essen eintragen");
@@ -78,7 +82,11 @@ try {
   assert.equal(await page.locator(".log-food-results").evaluate((node) => getComputedStyle(node).overflowY), "visible");
   assertInsideViewport(await page.locator("#logForm .flow-dialog-actions").boundingBox(), width, height, "Log-Aktionsleiste");
   await page.locator("#cancelLog").click();
-  assert.equal(await page.evaluate(() => window.__beikostTest.getState().logs.length), 0, "Abbrechen darf keinen Eintrag erzeugen");
+  assert.deepEqual(
+    await page.evaluate(() => window.__beikostTest.getState().logs),
+    freeLogBaseline,
+    "Abbrechen darf den bestehenden Protokollzustand nicht verändern",
+  );
 
   // Bestehenden Eintrag bearbeiten: gleicher Dialog, bestehender Datensatz bleibt derselbe Flow.
   await page.evaluate(() => {

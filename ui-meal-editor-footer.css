@@ -422,3 +422,36 @@
   --recipe-omelett-left: -35.156%;
   --recipe-omelett-top: -35.822%;
 }
+
+/* UI-08 Review: Der Wochenplan-Kopf bleibt eine einzelne Karte. Planbasis und
+ * Lock-Status werden über Typografie und Abstand gewichtet; die DOM-Reihenfolge
+ * entspricht zugleich der sichtbaren und assistiven Lesereihenfolge. */
+#plan .plan-defaults.plan-defaults-compact {
+  margin-top: 10px;
+}
+
+#plan .plan-defaults-compact .plan-defaults-line {
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+#plan .plan-lock-strip {
+  min-height: 0;
+  margin-top: 4px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+#plan .plan-lock-strip:not(:has(.plan-lock-text > b)) {
+  display: none;
+}
+
+#plan .plan-lock-text {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}

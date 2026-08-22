@@ -55,12 +55,13 @@ function loadEffectiveIconRuntime() {
   ]) context[name] = () => null;
 
   vm.createContext(context);
-  vm.runInContext(`${iconSource}\n;this.__icons = { FOOD_ICON_PATHS, RECIPE_ICON_PATHS };`, context, { filename: "js/icons.js", timeout: 2_000 });
+  vm.runInContext(`${iconSource}\n;this.__icons = { FOOD_ICON_PATHS, RECIPE_ICON_PATHS, RECIPE_RUNTIME_ICON_ALIASES };`, context, { filename: "js/icons.js", timeout: 2_000 });
   vm.runInContext(`${appSource}\n;this.__install = installFoodPolicyRuntime;`, context, { filename: "app.js", timeout: 2_000 });
   vm.runInContext("__install(); this.__foods = FOOD_DB; this.__foodPath = foodIllustrationPath;", context, { timeout: 2_000 });
   return {
     foodPaths: clonePlain(context.__icons.FOOD_ICON_PATHS),
     recipePaths: clonePlain(context.__icons.RECIPE_ICON_PATHS),
+    recipeAliases: clonePlain(context.__icons.RECIPE_RUNTIME_ICON_ALIASES),
     runtimeFoods: clonePlain(context.__foods),
     foodIllustrationPath: context.__foodPath,
   };
@@ -111,6 +112,16 @@ test("aktive FOOD-/Recipe-Mappings zeigen auf existente V2-Assets", () => {
   assert.deepEqual(Object.keys(runtime.recipePaths).sort((a, b) => a.localeCompare(b, "de")), activeRecipeNames, "RECIPE_ICON_PATHS enthält verwaiste oder fehlende aktive Mapping-Schlüssel");
 });
 
+test("Runtime-Nockerl-Aliase lösen alle drei gesplitteten Rezepte eindeutig auf", () => {
+  const names = ["Huhn-Zucchini-Nockerl", "Rind-Karotten-Nockerl", "Linsen-Süßkartoffel-Nockerl"];
+  const paths = names.map((name) => runtime.recipeAliases[name]);
+  for (let index = 0; index < names.length; index += 1) {
+    assert.match(paths[index] || "", /^assets\/illustrations-v2\/recipes\/[^/]+\.svg$/, `${names[index]}: Runtime-Icon fehlt`);
+    assert.ok(fs.existsSync(path.join(ROOT, paths[index])), `${names[index]}: Runtime-Asset fehlt`);
+  }
+  assert.equal(new Set(paths).size, names.length, "die drei Nockerl-Runtime-Rezepte müssen drei unterschiedliche Motive verwenden");
+});
+
 test("Runtime-FOODs: keine dokumentierten V2-Soll/Ist-Gaps bleiben offen", () => {
   const missing = runtime.runtimeFoods
     .filter((food) => food.active !== false && !effectiveFoodMappingId(food))
@@ -137,7 +148,11 @@ test("Runtime-FOOD-Illustration berücksichtigt illustrationId und id-Fallback e
 });
 
 test("V2-Mappings, Dateibestand und Service-Worker-Precache sind exakt deckungsgleich", () => {
-  const referenced = [...Object.values(runtime.foodPaths), ...Object.values(runtime.recipePaths)].map(normalizeRepoPath).sort();
+  const referenced = [...new Set([
+    ...Object.values(runtime.foodPaths),
+    ...Object.values(runtime.recipePaths),
+    ...Object.values(runtime.recipeAliases),
+  ])].map(normalizeRepoPath).sort();
   assert.deepEqual(allAssets, referenced, "unreferenzierte V2-Assets oder Mapping auf nicht vorhandene V2-Datei");
   const precached = precacheFiles.filter((item) => item.startsWith("assets/illustrations-v2/") && item.endsWith(".svg")).sort();
   assert.deepEqual(precached, allAssets, "V2-Precache enthält fehlende, doppelte oder veraltete Assetpfade");

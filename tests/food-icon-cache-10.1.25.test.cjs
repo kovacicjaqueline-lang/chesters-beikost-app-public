@@ -13,7 +13,7 @@ const appVersion = JSON.parse(fs.readFileSync(path.join(ROOT, "VERSION.json"), "
 const cacheVersion = appVersion.replace(/\./g, "-");
 
 test("finaler FOOD-Iconstand behält den frischen Service-Worker-Cache und die bestehende Kernlogik", () => {
-  assert.match(wrapper, /importScripts\("\.\/sw-core\.js"\)/);
+  assert.match(wrapper, /importScripts\("\.\/sw-core\.js(?:\?v=[^"]+)?"\)/);
   assert.match(core, new RegExp(`const CACHE='chester-beikost-v${cacheVersion}-icons-final'`));
   assert.match(core, /cache:'reload'/, "Kern-Precache muss Assets am HTTP-Cache vorbei frisch laden");
   assert.match(core, /keys\.filter\(key=>key!==CACHE\)\.map\(key=>caches\.delete\(key\)\)/, "alte App-Caches werden bei Aktivierung entfernt");

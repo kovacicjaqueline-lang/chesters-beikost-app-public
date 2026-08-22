@@ -72,7 +72,7 @@ test("FOOD/PLAN-08: normaler Planner und Recipe-first verwenden für reales Lega
 test("FOOD/PLAN-08: dynamische Planner-Policy-Kette wird bereits beim Service-Worker-Install gecacht", () => {
   const wrapper = source("sw.js");
   const core = source("sw-core.js");
-  assert.match(wrapper, /importScripts\("\.\/sw-core\.js"\)/);
+  assert.match(wrapper, /importScripts\("\.\/sw-core\.js(?:\?v=[^"]+)?"\)/);
   const required = [
     "./js/planner-meal-eligibility.js",
     "./js/planner-milk-policy.js",

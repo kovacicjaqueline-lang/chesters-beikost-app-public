@@ -23,7 +23,7 @@
 
   function stripVisibleLockLabel(html) {
     return String(html || "").replace(
-      /\s*<div class="tiny lock-label">[^<]*<\/div>/,
+      /\s*<div class="tiny lock-label">\s*Fest eingeplant\s*<\/div>/,
       "",
     );
   }

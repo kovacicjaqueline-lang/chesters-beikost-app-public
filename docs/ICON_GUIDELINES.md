@@ -29,6 +29,18 @@ Diese Asset-Regel ist Teil der allgemeinen Aufnahmebedingung aus `AGENTS.md`: Ne
 - Schatten nur dezent und direkt am Objekt, damit das Motiv auf unterschiedlichen UI-Hintergründen funktioniert.
 - Bei mehreren Objekten nur so viele verwenden, wie zur eindeutigen Erkennung sinnvoll sind.
 
+## Recipe-V2: Master-Gefäße
+
+Für Recipe-V2 gelten zusätzlich die verbindlichen Master-Gefäße aus [`RECIPE_V2_MASTER_VESSELS.md`](RECIPE_V2_MASTER_VESSELS.md):
+
+- **Master-Teller:** `assets/illustrations-v2/recipes/omelettstreifen.svg`
+- **Master-Schale:** `assets/illustrations-v2/recipes/obst-haferbrei.svg`
+- **Master-Topf:** `assets/illustrations-v2/recipes/arroz-caldo-inspiriert.svg`
+
+Verbindlich ist jeweils **nur das Gefäß**, nicht der Rezeptinhalt der Referenz. Form, Farbe, Materialwirkung, Rand, Perspektive, Ansicht und Gefäßbeleuchtung sind aus dem jeweiligen Referenz-Asset zu übernehmen. Insbesondere darf die Kameraposition bzw. Ansicht nicht frei neu interpretiert werden.
+
+Vor einer neuen Recipe-V2-Generierung mit Teller, Schale oder Topf muss die passende Master-Referenz geprüft und verwendet werden. Zusätzliche Master-Gefäße dürfen nicht eigenmächtig eingeführt werden. Die vollständige Referenzzuordnung, die festgehaltenen Ausgangs-Blobs und die Freigaberegeln stehen in `docs/RECIPE_V2_MASTER_VESSELS.md`.
+
 ## Fleisch und Fisch
 
 Fleisch und Fisch werden **niemals roh** dargestellt.

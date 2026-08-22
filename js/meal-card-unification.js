@@ -161,14 +161,16 @@
   };
 
   // Die Runtime wird dynamisch aus planned-recipe-details.js geladen. Nach dem
-  // initialen App-Start wird „Heute“ deshalb einmal neu gerendert, damit es keinen
-  // Unterschied zwischen Erstansicht und späteren Re-Renders gibt.
-  let refreshHome = () => {
+  // initialen App-Start werden beide betroffenen Ansichten einmal neu gerendert,
+  // damit auch bereits erzeugtes DOM sofort die gemeinsame Darstellung verwendet.
+  let refreshMealViews = () => {
     if (typeof renderHome === "function" && document.getElementById("todayCard"))
       renderHome();
+    if (typeof renderPlan === "function" && document.getElementById("blockPlan"))
+      renderPlan();
   };
   if (document.readyState === "loading")
-    document.addEventListener("DOMContentLoaded", refreshHome, { once: true });
+    document.addEventListener("DOMContentLoaded", refreshMealViews, { once: true });
   else
-    queueMicrotask(refreshHome);
+    queueMicrotask(refreshMealViews);
 })(typeof window !== "undefined" ? window : globalThis);

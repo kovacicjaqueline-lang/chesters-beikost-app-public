@@ -9,6 +9,13 @@
  */
 (function mealCardUnificationModule(root) {
   const expandedPlanDays = new Set();
+  const MEAL_SLOT_LABELS = new Set([
+    "frühstück",
+    "mittag",
+    "mittagessen",
+    "snack",
+    "abendessen",
+  ]);
 
   function normalizeComparable(value = "") {
     return String(value || "")
@@ -52,7 +59,8 @@
       .split("·")
       .map((part) => part.trim())
       .filter(Boolean);
-    return parts.at(-1) || "Mahlzeit";
+    let slot = parts.find((part) => MEAL_SLOT_LABELS.has(normalizeComparable(part)));
+    return slot || parts.at(-1) || "Mahlzeit";
   }
 
   function compactKnownMealMeta(mealNode) {
@@ -68,6 +76,16 @@
     statusNode?.remove();
   }
 
+  function manualMealRecord(mealNode) {
+    if (!mealNode?.classList?.contains("manual-meal")) return null;
+    let lock = mealNode.querySelector(".meal-lock[data-lock-date][data-lock-meal]");
+    if (!lock) return null;
+    let key = typeof planLockKey === "function"
+      ? planLockKey(lock.dataset.lockDate, lock.dataset.lockMeal)
+      : `${lock.dataset.lockDate}|${lock.dataset.lockMeal}`;
+    return state?.planLocks?.[key] || state?.manualMeals?.[key] || null;
+  }
+
   function ensureManualProtectionLabel(mealNode) {
     if (!mealNode?.classList?.contains("manual-meal")) return;
     let lock = mealNode.querySelector('.meal-lock.locked[title="Manuell geschützt"]');
@@ -79,11 +97,30 @@
     main.appendChild(label);
   }
 
+  function ensureManualStockBadge(mealNode) {
+    if (!mealNode?.classList?.contains("manual-meal")) return;
+    let main = mealNode.querySelector("summary .grow");
+    if (!main || main.querySelector(".meal-stock-row")) return;
+    let record = manualMealRecord(mealNode);
+    if (!record) return;
+    let badgeHtml = stockBadges(record);
+    if (!badgeHtml) return;
+    let row = document.createElement("div");
+    row.className = "meal-stock-row";
+    row.innerHTML = badgeHtml;
+    main.appendChild(row);
+  }
+
   function decorateMealCards(container) {
     if (!container?.querySelectorAll) return;
     for (let mealNode of container.querySelectorAll(".mealbox, .manual-meal")) {
       compactKnownMealMeta(mealNode);
       ensureManualProtectionLabel(mealNode);
+      ensureManualStockBadge(mealNode);
+      if (
+        mealNode.classList.contains("manual-meal") &&
+        mealNode.querySelector(".inactive-plan-warning")
+      ) mealNode.open = true;
     }
   }
 
@@ -106,6 +143,7 @@
 
     let status = String(mealNode.querySelector(".meal-status-text")?.textContent || "").trim();
     if (status === "Bekannt kombinieren") status = "";
+    let followUp = String(mealNode.querySelector(".followup-plan-note")?.textContent || "").trim();
 
     let lock = mealNode.querySelector(".meal-lock.locked");
     let manualProtected = lock?.getAttribute("title") === "Manuell geschützt";
@@ -118,6 +156,7 @@
       title,
       slot,
       status,
+      followUp,
       locked: !!lock,
       manualProtected,
       stockLabel,
@@ -139,7 +178,7 @@
 
     return `<div class="day-summary-meal ${data.completed ? "is-completed" : ""}">
       <span class="day-summary-slot">${esc(data.slot)}</span>
-      <span class="day-summary-title"><b>${esc(data.title)}</b>${data.status ? `<small>${esc(data.status)}</small>` : ""}${data.manualProtected ? '<small class="day-summary-manual">Manuell geschützt</small>' : ""}</span>
+      <span class="day-summary-title"><b>${esc(data.title)}</b>${data.status ? `<small>${esc(data.status)}</small>` : ""}${data.followUp ? `<small class="day-summary-followup">${esc(data.followUp)}</small>` : ""}${data.manualProtected ? '<small class="day-summary-manual">Manuell geschützt</small>' : ""}</span>
       <span class="day-summary-state">${state.join("")}</span>
     </div>`;
   }
@@ -253,6 +292,7 @@
       .day-summary-title b{font-weight:760}
       .day-summary-title small{display:block;margin-top:1px;font-size:10.5px;color:var(--terracotta);font-weight:700}
       .day-summary-title .day-summary-manual{color:var(--accent)}
+      .day-summary-title .day-summary-followup{color:var(--ochre)}
       .day-summary-state{display:flex;align-items:center;justify-content:flex-end;gap:4px;min-width:18px}
       .day-summary-lock{display:grid;place-items:center;color:var(--accent)}
       .day-summary-lock .lock-svg{width:15px;height:15px}
@@ -318,7 +358,7 @@
     let card = document.getElementById("todayCard");
     if (!card || !card.contains(event.target)) return;
     let button = event.target.closest?.(
-      ".logMeal, .replaceMeal, .moveMeal, .editCompletedLog, .meal-lock, .removeManualMeal",
+      ".logMeal, .replaceMeal, .editCompletedLog, .meal-lock, .removeManualMeal",
     );
     if (!button) return;
 
@@ -328,10 +368,6 @@
     }
     if (button.classList.contains("replaceMeal")) {
       chooseReplacement(button.dataset.date, button.dataset.meal, button.dataset.focus);
-      return;
-    }
-    if (button.classList.contains("moveMeal")) {
-      moveMealTomorrow(JSON.parse(decodeURIComponent(button.dataset.movePayload)));
       return;
     }
     if (button.classList.contains("editCompletedLog")) {

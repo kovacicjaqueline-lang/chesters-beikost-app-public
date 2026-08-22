@@ -1,0 +1,151 @@
+/* FLOW-C: gemeinsames Dialog-Grundmuster für Plan-Editor und Essensprotokoll.
+ * Fachliche Unterschiede bleiben in den jeweiligen Controllern; hier wird nur die
+ * gemeinsame visuelle und mobile Dialog-Shell definiert.
+ */
+#genericModal.flow-dialog,
+#logModal.flow-dialog {
+  z-index: 90;
+  overscroll-behavior: contain;
+  isolation: isolate;
+  background: transparent;
+}
+
+#genericModal.flow-dialog::before,
+#logModal.flow-dialog::before {
+  content: "";
+  position: fixed;
+  inset: -100vh 0;
+  background: #9e988f;
+  z-index: 0;
+  pointer-events: none;
+}
+
+#genericModal.flow-dialog .flow-dialog-sheet,
+#logModal.flow-dialog .flow-dialog-sheet {
+  position: relative;
+  z-index: 1;
+  display: block;
+  height: auto;
+  max-height: 92vh;
+  max-height: 92dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 0;
+  scroll-padding-bottom: calc(118px + env(safe-area-inset-bottom));
+}
+
+#genericModal.flow-dialog .flow-dialog-body,
+#logModal.flow-dialog .flow-dialog-body {
+  display: block;
+  min-height: 0;
+  overflow: visible;
+}
+
+#genericModal.flow-dialog .flow-dialog-header,
+#logModal.flow-dialog .flow-dialog-header {
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 4px;
+  padding-bottom: 10px;
+}
+
+#genericModal.flow-dialog .flow-dialog-heading,
+#logModal.flow-dialog .flow-dialog-heading {
+  min-width: 0;
+}
+
+#genericModal.flow-dialog .flow-dialog-title,
+#logModal.flow-dialog .flow-dialog-title {
+  margin: 0 0 3px;
+  line-height: 1.15;
+}
+
+#genericModal.flow-dialog .flow-dialog-subtitle,
+#logModal.flow-dialog .flow-dialog-subtitle {
+  min-height: 18px;
+  line-height: 1.35;
+}
+
+#genericModal.flow-dialog .flow-dialog-subtitle[hidden],
+#logModal.flow-dialog .flow-dialog-subtitle[hidden] {
+  display: none;
+}
+
+#genericModal.flow-dialog .flow-dialog-context,
+#logModal.flow-dialog .flow-dialog-context {
+  margin-bottom: var(--space-group, 12px);
+}
+
+#genericModal.flow-dialog .flow-dialog-selection,
+#logModal.flow-dialog .flow-dialog-selection,
+#genericModal.flow-dialog .flow-dialog-selected,
+#logModal.flow-dialog .flow-dialog-selected {
+  margin-bottom: var(--space-related, 10px);
+}
+
+#genericModal.flow-dialog #mealSelectorSearch,
+#logModal.flow-dialog #logFoodSearch,
+#logModal.flow-dialog #logRecipeSearch {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  font-size: 16px;
+}
+
+#genericModal.flow-dialog .selector-results,
+#logModal.flow-dialog .log-food-results,
+#logModal.flow-dialog .log-recipe-results {
+  max-height: none;
+  overflow: visible;
+}
+
+#genericModal.flow-dialog .flow-dialog-actions,
+#logModal.flow-dialog .flow-dialog-actions {
+  position: sticky;
+  bottom: 0;
+  margin: 10px -15px 0;
+  padding: 10px 15px calc(10px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line);
+  background: var(--bg) !important;
+  background-image: none !important;
+  z-index: 5;
+}
+
+#genericModal.flow-dialog .flow-dialog-actions.ds-actionbar,
+#genericModal.flow-dialog .flow-dialog-actions > .ds-actionbar,
+#logModal.flow-dialog .flow-dialog-actions.ds-actionbar,
+#logModal.flow-dialog .flow-dialog-actions > .ds-actionbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+  align-items: stretch;
+}
+
+#genericModal.flow-dialog .flow-dialog-actions .btn,
+#logModal.flow-dialog .flow-dialog-actions .btn {
+  width: 100%;
+  min-height: 46px;
+  margin: 0;
+}
+
+#logModal.flow-dialog .flow-dialog-actions > .small {
+  margin-top: 6px !important;
+}
+
+@media (max-width: 560px) {
+  #genericModal.flow-dialog .flow-dialog-sheet,
+  #logModal.flow-dialog .flow-dialog-sheet {
+    width: 100%;
+  }
+
+  #genericModal.flow-dialog input,
+  #genericModal.flow-dialog select,
+  #genericModal.flow-dialog textarea,
+  #logModal.flow-dialog input,
+  #logModal.flow-dialog select,
+  #logModal.flow-dialog textarea {
+    font-size: 16px;
+  }
+}

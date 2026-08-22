@@ -10,6 +10,10 @@ const index = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
 const worker = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
 const icons = fs.readFileSync(path.join(ROOT, "js/icons.js"), "utf8");
 const recipeCss = fs.readFileSync(path.join(ROOT, "ui-meal-editor-footer.css"), "utf8");
+const plannedRecipeDetails = fs.readFileSync(
+  path.join(ROOT, "js", "planned-recipe-details.js"),
+  "utf8",
+);
 
 test("Recipe-V2 sizing CSS wird unter exakt der in index.html verwendeten URL frisch precached", () => {
   const match = index.match(/href="(ui-meal-editor-footer\.css\?v=[^"]+)"/);
@@ -42,4 +46,19 @@ test("der frisch gecachte Stylesheet enthält die Recipe-V2-Brei-Normalisierung"
     recipeCss,
     /\.illustration-icon__asset\[src\*="\/recipes\/milch-getreide-brei\.svg"\]\s*\{[\s\S]*?--recipe-brei-size:\s*[0-9.]+%;/,
   );
+});
+
+test("geplante Rezeptdetails werden unter exakt der in index.html verwendeten JS-URL frisch precached", () => {
+  const match = index.match(/src="(js\/planned-recipe-details\.js\?v=[^"]+)"/);
+  assert.ok(match, "index.html muss die versionierte Planned-Recipe-Details-Runtime referenzieren");
+
+  const scriptUrl = `./${match[1]}`;
+  assert.ok(
+    worker.includes(`"${scriptUrl}"`),
+    `sw.js muss ${scriptUrl} direkt precachen, damit kein alter Query-Cachetreffer Klick und Markierung des Rezeptnamens überdeckt`,
+  );
+  assert.match(worker, /new Request\(url, \{ cache: "reload" \}\)/, "UI-Precache muss den HTTP-Cache umgehen");
+  assert.match(plannedRecipeDetails, /node\.style\.color = "var\(--accent\)"/);
+  assert.match(plannedRecipeDetails, /planned-recipe-chevron/);
+  assert.match(plannedRecipeDetails, /document\.addEventListener\("click"/);
 });

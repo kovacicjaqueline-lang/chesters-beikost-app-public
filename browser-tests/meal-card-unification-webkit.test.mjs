@@ -65,6 +65,13 @@ async function seedUnifiedWeek(page) {
     const followUpDay = window.__beikostTest.addDays(today, 3);
     const warningDay = window.__beikostTest.addDays(today, 4);
     state.settings.planFrom = today;
+    state.settings.preferInventoryInPlan = true;
+    state.inventory = [
+      { id: "ui-stock-kartoffel", kind: "food", foodId: "kartoffel", portions: 1, size: "35 g", frozenDate: today, note: "" },
+      { id: "ui-stock-gurke", kind: "food", foodId: "gurke", portions: 1, size: "35 g", frozenDate: today, note: "" },
+      { id: "ui-stock-karotte", kind: "food", foodId: "karotte", portions: 1, size: "35 g", frozenDate: today, note: "" },
+      { id: "ui-stock-banane", kind: "food", foodId: "banane", portions: 1, size: "35 g", frozenDate: today, note: "" },
+    ];
 
     for (const id of ["kartoffel", "gurke", "karotte", "banane", "apfel"]) {
       const item = state.foods.find((food) => food.id === id);
@@ -91,7 +98,6 @@ async function seedUnifiedWeek(page) {
     });
 
     const todayMeal = makeMeal(today, "lunch", {
-      inventoryFoodIds: ["kartoffel"],
       planId: "ui-unified-today",
     });
     state.planLocks[`${today}|lunch`] = { ...todayMeal, mode: "auto" };
@@ -100,7 +106,6 @@ async function seedUnifiedWeek(page) {
       foodIds: ["kartoffel", "gurke"],
       baseFoodIds: ["kartoffel"],
       foodRoles: { kartoffel: "base", gurke: "component" },
-      inventoryFoodIds: ["gurke"],
       planId: "ui-unified-tomorrow",
     });
     state.planLocks[`${tomorrow}|lunch`] = { ...tomorrowMeal, mode: "auto" };
@@ -109,7 +114,6 @@ async function seedUnifiedWeek(page) {
       focusId: "karotte",
       foodIds: ["karotte"],
       baseFoodIds: ["karotte"],
-      inventoryFoodIds: ["karotte"],
       type: "manuell",
       note: "Mahlzeit bewusst manuell bearbeitet.",
       planId: "ui-unified-manual",
@@ -120,7 +124,6 @@ async function seedUnifiedWeek(page) {
       focusId: "banane",
       foodIds: ["banane"],
       baseFoodIds: ["banane"],
-      inventoryFoodIds: ["banane"],
       type: "manuell",
       manualAdded: true,
       planId: "ui-unified-extra",

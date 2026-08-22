@@ -48,47 +48,111 @@ async function waitForApp(page) {
   await page.waitForFunction(() =>
     !!window.__beikostTest &&
     !!window.__mealCardUnification &&
+    !!window.__plannerRolloverReviewFixes &&
+    !!window.__plannerRandomSwap &&
     window.__plannerPoliciesReady === true,
   );
 }
 
-async function seedUnifiedMeal(page) {
+async function seedUnifiedWeek(page) {
   return page.evaluate(() => {
     window.__beikostTest.reset();
     const state = window.__beikostTest.getState();
-    const date = window.__beikostTest.today();
-    state.settings.planFrom = date;
+    const today = window.__beikostTest.today();
+    const tomorrow = window.__beikostTest.addDays(today, 1);
+    const manualDay = window.__beikostTest.addDays(today, 2);
+    const followUpDay = window.__beikostTest.addDays(today, 3);
+    const warningDay = window.__beikostTest.addDays(today, 4);
+    state.settings.planFrom = today;
 
-    for (const id of ["kartoffel", "gurke"]) {
+    for (const id of ["kartoffel", "gurke", "karotte", "banane", "apfel"]) {
       const item = state.foods.find((food) => food.id === id);
       if (item) item.manualStatus = "Verträgliche Basis";
     }
 
-    const key = `${date}|lunch`;
-    const meal = {
+    const makeMeal = (date, meal, patch = {}) => ({
       date,
-      meal: "lunch",
+      meal,
       focusId: "kartoffel",
-      foodIds: ["kartoffel", "gurke"],
-      baseFoodIds: ["kartoffel", "gurke"],
+      foodIds: ["kartoffel"],
+      baseFoodIds: ["kartoffel"],
       sampleFoodIds: [],
       optionalAddons: [],
-      inventoryFoodIds: ["kartoffel"],
+      inventoryFoodIds: [],
       recipeName: "",
       recipeInventoryId: "",
       type: "bekannt kombinieren",
       note: "",
       manualAdded: false,
+      active: true,
       createdAt: new Date().toISOString(),
-    };
-    state.manualMeals[key] = meal;
-    state.planLocks[key] = { ...meal, mode: "auto", active: true };
+      ...patch,
+    });
+
+    const todayMeal = makeMeal(today, "lunch", {
+      inventoryFoodIds: ["kartoffel"],
+      planId: "ui-unified-today",
+    });
+    state.planLocks[`${today}|lunch`] = { ...todayMeal, mode: "auto" };
+
+    const tomorrowMeal = makeMeal(tomorrow, "lunch", {
+      foodIds: ["kartoffel", "gurke"],
+      baseFoodIds: ["kartoffel"],
+      foodRoles: { kartoffel: "base", gurke: "component" },
+      inventoryFoodIds: ["gurke"],
+      planId: "ui-unified-tomorrow",
+    });
+    state.planLocks[`${tomorrow}|lunch`] = { ...tomorrowMeal, mode: "auto" };
+
+    const manualMeal = makeMeal(manualDay, "lunch", {
+      focusId: "karotte",
+      foodIds: ["karotte"],
+      baseFoodIds: ["karotte"],
+      inventoryFoodIds: ["karotte"],
+      type: "manuell",
+      note: "Mahlzeit bewusst manuell bearbeitet.",
+      planId: "ui-unified-manual",
+    });
+    state.planLocks[`${manualDay}|lunch`] = { ...manualMeal, mode: "manual" };
+
+    const extraMeal = makeMeal(manualDay, "breakfast", {
+      focusId: "banane",
+      foodIds: ["banane"],
+      baseFoodIds: ["banane"],
+      inventoryFoodIds: ["banane"],
+      type: "manuell",
+      manualAdded: true,
+      planId: "ui-unified-extra",
+    });
+    state.manualMeals[`${manualDay}|breakfast`] = { ...extraMeal };
+    state.planLocks[`${manualDay}|breakfast`] = { ...extraMeal, mode: "manual" };
+
+    const followUpMeal = makeMeal(followUpDay, "lunch", {
+      focusId: "apfel",
+      foodIds: ["apfel"],
+      baseFoodIds: ["apfel"],
+      note: "Erneut anbieten – diesmal ohne zusätzliche Kostprobe.",
+      planId: "ui-unified-follow-up",
+    });
+    state.planLocks[`${followUpDay}|lunch`] = { ...followUpMeal, mode: "auto" };
+
+    const warningMeal = makeMeal(warningDay, "lunch", {
+      focusId: "gurke",
+      foodIds: ["gurke"],
+      baseFoodIds: ["gurke"],
+      planId: "ui-unified-warning",
+    });
+    state.planLocks[`${warningDay}|lunch`] = { ...warningMeal, mode: "manual" };
+    const cucumber = state.foods.find((food) => food.id === "gurke");
+    if (cucumber) cucumber.active = false;
+
     window.__beikostTest.setState(state);
-    return date;
+    return { today, tomorrow, manualDay, followUpDay, warningDay };
   });
 }
 
 function assertMealActions(text) {
+  assert.match(text, /Tauschen/);
   assert.match(text, /Mahlzeit bearbeiten/);
   assert.match(text, /Auf morgen/);
   assert.match(text, /Essen eintragen/);
@@ -108,15 +172,30 @@ try {
   const page = await context.newPage();
   await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "domcontentloaded" });
   await waitForApp(page);
-  await seedUnifiedMeal(page);
+  const dates = await seedUnifiedWeek(page);
 
   const homeMeal = page.locator("#todayCard .mealbox", { hasText: "Kartoffel" }).first();
   await homeMeal.waitFor();
   assertMealActions(await homeMeal.innerText());
+  assert.equal(await homeMeal.locator(".homeLog").count(), 0, "Heute nutzt keinen separaten Home-Log-Button mehr");
+  assert.equal(await homeMeal.locator(".logMeal").count(), 1, "Heute nutzt denselben Log-Button wie der Plan");
   await homeMeal.locator(".meal-lock.locked").waitFor();
-  assert.equal(await homeMeal.locator(".lock-label").count(), 0, "Heute zeigt keine sichtbare Fest-eingeplant-Info");
-  assert.equal(await homeMeal.locator(".stock-chip").innerText(), "❄️ Kartoffel");
+  assert.equal(await homeMeal.locator(".lock-label").count(), 0, "Auto-Lock zeigt keine redundante Fest-eingeplant-Zeile");
+  assert.equal(await homeMeal.locator(".stock-chip").innerText(), "❄️ Vorrat");
   assert.equal(await homeMeal.locator(".stock-chip").getAttribute("aria-label"), "Aus Vorrat: Kartoffel");
+
+  const lockMetrics = await homeMeal.locator(".meal-lock").evaluate((button) => {
+    const buttonRect = button.getBoundingClientRect();
+    const iconRect = button.querySelector(".lock-svg")?.getBoundingClientRect();
+    return {
+      width: buttonRect.width,
+      height: buttonRect.height,
+      iconWidth: iconRect?.width || 0,
+      iconHeight: iconRect?.height || 0,
+    };
+  });
+  assert.ok(lockMetrics.width >= 44 && lockMetrics.height >= 44, "Schloss behält mindestens 44×44 px Touchfläche");
+  assert.ok(lockMetrics.iconWidth < lockMetrics.width && lockMetrics.iconHeight < lockMetrics.height, "sichtbares Schloss bleibt kleiner als seine Touchfläche");
 
   const homeStyle = await homeMeal.evaluate((node) => {
     const style = getComputedStyle(node);
@@ -133,12 +212,17 @@ try {
   await page.locator("#closeGeneric").click();
 
   await page.locator('nav button[data-view="plan"]').click();
-  const planMeal = page.locator("#blockPlan .mealbox", { hasText: "Kartoffel" }).first();
+
+  const todayDay = page.locator(`#blockPlan details.day-details[data-day-date="${dates.today}"]`);
+  await todayDay.waitFor();
+  assert.equal(await todayDay.evaluate((node) => node.open), true, "Heute ist im Wochenplan standardmäßig geöffnet");
+
+  const planMeal = todayDay.locator(".mealbox", { hasText: "Kartoffel" }).first();
   await planMeal.waitFor();
   assertMealActions(await planMeal.innerText());
   await planMeal.locator(".meal-lock.locked").waitFor();
-  assert.equal(await planMeal.locator(".lock-label").count(), 0, "Plan zeigt keine sichtbare Fest-eingeplant-Info");
-  assert.equal(await planMeal.locator(".stock-chip").innerText(), "❄️ Kartoffel");
+  assert.equal(await planMeal.locator(".lock-label").count(), 0, "Plan zeigt beim Auto-Lock keine Fest-eingeplant-Zeile");
+  assert.equal(await planMeal.locator(".stock-chip").innerText(), "❄️ Vorrat");
 
   const planStyle = await planMeal.evaluate((node) => {
     const style = getComputedStyle(node);
@@ -150,6 +234,58 @@ try {
     };
   });
   assert.deepEqual(homeStyle, planStyle, "Heute und Plan verwenden dieselbe Kartenoptik");
+
+  const tomorrowDay = page.locator(`#blockPlan details.day-details[data-day-date="${dates.tomorrow}"]`);
+  await tomorrowDay.waitFor();
+  assert.equal(await tomorrowDay.evaluate((node) => node.open), false, "normaler Zukunftstag ist kompakt eingeklappt");
+  const tomorrowSummary = tomorrowDay.locator("summary.day-details-summary");
+  assert.match(await tomorrowSummary.innerText(), /Kartoffel/);
+  assert.doesNotMatch(await tomorrowSummary.innerText(), /Bekannter Tag/);
+  assert.equal(await tomorrowSummary.locator(".day-summary-slot").first().innerText(), "Mittag");
+  assert.equal(await tomorrowSummary.locator(".day-summary-stock").count(), 1, "Vorrat bleibt im kompakten Tagesüberblick sichtbar");
+
+  await tomorrowSummary.click();
+  assert.equal(await tomorrowDay.evaluate((node) => node.open), true, "Zukunftstag lässt sich über bestehendes Details-Muster öffnen");
+  const tomorrowMeal = tomorrowDay.locator(".mealbox", { hasText: "Kartoffel" }).first();
+  assert.equal(await tomorrowMeal.locator(".stock-chip").innerText(), "❄️ Gurke", "Teilvorrat nennt die konkrete Komponente");
+  assert.equal(await tomorrowMeal.locator(".stock-chip").getAttribute("aria-label"), "Aus Vorrat: Gurke");
+
+  const manualDay = page.locator(`#blockPlan details.day-details[data-day-date="${dates.manualDay}"]`);
+  await manualDay.waitFor();
+  assert.equal(await manualDay.evaluate((node) => node.open), false, "manuell geschützter Zukunftstag bleibt grundsätzlich kompakt");
+  const manualSummaryText = await manualDay.locator("summary.day-details-summary").innerText();
+  assert.match(manualSummaryText, /Manuell geschützt/, "manueller Schutz bleibt bereits in der kompakten Tagesübersicht sichtbar");
+  await manualDay.locator("summary.day-details-summary").click();
+  const manualEditedMeal = manualDay.locator(".mealbox", { hasText: "Karotte" }).first();
+  assert.match(await manualEditedMeal.innerText(), /Manuell geschützt/, "manuell bearbeitete Mahlzeit behält sichtbaren Schutzstatus");
+  assert.doesNotMatch(await manualEditedMeal.innerText(), /Fest eingeplant/);
+  const extraMeal = manualDay.locator("details.manual-meal", { hasText: "Banane" }).first();
+  await extraMeal.waitFor();
+  assert.match(await extraMeal.locator("summary").innerText(), /Manuell geschützt/, "Zusatzmahlzeit erklärt den manuellen Schutz im Summary");
+  assert.equal(await extraMeal.locator("summary .stock-chip").innerText(), "❄️ Vorrat", "Zusatzmahlzeit nutzt dieselbe kompakte Vorratsdarstellung");
+
+  const followUpDay = page.locator(`#blockPlan details.day-details[data-day-date="${dates.followUpDay}"]`);
+  await followUpDay.waitFor();
+  assert.equal(await followUpDay.evaluate((node) => node.open), false);
+  assert.match(
+    await followUpDay.locator("summary.day-details-summary").innerText(),
+    /Erneut anbieten/,
+    "Nachhol-/erneut-anbieten-Hinweis bleibt auch im geschlossenen Tag sichtbar",
+  );
+
+  const warningDay = page.locator(`#blockPlan details.day-details[data-day-date="${dates.warningDay}"]`);
+  await warningDay.waitFor();
+  assert.equal(await warningDay.evaluate((node) => node.open), true, "Tag mit deaktiviertem Lebensmittel öffnet sich automatisch");
+  assert.match(await warningDay.innerText(), /deaktiviert/);
+
+  const pageOverflow = await page.evaluate(() => ({
+    scrollWidth: document.documentElement.scrollWidth,
+    clientWidth: document.documentElement.clientWidth,
+  }));
+  assert.ok(
+    pageOverflow.scrollWidth <= pageOverflow.clientWidth + 1,
+    `Wochenplan darf auf 390 px nicht horizontal überlaufen (${pageOverflow.scrollWidth} > ${pageOverflow.clientWidth})`,
+  );
 
   await context.close();
 } finally {

@@ -61,18 +61,35 @@ async function createSnapshot(reason = "automatisch") {
 }
 let saveQueue = Promise.resolve();
 let indexedDbUnavailable = false;
+const IDB_RECOVERY_PENDING_KEY = `${KEY}-idb-recovery-pending`;
+function pendingIdbRecoveryState() {
+  try {
+    if (localStorage.getItem(IDB_RECOVERY_PENDING_KEY) !== "1") return null;
+    let raw = localStorage.getItem(KEY);
+    return raw ? migrateState(JSON.parse(raw)) : null;
+  } catch (_) {
+    return null;
+  }
+}
 function save(options = {}) {
   let snapshot = clone(state);
   snapshot.schemaVersion = SCHEMA_VERSION;
   snapshot.appVersion = APP_VERSION;
   // Mirror for migration and emergency recovery; IndexedDB remains the primary store when available.
-  try { localStorage.setItem(KEY, JSON.stringify(snapshot)); } catch (_) {}
+  let localBackupWritten = false;
+  try {
+    localStorage.setItem(KEY, JSON.stringify(snapshot));
+    localBackupWritten = true;
+  } catch (_) {}
   if (indexedDbUnavailable || !globalThis.indexedDB) return Promise.resolve();
   saveQueue = saveQueue.then(async () => {
     if (options.snapshotReason) await createSnapshot(options.snapshotReason);
     await idbPut(STATE_RECORD, snapshot);
   }).catch((error) => {
     indexedDbUnavailable = true;
+    if (localBackupWritten) {
+      try { localStorage.setItem(IDB_RECOVERY_PENDING_KEY, "1"); } catch (_) {}
+    }
     state.backupMeta.storagePersisted = "unavailable";
     if (!/denied|not available|nicht verfügbar|SecurityError/i.test(String(error))) {
       console.error("Speichern in IndexedDB fehlgeschlagen", error);
@@ -95,17 +112,21 @@ function load() {
   }
 }
 async function bootstrapStorage() {
+  let recoveryState = pendingIdbRecoveryState();
   let idbState = await idbGet(STATE_RECORD).catch(() => null);
-  if (idbState) {
+  if (idbState && !recoveryState) {
     state = migrateState(idbState);
   } else {
-    state = migrateState(state);
+    state = recoveryState || migrateState(state);
     state.backupMeta.migratedAt = new Date().toISOString();
     await idbPut(STATE_RECORD, clone(state)).catch(() => {});
     // Keep the old localStorage record until the database can be read back successfully.
     let check = await idbGet(STATE_RECORD).catch(() => null);
     if (check) {
-      try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (_) {}
+      try {
+        localStorage.setItem(KEY, JSON.stringify(state));
+        if (recoveryState) localStorage.removeItem(IDB_RECOVERY_PENDING_KEY);
+      } catch (_) {}
     }
   }
   if (navigator.storage?.persist) {

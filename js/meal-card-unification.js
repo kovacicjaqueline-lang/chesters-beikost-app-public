@@ -159,4 +159,16 @@
     bindMealActions,
     renderUnifiedTodayCard,
   };
+
+  // Die Runtime wird dynamisch aus planned-recipe-details.js geladen. Nach dem
+  // initialen App-Start wird „Heute“ deshalb einmal neu gerendert, damit es keinen
+  // Unterschied zwischen Erstansicht und späteren Re-Renders gibt.
+  let refreshHome = () => {
+    if (typeof renderHome === "function" && document.getElementById("todayCard"))
+      renderHome();
+  };
+  if (document.readyState === "loading")
+    document.addEventListener("DOMContentLoaded", refreshHome, { once: true });
+  else
+    queueMicrotask(refreshHome);
 })(typeof window !== "undefined" ? window : globalThis);

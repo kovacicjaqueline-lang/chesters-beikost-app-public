@@ -289,3 +289,17 @@
     decoratePlanRecipeTitles,
   };
 })(typeof window !== "undefined" ? window : globalThis);
+
+// Die gemeinsame Kartenpräsentation betrifft dieselben beiden Oberflächen und wird
+// als eigene Runtime geladen, damit die bestehende Planner-Logik unverändert bleibt.
+(function loadMealCardUnificationRuntime() {
+  if (typeof document === "undefined") return;
+  if (document.querySelector('script[data-meal-card-unification="v1"]')) return;
+  let script = document.createElement("script");
+  script.src = "js/meal-card-unification.js?v=10.1.26";
+  script.dataset.mealCardUnification = "v1";
+  script.addEventListener("error", (event) => {
+    console.error("Einheitliche Mahlzeitenkarten konnten nicht geladen werden.", event);
+  }, { once: true });
+  document.head.appendChild(script);
+})();

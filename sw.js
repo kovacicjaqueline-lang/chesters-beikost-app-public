@@ -109,8 +109,10 @@ const UNIFIED_LOG_PRECACHE = [
 // Treffer dieser URL und liefert die aktuelle Recipe-Icon-Geometrie beim nächsten Start.
 const UI_PRECACHE = [
   "./ui-meal-editor-footer.css?v=10.1.26",
+  "./flow-dialog-ui.css?v=10.1.26",
   "./catalog-navigation.css",
   "./js/manual-meal-flow.js",
+  "./js/flow-dialog-ui.js",
   "./js/planned-recipe-details.js",
   "./js/recipe-frozen-ingredient-stock.js",
   "./js/planner-log-rollover.js",

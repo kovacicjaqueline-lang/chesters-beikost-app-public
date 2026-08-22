@@ -137,14 +137,14 @@ async function seedUnifiedWeek(page) {
     state.planLocks[`${followUpDay}|lunch`] = { ...followUpMeal, mode: "auto" };
 
     const warningMeal = makeMeal(warningDay, "lunch", {
-      focusId: "gurke",
-      foodIds: ["gurke"],
-      baseFoodIds: ["gurke"],
+      focusId: "zucchini",
+      foodIds: ["zucchini"],
+      baseFoodIds: ["zucchini"],
       planId: "ui-unified-warning",
     });
     state.planLocks[`${warningDay}|lunch`] = { ...warningMeal, mode: "manual" };
-    const cucumber = state.foods.find((food) => food.id === "gurke");
-    if (cucumber) cucumber.active = false;
+    const zucchini = state.foods.find((food) => food.id === "zucchini");
+    if (zucchini) zucchini.active = false;
 
     window.__beikostTest.setState(state);
     return { today, tomorrow, manualDay, followUpDay, warningDay };

@@ -10,6 +10,7 @@ const {
   clonePlain,
   duplicateGroups,
   evaluateDeclaredValue,
+  matchingBracket,
   normalizeRepoPath,
   parsePrecacheFiles,
   rawStringMappingEntries,
@@ -29,11 +30,23 @@ function v2SvgFiles(directory, prefix) {
     .sort();
 }
 
+function parseNamedStringArray(source, name) {
+  const marker = source.indexOf(`const ${name} = [`);
+  assert.notEqual(marker, -1, `${name}: Precache-Deklaration fehlt`);
+  const open = source.indexOf("[", marker);
+  const close = matchingBracket(source, open);
+  return Array.from(
+    vm.runInNewContext(source.slice(open, close + 1), Object.create(null), { timeout: 2_000 }),
+    normalizeRepoPath,
+  );
+}
+
 const iconSource = read("js/icons.js");
 const appSource = read("app.js");
 const foodDataSource = read("data/foods.js");
 const recipeDataSource = read("data/recipes.js");
 const serviceWorkerCore = read("sw-core.js");
+const serviceWorker = read("sw.js");
 const canonicalFoods = evaluateDeclaredValue(foodDataSource, "FOOD_DB", "data/foods.js");
 const recipes = evaluateDeclaredValue(recipeDataSource, "RECIPES", "data/recipes.js");
 
@@ -73,7 +86,8 @@ const recipeEntries = rawStringMappingEntries(iconSource, "RECIPE_ICON_PATHS");
 const foodAssets = v2SvgFiles(path.join(ROOT, "assets/illustrations-v2/foods"), "assets/illustrations-v2/foods");
 const recipeAssets = v2SvgFiles(path.join(ROOT, "assets/illustrations-v2/recipes"), "assets/illustrations-v2/recipes");
 const allAssets = [...foodAssets, ...recipeAssets].sort();
-const precacheFiles = parsePrecacheFiles(serviceWorkerCore);
+const corePrecacheFiles = parsePrecacheFiles(serviceWorkerCore);
+const runtimeRecipePrecache = parseNamedStringArray(serviceWorker, "RECIPE_RUNTIME_PRECACHE");
 
 function effectiveFoodMappingId(food) {
   if (food?.illustrationId && runtime.foodPaths[food.illustrationId]) return food.illustrationId;
@@ -151,8 +165,15 @@ test("V2-Mappings, Dateibestand und Service-Worker-Precache sind exakt deckungsg
     ...Object.values(runtime.runtimeRecipePaths),
   ].map(normalizeRepoPath))].sort();
   assert.deepEqual(allAssets, referenced, "unreferenzierte V2-Assets oder Mapping auf nicht vorhandene V2-Datei");
-  const precached = precacheFiles.filter((item) => item.startsWith("assets/illustrations-v2/") && item.endsWith(".svg")).sort();
+
+  const precached = [...new Set([...corePrecacheFiles, ...runtimeRecipePrecache])]
+    .filter((item) => item.startsWith("assets/illustrations-v2/") && item.endsWith(".svg"))
+    .sort();
   assert.deepEqual(precached, allAssets, "V2-Precache enthält fehlende, doppelte oder veraltete Assetpfade");
+  assert.deepEqual(runtimeRecipePrecache.sort(), [
+    "assets/illustrations-v2/recipes/chicken-fajita-wrap.svg",
+    "assets/illustrations-v2/recipes/pizza-wrap.svg",
+  ]);
 });
 
 test("sämtliche Food-/Recipe-V2-SVGs erfüllen 128×128, PNG-CRC/Decode und Alpha-Integrität", () => {

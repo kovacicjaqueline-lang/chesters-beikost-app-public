@@ -1,14 +1,15 @@
 // sw-core.js besitzt weiterhin die vollständige, versionsgebundene Precache-Liste.
-// Seine bisherige Fetch-Strategie war jedoch network-first und hat dadurch besonders
-// auf iOS/PWA-Cold-Starts bereits lokal vorhandene App-Dateien unnötig verzögert.
-// Wir übernehmen hier nur die Fetch-Strategie, ohne den bestehenden Precache umzubauen.
+// Seine bisherige Fetch-Strategie war jedoch network-first und der Install-Precache
+// best-effort. Der Wrapper übernimmt deshalb Fetch-Strategie und Install-Vertrag.
 const nativeAddEventListener = self.addEventListener.bind(self);
 const nativeRemoveEventListener = self.removeEventListener.bind(self);
 let coreFetchHandler = null;
+let coreInstallHandler = null;
 
 self.addEventListener = (type, listener, options) => {
   nativeAddEventListener(type, listener, options);
   if (type === "fetch") coreFetchHandler = listener;
+  if (type === "install") coreInstallHandler = listener;
 };
 
 // Der Core-Import ist absichtlich mit derselben App-Version versehen wie die Runtime-Assets.
@@ -18,6 +19,7 @@ importScripts("./sw-core.js?v=10.1.26");
 
 self.addEventListener = nativeAddEventListener;
 if (coreFetchHandler) nativeRemoveEventListener("fetch", coreFetchHandler);
+if (coreInstallHandler) nativeRemoveEventListener("install", coreInstallHandler);
 
 async function matchAppCache(request) {
   const cache = await caches.open(CACHE);
@@ -130,14 +132,18 @@ const UI_PRECACHE = [
 
 self.addEventListener("install", (event) => {
   event.waitUntil((async () => {
+    const requiredPrecache = [
+      ...new Set([
+        ...FILES,
+        ...PLAN08_PRECACHE,
+        ...HANDLING_PRECACHE,
+        ...UNIFIED_LOG_PRECACHE,
+        ...UI_PRECACHE,
+      ]),
+    ];
     const cache = await caches.open(CACHE);
-    await Promise.all([...PLAN08_PRECACHE, ...HANDLING_PRECACHE, ...UNIFIED_LOG_PRECACHE, ...UI_PRECACHE].map(async (url) => {
-      try {
-        const response = await fetch(new Request(url, { cache: "reload" }));
-        if (response && response.ok) await cache.put(url, response.clone());
-      } catch (error) {
-        console.warn("[PWA] Zusatz-Precache fehlgeschlagen:", url, error);
-      }
-    }));
+    const requests = requiredPrecache.map((url) => new Request(url, { cache: "reload" }));
+    await cache.addAll(requests);
+    await self.skipWaiting();
   })());
 });

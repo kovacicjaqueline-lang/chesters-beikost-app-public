@@ -55,8 +55,8 @@ test("UI: Essfähigkeiten bleiben drei unabhängige beobachtete Controls", () =>
   assert.match(settingsControl, /id="smallSoftPiecesCapability"/);
   assert.match(settingsControl, /id="gradedBiteCapability"/);
   assert.match(settingsControl, /id="structuredChewCapability"/);
-  assert.match(settingsControl, /Biss gezielt dosieren/);
-  assert.match(settingsControl, /kontrolliert halten oder abtrennen/);
+  assert.match(settingsControl, /Mein Kind kann bei einem weichen, aber formstabilen Stück gezielt einen passenden Bissen abtrennen\./);
+  assert.doesNotMatch(settingsControl, /halten oder abtrennen/);
   assert.match(settingsControl, /Zähne sind keine Voraussetzung/);
 });
 

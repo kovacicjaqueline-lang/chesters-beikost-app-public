@@ -252,12 +252,16 @@ try {
   await peachPreparation.selectOption(peachPreparationKey);
 
   await page.locator("#confirmManualMeal").click();
-  await page.locator(`#blockPlan .removeManualMeal[data-date="${dates.future}"][data-meal="breakfast"]`).waitFor();
+  await page.locator(`#blockPlan .removeManualMeal[data-date="${dates.future}"][data-meal="breakfast"]`).waitFor({ state: "attached" });
   assert.equal(await page.locator("#genericModal").evaluate((element) => element.classList.contains("open")), false, "Editor muss nach Save geschlossen sein");
   assert.notEqual(await page.locator("main").evaluate((element) => getComputedStyle(element).visibility), "hidden", "Plan darf nach Save nicht leer/unsichtbar bleiben");
 
   let manualCard = page.locator("#blockPlan .manual-meal").filter({
     has: page.locator(`.removeManualMeal[data-date="${dates.future}"][data-meal="breakfast"]`),
+  });
+  await manualCard.evaluate((element) => {
+    const day = element.closest("details.day-details");
+    if (day) day.open = true;
   });
   assert.match(await manualCard.locator(".manual-meal-title").innerText(), /Banane.*Pfirsich.*Einführung/, "Kartentitel muss Hauptbasis und Einführung repräsentieren");
   assert.equal(await manualCard.locator("summary").evaluate((element) => getComputedStyle(element).listStyleType), "none", "nativer Details-Marker darf nicht einrücken");

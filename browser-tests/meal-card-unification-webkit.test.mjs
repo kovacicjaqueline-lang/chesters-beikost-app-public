@@ -50,7 +50,8 @@ async function waitForApp(page) {
     !!window.__mealCardUnification &&
     !!window.__plannerRolloverReviewFixes &&
     !!window.__plannerRandomSwap &&
-    window.__plannerPoliciesReady === true,
+    window.__plannerPoliciesReady === true &&
+    window.__beikostTest.getState()?.backupMeta?.storagePersisted !== "unknown",
   );
 }
 
@@ -131,6 +132,7 @@ async function seedUnifiedWeek(page) {
       focusId: "apfel",
       foodIds: ["apfel"],
       baseFoodIds: ["apfel"],
+      followUpFoodId: "apfel",
       note: "Erneut anbieten – diesmal ohne zusätzliche Kostprobe.",
       planId: "ui-unified-follow-up",
     });

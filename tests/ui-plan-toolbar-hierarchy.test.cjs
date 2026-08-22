@@ -13,6 +13,7 @@ function lastRule(selector) {
   return matches.at(-1)?.[1] || '';
 }
 
+// Die Reihenfolge wird absichtlich im DOM geprüft, nicht über rein visuelles CSS-order.
 test('Wochenplan-Kopf hat dieselbe visuelle und semantische DOM-Reihenfolge', () => {
   const plan = html.match(/<section id="plan" class="view">[\s\S]*?<div id="blockPlan"><\/div>/)?.[0] || '';
   const controls = plan.indexOf('class="plan-controls"');

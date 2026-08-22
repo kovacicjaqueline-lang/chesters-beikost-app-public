@@ -1,7 +1,7 @@
 # FOOD Handling – Bite Separation und orale Verarbeitung
 
-Stand: 2026-08-21  
-Status: fachlich freigegeben; bestehender Laufzeitkatalog gezielt auf Bite Separation nachauditiert  
+Stand: 2026-08-22  
+Status: fachlich freigegeben; 103 Bestandsrezepte gezielt reauditiert und zwei neue graded-bite-Referenzrezepte ergänzt  
 Bezug: `docs/FOOD_HANDLING_READINESS_TECHNICAL_DESIGN.md` und `docs/PLANNER_FACHKONZEPT.md`
 
 ## Zweck
@@ -54,7 +54,7 @@ Ein tatsächliches Abbeißen oder Abquetschen findet statt, die weiche Struktur 
 
 ### `graded-bite-required`
 
-Die konkrete zusammenhängende Form verlangt einen **gezielt dosierten Kieferschluss**, damit ein beherrschbarer Bissen kontrolliert gehalten oder abgetrennt werden kann. Typischerweise ist sie formstabiler, fester oder zäher als frühe leicht nachgebende Fingerfoods und trennt sich nicht bereits zuverlässig unter geringer Belastung.
+Die konkrete zusammenhängende Form verlangt einen **gezielt dosierten Kieferschluss**, damit ein beherrschbarer Bissen gezielt abgetrennt werden kann. Typischerweise ist sie formstabiler, fester oder zäher als frühe leicht nachgebende Fingerfoods und trennt sich nicht bereits zuverlässig unter geringer Belastung.
 
 **Folge:** zusätzliche Capability `graded-bite`.
 
@@ -62,7 +62,7 @@ Die konkrete zusammenhängende Form verlangt einen **gezielt dosierten Kiefersch
 
 Beobachtbare Nutzersemantik:
 
-> Mein Kind kann bei einem zusammenhängenden, formstabilen Stück den Kieferschluss gezielt dosieren und dadurch einen beherrschbaren Bissen kontrolliert halten oder abtrennen.
+> Mein Kind kann bei einem weichen, aber formstabilen Stück gezielt einen passenden Bissen abtrennen.
 
 Nicht Bestandteil der Capability:
 
@@ -139,13 +139,13 @@ Der Zwei-Finger-Test bleibt ein nützlicher Konsistenzhinweis, reicht aber allei
 
 ## 5. Ergebnis des gezielten Bite-Separation-Rechecks
 
-Alle **41 bestehenden zusammenhängenden `finger-graspable`-Rezepte** wurden für die neue Dimension einzeln anhand ihrer kanonischen Rezeptur und Servierform geprüft.
+Alle **41 zuvor bestehenden zusammenhängenden `finger-graspable`-Rezepte** wurden für die neue Dimension einzeln anhand ihrer kanonischen Rezeptur und Servierform geprüft.
 
 | Bite Separation | Anzahl | zusätzliche Bite-Capability |
 | --- | ---: | --- |
 | `low-resistance-separate` | 13 | keine |
 | `easy-bite-separate` | 28 | keine |
-| `graded-bite-required` | 0 | `graded-bite` bleibt für konkret belegte spätere Formen verfügbar |
+| `graded-bite-required` | 0 | – |
 
 Die 13 `low-resistance-separate`-Fälle sind:
 
@@ -163,15 +163,20 @@ Die 13 `low-resistance-separate`-Fälle sind:
 - Gebackene Saba-Banane
 - Bananen-Ei-Pancakes
 
-Die übrigen 28 zusammenhängenden Fingerfoods sind `easy-bite-separate`.
+Die übrigen 28 zuvor bestehenden zusammenhängenden Fingerfoods sind `easy-bite-separate`.
 
-**Kein bestehendes Laufzeitrezept erhält derzeit einen `graded-bite`-Hard-Gate.** Das ist keine Aussage, dass die Capability unnötig wäre. Die Quellen stützen die Fähigkeit insbesondere für formstabilere/härtere/zähere spätere Fingerfoods; die derzeitigen 41 kanonischen Bestandsformen sind dagegen ausdrücklich weich beziehungsweise leicht nachgebend modelliert.
+Im aktuellen **105er Laufzeitkatalog** kommen zwei einzeln geprüfte neue graded-bite-Referenzrezepte hinzu:
 
-Neue oder später einzeln geprüfte zusammenhängende Brot-/Toast-/Pitta-/Wrap-/Fleischformen können `graded-bite-required` erhalten, wenn die konkrete Servierform tatsächlich dosierten Kieferschluss zur kontrollierten Bissabtrennung verlangt.
+| Rezept | Bite Separation | Bite-Capability | Oral Processing | Oral-Capability |
+| --- | --- | --- | --- | --- |
+| Pizza Wrap | `graded-bite-required` | `graded-bite` | `easy-chew` | keine |
+| Chicken Fajita Wrap | `graded-bite-required` | `graded-bite` | `structured-chew-required` | `structured-chew` |
+
+Damit bleibt die 41er Bestandsmatrix unverändert, während der aktuelle Runtime-Contract **105/105 Rezepte** explizit abdeckt. Die beiden Wrap-Einstufungen sind Einzelentscheidungen aus ihrer konkreten kanonischen Servierform und keine Kategorienregel.
 
 ## 6. Vier Fälle mit unabhängigem Structured-Chew-Gate
 
-Vier bestehende Rezepte benötigen weiterhin `structured-chew` für den bereits abgetrennten Bissen, **ohne** deshalb Bite-seitig `graded-bite` zu verlangen:
+Vier zuvor bestehende Rezepte benötigen weiterhin `structured-chew` für den bereits abgetrennten Bissen, **ohne** deshalb Bite-seitig `graded-bite` zu verlangen:
 
 | Rezept | Bite Separation | Bite-Capability | Oral Processing | Oral-Capability |
 | --- | --- | --- | --- | --- |

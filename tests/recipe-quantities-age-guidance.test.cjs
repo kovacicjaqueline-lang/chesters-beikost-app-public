@@ -53,9 +53,13 @@ test("recipe quantities: every runtime recipe has explicit researched quantity g
   }
 });
 
-test("recipe age guidance: Altersangaben bleiben Orientierung und werden nicht zu hardMinMonths", () => {
+test("recipe age guidance: nur vorhandene Quellenalter werden als Orientierung gespeichert", () => {
   const { after } = loadCatalog();
   for (const recipe of after) {
+    if (recipe.minMonths == null) {
+      assert.equal(recipe.ageGuidanceKind, undefined, `${recipe.name}: ohne Quellenalter keine Orientierungssemantik`);
+      continue;
+    }
     assert.ok(Number(recipe.minMonths) >= Number(recipe.hardMinMonths || 0), `${recipe.name}: Orientierung unter hardMinMonths`);
     assert.equal(recipe.ageGuidanceKind, "orientation", `${recipe.name}: keine Orientierungssemantik`);
   }
@@ -65,11 +69,13 @@ test("recipe age guidance: Altersangaben bleiben Orientierung und werden nicht z
   assert.equal(after.find((r) => r.name === "Fleisch-Gemüse-Bällchen").minMonths, 7);
 
   const pizza = after.find((r) => r.name === "Pizza Wrap");
-  assert.equal(pizza.minMonths, 9, "Pizza Wrap nutzt die 9–12-Monats-Entwicklungsorientierung für graded bite");
+  assert.equal(pizza.minMonths, undefined, "Pizza Wrap erhält ohne rezeptbezogene Altersquelle keine erfundene Monatsorientierung");
+  assert.equal(pizza.ageGuidanceKind, undefined);
   assert.equal(pizza.hardMinMonths, undefined);
 
   const chicken = after.find((r) => r.name === "Chicken Fajita Wrap");
   assert.equal(chicken.minMonths, 12, "Chicken Fajita Wrap übernimmt die NHS-Altersorientierung");
+  assert.equal(chicken.ageGuidanceKind, "orientation");
   assert.equal(chicken.hardMinMonths, undefined);
 });
 

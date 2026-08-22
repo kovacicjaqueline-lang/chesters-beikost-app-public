@@ -60,6 +60,14 @@ async function waitForApp(page) {
   await page.waitForFunction(() => window.__manualMealFlowRuntimeInstalled === true);
 }
 
+async function openManualCard(locator) {
+  await locator.evaluate((element) => {
+    const day = element.closest("details.day-details");
+    if (day) day.open = true;
+    element.open = true;
+  });
+}
+
 const widths = [320, 375, 390];
 const server = await startStaticServer();
 const { port } = server.address();
@@ -259,10 +267,7 @@ try {
   let manualCard = page.locator("#blockPlan .manual-meal").filter({
     has: page.locator(`.removeManualMeal[data-date="${dates.future}"][data-meal="breakfast"]`),
   });
-  await manualCard.evaluate((element) => {
-    const day = element.closest("details.day-details");
-    if (day) day.open = true;
-  });
+  await openManualCard(manualCard);
   assert.match(await manualCard.locator(".manual-meal-title").innerText(), /Banane.*Pfirsich.*Einführung/, "Kartentitel muss Hauptbasis und Einführung repräsentieren");
   assert.equal(await manualCard.locator("summary").evaluate((element) => getComputedStyle(element).listStyleType), "none", "nativer Details-Marker darf nicht einrücken");
   assert.equal(await manualCard.locator(".manual-meal-actions").evaluate((element) => getComputedStyle(element).gap), "12px", "Aktionsbuttons müssen den 12px-Gruppenabstand des Designsystems verwenden");
@@ -279,7 +284,7 @@ try {
   await page.locator("#manualMealTargetDate").fill(dates.today);
   await page.locator("#manualMealTargetDate").dispatchEvent("change");
   await page.locator("#confirmManualMeal").click();
-  await page.locator(`#blockPlan .removeManualMeal[data-date="${dates.today}"][data-meal="breakfast"]`).waitFor();
+  await page.locator(`#blockPlan .removeManualMeal[data-date="${dates.today}"][data-meal="breakfast"]`).waitFor({ state: "attached" });
 
   savedState = await page.evaluate(() => window.__beikostTest.getState());
   assert.equal(savedState.manualMeals[`${dates.future}|breakfast`], undefined, "alter Zukunftsschlüssel muss entfernt werden");
@@ -289,11 +294,12 @@ try {
   manualCard = page.locator("#blockPlan .manual-meal").filter({
     has: page.locator(`.removeManualMeal[data-date="${dates.today}"][data-meal="breakfast"]`),
   });
+  await openManualCard(manualCard);
   await manualCard.locator(".replaceMeal").click();
   await page.locator("#manualMealTargetDate").fill(dates.past);
   await page.locator("#manualMealTargetDate").dispatchEvent("change");
   await page.locator("#confirmManualMeal").click();
-  await page.locator(`#blockPlan .removeManualMeal[data-date="${dates.past}"][data-meal="breakfast"]`).waitFor();
+  await page.locator(`#blockPlan .removeManualMeal[data-date="${dates.past}"][data-meal="breakfast"]`).waitFor({ state: "attached" });
 
   savedState = await page.evaluate(() => window.__beikostTest.getState());
   assert.equal(savedState.settings.planFrom, dates.past, "vergangener Zieltag muss nach Save sichtbar gemacht werden");
@@ -302,6 +308,7 @@ try {
   manualCard = page.locator("#blockPlan .manual-meal").filter({
     has: page.locator(`.removeManualMeal[data-date="${dates.past}"][data-meal="breakfast"]`),
   });
+  await openManualCard(manualCard);
   await manualCard.locator(".moveMeal").click();
   await page.locator(`#blockPlan .removeManualMeal[data-date="${dates.today}"][data-meal="breakfast"]`).waitFor({ state: "attached" });
   savedState = await page.evaluate(() => window.__beikostTest.getState());
@@ -314,7 +321,7 @@ try {
   manualCard = page.locator("#blockPlan .manual-meal").filter({
     has: page.locator(`.removeManualMeal[data-date="${dates.today}"][data-meal="breakfast"]`),
   });
-  await manualCard.evaluate((element) => { element.open = true; });
+  await openManualCard(manualCard);
   await manualCard.locator(".logMeal").click();
   await page.locator('[data-remove-log-food="pfirsich"]').waitFor();
   await page.locator('[data-remove-log-food="pfirsich"]').click();

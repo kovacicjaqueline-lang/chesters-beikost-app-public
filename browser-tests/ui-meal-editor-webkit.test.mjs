@@ -152,7 +152,7 @@ try {
   await search.fill("Banane");
   await page.locator('.selectFood[data-food="banane"]').click();
   await page.locator("#confirmManualMeal").click();
-  await page.locator(`#todayCard .removeManualMeal[data-date="${dates.today}"][data-meal="lunch"]`).waitFor();
+  await page.locator(`#todayCard .removeManualMeal[data-date="${dates.today}"][data-meal="lunch"]`).waitFor({ state: "attached" });
   let savedState = await page.evaluate(() => window.__beikostTest.getState());
   assert.ok(savedState.manualMeals[`${dates.today}|lunch`], "neu für heute angelegte Mahlzeit muss unter dem heutigen Schlüssel gespeichert sein");
 

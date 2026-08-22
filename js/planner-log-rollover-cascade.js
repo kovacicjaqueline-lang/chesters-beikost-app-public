@@ -88,13 +88,26 @@
   globalScope.__plannerRolloverCascade = API;
 
   // Die Review-Fixes müssen vor app.js und vor nachgelagerten UI-Dekoratoren laufen.
-  // Beim normalen Parser-Start lädt document.write das Zusatzmodul synchron.
+  // Beim normalen Parser-Start lädt document.write die Zusatzmodule synchron.
   const reviewFixSrc = "js/planner-log-rollover-review-fixes.js?v=10.1.26";
   if (document.readyState === "loading") {
     document.write(`<script src="${reviewFixSrc}"></scr` + `ipt>`);
   } else {
     let script = document.createElement("script");
     script.src = reviewFixSrc;
+    script.async = false;
+    document.head.appendChild(script);
+  }
+
+  // Die gemeinsame Kartenpräsentation muss vor dem Tauschen-Dekorator stehen:
+  // So laufen Wochenplan und „Heute“ durch denselben renderMeal-/renderMealCore-Pfad
+  // und erhalten anschließend dieselbe Tauschen-Aktion ohne Today-Sondervariante.
+  const mealCardSrc = "js/meal-card-unification.js?v=10.1.26";
+  if (document.readyState === "loading") {
+    document.write(`<script src="${mealCardSrc}"></scr` + `ipt>`);
+  } else {
+    let script = document.createElement("script");
+    script.src = mealCardSrc;
     script.async = false;
     document.head.appendChild(script);
   }

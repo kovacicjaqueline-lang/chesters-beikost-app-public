@@ -60,6 +60,32 @@
 
   root.__mealCardUnificationInstalled = true;
 
+  function installTodayPlanMealStyles() {
+    if (document.querySelector('style[data-meal-card-unification="v1"]')) return;
+    let style = document.createElement("style");
+    style.dataset.mealCardUnification = "v1";
+    style.textContent = `
+#todayCard .mealbox {
+  margin-top: var(--space-related);
+  padding: var(--space-subcard);
+  border: 1px solid var(--line);
+  background: var(--surface-soft);
+}
+#todayCard .mealbox:first-of-type {
+  border-top: 1px solid var(--line);
+}
+#todayCard .logMeal {
+  min-height: 44px !important;
+  padding: 9px 12px !important;
+  margin-top: 8px;
+  border-radius: 13px;
+}
+`;
+    document.head.appendChild(style);
+  }
+
+  installTodayPlanMealStyles();
+
   stockBadges = function compactStockBadges(meal) {
     if (meal?.recipeInventoryId) {
       let badge = compactStockBadgeData("recipe");

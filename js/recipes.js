@@ -165,7 +165,7 @@ const RECIPE_RESEARCH_GUIDANCE = Object.freeze({
   "Huhn-Zucchini-Nockerl": Object.freeze(["60 g vollständig gegartes fein zerkleinertes Huhn, 80 g sehr weich gegarte und gut ausgedrückte Zucchini, 1 Ei, 45 g Weizenmehl oder feiner Weizengrieß, 5 ml Rapsöl, bei Bedarf bis zu 15 ml Wasser", 7]),
   "Rind-Karotten-Nockerl": Object.freeze(["60 g vollständig gegartes fein zerkleinertes Rind, 80 g sehr weich gegarte Karotte oder Karottenpüree, 1 Ei, 45 g Weizenmehl oder feiner Weizengrieß, 5 ml Rapsöl, bei Bedarf bis zu 15 ml Wasser", 7]),
   "Linsen-Süßkartoffel-Nockerl": Object.freeze(["100 g sehr weich gekochte rote Linsen, 100 g Süßkartoffelpüree, 1 Ei, 40 g Weizenmehl oder feiner Weizengrieß, 5 ml Rapsöl", 7]),
-  "Pizza Wrap": Object.freeze(["2 Vollkorn-Wraps aus Weizen, 2 EL Tomatenmark, 2 EL Wasser, 30 g geriebener pasteurisierter Käse, 1 mittelgroßer Champignon und/oder ¼ Paprika und/oder etwa 2,5 cm Zucchini, 1 TL Olivenöl", 9]),
+  "Pizza Wrap": Object.freeze(["2 Vollkorn-Wraps aus Weizen, 2 EL Tomatenmark, 2 EL Wasser, 30 g geriebener pasteurisierter Käse, 1 mittelgroßer Champignon und/oder ¼ Paprika und/oder etwa 2,5 cm Zucchini, 1 TL Olivenöl", null]),
   "Chicken Fajita Wrap": Object.freeze(["1¼ rote Paprika, 1½ kleine Zwiebeln, ½ TL Paprikapulver, ¼ TL mildes Chilipulver, 1 kleine Knoblauchzehe, ½ TL gemahlener Kreuzkümmel, 2 TL Pflanzenöl, 2 kleine Hühnerbrustfilets, pro Portion ½ mittelgroßer Weizen-Tortilla-Wrap und ½ EL Naturjoghurt", 12]),
 });
 
@@ -239,14 +239,17 @@ function installRecipeResearchGuidance(recipes = typeof RECIPES !== "undefined" 
       recipe.ingredients = ingredients;
       changed = true;
     }
-    let hardMinimum = Number(recipe.hardMinMonths || 0);
-    let recommendation = Math.max(hardMinimum, Number(recommendedMonths || 0));
-    if (Number(recipe.minMonths || 0) !== recommendation) {
-      recipe.minMonths = recommendation;
-      changed = true;
+    let hasAgeRecommendation = Number.isFinite(Number(recommendedMonths)) && Number(recommendedMonths) > 0;
+    if (hasAgeRecommendation) {
+      let hardMinimum = Number(recipe.hardMinMonths || 0);
+      let recommendation = Math.max(hardMinimum, Number(recommendedMonths));
+      if (Number(recipe.minMonths || 0) !== recommendation) {
+        recipe.minMonths = recommendation;
+        changed = true;
+      }
+      recipe.ageGuidanceKind = "orientation";
     }
     recipe.quantityGuidanceRevision = "2026-08-22";
-    recipe.ageGuidanceKind = "orientation";
   }
 
   return changed;

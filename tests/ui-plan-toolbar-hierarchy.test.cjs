@@ -5,6 +5,7 @@ const path = require('node:path');
 
 const root = path.resolve(__dirname, '..');
 const css = fs.readFileSync(path.join(root, 'ui-meal-editor-footer.css'), 'utf8');
+const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
 function lastRule(selector) {
   const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -12,13 +13,19 @@ function lastRule(selector) {
   return matches.at(-1)?.[1] || '';
 }
 
-test('Wochenplan-Kopf ordnet Planbasis, Lockstatus, Prüfung und Zusatzaktionen ruhig', () => {
-  assert.match(lastRule('#plan .plan-toolbar'), /display:\s*flex/);
-  assert.match(lastRule('#plan .plan-toolbar'), /flex-direction:\s*column/);
-  assert.match(lastRule('#plan .plan-defaults.plan-defaults-compact'), /order:\s*3/);
-  assert.match(lastRule('#plan .plan-lock-strip'), /order:\s*4/);
-  assert.match(lastRule('#plan #planQuality'), /order:\s*5/);
-  assert.match(lastRule('#plan .plan-secondary-actions'), /order:\s*6/);
+test('Wochenplan-Kopf hat dieselbe visuelle und semantische DOM-Reihenfolge', () => {
+  const plan = html.match(/<section id="plan" class="view">[\s\S]*?<div id="blockPlan"><\/div>/)?.[0] || '';
+  const controls = plan.indexOf('class="plan-controls"');
+  const defaults = plan.indexOf('id="planDefaults"');
+  const locks = plan.indexOf('id="planLockSummary"');
+  const quality = plan.indexOf('id="planQuality"');
+  const secondary = plan.indexOf('class="plan-secondary-actions"');
+
+  assert.ok(controls >= 0 && defaults > controls, 'Planbasis steht nach den Hauptaktionen');
+  assert.ok(locks > defaults, 'Lockstatus steht nach der Planbasis');
+  assert.ok(quality > locks, 'Planprüfung steht nach dem Lockstatus');
+  assert.ok(secondary > quality, 'Weitere Planaktionen stehen nach der Planprüfung');
+  assert.doesNotMatch(css, /#plan [^{]+\{[^}]*\border\s*:/s);
 });
 
 test('Planbasis und Lockstatus verwenden keine eigenen Kartenflächen mehr', () => {

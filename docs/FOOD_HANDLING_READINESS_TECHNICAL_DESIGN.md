@@ -1,6 +1,6 @@
 # FOOD Handling Readiness – technisches Soll- und Laufzeitmodell
 
-Stand: 2026-08-21  
+Stand: 2026-08-22  
 Status: Handling-, Bite-Separation- und Oral-Processing-Modell fachlich freigegeben  
 Bezug: `docs/FOOD_HANDLING_ORAL_PROCESSING_CONTRACT.md` und `docs/PLANNER_FACHKONZEPT.md`
 
@@ -119,15 +119,20 @@ biteRequiredCapability: "graded-bite"
 
 Die Capability wird unabhängig von Handling und Oral Processing geprüft.
 
-`graded-bite` bedeutet technisch und fachlich: **dosierter Kieferschluss bei einer zusammenhängenden, formstabilen Form, um einen beherrschbaren Bissen kontrolliert zu halten oder abzutrennen.** Es bedeutet nicht bloß „kräftiger beißen“.
+`graded-bite` bedeutet technisch und fachlich: **gezielt dosierter Kieferschluss bei einer weichen, aber formstabilen zusammenhängenden Form, um einen passenden beherrschbaren Bissen abzutrennen.** Es bedeutet nicht bloß „kräftiger beißen“.
 
-Der bestehende Katalog enthält nach dem gezielten Einzel-Recheck:
+Der gezielte Recheck der **41 zuvor bestehenden** zusammenhängenden `finger-graspable`-Rezepte ergibt:
 
 - 13 × `low-resistance-separate`
 - 28 × `easy-bite-separate`
 - 0 × `graded-bite-required`
 
-Die Capability bleibt trotzdem Bestandteil des Modells. PEAS beschreibt `graded bite through harder or chewy food` für formstabilere/härtere/zähere Fingerfoods. Solche Quellenbeispiele dürfen bei neuen oder später einzeln geprüften Brot-/Toast-/Pitta-/Wrap-/Pasta-/Ei-/Fleischformen als Review-Signal dienen, erzeugen aber **keine Kategorienregel**.
+Im aktuellen **105er Laufzeitkatalog** kommen zwei individuell geprüfte graded-bite-Referenzfälle hinzu:
+
+- `Pizza Wrap`: `graded-bite-required` + `easy-chew`, nur `graded-bite`;
+- `Chicken Fajita Wrap`: `graded-bite-required` + `structured-chew-required`, `graded-bite` + `structured-chew`.
+
+Die Capability bleibt eine Einzelentscheidung. PEAS beschreibt `graded bite through harder or chewy food` für formstabilere/härtere/zähere Fingerfoods. Solche Quellenbeispiele dürfen bei neuen oder später einzeln geprüften Brot-/Toast-/Pitta-/Wrap-/Pasta-/Ei-/Fleischformen als Review-Signal dienen, erzeugen aber **keine Kategorienregel**.
 
 ## 5. Oral Processing
 
@@ -135,14 +140,14 @@ Die Capability bleibt trotzdem Bestandteil des Modells. PEAS beschreibt `graded 
 
 `easy-bite-separate` ist deshalb kein Oral-Profil mehr. Sein bisher vermischter post-separation-Anteil wird als `easy-chew` modelliert.
 
-Vier bestehende Rezepte verlangen weiterhin nach separater Einzelprüfung `structured-chew`:
+Vier zuvor bestehende Rezepte verlangen weiterhin nach separater Einzelprüfung `structured-chew`:
 
 - Rind-Hafer-Bällchen
 - Baby-Bananenbrot
 - Weiche Joghurt-Fladen
 - Huhn-Gemüse-Muffins
 
-Technische Form dieser vier aktuellen Bestandsfälle:
+Technische Form dieser vier Bestandsfälle:
 
 ```js
 {
@@ -172,7 +177,7 @@ Fehlende Altwerte werden konservativ als `false` normalisiert.
 Die Settings-UI enthält drei getrennte beobachtbare Bestätigungen:
 
 - kleine weiche Stücke gezielt aufnehmen und zum Mund führen;
-- bei einem zusammenhängenden formstabilen Stück den Kieferschluss gezielt dosieren und einen beherrschbaren Bissen kontrolliert halten oder abtrennen;
+- „Mein Kind kann bei einem weichen, aber formstabilen Stück gezielt einen passenden Bissen abtrennen.“;
 - strukturierte weiche Bissen sicher im Mund bewegen und wiederholt zerkleinern.
 
 Eine neue Storage-Schema-Version ist nicht erforderlich, weil `gradedBite` additiv ist.
@@ -185,11 +190,11 @@ Wichtig:
 - keine Capability entsperrt eine andere;
 - Zähne sind kein Capability-Gate.
 
-## 7. Vollmigration der 103 Laufzeitrezepte
+## 7. Vollmigration der 105 Laufzeitrezepte
 
-Der Contract enthält weiterhin genau **103 Rezeptnamen** und muss exakt mit dem normalisierten Laufzeitkatalog übereinstimmen.
+Der Contract enthält genau **105 Rezeptnamen** und muss exakt mit dem normalisierten Laufzeitkatalog übereinstimmen.
 
-Die bestehende Later-Matrix bleibt insgesamt bei 87 / 4 / 3 / 9:
+Die bestehende 103er Later-Matrix bleibt erhalten und wird um die zwei neuen graded-bite-Referenzfälle ergänzt:
 
 | Gruppe | Anzahl | technische Wirkung |
 | --- | ---: | --- |
@@ -197,6 +202,8 @@ Die bestehende Later-Matrix bleibt insgesamt bei 87 / 4 / 3 / 9:
 | `structured-chew` | 4 | harte beobachtete orale Capability; Bite-Separation bleibt `easy-bite-separate` |
 | `small-soft-pieces` | 3 | harte beobachtete Handling-Capability |
 | weiche spätere Formorientierung | 9 | keine neue Capability; Form/`minMonths`-Orientierung bleibt erhalten |
+| `graded-bite` | 1 | `Pizza Wrap`: harte beobachtete Bite-Capability |
+| `graded-bite` + `structured-chew` | 1 | `Chicken Fajita Wrap`: zwei unabhängige harte Capabilities |
 | offen | 0 | – |
 
 Die neun weichen späteren Formfälle bleiben:
@@ -239,7 +246,7 @@ Darreichungsform: kleine weiche Stücke noch nicht bestätigt
 Bite-Capability:
 
 ```text
-Bissabtrennung: kontrollierter dosierter Biss noch nicht bestätigt
+Bissabtrennung: gezieltes Abtrennen eines passenden Bissens noch nicht bestätigt
 ```
 
 Orale Capability:
@@ -306,14 +313,14 @@ Dasselbe Prinzip gilt für harte Krusten, kompakt-federnde Bällchen oder gummia
 
 Mindestens abzusichern:
 
-1. 103 Runtime-Rezepte = 103 Contract-Einträge;
+1. 105 Runtime-Rezepte = 105 Contract-Einträge;
 2. keine Doppelzuordnung;
-3. bestehende Later-Matrix 87 / 4 / 3 / 9;
-4. 41 `finger-graspable` = 13 low-resistance / 28 easy-bite / 0 graded-bite;
+3. bestehende 103er Later-Matrix 87 / 4 / 3 / 9 plus zwei explizite graded-bite-Referenzfälle;
+4. 41 zuvor bestehende `finger-graspable` = 13 low-resistance / 28 easy-bite / 0 graded-bite;
 5. jeder `finger-graspable`-Contract hat Bite Separation;
-6. vier Einzelprüfungen verlangen `structured-chew`, bleiben Bite-seitig aber `easy-bite-separate`;
-7. `gradedBite` bleibt als eigenständige Capability technisch prüfbar und entsperrt `structuredChew` nicht;
-8. reales Bestandsrezept mit `structured-chew` bleibt bei fehlendem `structuredChew` gesperrt, unabhängig von `gradedBite`;
+6. vier Bestands-Einzelprüfungen verlangen `structured-chew`, bleiben Bite-seitig aber `easy-bite-separate`;
+7. `Pizza Wrap` verlangt nur `gradedBite`; `Chicken Fajita Wrap` verlangt `gradedBite` und `structuredChew`;
+8. `gradedBite` und `structuredChew` entsperren sich nicht gegenseitig;
 9. drei Nockerl nur durch `small-soft-pieces` freigegeben;
 10. Feeding-Präferenz umgeht keine Capability;
 11. `spoon-soft-lumpy` bleibt an Texturentwicklung gekoppelt;

@@ -114,7 +114,7 @@
   <details class="panel-details" id="logDetails">
    <summary><span><b id="logSummaryTitle">Protokoll</b><small id="logCountSummary">Ältere Einträge bleiben vollständig gespeichert.</small></span></summary>
    <div class="panel-body compact-log-body">
-    <div class="compact-log-head"><div class="small">Neueste Tage · Abendessen zuerst</div><button class="btn smallbtn" id="freeLog">+ Eintrag</button></div>
+    <div class="compact-log-head"><div class="small">Neueste Tage · Abendessen zuerst</div><button class="btn smallbtn" id="freeLog">+ Essen eintragen</button></div>
     <div class="log-toolbar"><div class="field"><label>Zeitraum</label><select id="logMonthFilter"><option value="all">Alle Monate</option></select></div></div>
     <div id="logList"></div>
     <button class="btn secondary full" id="logMore" style="display:none">Weitere Einträge anzeigen</button>
@@ -163,7 +163,7 @@
      <div class="small">
       <p><b>Geschlossenes Schloss:</b> Die Mahlzeit bleibt bei einer automatischen Neuberechnung unverändert.</p>
       <p><b>Offenes Schloss:</b> Bei einer Neuberechnung darf die App die Mahlzeit anpassen.</p>
-      <p>Manuelle Änderungen wie Zutaten wechseln, verschieben oder protokollieren bleiben immer möglich. „Neu planen“ löst nur Mahlzeiten, die die App fest eingeplant hat; manuell geschützte Mahlzeiten bleiben bestehen.</p>
+      <p>Du kannst Mahlzeiten weiterhin bearbeiten oder verschieben und tatsächliches Essen jederzeit eintragen. „Neu planen“ löst nur Mahlzeiten, die die App fest eingeplant hat; manuell geschützte Mahlzeiten bleiben bestehen.</p>
      </div>
     </details>
     <details class="help-topic">
@@ -177,7 +177,7 @@
      </div>
     </details>
     <details class="help-topic">
-     <summary>Neue Lebensmittel protokollieren</summary>
+     <summary>Neue Lebensmittel eintragen</summary>
      <div class="small">
       <p>Neue Lebensmittel und Wiederholungen werden im selben Protokolleintrag wie jedes andere Essen erfasst. Die interne Einführungsrolle bleibt dabei erhalten.</p>
       <p>Bei freien Einträgen ist keine Mahlzeitenauswahl nötig. Bei „Probiert“ oder „Gegessen“ wird die tatsächlich angebotene Konsistenz dokumentiert. Bei Ablehnung, Reaktion oder „Nicht angeboten“ ist sie optional; alte Einträge ohne bekannte Konsistenz bleiben unverändert.</p>
@@ -201,7 +201,7 @@
     <details class="help-topic">
      <summary>Vorrat und Reservierungen</summary>
      <div class="small">
-      <p>Passende Gefrierportionen können für geplante Mahlzeiten reserviert werden. Abgezogen wird der Vorrat erst beim Protokollieren.</p>
+      <p>Passende Gefrierportionen können für geplante Mahlzeiten reserviert werden. Abgezogen wird der Vorrat erst beim Eintragen des tatsächlichen Essens.</p>
       <p>Bei mehreren Batches wird der älteste passende Batch zuerst verwendet. Rezeptvorrat wie Bananenbrot bleibt getrennt von einzelnen Lebensmitteln.</p>
      </div>
     </details>
@@ -244,7 +244,7 @@
 <button data-view="more" aria-label="Mehr"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>Mehr</button>
 </nav>
 <div class="toast" id="toast"><div class="grow" id="toastText"></div><button id="toastUndo">Rückgängig</button></div>
-<div class="modal" id="logModal"><div class="sheet log-sheet"><div class="sheethead row"><div class="grow"><h2 id="logTitle">Protokollieren</h2><div class="small" id="logSubtitle"></div></div><button class="iconbtn" id="closeLog">×</button></div><div id="logForm"></div></div></div>
+<div class="modal" id="logModal"><div class="sheet log-sheet"><div class="sheethead row"><div class="grow"><h2 id="logTitle">Essen eintragen</h2><div class="small" id="logSubtitle"></div></div><button class="iconbtn" id="closeLog">×</button></div><div id="logForm"></div></div></div>
 <div class="modal" id="genericModal"><div class="sheet"><div class="sheethead row"><div class="grow"><h2 id="genericTitle"></h2></div><button class="iconbtn" id="closeGeneric">×</button></div><div id="genericBody"></div></div></div>
  <!-- Version 10.1.26: Recipe-V2 R01–R10 (100 freigegebene Rezeptillustrationen) integriert; Joghurt-Zutatenwürfel entfernt; Food-V2 164/164 sowie Funktionalität unverändert. -->
 <script src="data/foods.js?v=10.1.26"></script>

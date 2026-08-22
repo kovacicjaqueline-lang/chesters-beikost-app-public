@@ -62,16 +62,20 @@ const RECIPE_CONTRACT_GROUPS = Object.freeze({
     "Gebackene Saba-Banane",
     "Bananen-Ei-Pancakes"
   ]),
-  fingerEasy: Object.freeze([
+  fingerEasySoft: Object.freeze([
+    "Geflügel-Gemüse-Hafer-Bällchen",
+    "Rote-Linsen-Bratlinge",
+    "Polenta-Zucchini-Sticks",
+    "Süßkartoffel-Linsen-Muffins",
+    "Fleisch-Gemüse-Bällchen"
+  ]),
+  fingerEasyChew: Object.freeze([
     "Obst-Hafer-Pancakes",
     "Birne-Hirse-Pancakes",
     "Gemüse-Hafer-Pancakes",
     "Zucchini-Hafer-Pancakes",
     "Ube-Bananen-Pancakes",
-    "Geflügel-Gemüse-Hafer-Bällchen",
     "Zucchini-Hafer-Puffer",
-    "Rote-Linsen-Bratlinge",
-    "Polenta-Zucchini-Sticks",
     "Obst-Hafer-Muffins",
     "Gemüse-Hafer-Muffins",
     "Kürbis-Hirse-Muffins",
@@ -83,15 +87,19 @@ const RECIPE_CONTRACT_GROUPS = Object.freeze({
     "Obst-Joghurt-Hafer-Ofenbites",
     "Zucchini-Joghurt-Hafer-Bites",
     "Joghurt-Hafer-Waffeln",
-    "Gemüse-Joghurt-Mini-Muffins",
-    "Süßkartoffel-Linsen-Muffins",
-    "Fleisch-Gemüse-Bällchen"
+    "Gemüse-Joghurt-Mini-Muffins"
   ]),
   fingerEasyStructured: Object.freeze([
     "Rind-Hafer-Bällchen",
     "Baby-Bananenbrot",
     "Weiche Joghurt-Fladen",
     "Huhn-Gemüse-Muffins"
+  ]),
+  fingerGradedEasyChew: Object.freeze([
+    "Pizza Wrap"
+  ]),
+  fingerGradedStructured: Object.freeze([
+    "Chicken Fajita Wrap"
   ]),
   spoonSmoothMash: Object.freeze([
     "Obst-Haferbrei",
@@ -225,6 +233,12 @@ const RECIPE_CONTRACT_OVERRIDES = Object.freeze({
   "Linsen-Süßkartoffel-Nockerl": Object.freeze({
     servingRequirement: "Als kleine einzelne, längliche und sehr weiche Nockerl anbieten. Ein aufgeschnittenes Nockerl darf nicht klebrig-gummiartig oder kompakt-elastisch sein; kleine weiche Stücke erst bei bestätigter passender Handhabung.",
   }),
+  "Pizza Wrap": Object.freeze({
+    servingRequirement: "Als zusammenhängenden, leicht gepressten Wrap mit weicher Füllung anbieten. Gemüse fein schneiden und weich garen, Käse schmelzen lassen und den Wrap nur so weit erwärmen, dass er formstabil bleibt; harte, trockene oder spröde Ränder vermeiden. In gut greifbare, beherrschbare Abschnitte schneiden.",
+  }),
+  "Chicken Fajita Wrap": Object.freeze({
+    servingRequirement: "Huhn vollständig durchgaren und zart halten, Paprika und Zwiebel weich garen. Mit Naturjoghurt in eine weiche Tortilla füllen, eng rollen und in gut greifbare, beherrschbare Abschnitte schneiden. Keine harte oder ausgetrocknete Tortilla anbieten; der abgetrennte Bissen enthält weiterhin Hühnerfasern und verlangt strukturiertes Kauen.",
+  }),
 });
 
 function freezeRecipeContract(modes, biteSeparation, oralProcessing, extra = {}) {
@@ -251,10 +265,16 @@ addRecipeContractGroup(
   RECIPE_CONTRACT_GROUPS.fingerLowResistance,
   [HANDLING_MODES.FINGER_GRASPABLE],
   BITE_SEPARATION_PROFILES.LOW_RESISTANCE_SEPARATE,
-  ORAL_PROCESSING_PROFILES.EASY_CHEW,
+  ORAL_PROCESSING_PROFILES.SOFT_BREAKDOWN,
 );
 addRecipeContractGroup(
-  RECIPE_CONTRACT_GROUPS.fingerEasy,
+  RECIPE_CONTRACT_GROUPS.fingerEasySoft,
+  [HANDLING_MODES.FINGER_GRASPABLE],
+  BITE_SEPARATION_PROFILES.EASY_BITE_SEPARATE,
+  ORAL_PROCESSING_PROFILES.SOFT_BREAKDOWN,
+);
+addRecipeContractGroup(
+  RECIPE_CONTRACT_GROUPS.fingerEasyChew,
   [HANDLING_MODES.FINGER_GRASPABLE],
   BITE_SEPARATION_PROFILES.EASY_BITE_SEPARATE,
   ORAL_PROCESSING_PROFILES.EASY_CHEW,
@@ -267,6 +287,27 @@ addRecipeContractGroup(
   {
     oralRequiredCapability: HANDLING_CAPABILITIES.STRUCTURED_CHEW,
     laterKind: "oral-capability",
+  },
+);
+addRecipeContractGroup(
+  RECIPE_CONTRACT_GROUPS.fingerGradedEasyChew,
+  [HANDLING_MODES.FINGER_GRASPABLE],
+  BITE_SEPARATION_PROFILES.GRADED_BITE_REQUIRED,
+  ORAL_PROCESSING_PROFILES.EASY_CHEW,
+  {
+    biteRequiredCapability: HANDLING_CAPABILITIES.GRADED_BITE,
+    laterKind: "bite-capability",
+  },
+);
+addRecipeContractGroup(
+  RECIPE_CONTRACT_GROUPS.fingerGradedStructured,
+  [HANDLING_MODES.FINGER_GRASPABLE],
+  BITE_SEPARATION_PROFILES.GRADED_BITE_REQUIRED,
+  ORAL_PROCESSING_PROFILES.STRUCTURED_CHEW_REQUIRED,
+  {
+    biteRequiredCapability: HANDLING_CAPABILITIES.GRADED_BITE,
+    oralRequiredCapability: HANDLING_CAPABILITIES.STRUCTURED_CHEW,
+    laterKind: "bite-oral-capability",
   },
 );
 addRecipeContractGroup(

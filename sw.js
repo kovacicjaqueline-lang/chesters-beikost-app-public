@@ -112,8 +112,10 @@ const UNIFIED_LOG_PRECACHE = [
 // Query-Cachetreffer und liefert die aktuelle UI-/Flow-Runtime beim nächsten Start.
 const UI_PRECACHE = [
   "./ui-meal-editor-footer.css?v=10.1.26",
+  "./flow-dialog-ui.css?v=10.1.26",
   "./catalog-navigation.css",
   "./js/manual-meal-flow.js",
+  "./js/flow-dialog-ui.js",
   "./js/planned-recipe-details.js?v=10.1.26",
   "./js/recipe-frozen-ingredient-stock.js",
   "./js/planner-log-rollover.js",

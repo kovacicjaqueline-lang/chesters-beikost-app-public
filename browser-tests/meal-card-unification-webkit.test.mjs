@@ -11,7 +11,7 @@ const mimeTypes = {
   ".js": "text/javascript; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".json": "application/json; charset=utf-8",
-  ".webmanifest": "application/manifest+json; charset=utf-8",
+  ".webmanifest": "application/manifest+json",
   ".svg": "image/svg+xml",
   ".png": "image/png",
   ".webp": "image/webp",
@@ -163,6 +163,11 @@ try {
   assert.equal(await homeStockBadge.locator(".stock-badge-icon").getAttribute("aria-hidden"), "true");
   assert.equal(await homeStockBadge.locator(".stock-badge-icon").getAttribute("stroke"), "currentColor");
   const homeStockBadgeMarkup = await homeStockBadge.innerHTML();
+
+  const unresolvedFoodStockHtml = await page.evaluate(() =>
+    window.stockBadges({ inventoryFoodIds: ["missing-food"], recipeInventoryId: "" }),
+  );
+  assert.equal(unresolvedFoodStockHtml, "", "Unauflösbarer FOOD-Vorrat darf nicht als alleinstehendes Vorrat erscheinen");
 
   const manualLabelHtml = await page.evaluate(() =>
     window.__mealCardUnification.stripVisibleLockLabel('<div class="tiny lock-label">Manuell geschützt</div>'),

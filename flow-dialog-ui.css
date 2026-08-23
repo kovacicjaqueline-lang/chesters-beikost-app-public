@@ -85,6 +85,23 @@
   margin-bottom: var(--space-related, 10px);
 }
 
+/* Die FOOD-Darreichung wird nachträglich als drittes Kind in .manual-role-item
+ * eingesetzt. Im Basis-Stylesheet ist dieser Container ein Flex-Row; dadurch wurde
+ * das volle Darreichungsfeld neben Name und Entfernen-Button gequetscht. Im
+ * Plan-Editor bekommt die Zeile deshalb zwei Spalten und die Darreichung die bereits
+ * vorgesehene volle zweite Zeile. */
+#genericModal.flow-dialog .manual-role-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 7px;
+  row-gap: 0;
+}
+
+#genericModal.flow-dialog .manual-role-item > .manual-preparation-field {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
 #genericModal.flow-dialog #mealSelectorSearch,
 #logModal.flow-dialog #logFoodSearch,
 #logModal.flow-dialog #logRecipeSearch {

@@ -4,6 +4,7 @@ const test = require("node:test");
 const {
   compactStockBadgeData,
   stockBadgeIconMarkup,
+  simplifyMealTypeLabel,
 } = require("../js/meal-card-unification.js");
 
 test("FOOD-Vorrat zeigt eine einzelne Vorratszutat auch bei identischem Mahlzeitentitel", () => {
@@ -47,4 +48,19 @@ test("Vorratsbadge verwendet ein neutrales currentColor-Outline-Icon statt Schne
   assert.match(icon, /fill="none"/);
   assert.match(icon, /stroke="currentColor"/);
   assert.match(icon, /aria-hidden="true"/);
+});
+
+test("normale Mahlzeiten zeigen nur die konkrete Tagesmahlzeit statt Mahlzeit · Mahlzeitentyp", () => {
+  assert.equal(
+    simplifyMealTypeLabel('<div class="small meal-type-text">Mahlzeit · Mittag</div>'),
+    '<div class="small meal-type-text">Mittag</div>',
+  );
+  assert.equal(
+    simplifyMealTypeLabel('<div class="small meal-type-text">Rezept · Mittag</div>'),
+    '<div class="small meal-type-text">Rezept · Mittag</div>',
+  );
+  assert.equal(
+    simplifyMealTypeLabel('<div class="small meal-type-text">Mahlzeit mit Allergen wiederholen · Mittag</div>'),
+    '<div class="small meal-type-text">Mahlzeit mit Allergen wiederholen · Mittag</div>',
+  );
 });

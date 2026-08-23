@@ -110,6 +110,27 @@ async function mealActionLabels(meal) {
     .evaluateAll((buttons) => buttons.map((button) => button.textContent.trim()));
 }
 
+async function directActionLabels(meal) {
+  return meal
+    .locator(":scope > .actionbar.random-swap-actions .randomizeMeal, :scope > details.meal-plan-actions > summary, :scope > .logMeal")
+    .evaluateAll((nodes) => nodes.map((node) => node.textContent.trim()));
+}
+
+async function lockPresentation(meal) {
+  return meal.locator(".meal-lock").first().evaluate((node) => {
+    const rect = node.getBoundingClientRect();
+    const icon = node.querySelector(".lock-svg");
+    const iconRect = icon?.getBoundingClientRect();
+    return {
+      width: rect.width,
+      height: rect.height,
+      backgroundColor: getComputedStyle(node).backgroundColor,
+      iconWidth: iconRect?.width || 0,
+      iconHeight: iconRect?.height || 0,
+    };
+  });
+}
+
 async function mealVisualStyle(meal) {
   return meal.evaluate((node) => {
     const style = getComputedStyle(node);
@@ -149,10 +170,25 @@ try {
   await homeMeal.waitFor();
 
   assert.equal(await homeMeal.locator(".homeLog").count(), 0, "Heute verwendet keinen separaten Home-Kartenpfad mehr");
-  assert.equal(await homeMeal.locator(".logMeal").count(), 1, "Heute verwendet denselben Log-Button wie der Plan");
+  assert.equal(await homeMeal.locator(":scope > .logMeal").count(), 1, "Essen eintragen bleibt direkte Primary-Aktion");
+  assert.equal(await homeMeal.locator(".meal-type-text").first().innerText(), "Mittag", "Normale Mahlzeiten wiederholen nicht mehr das Wort Mahlzeit");
+  assert.deepEqual(
+    await directActionLabels(homeMeal),
+    ["↻ Tauschen", "Plan ändern", "Essen eintragen"],
+    "Direkt sichtbar bleiben nur Tauschen, Planverwaltung und Essen eintragen",
+  );
+  assert.equal(await homeMeal.locator(":scope > details.meal-plan-actions").getAttribute("open"), null, "Planverwaltung ist standardmäßig geschlossen");
+  assert.equal(await homeMeal.locator(".meal-plan-actions .replaceMeal").count(), 1);
+  assert.equal(await homeMeal.locator(".meal-plan-actions .moveMeal").count(), 1);
+  assert.equal(await homeMeal.locator(".meal-plan-actions .removePlannedMeal").count(), 1);
+
   await homeMeal.locator(".meal-lock.locked").waitFor();
   assert.equal(await homeMeal.locator(".lock-label").count(), 0, "Auto-Lock zeigt keine redundante Fest-eingeplant-Zeile");
   assert.doesNotMatch(await homeMeal.innerText(), /Fest eingeplant/);
+  const homeLock = await lockPresentation(homeMeal);
+  assert.ok(homeLock.width >= 44 && homeLock.height >= 44, "Schloss behält ein ausreichend großes Touchziel");
+  assert.ok(homeLock.iconWidth <= 20 && homeLock.iconHeight <= 20, "Schloss-Icon wird visuell zurückgenommen");
+  assert.equal(homeLock.backgroundColor, "rgba(0, 0, 0, 0)", "Schloss erhält keine hervorgehobene Buttonfläche mehr");
 
   const homeStockBadge = homeMeal.locator(".stock-chip");
   assert.equal(await homeStockBadge.innerText(), "Vorrat: Kartoffel");
@@ -182,6 +218,7 @@ try {
   assert.ok(homeActions.some((label) => label.includes("Tauschen")));
   const homeStyle = await mealVisualStyle(homeMeal);
 
+  await homeMeal.locator(".meal-plan-actions > summary").click();
   await homeMeal.locator(".replaceMeal").click();
   await page.locator("#genericModal.open").waitFor();
   await page.locator("#closeGeneric").click();
@@ -197,6 +234,8 @@ try {
   await planMeal.waitFor();
   await planMeal.locator(".meal-lock.locked").waitFor();
   assert.equal(await planMeal.locator(".lock-label").count(), 0);
+  assert.equal(await planMeal.locator(".meal-type-text").first().innerText(), "Mittag");
+  assert.deepEqual(await directActionLabels(planMeal), await directActionLabels(homeMeal), "Heute und Plan verwenden dieselbe direkte Aktionshierarchie");
 
   const planStockBadge = planMeal.locator(".stock-chip");
   assert.equal(await planStockBadge.innerText(), "Vorrat: Kartoffel");
@@ -210,6 +249,7 @@ try {
   assert.deepEqual(await mealVisualStyle(planMeal), homeStyle, "Heute und Plan verwenden dieselbe Kartenoptik");
 
   // Ein regulärer Planner-Slot wird bewusst entfernt und darf beim nächsten Render nicht neu entstehen.
+  await planMeal.locator(".meal-plan-actions > summary").click();
   await planMeal.locator(".removePlannedMeal").click();
   await page.locator("#genericModal.open").waitFor();
   assert.match(await page.locator("#genericBody").innerText(), /nur aus dem Plan entfernt/i);

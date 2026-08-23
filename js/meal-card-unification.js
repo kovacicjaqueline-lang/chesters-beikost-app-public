@@ -49,6 +49,13 @@
     );
   }
 
+  function simplifyMealTypeLabel(html) {
+    return String(html || "").replace(
+      /(<div class="small meal-type-text">)Mahlzeit\s*·\s*([^<]+)(<\/div>)/g,
+      "$1$2$3",
+    );
+  }
+
   function planSlotKey(date, meal) {
     return `${date}|${meal}`;
   }
@@ -63,6 +70,7 @@
       compactStockBadgeData,
       stockBadgeIconMarkup,
       stripVisibleLockLabel,
+      simplifyMealTypeLabel,
       isRemovedPlanSlot,
     };
   }
@@ -81,10 +89,11 @@
   root.__mealCardUnificationInstalled = true;
 
   function installTodayPlanMealStyles() {
-    if (document.querySelector('style[data-meal-card-unification="v2"]')) return;
+    if (document.querySelector('style[data-meal-card-unification="v3"]')) return;
     document.querySelector('style[data-meal-card-unification="v1"]')?.remove();
+    document.querySelector('style[data-meal-card-unification="v2"]')?.remove();
     let style = document.createElement("style");
-    style.dataset.mealCardUnification = "v2";
+    style.dataset.mealCardUnification = "v3";
     style.textContent = `
 #todayCard .mealbox {
   margin-top: var(--space-related);
@@ -105,6 +114,73 @@
 .recipe-stock-chip .stock-badge-icon {
   flex: 0 0 auto;
   margin-right: 5px;
+}
+.mealbox > .actionbar:empty {
+  display: none;
+}
+.mealbox > .actionbar.random-swap-actions {
+  grid-template-columns: 1fr;
+}
+.mealbox > .actionbar.random-swap-actions .randomizeMeal {
+  width: 100%;
+}
+.meal-plan-actions {
+  margin-top: 8px;
+}
+.meal-plan-actions > summary {
+  list-style: none;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 750;
+  cursor: pointer;
+}
+.meal-plan-actions > summary::-webkit-details-marker {
+  display: none;
+}
+.meal-plan-actions > summary::after {
+  content: "⌄";
+  font-size: 14px;
+  line-height: 1;
+  transition: transform .16s ease;
+}
+.meal-plan-actions[open] > summary {
+  color: var(--ink);
+  background: #fffdf8;
+}
+.meal-plan-actions[open] > summary::after {
+  transform: rotate(180deg);
+}
+.meal-plan-actions-body {
+  padding-top: 8px;
+}
+.meal-plan-secondary-actions {
+  margin-top: 0;
+}
+.mealbox .meal-lock {
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
+  padding: 10px !important;
+  border-color: transparent !important;
+  background: transparent !important;
+  color: var(--muted) !important;
+}
+.mealbox .meal-lock.locked {
+  color: var(--accent) !important;
+}
+.mealbox .meal-lock .lock-svg {
+  width: 19px;
+  height: 19px;
+  opacity: .82;
 }
 .meal-delete-row {
   display: flex;
@@ -180,12 +256,26 @@
     return `<div class="meal-delete-row"><button type="button" class="meal-delete-link removePlannedMeal" data-date="${esc(day.date)}" data-meal="${esc(meal.meal)}" data-plan-id="${esc(planId)}">Mahlzeit löschen</button></div>`;
   }
 
+  function compactOpenMealActions(html, day, meal) {
+    if (meal?.manualAdded) return html;
+    let actionStart = html.indexOf('<div class="actionbar">');
+    if (actionStart < 0) return html;
+    let actionEnd = html.indexOf("</div>", actionStart);
+    if (actionEnd < 0) return html;
+    actionEnd += "</div>".length;
+
+    let actionOpen = '<div class="actionbar">';
+    let actionButtons = html.slice(actionStart + actionOpen.length, actionEnd - "</div>".length);
+    let deleteHtml = plannedMealDeleteHtml(day, meal);
+    let compactActions = `<div class="actionbar"></div><details class="meal-plan-actions"><summary>Plan ändern</summary><div class="meal-plan-actions-body"><div class="actionbar meal-plan-secondary-actions">${actionButtons}</div>${deleteHtml}</div></details>`;
+    return `${html.slice(0, actionStart)}${compactActions}${html.slice(actionEnd)}`;
+  }
+
   let originalRenderMealCore = renderMealCore;
   renderMealCore = function renderMealCoreWithSimplifiedActions(day, meal) {
-    let html = stripVisibleLockLabel(originalRenderMealCore(day, meal));
-    let deleteHtml = plannedMealDeleteHtml(day, meal);
-    if (!deleteHtml || !html.includes('class="btn full logMeal"')) return html;
-    return html.replace('<button class="btn full logMeal"', `${deleteHtml}<button class="btn full logMeal"`);
+    let html = simplifyMealTypeLabel(stripVisibleLockLabel(originalRenderMealCore(day, meal)));
+    if (!html || !html.includes('class="btn full logMeal"')) return html;
+    return compactOpenMealActions(html, day, meal);
   };
 
   function removeActualIngredientRepeat(card) {
@@ -399,6 +489,7 @@
     compactStockBadgeData,
     stockBadgeIconMarkup,
     stripVisibleLockLabel,
+    simplifyMealTypeLabel,
     isRemovedPlanSlot,
     flattenCompletedDetails,
     flattenSinglePlanAction,

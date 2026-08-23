@@ -7,7 +7,7 @@
     "deploy": "wrangler deploy",
     "check:deploy": "wrangler deploy --dry-run",
     "test": "node --test tests/*.test.js tests/*.test.cjs",
-    "test:browser": "node browser-tests/ui-meal-editor-webkit.test.mjs && node browser-tests/ui-meal-editor-sticky-footer-webkit.test.mjs && node browser-tests/flow-c-dialogs-webkit.test.mjs && node browser-tests/planned-recipe-details-webkit.test.mjs && node browser-tests/meal-card-unification-webkit.test.mjs && node browser-tests/ui-settings-tab-state-webkit.test.mjs && node browser-tests/unified-food-log-webkit.test.mjs && node browser-tests/planner-random-swap-webkit.test.mjs",
+    "test:browser": "node browser-tests/ui-meal-editor-webkit.test.mjs && node browser-tests/ui-meal-editor-sticky-footer-webkit.test.mjs && node browser-tests/flow-c-dialogs-webkit.test.mjs && node browser-tests/planned-recipe-details-webkit.test.mjs && node browser-tests/meal-card-unification-webkit.test.mjs && node browser-tests/completed-day-presentation-webkit.test.mjs && node browser-tests/ui-settings-tab-state-webkit.test.mjs && node browser-tests/unified-food-log-webkit.test.mjs && node browser-tests/planner-random-swap-webkit.test.mjs",
     "verify:icons": "node --test tests/*icon*.test.cjs tests/legacy-recipe-assets-cleanup.test.cjs",
     "verify:fast": "npm test",
     "verify:app": "npm run verify:fast && npm run test:browser",

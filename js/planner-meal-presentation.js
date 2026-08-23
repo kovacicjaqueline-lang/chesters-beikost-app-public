@@ -49,6 +49,99 @@ function plannerAutomaticComponentTitle(meal) {
   return "";
 }
 
+function plannerCompletedLogOnlyDayState(data, core, date) {
+  if (!core?.logsForDate || !core?.openPlanInstances) {
+    return { canCollapse: false, count: 0, completedCount: 0, grams: 0 };
+  }
+  let logs = core.logsForDate(data, date) || [];
+  let completedLogs = logs.filter((log) =>
+    typeof core.logQualifiesAsCompletion === "function"
+      ? core.logQualifiesAsCompletion(log)
+      : false,
+  );
+  let openPlans = core.openPlanInstances(
+    data,
+    (plan) => plan?.date === date,
+  ) || [];
+  return {
+    canCollapse: completedLogs.length > 0 && openPlans.length === 0,
+    count: logs.length,
+    completedCount: completedLogs.length,
+    grams: logs.reduce((sum, log) => sum + (Number(log?.amount) || 0), 0),
+  };
+}
+
+function plannerInstallCompletedDayPresentationStyles() {
+  if (typeof document === "undefined") return false;
+  if (document.querySelector('style[data-completed-day-presentation="v1"]')) return true;
+  let style = document.createElement("style");
+  style.dataset.completedDayPresentation = "v1";
+  style.textContent = `
+#blockPlan .completed-edit-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+}
+#blockPlan .completed-edit-actions .editCompletedLog {
+  margin: 0 !important;
+}
+`;
+  document.head.appendChild(style);
+  return true;
+}
+
+function plannerCollapseFinishedLogOnlyDays() {
+  if (typeof document === "undefined") return 0;
+  let container = document.getElementById("blockPlan");
+  let core = globalThis.__plannerLogRolloverCore;
+  if (!container || !core || typeof visiblePlanStart !== "function") return 0;
+
+  let from = visiblePlanStart();
+  let current = today();
+  let changed = 0;
+  [...container.children].forEach((dayNode, index) => {
+    if (!dayNode.classList?.contains("day-card")) return;
+    let date = addDays(from, index);
+    if (date >= current) return;
+    let summary = plannerCompletedLogOnlyDayState(state, core, date);
+    if (!summary.canCollapse) return;
+
+    let details = document.createElement("details");
+    details.className = "card block completed-day";
+    let label = nice(date, true);
+    details.innerHTML = `<summary><span><span class="completed-day-title">${esc(label)} erledigt</span><span class="small">${summary.count} ${summary.count === 1 ? "Protokolleintrag" : "Protokolleinträge"}${summary.grams ? ` · ${summary.grams} g protokolliert` : ""}</span></span><span class="completed-day-chevron">▼</span></summary>`;
+
+    let body = document.createElement("div");
+    body.className = "completed-day-body";
+    [...dayNode.children].forEach((child) => {
+      if (!child.classList?.contains("day-head")) body.appendChild(child);
+    });
+    details.appendChild(body);
+    dayNode.replaceWith(details);
+    changed += 1;
+  });
+  return changed;
+}
+
+function plannerCenterCompletedEditActions() {
+  if (typeof document === "undefined") return 0;
+  let container = document.getElementById("blockPlan");
+  if (!container?.querySelectorAll) return 0;
+  let changed = 0;
+  container
+    .querySelectorAll(".mealbox.completed .completed-body-direct .editCompletedLog")
+    .forEach((button) => {
+      let mealBox = button.closest(".mealbox.completed");
+      if (!mealBox || button.closest(".completed-edit-actions")) return;
+      let actions = document.createElement("div");
+      actions.className = "completed-edit-actions";
+      actions.appendChild(button);
+      mealBox.appendChild(actions);
+      changed += 1;
+    });
+  return changed;
+}
+
 function installPlannerMealPresentationRuntime() {
   if (typeof globalThis === "undefined") return false;
   if (globalThis.__plannerMealPresentationRuntimeInstalled) return false;
@@ -65,6 +158,17 @@ function installPlannerMealPresentationRuntime() {
     let componentTitle = plannerAutomaticComponentTitle(meal);
     return componentTitle || originalDishTitle(meal);
   };
+
+  if (typeof renderPlanCore === "function") {
+    plannerInstallCompletedDayPresentationStyles();
+    let originalRenderPlanCore = renderPlanCore;
+    renderPlanCore = function plan08CompletedDayPresentationRenderPlanCore() {
+      let result = originalRenderPlanCore();
+      plannerCollapseFinishedLogOnlyDays();
+      plannerCenterCompletedEditActions();
+      return result;
+    };
+  }
 
   return true;
 }
@@ -94,6 +198,10 @@ if (typeof module !== "undefined" && module.exports) {
     plannerFoodPresentationRole,
     plannerNeutralBreakfastTitle,
     plannerAutomaticComponentTitle,
+    plannerCompletedLogOnlyDayState,
+    plannerInstallCompletedDayPresentationStyles,
+    plannerCollapseFinishedLogOnlyDays,
+    plannerCenterCompletedEditActions,
     installPlannerMealPresentationRuntime,
     loadManualMealFlowRuntime,
   };

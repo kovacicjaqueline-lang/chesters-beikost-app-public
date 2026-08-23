@@ -26,7 +26,7 @@ test("Icon-Rendergrößen: FOOD-Katalog verwendet nur dort 32px", () => {
   );
   assert.match(
     indexHtml,
-    /<link\s+rel="stylesheet"\s+href="catalog-navigation\.css\?v=10\.1\.26">/,
+    /<link\s+rel="stylesheet"\s+href="catalog-navigation\.css\?v=[^"]+">/,
     "catalog-navigation.css muss im App-Dokument geladen werden",
   );
 });

@@ -132,17 +132,53 @@ try {
   await page.locator("#cancelManualMeal").click();
   assert.equal(await page.locator("#genericModal").evaluate((node) => node.classList.contains("open")), false);
 
-  // Geplante Mahlzeit bearbeiten nutzt dieselbe Header-Hierarchie, ohne Log-Semantik zu übernehmen.
+  // Geplante Hafer-Mahlzeit bearbeiten: Header bleibt im gemeinsamen Flow und die
+  // nachträglich ergänzte Darreichung muss unter Name/Entfernen statt daneben liegen.
   await page.evaluate(() => {
-    const date = window.__beikostTest.today();
-    const day = window.__beikostTest.buildDays(date, 1)[0];
-    const meal = day.meals.find((item) => item.meal === "lunch" && item.active) || day.meals.find((item) => item.active);
-    if (!meal) throw new Error("Test benötigt eine aktive geplante Mahlzeit");
-    window.__beikostTest.openManualMealSelector(date, meal.meal, meal);
+    window.__beikostTest.reset();
+    const state = window.__beikostTest.getState();
+    const hafer = state.foods.find((item) => item.id === "hafer");
+    if (!hafer) throw new Error("Test benötigt das Lebensmittel Hafer");
+    hafer.manualStatus = "Verträgliche Basis";
+    window.__beikostTest.setState(state);
+    window.__beikostTest.openManualMealSelector(window.__beikostTest.today(), "lunch", {
+      meal: "lunch",
+      active: true,
+      focusId: "hafer",
+      foodIds: ["hafer"],
+      baseFoodIds: ["hafer"],
+      sampleFoodIds: [],
+      foodRoles: { hafer: "base" },
+      type: "known",
+    });
   });
   await page.waitForFunction(() => document.getElementById("genericTitle")?.textContent === "Mahlzeit bearbeiten");
   assert.equal(await page.locator("#genericModal .flow-dialog-header").count(), 1);
   assert.equal(await page.locator("#confirmManualMeal").textContent(), "Änderungen speichern");
+
+  const haferPreparation = page.locator('[data-manual-preparation="hafer"]');
+  await haferPreparation.waitFor();
+  const haferItem = page.locator(".manual-role-item").filter({ has: haferPreparation });
+  assert.equal(await haferItem.count(), 1, "Hafer muss genau eine Rollen-/Darreichungszeile besitzen");
+  assert.equal(
+    await haferItem.evaluate((node) => getComputedStyle(node).display),
+    "grid",
+    "Rollenzeile mit Darreichung muss als zweizeiliges Grid gerendert werden",
+  );
+
+  const itemBox = await haferItem.boundingBox();
+  const foodBox = await haferItem.locator(":scope > .grow").boundingBox();
+  const actionBox = await haferItem.locator(":scope > .manual-role-actions").boundingBox();
+  const preparationBox = await haferItem.locator(":scope > .manual-preparation-field").boundingBox();
+  assert.ok(itemBox && foodBox && actionBox && preparationBox, "Hafer-Editor muss vollständig messbar sein");
+  assert.ok(
+    preparationBox.y >= Math.max(foodBox.y + foodBox.height, actionBox.y + actionBox.height) - 1,
+    "Konsistenz / Darreichung darf Hafer oder den Entfernen-Button nicht überlagern",
+  );
+  assert.ok(
+    preparationBox.x >= itemBox.x - 1 && preparationBox.x + preparationBox.width <= itemBox.x + itemBox.width + 1,
+    "Darreichungsfeld muss innerhalb der Rollenkarte die volle verfügbare Zeile nutzen",
+  );
   await page.locator("#cancelManualMeal").click();
 
   assert.ok(

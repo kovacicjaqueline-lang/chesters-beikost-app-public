@@ -153,9 +153,21 @@ try {
   await homeMeal.locator(".meal-lock.locked").waitFor();
   assert.equal(await homeMeal.locator(".lock-label").count(), 0, "Auto-Lock zeigt keine redundante Fest-eingeplant-Zeile");
   assert.doesNotMatch(await homeMeal.innerText(), /Fest eingeplant/);
-  assert.equal(await homeMeal.locator(".stock-chip").innerText(), "❄️ Vorrat");
-  assert.equal(await homeMeal.locator(".stock-chip").getAttribute("aria-label"), "Aus Vorrat: Kartoffel");
-  assert.equal(await homeMeal.locator(".stock-chip").getAttribute("title"), "Aus Vorrat: Kartoffel");
+
+  const homeStockBadge = homeMeal.locator(".stock-chip");
+  assert.equal(await homeStockBadge.innerText(), "Vorrat: Kartoffel");
+  assert.doesNotMatch(await homeStockBadge.innerText(), /❄/);
+  assert.equal(await homeStockBadge.getAttribute("aria-label"), "Aus Vorrat: Kartoffel");
+  assert.equal(await homeStockBadge.getAttribute("title"), "Aus Vorrat: Kartoffel");
+  assert.equal(await homeStockBadge.locator(".stock-badge-icon").count(), 1);
+  assert.equal(await homeStockBadge.locator(".stock-badge-icon").getAttribute("aria-hidden"), "true");
+  assert.equal(await homeStockBadge.locator(".stock-badge-icon").getAttribute("stroke"), "currentColor");
+  const homeStockBadgeMarkup = await homeStockBadge.innerHTML();
+
+  const unresolvedFoodStockHtml = await page.evaluate(() =>
+    window.stockBadges({ inventoryFoodIds: ["missing-food"], recipeInventoryId: "" }),
+  );
+  assert.equal(unresolvedFoodStockHtml, "", "Unauflösbarer FOOD-Vorrat darf nicht als alleinstehendes Vorrat erscheinen");
 
   const manualLabelHtml = await page.evaluate(() =>
     window.__mealCardUnification.stripVisibleLockLabel('<div class="tiny lock-label">Manuell geschützt</div>'),
@@ -185,8 +197,14 @@ try {
   await planMeal.waitFor();
   await planMeal.locator(".meal-lock.locked").waitFor();
   assert.equal(await planMeal.locator(".lock-label").count(), 0);
-  assert.equal(await planMeal.locator(".stock-chip").innerText(), "❄️ Vorrat");
-  assert.equal(await planMeal.locator(".stock-chip").getAttribute("aria-label"), "Aus Vorrat: Kartoffel");
+
+  const planStockBadge = planMeal.locator(".stock-chip");
+  assert.equal(await planStockBadge.innerText(), "Vorrat: Kartoffel");
+  assert.doesNotMatch(await planStockBadge.innerText(), /❄/);
+  assert.equal(await planStockBadge.getAttribute("aria-label"), "Aus Vorrat: Kartoffel");
+  assert.equal(await planStockBadge.getAttribute("title"), "Aus Vorrat: Kartoffel");
+  assert.equal(await planStockBadge.locator(".stock-badge-icon").count(), 1);
+  assert.equal(await planStockBadge.innerHTML(), homeStockBadgeMarkup, "Heute und Plan verwenden dasselbe Vorratsbadge");
 
   assert.deepEqual(await mealActionLabels(planMeal), homeActions, "Heute und Plan bieten dieselben Kartenaktionen an");
   assert.deepEqual(await mealVisualStyle(planMeal), homeStyle, "Heute und Plan verwenden dieselbe Kartenoptik");

@@ -51,6 +51,14 @@
   border-top: 0;
 }
 
+/* FOOD-Katalog: Motiv bewusst größer als in kompakten Auswahl-/Protokollkontexten. */
+#foodsCatalogSection .foodcard .food-emoji {
+  --icon-food: 32px;
+  width: var(--icon-food);
+  min-width: var(--icon-food);
+  height: var(--icon-food);
+}
+
 /* NAV-B: weniger visuelle Höhe, Safe-Area bleibt vollständig erhalten. */
 body {
   padding-bottom: calc(58px + env(safe-area-inset-bottom));

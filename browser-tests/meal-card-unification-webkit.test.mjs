@@ -112,7 +112,7 @@ async function mealActionLabels(meal) {
 
 async function directActionLabels(meal) {
   return meal
-    .locator(":scope > .actionbar.random-swap-actions .randomizeMeal, :scope > details.meal-plan-actions > summary, :scope > .logMeal")
+    .locator(":scope > details.meal-plan-actions > summary, :scope > .logMeal")
     .evaluateAll((nodes) => nodes.map((node) => node.textContent.trim()));
 }
 
@@ -174,10 +174,12 @@ try {
   assert.equal(await homeMeal.locator(".meal-type-text").first().innerText(), "Mittag", "Normale Mahlzeiten wiederholen nicht mehr das Wort Mahlzeit");
   assert.deepEqual(
     await directActionLabels(homeMeal),
-    ["↻ Tauschen", "Plan ändern", "Essen eintragen"],
-    "Direkt sichtbar bleiben nur Tauschen, Planverwaltung und Essen eintragen",
+    ["Plan ändern", "Essen eintragen"],
+    "Direkt sichtbar bleiben nur Planverwaltung und Essen eintragen",
   );
+  assert.equal(await homeMeal.locator(":scope > .actionbar .randomizeMeal").count(), 0, "Tauschen ist keine direkte Kartenaktion mehr");
   assert.equal(await homeMeal.locator(":scope > details.meal-plan-actions").getAttribute("open"), null, "Planverwaltung ist standardmäßig geschlossen");
+  assert.equal(await homeMeal.locator(".meal-plan-actions .randomizeMeal").count(), 1, "Tauschen liegt unter Plan ändern");
   assert.equal(await homeMeal.locator(".meal-plan-actions .replaceMeal").count(), 1);
   assert.equal(await homeMeal.locator(".meal-plan-actions .moveMeal").count(), 1);
   assert.equal(await homeMeal.locator(".meal-plan-actions .removePlannedMeal").count(), 1);
@@ -236,6 +238,8 @@ try {
   assert.equal(await planMeal.locator(".lock-label").count(), 0);
   assert.equal(await planMeal.locator(".meal-type-text").first().innerText(), "Mittag");
   assert.deepEqual(await directActionLabels(planMeal), await directActionLabels(homeMeal), "Heute und Plan verwenden dieselbe direkte Aktionshierarchie");
+  assert.equal(await planMeal.locator(":scope > .actionbar .randomizeMeal").count(), 0);
+  assert.equal(await planMeal.locator(".meal-plan-actions .randomizeMeal").count(), 1);
 
   const planStockBadge = planMeal.locator(".stock-chip");
   assert.equal(await planStockBadge.innerText(), "Vorrat: Kartoffel");

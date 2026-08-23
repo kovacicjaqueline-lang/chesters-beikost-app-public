@@ -267,7 +267,7 @@
     let actionOpen = '<div class="actionbar">';
     let actionButtons = html.slice(actionStart + actionOpen.length, actionEnd - "</div>".length);
     let deleteHtml = plannedMealDeleteHtml(day, meal);
-    let compactActions = `<div class="actionbar"></div><details class="meal-plan-actions"><summary>Plan ändern</summary><div class="meal-plan-actions-body"><div class="actionbar meal-plan-secondary-actions">${actionButtons}</div>${deleteHtml}</div></details>`;
+    let compactActions = `<details class="meal-plan-actions"><summary>Plan ändern</summary><div class="meal-plan-actions-body"><div class="meal-plan-secondary-actions"><div class="actionbar">${actionButtons}</div></div>${deleteHtml}</div></details>`;
     return `${html.slice(0, actionStart)}${compactActions}${html.slice(actionEnd)}`;
   }
 

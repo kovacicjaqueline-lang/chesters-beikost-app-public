@@ -30,10 +30,11 @@
         accessible: "Aus Rezeptvorrat",
       };
     }
+    if (!cleanNames) return null;
 
     return {
-      visible: `Vorrat${cleanNames ? `: ${cleanNames}` : ""}`,
-      accessible: `Aus Vorrat${cleanNames ? `: ${cleanNames}` : ""}`,
+      visible: `Vorrat: ${cleanNames}`,
+      accessible: `Aus Vorrat: ${cleanNames}`,
     };
   }
 
@@ -162,6 +163,7 @@
       .filter(Boolean)
       .join(", ");
     let badge = compactStockBadgeData("food", names);
+    if (!badge) return "";
     return `<span class="pill stock-chip" aria-label="${esc(badge.accessible)}" title="${esc(badge.accessible)}">${stockBadgeIconMarkup()}<span class="stock-badge-label">${esc(badge.visible)}</span></span>`;
   };
 

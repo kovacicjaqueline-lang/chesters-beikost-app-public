@@ -51,6 +51,14 @@
   border-top: 0;
 }
 
+/* FOOD-Katalog: Motiv bewusst größer als in kompakten Auswahl-/Protokollkontexten. */
+#foodsCatalogSection .foodcard .food-emoji {
+  --icon-food: 32px;
+  width: var(--icon-food);
+  min-width: var(--icon-food);
+  height: var(--icon-food);
+}
+
 /* NAV-B: kompakte Navigation in einem stabilen Viewport-Shell.
  * iOS 26 kann fixed/sticky Elemente in Standalone-PWAs beim Scrollen sichtbar
  * versetzen. Deshalb scrollt nur noch <main>; die Navigation selbst wird absolut

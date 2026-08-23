@@ -108,6 +108,17 @@ async function todayMealFoods(page, meal) {
   return canonical(payload?.foodIds || []);
 }
 
+async function openSwapAction(page, scope, date, meal) {
+  const selector = `.randomizeMeal[data-random-date="${date}"][data-random-meal="${meal}"]`;
+  const details = page.locator(`${scope} details.meal-plan-actions`).filter({
+    has: page.locator(selector),
+  }).first();
+  await details.locator(":scope > summary").click();
+  const button = details.locator(selector);
+  await button.waitFor();
+  return button;
+}
+
 const server = await startStaticServer();
 const { port } = server.address();
 const browser = await webkit.launch();
@@ -125,12 +136,11 @@ try {
 
   const today = await configurePlanner(page, 0);
   const targetKey = `${today}|lunch`;
-  const todayButton = page.locator(`#todayCard .randomizeMeal[data-random-date="${today}"][data-random-meal="lunch"]`);
-  await todayButton.waitFor();
-  assert.equal(await todayButton.innerText(), "↻ Tauschen", "Heute muss den gemeinsamen Tausch-Button der Plan-Karte zeigen");
+  const todayButton = await openSwapAction(page, "#todayCard", today, "lunch");
+  assert.equal(await todayButton.innerText(), "↻ Tauschen", "Heute muss den gemeinsamen Tausch-Button unter Plan ändern zeigen");
 
   const planButton = page.locator(`#blockPlan .randomizeMeal[data-random-date="${today}"][data-random-meal="lunch"]`);
-  assert.equal(await planButton.count(), 1, "derselbe Slot muss auch im Wochenplan einen Tausch-Button haben");
+  assert.equal(await planButton.count(), 1, "derselbe Slot muss auch im Wochenplan einen Tausch-Button unter Plan ändern haben");
 
   const before = await visiblePlan(page);
   assert.equal(before[targetKey]?.length, 1, "heutiges Mittagessen muss im sichtbaren Wochenplan genau einmal offen geplant sein");
@@ -163,8 +173,7 @@ try {
   const previousTodayFoods = await todayMealFoods(page, "lunch");
   assert.ok(previousTodayFoods, "Heute muss auch bei ab morgen sichtbarem Wochenplan ein Mittagessen enthalten");
 
-  const shiftedTodayButton = page.locator(`#todayCard .randomizeMeal[data-random-date="${shiftedToday}"][data-random-meal="lunch"]`);
-  await shiftedTodayButton.waitFor();
+  const shiftedTodayButton = await openSwapAction(page, "#todayCard", shiftedToday, "lunch");
   await shiftedTodayButton.click();
   await page.waitForFunction(({ key, previous }) => {
     const lock = window.__beikostTest.getState().planLocks?.[key];

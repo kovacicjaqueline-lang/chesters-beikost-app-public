@@ -26,6 +26,10 @@ test("FOOD-Vorrat zeigt mehrere Vorratszutaten", () => {
   );
 });
 
+test("FOOD-Vorrat ohne auflösbare Zutaten erzeugt kein alleinstehendes Vorratsbadge", () => {
+  assert.equal(compactStockBadgeData("food", ""), null);
+});
+
 test("Rezeptvorrat bleibt als eigener sichtbarer Zustand erhalten", () => {
   assert.deepEqual(
     compactStockBadgeData("recipe"),

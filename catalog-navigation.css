@@ -51,12 +51,44 @@
   border-top: 0;
 }
 
-/* NAV-B: weniger visuelle Höhe, Safe-Area bleibt vollständig erhalten. */
+/* NAV-B: kompakte Navigation in einem stabilen Viewport-Shell.
+ * iOS 26 kann fixed/sticky Elemente in Standalone-PWAs beim Scrollen sichtbar
+ * versetzen. Deshalb scrollt nur noch <main>; die Navigation selbst wird absolut
+ * am nicht scrollenden App-Shell verankert. */
+html,
 body {
-  padding-bottom: calc(58px + env(safe-area-inset-bottom));
+  height: 100%;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 0;
+}
+
+.app-header {
+  flex: 0 0 auto;
+}
+
+main {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  margin: 0 auto;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: calc(72px + env(safe-area-inset-bottom));
 }
 
 nav {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
   padding: 3px 5px calc(3px + env(safe-area-inset-bottom));
 }
 

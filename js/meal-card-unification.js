@@ -17,27 +17,28 @@
       .replace(/\s+/g, " ");
   }
 
-  function compactStockBadgeData(kind, names = "", mealTitle = "") {
-    let cleanNames = String(names || "").trim();
+  function compactStockBadgeData(kind, names = "") {
+    let cleanNames = String(names || "")
+      .split(",")
+      .map((name) => name.trim())
+      .filter(Boolean)
+      .join(", ");
+
     if (kind === "recipe") {
       return {
-        visible: "❄️ Rezeptvorrat",
+        visible: "Rezeptvorrat",
         accessible: "Aus Rezeptvorrat",
       };
     }
 
-    let listed = cleanNames
-      .split(",")
-      .map((name) => name.trim())
-      .filter(Boolean);
-    let titleMatchesSingleStock =
-      listed.length === 1 &&
-      normalizeComparable(mealTitle) === normalizeComparable(listed[0]);
-
     return {
-      visible: `❄️ ${titleMatchesSingleStock ? "Vorrat" : cleanNames || "Vorrat"}`,
+      visible: `Vorrat${cleanNames ? `: ${cleanNames}` : ""}`,
       accessible: `Aus Vorrat${cleanNames ? `: ${cleanNames}` : ""}`,
     };
+  }
+
+  function stockBadgeIconMarkup() {
+    return '<svg class="stock-badge-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 9h14l-1 10H6L5 9Z"></path><path d="M7 9V6.5h10V9"></path></svg>';
   }
 
   function stripVisibleLockLabel(html) {
@@ -59,6 +60,7 @@
     module.exports = {
       REMOVED_PLAN_MARKER,
       compactStockBadgeData,
+      stockBadgeIconMarkup,
       stripVisibleLockLabel,
       isRemovedPlanSlot,
     };
@@ -97,6 +99,11 @@
   padding: 9px 12px !important;
   margin-top: 8px;
   border-radius: 13px;
+}
+.stock-chip .stock-badge-icon,
+.recipe-stock-chip .stock-badge-icon {
+  flex: 0 0 auto;
+  margin-right: 5px;
 }
 .meal-delete-row {
   display: flex;
@@ -146,7 +153,7 @@
   stockBadges = function compactStockBadges(meal) {
     if (meal?.recipeInventoryId) {
       let badge = compactStockBadgeData("recipe");
-      return `<span class="pill recipe-stock-chip" aria-label="${esc(badge.accessible)}" title="${esc(badge.accessible)}">${esc(badge.visible)}</span>`;
+      return `<span class="pill recipe-stock-chip" aria-label="${esc(badge.accessible)}" title="${esc(badge.accessible)}">${stockBadgeIconMarkup()}<span class="stock-badge-label">${esc(badge.visible)}</span></span>`;
     }
     if (!meal?.inventoryFoodIds?.length) return "";
 
@@ -154,9 +161,8 @@
       .map((id) => food(id)?.name)
       .filter(Boolean)
       .join(", ");
-    let title = typeof mealDisplayTitle === "function" ? mealDisplayTitle(meal) : "";
-    let badge = compactStockBadgeData("food", names, title);
-    return `<span class="pill stock-chip" aria-label="${esc(badge.accessible)}" title="${esc(badge.accessible)}">${esc(badge.visible)}</span>`;
+    let badge = compactStockBadgeData("food", names);
+    return `<span class="pill stock-chip" aria-label="${esc(badge.accessible)}" title="${esc(badge.accessible)}">${stockBadgeIconMarkup()}<span class="stock-badge-label">${esc(badge.visible)}</span></span>`;
   };
 
   function planIdForMeal(day, meal) {
@@ -389,6 +395,7 @@
   root.__mealCardUnification = {
     REMOVED_PLAN_MARKER,
     compactStockBadgeData,
+    stockBadgeIconMarkup,
     stripVisibleLockLabel,
     isRemovedPlanSlot,
     flattenCompletedDetails,

@@ -174,7 +174,7 @@ try {
   assert.equal(await homeMeal.locator(".meal-type-text").first().innerText(), "Mittag", "Normale Mahlzeiten wiederholen nicht mehr das Wort Mahlzeit");
   assert.deepEqual(
     await directActionLabels(homeMeal),
-    ["↻ Tauschen", "Plan ändern⌄", "Essen eintragen"],
+    ["↻ Tauschen", "Plan ändern", "Essen eintragen"],
     "Direkt sichtbar bleiben nur Tauschen, Planverwaltung und Essen eintragen",
   );
   assert.equal(await homeMeal.locator(":scope > details.meal-plan-actions").getAttribute("open"), null, "Planverwaltung ist standardmäßig geschlossen");

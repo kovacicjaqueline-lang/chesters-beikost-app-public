@@ -92,9 +92,10 @@ Für die Messung zählt die sichtbare Alpha-Bounding-Box ab Alpha ≥ 16; sehr s
 
 - Maßgeblich ist die **längere sichtbare Motivachse** innerhalb des 128×128-Canvas, nicht die gesamte rechteckige Fläche des Motivs.
 - **Zielwert sind 80 %** der Canvas-Kantenlänge.
-- Für technische Prüfungen gilt ein Zielkorridor von **78–82 %**.
+- Für technische Prüfungen gilt ein Zielkorridor von **78–82 %**. Auf dem 128×128-Prüfraster wird dieser Korridor auf ganze Bounding-Box-Pixel gerundet und entspricht damit **100–105 px** auf der längeren Achse.
 - Die sichtbare Bounding-Box wird horizontal und vertikal auf die Canvas-Mitte ausgerichtet. Als technische Toleranz gelten höchstens **2 px Abweichung je Achse** auf dem 128×128-Canvas.
 - Skalierung oder Zentrierung darf das eigentliche Motiv nicht abschneiden.
+- Der Korridor bleibt bewusst auf Asset-Ebene bestehen. Eine zu kleine Darstellung in der App wird nicht dadurch kompensiert, dass das FOOD-Asset über den 80-%-Zielbereich hinaus aufgeblasen wird.
 
 ### Recipe-V2
 
@@ -106,6 +107,31 @@ Recipe-Illustrationen dürfen je nach Motivform deutlich unterschiedlich viel Ca
 - Zentrierung wird **optisch** beurteilt. Die Alpha-Bounding-Box dient als Mess- und Review-Hilfe, ist bei Recipe-V2 aber kein eigener harter ±px-Grenzwert.
 - Zu viel transparenter Leerraum bleibt ebenfalls ein Review-Grund: Ein in der kleinen App-Darstellung sichtbar zu kleines Motiv soll vergrößert werden, solange der Mindest-Rand erhalten bleibt. Dafür gibt es bewusst keinen festen Mindest-Prozentwert.
 - Bereits geprüfte Recipe-V2-Gruppen: **Brei** und **Stampf** wurden wegen deutlich zu großer Leerräume vergrößert und neu zentriert. **Pancakes**, **Taler** und **Muffins** werden ausdrücklich nicht auf einen gemeinsamen Prozentwert vereinheitlicht; ihre unterschiedlichen Motivgrößen bleiben erhalten, solange die Randregel erfüllt ist und der optische Review keinen Änderungsbedarf zeigt. Bei den **Bällchen** bleiben die drei bereits ausreichend großen Motive unverändert; die drei klar zu klein angelegten kompakten Motive Lachs-Kartoffel, Rote-Linsen-Gemüse und Tofu-Brokkoli werden innerhalb ihrer Familie vergrößert und neu zentriert, ohne daraus einen allgemeinen Recipe-Prozentwert abzuleiten. Bei **Lugaw** bleibt Huhn-Lugaw als bereits passende Familienreferenz unverändert; Lugaw-Basis und Kürbis-Lugaw werden als deutlich kleinere, gleichartig kompakte Schüssel-Motive auf ungefähr dieselbe sichtbare Familienbreite vergrößert und neu positioniert. Bei der **Omelett**-Familie bleiben Omelettstreifen und Zucchini-Omelett in ihrer bereits großen Originaldarstellung; nur Paprika-Omelettstreifen wird als klar zu kleines, gleichartig breites Motiv an die kleinere gute Familienreferenz von Zucchini-Omelett angeglichen und neu zentriert. Aus keiner dieser Familienreferenzen folgt ein allgemeiner Recipe-Prozentwert.
+
+## Automatische Geometrie-Prüfung
+
+Die technische Messung ist Bestandteil von `npm run verify:icons`.
+
+- `tests/helpers/icon-integrity-png.cjs` dekodiert das eingebettete 128×128-PNG und stellt die Alpha-Bounding-Box ab Alpha ≥ 16 zentral bereit.
+- `tests/icon-geometry-audit.test.cjs` vermisst den **kompletten aktuellen FOOD-V2- und Recipe-V2-Bestand**. Die CI-Ausgabe enthält Anzahl und Verteilungen für Bounding-Box-Breite/-Höhe, längste Achse, Mindestrand und X-/Y-Zentrierungsabweichung.
+- Für **FOOD-V2** bleibt 78–82 % auf der längeren Achse – im 128×128-Raster **100–105 px** – mit maximal ±2 px Zentrierungsabweichung je Achse die verbindliche Zielgeometrie für neue und normalisierte Assets.
+- Der bereits vorhandene FOOD-Bestand enthält historische Abweichungen von dieser Zielgeometrie. Sie sind im Test **kategoriengenau als Legacy-Baseline eingefroren** und gelten ausdrücklich nicht als Designfreigabe. Neue Größen- oder Zentrierungsabweichungen schlagen fehl; wird eine historische Abweichung behoben, schlägt der nun veraltete Baseline-Eintrag ebenfalls fehl und muss entfernt werden. Die Ausnahmebasis darf damit nicht still wachsen.
+- Für **Recipe-V2** sind mindestens 2 px sichtbarer Freiraum an jeder Canvas-Seite harte Gates. Die bereits vorhandenen Integritätschecks sichern zusätzlich 128×128, PNG-Decode/CRC, Alpha/Transparenz und praktisch transparente Außenkanten ab.
+- Für Recipe-V2 wird bewusst **kein globales Mindest-/Maximal-Prozentgate und kein globales ±px-Zentrierungsgate** eingeführt. Größenangleichungen bleiben dort motiv- bzw. familienbezogen und werden bei bereits definierten Familien durch die passenden spezifischen Regressionen abgesichert.
+
+## Rendergröße in der App
+
+Asset-Auslastung und UI-Rendergröße sind getrennte Ebenen. Ein geometrisch korrektes 80-%-FOOD darf in der Oberfläche trotzdem zu klein wirken, wenn sein Rendercontainer zu klein ist.
+
+Verbindlicher aktueller Stand:
+
+- **kompakte FOOD-Kontexte** wie Auswahl-/Protokollzeilen: `--icon-food: 25px` bleibt bestehen;
+- **FOOD-Katalogkarten:** 32 px; bei 78–82 % Asset-Auslastung sind damit etwa 25–26 px des eigentlichen Motivs sichtbar statt nur etwa 20 px bei einem 25-px-Container;
+- **FOOD-Detailhero:** 96 px bleibt bestehen;
+- **allgemeine kompakte Recipe-/Feature-Icons:** `--icon-feature: 27px` bleibt bestehen;
+- **Recipe-Karten:** 44 px, auf sehr schmalen Displays bis 380 px weiterhin 40 px.
+
+Die FOOD-Vergrößerung ist bewusst auf den Katalog beschränkt. Der globale FOOD-Token wird nicht erhöht, damit dichte Auswahl-, Such- und Protokolloberflächen nicht unnötig aufwachsen. Für Recipe-Karten besteht mit 44/40 px bereits eine deutlich größere, bewusste Darstellung; aus der Asset-Geometrie ergibt sich deshalb kein Anlass, diese Größe pauschal weiter zu erhöhen.
 
 ## Review-Kriterien vor Freigabe
 

@@ -593,11 +593,23 @@ function renderPrepCore() {
             (sum, item) => sum + inventoryPortionCount(item),
             0,
           );
-          return `<div class="history stock-group ${isRecipe ? "recipe-group" : ""}"><div class="row"><div class="grow"><b>${esc(name)}</b><div class="small">${total} ${esc(batches[0].size || "Portionen")} insgesamt · ${batches.length} ${batches.length === 1 ? "Vorratseintrag" : "Vorratseinträge"}</div>${isRecipe ? '<div class="stock-source-note">Fertiges Rezept; die enthaltenen Lebensmittel bleiben im Protokoll einzeln sichtbar.</div>' : ""}</div><span class="pill ${isRecipe ? "recipe-stock-chip" : ""}">${isRecipe ? "Fertiges Rezept" : batches.length > 1 ? "ältester zuerst" : "Vorrat"}</span></div><div style="margin-top:7px">${batches
+          let sizes = [...new Set(batches.map((item) => String(item.size || "").trim()).filter(Boolean))];
+          let stockSummary = isRecipe
+            ? `${total} ${esc(batches[0].size || "Portionen")} insgesamt${batches.length > 1 ? ` · ${batches.length} Vorratseinträge` : ""}`
+            : `${total} ${total === 1 ? "Portion" : "Portionen"}${sizes.length === 1 ? ` · je ${esc(sizes[0])}` : ""}${batches.length > 1 ? ` · ${batches.length} Chargen` : ""}`;
+          let stockBadge = isRecipe
+            ? '<span class="pill recipe-stock-chip">Fertiges Rezept</span>'
+            : batches.length > 1
+              ? '<span class="pill">ältester zuerst</span>'
+              : "";
+          return `<div class="history stock-group ${isRecipe ? "recipe-group" : ""}" style="padding:10px 12px"><div class="row"><div class="grow"><b>${esc(name)}</b><div class="small">${stockSummary}</div>${isRecipe ? '<div class="stock-source-note">Fertiges Rezept; die enthaltenen Lebensmittel bleiben im Protokoll einzeln sichtbar.</div>' : ""}</div>${stockBadge}</div><div style="margin-top:4px">${batches
             .map((item, index) => {
               let age = diffDays(today(), item.frozenDate);
               let old = age > Number(state.settings.freezerDays);
-              return `<div class="stockline" data-inv="${item.id}" style="padding:8px 0;border-top:1px solid var(--line)"><div class="grow"><b class="small">Vorrat ${index + 1}${index === 0 && batches.length > 1 ? " · zuerst verwenden" : ""}</b><div class="small">${inventoryPortionCount(item)} × ${esc(item.size)} · ${shortDate(item.frozenDate)}${item.note ? ` · ${esc(item.note)}` : ""}</div></div><span class="pill ${old ? "warn" : "ok"}">${age} T.</span><div class="row" style="gap:5px"><button class="btn secondary smallbtn editInv">Bearbeiten</button><button class="stockbtn useInv" aria-label="Eine Portion aus diesem Vorrat verbrauchen">−1</button><button class="iconbtn deleteInv" aria-label="Vorratseintrag löschen">×</button></div></div>`;
+              let batchLabel = batches.length > 1
+                ? `<b class="small">${index === 0 ? "Älteste Charge · zuerst verwenden" : `Charge ${index + 1}`}</b>`
+                : "";
+              return `<div class="stockline" data-inv="${item.id}" style="padding:6px 0;border-top:1px solid var(--line)"><div class="grow">${batchLabel}<div class="small">${inventoryPortionCount(item)} × ${esc(item.size)} · ${shortDate(item.frozenDate)}${item.note ? ` · ${esc(item.note)}` : ""}</div></div><span class="pill ${old ? "warn" : "ok"}">${age} ${age === 1 ? "Tag" : "Tage"}</span><div class="row" style="gap:5px"><button class="iconbtn editInv" aria-label="Vorratseintrag bearbeiten" title="Bearbeiten"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="m13.5 6.5 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button><button class="stockbtn useInv" aria-label="Eine Portion aus diesem Vorrat verbrauchen">−1</button><button class="iconbtn deleteInv" aria-label="Vorratseintrag löschen" title="Löschen"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m-8 0 1 13h8l1-13M10 11v5m4-5v5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div></div>`;
             })
             .join("")}</div></div>`;
         })

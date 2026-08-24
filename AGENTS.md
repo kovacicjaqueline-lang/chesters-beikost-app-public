@@ -130,7 +130,9 @@ Für jedes **neue kanonische FOOD** und jedes **neue Laufzeitrezept** gilt ab je
 
 Für neue FOODs muss die Handling-/Oral-Prüfung ebenfalls explizit erfolgen, auch wenn ein aktueller Runtime-Consumer nur einen Teil dieser Metadaten verwendet. Bestehende Legacy-FOODs werden durch diese Vorwärtsregel nicht automatisch neu klassifiziert; dafür bleibt eine gesonderte Einzelmigration erforderlich.
 
-Bei Icon-Arbeit gilt zusätzlich `docs/ICON_GUIDELINES.md`. Bei Handling/Oral Processing gilt `docs/FOOD_HANDLING_ORAL_PROCESSING_CONTRACT.md`.
+Bei beauftragter **visueller Neuerzeugung** eines FOOD-/Recipe-V2-Icons muss der sichtbare Bildinhalt mit der vorgesehenen Bild-KI / Image-Generation-Funktion erzeugt werden. Das Extrahieren, Dekodieren, Kopieren, Umverpacken oder Anzeigen eines vorhandenen Repository-Assets ist keine Bildgenerierung und darf nicht als „generiert“ bezeichnet werden. Ist ein Image-Generation-Tool verfügbar, ist es für die eigentliche visuelle Erzeugung verpflichtend zu verwenden; technische SVG-/128×128-Integration folgt erst danach.
+
+Bei Icon-Arbeit gilt zusätzlich `docs/ICON_GUIDELINES.md`; für den operativen Generierungsablauf gilt `docs/AI_ICON_GENERATION_WORKFLOW.md`. Bei Handling/Oral Processing gilt `docs/FOOD_HANDLING_ORAL_PROCESSING_CONTRACT.md`.
 
 ### Bestehende Semantik bewahren
 

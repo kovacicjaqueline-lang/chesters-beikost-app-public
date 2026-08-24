@@ -10,7 +10,6 @@ const read = (relativePath) => fs.readFileSync(path.join(ROOT, relativePath), "u
 
 const styles = read("styles.css");
 const catalogNavigation = read("catalog-navigation.css");
-const foodsJs = read("js/foods.js");
 const indexHtml = read("index.html");
 
 test("Icon-Rendergrößen: kompakte FOOD- und Feature-Tokens bleiben stabil", () => {
@@ -31,11 +30,16 @@ test("Icon-Rendergrößen: FOOD-Katalog verwendet nur dort 32px", () => {
   );
 });
 
-test("Icon-Rendergrößen: FOOD-Detail bleibt 96px", () => {
+test("Icon-Rendergrößen: FOOD-Detail bleibt bei raster-sicheren 40px", () => {
   assert.match(
-    foodsJs,
-    /food-detail-hero-icon[^\n]*--icon-food:96px;width:96px;height:96px/,
-    "FOOD-Detailhero muss bei 96px bleiben",
+    catalogNavigation,
+    /\.food-detail-hero\s*\{[^}]*grid-template-columns\s*:\s*minmax\(0,\s*1fr\)\s*40px\s*!important\s*;[^}]*min-height\s*:\s*40px\s*!important\s*;[^}]*\}/s,
+    "FOOD-Detailhero muss die 40px-Spalte und -Mindesthöhe verwenden",
+  );
+  assert.match(
+    catalogNavigation,
+    /\.food-detail-hero-icon\s*\{[^}]*--icon-food\s*:\s*40px\s*!important\s*;[^}]*width\s*:\s*40px\s*!important\s*;[^}]*height\s*:\s*40px\s*!important\s*;[^}]*\}/s,
+    "FOOD-Detailicon muss bei 40px rendern",
   );
 });
 

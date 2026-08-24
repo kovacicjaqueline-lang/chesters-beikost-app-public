@@ -94,6 +94,39 @@ function load() {
     return clone(DEFAULT);
   }
 }
+
+/* PLAN-FROM-TODAY START */
+function isIsoCalendarDate(value) {
+  let match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || ""));
+  if (!match) return false;
+  let year = Number(match[1]), month = Number(match[2]), day = Number(match[3]);
+  if (month < 1 || month > 12 || day < 1) return false;
+  let leapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  let daysInMonth = [31, leapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  return day <= daysInMonth[month - 1];
+}
+function syncPlanFromToToday(data = state, currentDate = today()) {
+  if (!data?.settings || !isIsoCalendarDate(currentDate)) return false;
+  let planFrom = String(data.settings.planFrom || "");
+  if (isIsoCalendarDate(planFrom) && planFrom >= currentDate) return false;
+  data.settings.planFrom = currentDate;
+  return true;
+}
+async function syncPlanFromOnAppOpen() {
+  if (!syncPlanFromToToday()) return false;
+  await save();
+  renderAll();
+  return true;
+}
+function installPlanFromVisibilitySync(doc) {
+  if (!doc?.addEventListener) return false;
+  doc.addEventListener("visibilitychange", () => {
+    if (doc.visibilityState === "visible") void syncPlanFromOnAppOpen();
+  });
+  return true;
+}
+/* PLAN-FROM-TODAY END */
+
 async function bootstrapStorage() {
   let idbState = await idbGet(STATE_RECORD).catch(() => null);
   if (idbState) {
@@ -114,7 +147,7 @@ async function bootstrapStorage() {
       state.backupMeta.storagePersisted = granted ? "granted" : "denied";
     } catch (_) { state.backupMeta.storagePersisted = "unavailable"; }
   } else state.backupMeta.storagePersisted = "unavailable";
-  if (!state.settings.planFrom) state.settings.planFrom = today();
+  syncPlanFromToToday();
   await save();
   renderAll();
   renderStorageStatus();
@@ -202,3 +235,5 @@ async function openSnapshots() {
     document.getElementById("confirmSnapshotRestore").onclick=async()=>{ await createSnapshot("vor Zwischenstand-Wiederherstellung"); state=migrateState(snap.state); await save(); closeGeneric(); renderAll(); showToast("Zwischenstand wiederhergestellt."); };
   });
 }
+
+if (typeof document !== "undefined") installPlanFromVisibilitySync(document);

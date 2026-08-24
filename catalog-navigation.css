@@ -59,10 +59,10 @@
   height: var(--icon-food);
 }
 
-/* FOOD-Detail: V2-Assets enthalten 128×128-Rasterdaten. 40 CSS-px bleiben auf
- * 3×-Displays bei 120 physischen Pixeln und vermeiden Browser-Upscaling. */
+/* FOOD-Detail: Die fachlich festgelegte 96px-Hierarchie bleibt erhalten.
+ * Der HiDPI-Renderpfad erzeugt dafür beim Öffnen eine ausreichend große Rasterquelle. */
 .food-detail-hero {
-  --food-detail-icon-size: 40px;
+  --food-detail-icon-size: 96px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) var(--food-detail-icon-size);
   gap: 14px;

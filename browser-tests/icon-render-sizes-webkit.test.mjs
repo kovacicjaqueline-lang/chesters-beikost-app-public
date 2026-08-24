@@ -115,6 +115,12 @@ try {
   await page.locator("#foodsCatalogSection .foodcard .foodInfo").first().click();
   const detailIcon = page.locator(".food-detail-hero-icon");
   await detailIcon.waitFor({ state: "visible" });
+  await page.waitForFunction(() => {
+    const asset = document.querySelector(".food-detail-hero-icon .food-illustration");
+    if (!(asset instanceof HTMLImageElement)) return false;
+    const requiredPhysicalWidth = asset.getBoundingClientRect().width * window.devicePixelRatio;
+    return asset.dataset.detailHidpiState === "ready" && asset.naturalWidth >= requiredPhysicalWidth;
+  });
 
   const detailSize = await detailIcon.evaluate((wrapper) => {
     const asset = wrapper.querySelector(".food-illustration");
@@ -125,20 +131,30 @@ try {
       wrapperHeight: wrapperRect.height,
       assetWidth: assetRect?.width ?? 0,
       assetHeight: assetRect?.height ?? 0,
+      naturalWidth: asset?.naturalWidth ?? 0,
+      naturalHeight: asset?.naturalHeight ?? 0,
+      source: asset?.currentSrc || asset?.src || "",
+      hidpiState: asset?.dataset.detailHidpiState || "",
       token: getComputedStyle(wrapper).getPropertyValue("--icon-food").trim(),
       deviceScaleFactor: window.devicePixelRatio,
     };
   });
 
-  assert.equal(detailSize.token, "40px", "FOOD-Detail muss den raster-sicheren 40px-Token tatsächlich verwenden");
-  assert.equal(detailSize.wrapperWidth, 40, "FOOD-Detail-Wrapper muss tatsächlich 40px breit rendern");
-  assert.equal(detailSize.wrapperHeight, 40, "FOOD-Detail-Wrapper muss tatsächlich 40px hoch rendern");
-  assert.equal(detailSize.assetWidth, 40, "FOOD-Detail-Asset muss tatsächlich 40px breit rendern");
-  assert.equal(detailSize.assetHeight, 40, "FOOD-Detail-Asset muss tatsächlich 40px hoch rendern");
+  assert.equal(detailSize.token, "96px", "FOOD-Detail muss die verbindliche 96px-Darstellung behalten");
+  assert.equal(detailSize.wrapperWidth, 96, "FOOD-Detail-Wrapper muss tatsächlich 96px breit rendern");
+  assert.equal(detailSize.wrapperHeight, 96, "FOOD-Detail-Wrapper muss tatsächlich 96px hoch rendern");
+  assert.equal(detailSize.assetWidth, 96, "FOOD-Detail-Asset muss tatsächlich 96px breit rendern");
+  assert.equal(detailSize.assetHeight, 96, "FOOD-Detail-Asset muss tatsächlich 96px hoch rendern");
   assert.equal(detailSize.deviceScaleFactor, 3, "Sharpness-Regression muss einen 3×-Viewport prüfen");
+  assert.equal(detailSize.hidpiState, "ready", "FOOD-Detail muss das HiDPI-Derivat tatsächlich verwenden");
+  assert.ok(detailSize.source.startsWith("data:image/png"), "FOOD-Detail muss auf die erzeugte HiDPI-Rasterquelle wechseln");
   assert.ok(
-    detailSize.assetWidth * detailSize.deviceScaleFactor <= 128,
-    "FOOD-Detail darf die 128px-Rasterquelle auf 3×-Displays nicht hochskalieren",
+    detailSize.naturalWidth >= detailSize.assetWidth * detailSize.deviceScaleFactor,
+    "FOOD-Detail braucht für den aktuellen DPR mindestens so viele Quellpixel wie Gerätepixel",
+  );
+  assert.ok(
+    detailSize.naturalHeight >= detailSize.assetHeight * detailSize.deviceScaleFactor,
+    "FOOD-Detail braucht auch vertikal eine ausreichend große HiDPI-Rasterquelle",
   );
 
   await context.close();

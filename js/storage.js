@@ -94,6 +94,24 @@ function load() {
     return clone(DEFAULT);
   }
 }
+
+/* PLAN-FROM-TODAY START */
+function syncPlanFromToToday(data = state, currentDate = today()) {
+  if (!data?.settings || !currentDate) return false;
+  let planFrom = String(data.settings.planFrom || "");
+  let validDate = /^\d{4}-\d{2}-\d{2}$/.test(planFrom);
+  if (validDate && planFrom >= currentDate) return false;
+  data.settings.planFrom = currentDate;
+  return true;
+}
+async function syncPlanFromOnAppOpen() {
+  if (!syncPlanFromToToday()) return false;
+  await save();
+  renderAll();
+  return true;
+}
+/* PLAN-FROM-TODAY END */
+
 async function bootstrapStorage() {
   let idbState = await idbGet(STATE_RECORD).catch(() => null);
   if (idbState) {
@@ -114,7 +132,7 @@ async function bootstrapStorage() {
       state.backupMeta.storagePersisted = granted ? "granted" : "denied";
     } catch (_) { state.backupMeta.storagePersisted = "unavailable"; }
   } else state.backupMeta.storagePersisted = "unavailable";
-  if (!state.settings.planFrom) state.settings.planFrom = today();
+  syncPlanFromToToday();
   await save();
   renderAll();
   renderStorageStatus();
@@ -163,7 +181,7 @@ async function validateBackup(raw) {
   if (!looksLegacy) throw new Error("Keine gültige Beikost-Backup-Datei.");
   let payload = parsed;
   return {
-    type: "chester-beikost-legacy-backup",
+    type:"chester-beikost-legacy-backup",
     appVersion: parsed.appVersion || "8.8 oder älter",
     schemaVersion: Number(parsed.schemaVersion) || 0,
     createdAt: parsed.createdAt || parsed.exportedAt || new Date().toISOString(),
@@ -200,5 +218,11 @@ async function openSnapshots() {
     openGeneric("Zwischenstand wiederherstellen?", `<div class="notice warn"><b>Der aktuelle Stand wird ersetzt.</b><br>Davor wird automatisch ein neuer Zwischenstand angelegt.</div><p class="small">Ausgewählt: ${new Date(snap.createdAt).toLocaleString("de-AT")} · ${esc(snap.reason)}</p><div class="sticky-form-actions ds-actionbar"><button class="btn secondary" id="cancelSnapshotRestore" type="button">Abbrechen</button><button class="btn danger" id="confirmSnapshotRestore" type="button">Wiederherstellen</button></div>`);
     document.getElementById("cancelSnapshotRestore").onclick=()=>{ closeGeneric(); openSnapshots(); };
     document.getElementById("confirmSnapshotRestore").onclick=async()=>{ await createSnapshot("vor Zwischenstand-Wiederherstellung"); state=migrateState(snap.state); await save(); closeGeneric(); renderAll(); showToast("Zwischenstand wiederhergestellt."); };
+  });
+}
+
+if (typeof document !== "undefined") {
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") void syncPlanFromOnAppOpen();
   });
 }

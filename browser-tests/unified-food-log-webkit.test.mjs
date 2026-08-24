@@ -267,7 +267,7 @@ try {
     assert.equal(Object.hasOwn(saved, "textureStage"), false);
   }
 
-  // 7. Geplanter Eintrag: kompakter Kontext bleibt korrigierbar und Einzelbewertungen brauchen nur eine Aktion.
+  // 7. Geplanter Eintrag: kompakter Kontext, unveränderlicher Slot und Einzelbewertungen mit einer Aktion.
   await reset(page);
   const plannedDate = await page.evaluate(() => window.__beikostTest.today());
   const movedDate = new Date(`${plannedDate}T12:00:00`);
@@ -285,8 +285,7 @@ try {
     entryType: "meal",
   }));
   assert.equal(await page.locator("#logRecipeSearch").count(), 0, "Geplanter Slot darf keine freie Rezeptauswahl anzeigen");
-  assert.equal(await page.locator("#logMeal").count(), 1, "Mahlzeitenkontext muss für Korrekturen vorhanden bleiben");
-  assert.equal(await page.locator("#logMeal").isVisible(), false, "Datum und Mahlzeit bleiben standardmäßig kompakt");
+  assert.equal(await page.locator("#logMeal").count(), 0, "Geplanter Slot bleibt übernommen und darf nicht neu gewählt werden");
   assert.equal(await page.locator("#logDate").isVisible(), false, "Datum bleibt im Plan-Kontext standardmäßig kompakt");
   assert.match(await page.locator("#logForm").innerText(), /Mittag[\s\S]*aus dem Plan/);
   assert.doesNotMatch(await page.locator("#logForm").innerText(), /Geplante Mahlzeit/);
@@ -295,16 +294,15 @@ try {
   assert.equal(await page.locator("#addCustomLogFood").evaluate((element) => element.classList.contains("btn")), false, "Eigenes Lebensmittel bleibt eine tertiäre Aktion");
   assert.doesNotMatch(await page.locator("#logForm").innerText(), /Lebensmittelrollen und getrennte Bewertungen bleiben/);
 
-  await page.getByRole("button", { name: "Ändern", exact: true }).click();
-  assert.equal(await page.locator("#logMeal").isVisible(), true);
+  await page.getByRole("button", { name: "Datum ändern", exact: true }).click();
+  assert.equal(await page.locator("#logMeal").count(), 0, "Auch beim Ändern des Datums bleibt die Mahlzeit unveränderlich");
   assert.equal(await page.locator("#logDate").isVisible(), true);
   await page.locator("#logDate").fill(movedDateIso);
   await page.locator("#logDate").dispatchEvent("change");
   await page.locator("#moveDraftDay").click();
   await page.waitForFunction(() => document.getElementById("logModal")?.classList.contains("open"));
-  assert.doesNotMatch(await page.locator("#logForm").innerText(), /aus dem Plan/, "Nach einer Kontextkorrektur ist die ursprüngliche Planung nicht mehr relevant");
-  await page.locator("#logMeal").selectOption("dinner");
-  assert.match(await page.locator("#logForm").innerText(), /Abend/);
+  assert.doesNotMatch(await page.locator("#logForm").innerText(), /aus dem Plan/, "Nach einer Datumskorrektur ist die ursprüngliche Plan-Herkunft nicht mehr relevant");
+  assert.match(await page.locator("#logForm").innerText(), /Mittag/);
 
   await page.getByRole("button", { name: "Zutaten einzeln bewerten ›", exact: true }).click();
   assert.equal(await page.locator("[data-individual-result]").count(), 2);
@@ -315,7 +313,7 @@ try {
   await page.waitForFunction(() => window.__beikostTest.getState().logs.length === 1);
   let planned = await page.evaluate(() => window.__beikostTest.getState().logs[0]);
   assert.equal(planned.date, movedDateIso);
-  assert.equal(planned.meal, "dinner");
+  assert.equal(planned.meal, "lunch");
   assert.equal(planned.entryType, "food");
   assert.equal(planned.individualRatings, true);
   assert.equal(planned.foodOutcomes.karotte, "eaten");
@@ -324,15 +322,15 @@ try {
   assert.equal(planned.foodRoles.brokkoli, "base");
   assert.equal(await page.evaluate((date) => successfulMealSlotCount(date), movedDateIso), 1);
 
-  // Bearbeiten kann den tatsächlichen Mahlzeitenslot ebenfalls korrigieren, ohne die Plan-Herkunft wieder einzublenden.
+  // Bearbeiten erhält den tatsächlichen Mahlzeitenslot und die getrennten Bewertungen.
   await page.evaluate((id) => window.editLogEntry(id), planned.id);
   assert.doesNotMatch(await page.locator("#logForm").innerText(), /aus dem Plan/);
-  await page.getByRole("button", { name: "Ändern", exact: true }).click();
-  await page.locator("#logMeal").selectOption("breakfast");
+  assert.equal(await page.locator("#logMeal").count(), 0);
+  assert.equal(await page.locator("[data-individual-result]").count(), 2);
   await page.locator("#saveLog").click();
   await page.waitForFunction(() => document.getElementById("logModal") && !document.getElementById("logModal").classList.contains("open"));
   planned = await page.evaluate(() => window.__beikostTest.getState().logs[0]);
-  assert.equal(planned.meal, "breakfast");
+  assert.equal(planned.meal, "lunch");
   assert.equal(planned.individualRatings, true);
   assert.equal(planned.foodOutcomes.brokkoli, "not_accepted");
 

@@ -449,7 +449,8 @@ function renderLogForm() {
   p.baseFoodIds = [...new Set((p.baseFoodIds || []).filter((id) => mainIds.includes(id)))];
   if (!p.baseFoodIds.length) p.baseFoodIds = [...mainIds];
   document.getElementById("logTitle").textContent = p.editId ? "Essen bearbeiten" : "Essen eintragen";
-  document.getElementById("logSubtitle").textContent = "Tatsächlicher Eintrag";
+  let subtitle = document.getElementById("logSubtitle");
+  if (subtitle) { subtitle.textContent = ""; subtitle.hidden = true; }
   let stockedSelected = selected.filter((f) => inventoryPortions(f.id) > 0);
   selectedInventoryFoods = new Set([...selectedInventoryFoods].filter((id) => stockedSelected.some((f) => f.id === id)));
   let recipeItem = selectedRecipeInventoryId ? state.inventory.find((item) => item.id === selectedRecipeInventoryId) : null;
@@ -459,7 +460,7 @@ function renderLogForm() {
   let individualRows = mainIds.map((id) => `<div class="food-outcome-row"><div class="food-outcome-name"><b>${esc(food(id)?.name || id)}</b><span>Bestandteil</span></div><select data-individual-result="${id}">${outcomeOptions.map(([value, title]) => `<option value="${value}" ${(p.foodOutcomes[id] || mainDefault) === value ? "selected" : ""}>${title}</option>`).join("")}</select><span></span></div>`).join("");
   let mainBlock = mainIds.length ? `<div class="field"><label>${mainIds.length === 1 ? "Lebensmittel bewerten" : "Mahlzeit bewerten"}</label>${mainIds.length > 1 && p.individualRatings ? `<div class="sample-outcome-list">${individualRows}</div><div class="individual-rating"><button class="text-button" id="toggleIndividualRatings" type="button">Gemeinsam bewerten</button></div>` : `<div class="grouped-outcome"><div><b>${mainIds.map((id) => esc(food(id)?.name || id)).join(" + ")}</b><span>${mainIds.length === 1 ? "Ergebnis" : "gemeinsam bewertet"}</span></div><select id="mainOutcome">${outcomeOptions.map(([value, title]) => `<option value="${value}" ${mainDefault === value ? "selected" : ""}>${title}</option>`).join("")}</select></div>${mainIds.length > 1 ? `<div class="individual-rating"><button class="text-button" id="toggleIndividualRatings" type="button">Zutaten einzeln bewerten ›</button></div>` : ""}`}</div>` : "";
   let sampleBlock = sampleIds.length ? `<div class="field"><label>Einführung und Wiederholung</label><div class="sample-outcome-list">${sampleIds.map((id) => `<div class="food-outcome-row"><div class="food-outcome-name"><b>${esc(food(id)?.name || id)}</b><span>${esc(logLearningLabel(id))}</span></div><select data-sample-result="${id}">${outcomeOptions.map(([value, title]) => `<option value="${value}" ${(p.foodOutcomes[id] || "tried") === value ? "selected" : ""}>${title}</option>`).join("")}</select><button class="iconbtn" data-remove-log-food="${id}" aria-label="${esc(food(id)?.name || id)} entfernen">×</button></div>`).join("")}</div></div>` : "";
-  let mealOptions = LOG_MEAL_KEYS.map((meal) => `<option value="${meal}" ${p.meal === meal ? "selected" : ""}>${esc(mealName(meal))}</option>`).join("");
+  let mealOptions = ["breakfast", "lunch", "snack", "dinner"].map((meal) => `<option value="${meal}" ${p.meal === meal ? "selected" : ""}>${esc(mealName(meal))}</option>`).join("");
   let contextChanged = p.date !== p.__originalDate || p.meal !== p.__originalMeal;
   let contextHint = p.__fromPlan && !contextChanged ? '<div class="small">aus dem Plan</div>' : "";
   let logContext = p.__mealContext

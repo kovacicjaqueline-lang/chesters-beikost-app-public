@@ -267,30 +267,74 @@ try {
     assert.equal(Object.hasOwn(saved, "textureStage"), false);
   }
 
-  // 7. Geplanter Eintrag: Slot wird übernommen und nicht erneut gewählt.
+  // 7. Geplanter Eintrag: kompakter Kontext bleibt korrigierbar und Einzelbewertungen brauchen nur eine Aktion.
   await reset(page);
+  const plannedDate = await page.evaluate(() => window.__beikostTest.today());
+  const movedDate = new Date(`${plannedDate}T12:00:00`);
+  movedDate.setDate(movedDate.getDate() + 1);
+  const movedDateIso = movedDate.toISOString().slice(0, 10);
   await page.evaluate(() => window.openLog({
     date: window.__beikostTest.today(),
     meal: "lunch",
     focusId: "karotte",
-    foodIds: ["karotte"],
-    baseFoodIds: ["karotte"],
+    foodIds: ["karotte", "brokkoli"],
+    baseFoodIds: ["karotte", "brokkoli"],
     sampleFoodIds: [],
-    foodRoles: { karotte: "base" },
-    foodOutcomes: { karotte: "eaten" },
+    foodRoles: { karotte: "base", brokkoli: "base" },
+    foodOutcomes: { karotte: "eaten", brokkoli: "eaten" },
     entryType: "meal",
   }));
-  assert.equal(await page.locator("#logMeal").count(), 0);
   assert.equal(await page.locator("#logRecipeSearch").count(), 0, "Geplanter Slot darf keine freie Rezeptauswahl anzeigen");
-  assert.match(await page.locator("#logForm").innerText(), /Geplante Mahlzeit[\s\S]*Mittag/);
+  assert.equal(await page.locator("#logMeal").count(), 1, "Mahlzeitenkontext muss für Korrekturen vorhanden bleiben");
+  assert.equal(await page.locator("#logMeal").isVisible(), false, "Datum und Mahlzeit bleiben standardmäßig kompakt");
+  assert.equal(await page.locator("#logDate").isVisible(), false, "Datum bleibt im Plan-Kontext standardmäßig kompakt");
+  assert.match(await page.locator("#logForm").innerText(), /Mittag[\s\S]*aus dem Plan/);
+  assert.doesNotMatch(await page.locator("#logForm").innerText(), /Geplante Mahlzeit/);
+  assert.equal(await page.locator("#individualRatings").count(), 0, "Einzelbewertungen dürfen keinen zweiten Toggle benötigen");
+  assert.equal(await page.locator("#addCustomLogFood").textContent(), "+ Eigenes Lebensmittel");
+  assert.equal(await page.locator("#addCustomLogFood").evaluate((element) => element.classList.contains("btn")), false, "Eigenes Lebensmittel bleibt eine tertiäre Aktion");
+  assert.doesNotMatch(await page.locator("#logForm").innerText(), /Lebensmittelrollen und getrennte Bewertungen bleiben/);
+
+  await page.getByRole("button", { name: "Ändern", exact: true }).click();
+  assert.equal(await page.locator("#logMeal").isVisible(), true);
+  assert.equal(await page.locator("#logDate").isVisible(), true);
+  await page.locator("#logDate").fill(movedDateIso);
+  await page.locator("#logDate").dispatchEvent("change");
+  await page.locator("#moveDraftDay").click();
+  await page.waitForFunction(() => document.getElementById("logModal")?.classList.contains("open"));
+  assert.doesNotMatch(await page.locator("#logForm").innerText(), /aus dem Plan/, "Nach einer Kontextkorrektur ist die ursprüngliche Planung nicht mehr relevant");
+  await page.locator("#logMeal").selectOption("dinner");
+  assert.match(await page.locator("#logForm").innerText(), /Abend/);
+
+  await page.getByRole("button", { name: "Zutaten einzeln bewerten ›", exact: true }).click();
+  assert.equal(await page.locator("[data-individual-result]").count(), 2);
+  await page.locator('[data-individual-result="karotte"]').selectOption("eaten");
+  await page.locator('[data-individual-result="brokkoli"]').selectOption("not_accepted");
   await page.locator("#logTexture").selectOption("1");
   await page.locator("#saveLog").click();
   await page.waitForFunction(() => window.__beikostTest.getState().logs.length === 1);
   let planned = await page.evaluate(() => window.__beikostTest.getState().logs[0]);
-  assert.equal(planned.meal, "lunch");
+  assert.equal(planned.date, movedDateIso);
+  assert.equal(planned.meal, "dinner");
   assert.equal(planned.entryType, "food");
+  assert.equal(planned.individualRatings, true);
+  assert.equal(planned.foodOutcomes.karotte, "eaten");
+  assert.equal(planned.foodOutcomes.brokkoli, "not_accepted");
   assert.equal(planned.foodRoles.karotte, "base");
-  assert.equal(await page.evaluate(() => successfulMealSlotCount(today())), 1);
+  assert.equal(planned.foodRoles.brokkoli, "base");
+  assert.equal(await page.evaluate((date) => successfulMealSlotCount(date), movedDateIso), 1);
+
+  // Bearbeiten kann den tatsächlichen Mahlzeitenslot ebenfalls korrigieren, ohne die Plan-Herkunft wieder einzublenden.
+  await page.evaluate((id) => window.editLogEntry(id), planned.id);
+  assert.doesNotMatch(await page.locator("#logForm").innerText(), /aus dem Plan/);
+  await page.getByRole("button", { name: "Ändern", exact: true }).click();
+  await page.locator("#logMeal").selectOption("breakfast");
+  await page.locator("#saveLog").click();
+  await page.waitForFunction(() => document.getElementById("logModal") && !document.getElementById("logModal").classList.contains("open"));
+  planned = await page.evaluate(() => window.__beikostTest.getState().logs[0]);
+  assert.equal(planned.meal, "breakfast");
+  assert.equal(planned.individualRatings, true);
+  assert.equal(planned.foodOutcomes.brokkoli, "not_accepted");
 
   // 8. Familienstatus: zwei freie Gaben am selben Tag bleiben zwei Expositionen.
   await reset(page);

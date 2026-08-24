@@ -287,7 +287,7 @@ test("fällige Allergen-Wiederholung bleibt exklusiv und wird nicht als bekannte
   });
 });
 
-test("geschützte Nicht-Allergen-Kostprobe blockiert weitere Nicht-Allergene, aber kein Allergen wird dazugemischt", () => {
+test("geschützte Nicht-Allergen-Kostprobe erlaubt weitere Nicht-Allergen-Einführungen, aber kein Allergen wird dazugemischt", () => {
   withRuntimeGlobals(() => {
     installFakePlanner({
       foods: [

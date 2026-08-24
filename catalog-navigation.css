@@ -62,14 +62,23 @@
 /* FOOD-Detail: V2-Assets enthalten 128×128-Rasterdaten. 40 CSS-px bleiben auf
  * 3×-Displays bei 120 physischen Pixeln und vermeiden Browser-Upscaling. */
 .food-detail-hero {
-  grid-template-columns: minmax(0, 1fr) 40px !important;
-  min-height: 40px !important;
+  --food-detail-icon-size: 40px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--food-detail-icon-size);
+  gap: 14px;
+  align-items: start;
+  min-height: var(--food-detail-icon-size);
+  margin-bottom: 4px;
 }
 
 .food-detail-hero-icon {
-  --icon-food: 40px !important;
-  width: 40px !important;
-  height: 40px !important;
+  --icon-food: var(--food-detail-icon-size);
+  width: var(--food-detail-icon-size);
+  height: var(--food-detail-icon-size);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
 }
 
 /* NAV-B: kompakte Navigation in einem stabilen Viewport-Shell.

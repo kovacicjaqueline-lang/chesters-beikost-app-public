@@ -51,7 +51,7 @@ const browser = await webkit.launch();
 try {
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 },
-    deviceScaleFactor: 2,
+    deviceScaleFactor: 3,
     isMobile: true,
     hasTouch: true,
   });
@@ -111,6 +111,35 @@ try {
   assert.equal(compactSize.wrapperHeight, 25, "kompakter FOOD-Wrapper muss tatsächlich 25px hoch rendern");
   assert.equal(compactSize.assetWidth, 25, "kompaktes FOOD-Asset muss tatsächlich 25px breit rendern");
   assert.equal(compactSize.assetHeight, 25, "kompaktes FOOD-Asset muss tatsächlich 25px hoch rendern");
+
+  await page.locator("#foodsCatalogSection .foodcard .foodInfo").first().click();
+  const detailIcon = page.locator(".food-detail-hero-icon");
+  await detailIcon.waitFor({ state: "visible" });
+
+  const detailSize = await detailIcon.evaluate((wrapper) => {
+    const asset = wrapper.querySelector(".food-illustration");
+    const wrapperRect = wrapper.getBoundingClientRect();
+    const assetRect = asset?.getBoundingClientRect();
+    return {
+      wrapperWidth: wrapperRect.width,
+      wrapperHeight: wrapperRect.height,
+      assetWidth: assetRect?.width ?? 0,
+      assetHeight: assetRect?.height ?? 0,
+      token: getComputedStyle(wrapper).getPropertyValue("--icon-food").trim(),
+      deviceScaleFactor: window.devicePixelRatio,
+    };
+  });
+
+  assert.equal(detailSize.token, "40px", "FOOD-Detail muss den raster-sicheren 40px-Token tatsächlich verwenden");
+  assert.equal(detailSize.wrapperWidth, 40, "FOOD-Detail-Wrapper muss tatsächlich 40px breit rendern");
+  assert.equal(detailSize.wrapperHeight, 40, "FOOD-Detail-Wrapper muss tatsächlich 40px hoch rendern");
+  assert.equal(detailSize.assetWidth, 40, "FOOD-Detail-Asset muss tatsächlich 40px breit rendern");
+  assert.equal(detailSize.assetHeight, 40, "FOOD-Detail-Asset muss tatsächlich 40px hoch rendern");
+  assert.equal(detailSize.deviceScaleFactor, 3, "Sharpness-Regression muss einen 3×-Viewport prüfen");
+  assert.ok(
+    detailSize.assetWidth * detailSize.deviceScaleFactor <= 128,
+    "FOOD-Detail darf die 128px-Rasterquelle auf 3×-Displays nicht hochskalieren",
+  );
 
   await context.close();
 } finally {

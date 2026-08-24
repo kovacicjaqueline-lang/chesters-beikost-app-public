@@ -252,19 +252,45 @@ if (typeof window !== "undefined" && typeof document !== "undefined") {
           if (typeof installPlannerMealPresentationRuntime === "function") installPlannerMealPresentationRuntime();
 
           let loadQualityPolicy = () => {
+            let loadIntroductionPolicy = () => {
+              let existingIntroduction = document.querySelector('script[data-planner-introduction-policy="daily-food-introductions"]');
+              let installIntroductionAndFinish = () => {
+                if (typeof installPlannerIntroductionPolicyRuntime !== "function") {
+                  failPlannerPolicies(new Error("Planner-Einführungspolicy fehlt."));
+                  return;
+                }
+                installPlannerIntroductionPolicyRuntime();
+                finishPlannerPolicies();
+              };
+              if (existingIntroduction) {
+                if (typeof installPlannerIntroductionPolicyRuntime === "function") installIntroductionAndFinish();
+                else {
+                  existingIntroduction.addEventListener("load", installIntroductionAndFinish, { once: true });
+                  attachPlannerLoadError(existingIntroduction);
+                }
+                return;
+              }
+              let introductionScript = document.createElement("script");
+              introductionScript.src = "js/planner-introduction-policy.js?v=10.1.26";
+              introductionScript.dataset.plannerIntroductionPolicy = "daily-food-introductions";
+              introductionScript.addEventListener("load", installIntroductionAndFinish, { once: true });
+              attachPlannerLoadError(introductionScript);
+              document.head.appendChild(introductionScript);
+            };
+
             let existingQuality = document.querySelector('script[data-planner-quality-rotation="planner-quality"]');
-            let installQualityAndFinish = () => {
+            let installQualityAndContinue = () => {
               if (typeof installPlannerQualityRotationRuntime !== "function") {
                 failPlannerPolicies(new Error("Planner-Quality-Policy fehlt."));
                 return;
               }
               installPlannerQualityRotationRuntime();
-              finishPlannerPolicies();
+              loadIntroductionPolicy();
             };
             if (existingQuality) {
-              if (typeof installPlannerQualityRotationRuntime === "function") installQualityAndFinish();
+              if (typeof installPlannerQualityRotationRuntime === "function") installQualityAndContinue();
               else {
-                existingQuality.addEventListener("load", installQualityAndFinish, { once: true });
+                existingQuality.addEventListener("load", installQualityAndContinue, { once: true });
                 attachPlannerLoadError(existingQuality);
               }
               return;
@@ -272,7 +298,7 @@ if (typeof window !== "undefined" && typeof document !== "undefined") {
             let qualityScript = document.createElement("script");
             qualityScript.src = "js/planner-quality-rotation.js?v=10.1.26";
             qualityScript.dataset.plannerQualityRotation = "planner-quality";
-            qualityScript.addEventListener("load", installQualityAndFinish, { once: true });
+            qualityScript.addEventListener("load", installQualityAndContinue, { once: true });
             attachPlannerLoadError(qualityScript);
             document.head.appendChild(qualityScript);
           };

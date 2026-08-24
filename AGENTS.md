@@ -114,7 +114,7 @@ Phasenübergänge sind entwicklungsorientiert und werden einmalig durch die Nutz
 - Für Frühstück, Mittagessen und Abendessen darf ein Lebensmittel nur automatisch verwendet werden, wenn seine bestehende `meals`-Klassifikation die Mahlzeit erlaubt.
 - Custom-Lebensmittel müssen fachlich dieselbe Mahlzeiteneignung wie reguläre Lebensmittel ihrer Kategorie erhalten.
 - `autoPlan`, `minPhase` und `minAgeMonths` gehören zur allgemeinen automatischen FOOD-Eignung und greifen vor der Planner-Auswahl.
-- Snack bleibt rezeptgetrieben; kein allgemeines neues `FOOD.meals`-Snack-Sondermodell erfinden, solange dies nicht ausdrücklich fachlich freigegeben wird.
+- Automatische Snacks bleiben grundsätzlich rezeptgetrieben; in **Familienkost** darf zusätzlich bereits bekanntes, geeignetes Obst als eng begrenzter Einzel-Snack geplant werden. Der Snack führt keine neuen FOODs ein, und daraus darf kein allgemeines neues `FOOD.meals = snack`-Modell für andere Kategorien abgeleitet werden.
 - Fehler wie eine unpassende Frühstückskombination nicht durch neue Kombinations-Sonderregeln kaschieren, wenn die Primärursache in der Lebensmittel-Eignung liegt.
 
 ### Aufnahme neuer FOODs und Rezepte

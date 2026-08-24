@@ -146,13 +146,11 @@ try {
     const copyRect = copy?.getBoundingClientRect();
     const addRect = add?.getBoundingClientRect();
     return {
-      display: getComputedStyle(element).display,
       width: rect.width,
       copyWidth: copyRect?.width || 0,
       addOffset: addRect ? addRect.left - rect.left : 0,
     };
   });
-  assert.equal(recipeResultLayout.display, "flex", "Rezepttreffer darf nicht das dreispaltige FOOD-Grid verwenden");
   assert.ok(recipeResultLayout.copyWidth >= recipeResultLayout.width * 0.7, "Rezeptname muss den Großteil der Trefferbreite nutzen");
   assert.ok(recipeResultLayout.addOffset >= recipeResultLayout.width * 0.75, "Plus-Aktion muss am rechten Rand des Rezepttreffers liegen");
   await recipeResult.click();

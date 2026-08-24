@@ -21,7 +21,7 @@ function loadHelpers(overrides = {}) {
     ...overrides,
   };
   vm.runInNewContext(
-    `${helperBlock[1]}; this.api = { syncPlanFromToToday, syncPlanFromOnAppOpen };`,
+    `${helperBlock[1]}; this.api = { isIsoCalendarDate, syncPlanFromToToday, syncPlanFromOnAppOpen, installPlanFromVisibilitySync };`,
     context,
   );
   return { context, ...context.api };
@@ -35,26 +35,40 @@ test('vergangenes Plan-ab-Datum wird beim Öffnen auf heute nachgezogen', () => 
   assert.equal(data.settings.planFrom, '2026-08-24');
 });
 
-test('leeres oder ungültiges Plan-ab-Datum wird auf heute gesetzt', () => {
+test('leeres, formal ungültiges oder unmögliches Plan-ab-Datum wird auf heute gesetzt', () => {
   const { syncPlanFromToToday } = loadHelpers();
-  const empty = { settings: { planFrom: '' } };
-  const invalid = { settings: { planFrom: 'kein-datum' } };
+  const cases = ['', 'kein-datum', '2026-13-40', '2026-02-29', '2026-04-31'];
 
-  assert.equal(syncPlanFromToToday(empty, '2026-08-24'), true);
-  assert.equal(empty.settings.planFrom, '2026-08-24');
-  assert.equal(syncPlanFromToToday(invalid, '2026-08-24'), true);
-  assert.equal(invalid.settings.planFrom, '2026-08-24');
+  for (const planFrom of cases) {
+    const data = { settings: { planFrom } };
+    assert.equal(syncPlanFromToToday(data, '2026-08-24'), true, planFrom || 'leer');
+    assert.equal(data.settings.planFrom, '2026-08-24');
+  }
+});
+
+test('Kalenderprüfung akzeptiert echte Schaltjahre und lehnt ungültigen heutigen Wert ab', () => {
+  const { isIsoCalendarDate, syncPlanFromToToday } = loadHelpers();
+  const data = { settings: { planFrom: '2026-08-22' } };
+
+  assert.equal(isIsoCalendarDate('2028-02-29'), true);
+  assert.equal(isIsoCalendarDate('2100-02-29'), false);
+  assert.equal(isIsoCalendarDate('2000-02-29'), true);
+  assert.equal(syncPlanFromToToday(data, '2026-02-30'), false);
+  assert.equal(data.settings.planFrom, '2026-08-22');
 });
 
 test('heutiges und bewusst zukünftiges Plan-ab-Datum bleiben erhalten', () => {
   const { syncPlanFromToToday } = loadHelpers();
   const current = { settings: { planFrom: '2026-08-24' } };
   const future = { settings: { planFrom: '2026-08-27' } };
+  const leapFuture = { settings: { planFrom: '2028-02-29' } };
 
   assert.equal(syncPlanFromToToday(current, '2026-08-24'), false);
   assert.equal(current.settings.planFrom, '2026-08-24');
   assert.equal(syncPlanFromToToday(future, '2026-08-24'), false);
   assert.equal(future.settings.planFrom, '2026-08-27');
+  assert.equal(syncPlanFromToToday(leapFuture, '2026-08-24'), false);
+  assert.equal(leapFuture.settings.planFrom, '2028-02-29');
 });
 
 test('erneutes Öffnen speichert und rendert nur wenn das Datum nachgezogen wurde', async () => {
@@ -76,13 +90,50 @@ test('erneutes Öffnen speichert und rendert nur wenn das Datum nachgezogen wurd
   assert.equal(renders, 1);
 });
 
-test('Bootstrap und Rückkehr in die sichtbare App prüfen Plan ab erneut', () => {
+test('visibilitychange synchronisiert erst beim tatsächlichen Sichtbarwerden', async () => {
+  let saves = 0;
+  let renders = 0;
+  const listeners = new Map();
+  const fakeDocument = {
+    visibilityState: 'hidden',
+    addEventListener(type, handler) {
+      listeners.set(type, handler);
+    },
+    dispatchEvent(event) {
+      const handler = listeners.get(event.type);
+      if (handler) handler(event);
+    },
+  };
+  const { context, installPlanFromVisibilitySync } = loadHelpers({
+    state: { settings: { planFrom: '2026-08-22' } },
+    save: async () => { saves += 1; },
+    renderAll: () => { renders += 1; },
+  });
+
+  assert.equal(installPlanFromVisibilitySync(fakeDocument), true);
+  assert.equal(typeof listeners.get('visibilitychange'), 'function');
+
+  fakeDocument.dispatchEvent({ type: 'visibilitychange' });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(context.state.settings.planFrom, '2026-08-22');
+  assert.equal(saves, 0);
+  assert.equal(renders, 0);
+
+  fakeDocument.visibilityState = 'visible';
+  fakeDocument.dispatchEvent({ type: 'visibilitychange' });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(context.state.settings.planFrom, '2026-08-24');
+  assert.equal(saves, 1);
+  assert.equal(renders, 1);
+});
+
+test('Bootstrap und Browser-Boot installieren die Plan-ab-Prüfung', () => {
   assert.match(
     storage,
     /async function bootstrapStorage\(\)[\s\S]*?syncPlanFromToToday\(\);[\s\S]*?await save\(\);/,
   );
   assert.match(
     storage,
-    /document\.addEventListener\("visibilitychange",[\s\S]*?document\.visibilityState === "visible"[\s\S]*?syncPlanFromOnAppOpen\(\)/,
+    /if \(typeof document !== "undefined"\) installPlanFromVisibilitySync\(document\);/,
   );
 });

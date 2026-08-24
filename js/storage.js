@@ -181,7 +181,7 @@ async function validateBackup(raw) {
   if (!looksLegacy) throw new Error("Keine gültige Beikost-Backup-Datei.");
   let payload = parsed;
   return {
-    type:"chester-beikost-legacy-backup",
+    type: "chester-beikost-legacy-backup",
     appVersion: parsed.appVersion || "8.8 oder älter",
     schemaVersion: Number(parsed.schemaVersion) || 0,
     createdAt: parsed.createdAt || parsed.exportedAt || new Date().toISOString(),

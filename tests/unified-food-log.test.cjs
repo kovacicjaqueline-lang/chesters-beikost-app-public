@@ -170,9 +170,8 @@ test("free unknown unified log remains unknown through another migration round",
   assert.equal(Object.hasOwn(migrated.logs[0], "textureStage"), false);
 });
 
-test("unified log scopes meal correction to meal-context entries and has no current-texture fallback", () => {
-  assert.equal(logSource.includes('id="logMeal"'), true);
-  assert.equal(logSource.includes('pendingLog.__mealContext && value("logMeal")'), true);
+test("unified log source has no meal selector or current-texture fallback", () => {
+  assert.equal(logSource.includes('id="logMeal"'), false);
   assert.equal(logSource.includes('entryType: "food"'), true);
   assert.equal(logSource.includes('<option value="">Bitte auswählen</option>'), true);
   assert.equal(logSource.includes("log.textureStage || state.settings.textureStage"), false);

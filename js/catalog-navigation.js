@@ -9,6 +9,7 @@
   const MODE_FOODS = "foods";
   const MODE_RECIPES = "recipes";
   const FOOD_DETAIL_MIN_RASTER_SIZE = 384;
+  const FOOD_DETAIL_RASTER_CACHE_LIMIT = 8;
   const foodDetailRasterCache = new Map();
 
   function setCatalogMode(mode) {
@@ -113,6 +114,14 @@
     return canvas.toDataURL("image/png");
   }
 
+  function rememberFoodDetailRaster(cacheKey, detailSource) {
+    if (!foodDetailRasterCache.has(cacheKey) && foodDetailRasterCache.size >= FOOD_DETAIL_RASTER_CACHE_LIMIT) {
+      const oldestKey = foodDetailRasterCache.keys().next().value;
+      if (oldestKey) foodDetailRasterCache.delete(oldestKey);
+    }
+    foodDetailRasterCache.set(cacheKey, detailSource);
+  }
+
   function enhanceFoodDetailAsset(asset) {
     if (!(asset instanceof HTMLImageElement)) return;
     if (asset.dataset.detailHidpiState === "ready" || asset.dataset.detailHidpiState === "working") return;
@@ -131,7 +140,7 @@
           const cacheKey = `${originalSource}|${targetSize}`;
           const cached = foodDetailRasterCache.get(cacheKey);
           const detailSource = cached || buildFoodDetailRaster(asset, targetSize);
-          if (!cached) foodDetailRasterCache.set(cacheKey, detailSource);
+          if (!cached) rememberFoodDetailRaster(cacheKey, detailSource);
           asset.src = detailSource;
           asset.dataset.detailRasterWidth = String(targetSize);
           asset.dataset.detailHidpiState = "ready";

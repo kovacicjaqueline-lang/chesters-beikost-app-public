@@ -261,10 +261,29 @@
     return liveKnownCandidate(meal, on, ctx, exclude);
   }
 
-  // Der frühere FOOD-ID-basierte dueAllergen-Pfad war ausschließlich die
-  // Langzeitpflege rank>=2 und darf daher keine Lernaufgabe mehr erzeugen.
-  dueAllergen = function maintenanceIsNotLearningTask() {
-    return false;
+  function maintenanceFoodIsDue(foodRecord, on) {
+    let target = CORE.targetForFood(foodRecord);
+    if (!target) return false;
+    let established = (state.foods || []).filter((item) =>
+      CORE.targetMatchesFood(target, item) && Number(rank(item)) >= 2
+    );
+    if (!established.length || established[0].id !== foodRecord.id) return false;
+    let lastEatenDate = CORE.latestSuccessfulExposureDate(
+      target,
+      state.foods,
+      state.logs,
+      (log, id) => outcomeForFood(log, id),
+      on,
+    );
+    return !!lastEatenDate &&
+      CORE.dayDistance(on, lastEatenDate) >= Math.max(1, Number(state.settings.allergenDays) || 7);
+  }
+
+  // Kompatibilitätsabfrage für bestehende Status-/Planprüfungen: genau ein
+  // Vertreter pro Maintenance-Ziel wird als fällig gemeldet. Die Lernkandidaten
+  // blenden diese Langzeitpflege innerhalb von buildDay separat aus.
+  dueAllergen = function maintenanceAwareDueAllergen(foodRecord, on) {
+    return maintenanceFoodIsDue(foodRecord, on);
   };
 
   lockedMeal = function maintenanceAwareLockedMeal(date, meal) {
@@ -291,6 +310,7 @@
       if (preset) markRuntimeRecord(ctx, preset);
     }
 
+    let liveDueAllergen = dueAllergen;
     let liveKnownCandidate = knownCandidate;
     let liveRecipeStockCandidate = recipeStockCandidate;
     let liveSnackRecipeCandidate = snackRecipeCandidate;
@@ -320,6 +340,9 @@
     };
 
     try {
+      // Langzeitpflege ist keine Lernaufgabe. Nur der bestehende Lernpfad sieht
+      // deshalb während der Basiserzeugung keine Maintenance-Fälligkeiten.
+      dueAllergen = () => false;
       let day = baseBuildDay(date, index, ctx);
       let actualTargetKeys = new Set();
       for (let meal of day?.meals || []) {
@@ -331,11 +354,34 @@
       }
       return day;
     } finally {
+      dueAllergen = liveDueAllergen;
       knownCandidate = liveKnownCandidate;
       recipeStockCandidate = liveRecipeStockCandidate;
       snackRecipeCandidate = liveSnackRecipeCandidate;
     }
   };
+
+  if (typeof planIssues === "function") {
+    let basePlanIssues = planIssues;
+    planIssues = function maintenanceAwarePlanIssues(days = []) {
+      let projected = new Set();
+      for (let day of days || []) {
+        for (let meal of day?.meals || []) {
+          for (let key of CORE.projectedTargetKeysForRecord(meal, state.foods, runtimeHelpers())) projected.add(key);
+        }
+      }
+      let liveDueAllergen = dueAllergen;
+      dueAllergen = function maintenanceDueNotAlreadyCovered(foodRecord, on) {
+        let target = CORE.targetForFood(foodRecord);
+        return !!target && !projected.has(target.key) && liveDueAllergen(foodRecord, on);
+      };
+      try {
+        return basePlanIssues(days);
+      } finally {
+        dueAllergen = liveDueAllergen;
+      }
+    };
+  }
 
   buildDays = function maintenanceAwareBuildDays(from, n = 7, applyAutoLocks = true) {
     let ctx = freshPlanContext();

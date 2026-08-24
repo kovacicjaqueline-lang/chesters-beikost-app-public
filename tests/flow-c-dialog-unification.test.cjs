@@ -65,9 +65,8 @@ test("Mobile-Dialoge nutzen einen nativen Sheet-Scroll ohne verschachtelte Ergeb
   assert.match(css, /\.selector-results,[\s\S]*\.log-food-results,[\s\S]*\.log-recipe-results\s*\{[\s\S]*max-height:\s*none;[\s\S]*overflow:\s*visible;/);
 });
 
-test("freier Essenseintrag bleibt ohne erzwungene Mahlzeitenzuordnung", () => {
-  assert.match(logSource, /if \(!mealContext && !input\.editId\) input\.meal = "";/, "freie neue Einträge müssen ihren Mahlzeitenkontext weiterhin leeren");
-  assert.match(logSource, /let logContext = p\.__mealContext[\s\S]*\? `[\s\S]*id="logMeal"[\s\S]*:\s*`<div class="log-date-grid">/, "die Mahlzeitenauswahl darf nur im bestehenden Mahlzeitenkontext gerendert werden");
+test("freier Essenseintrag behält optionale Mahlzeitenzuordnung", () => {
+  assert.equal(logSource.includes('id="logMeal"'), false, "FLOW-C darf keine Mahlzeitenauswahl erzwingen");
 });
 
 test("FLOW-C Assets sind für den installierten PWA-Stand precached", () => {

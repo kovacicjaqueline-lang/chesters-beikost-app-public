@@ -10,6 +10,7 @@ const read = (relativePath) => fs.readFileSync(path.join(ROOT, relativePath), "u
 
 const styles = read("styles.css");
 const catalogNavigation = read("catalog-navigation.css");
+const foodsJs = read("js/foods.js");
 const indexHtml = read("index.html");
 
 test("Icon-Rendergrößen: kompakte FOOD- und Feature-Tokens bleiben stabil", () => {
@@ -30,16 +31,26 @@ test("Icon-Rendergrößen: FOOD-Katalog verwendet nur dort 32px", () => {
   );
 });
 
-test("Icon-Rendergrößen: FOOD-Detail bleibt bei raster-sicheren 40px", () => {
+test("Icon-Rendergrößen: FOOD-Detail verwendet genau eine raster-sichere 40px-Quelle", () => {
   assert.match(
     catalogNavigation,
-    /\.food-detail-hero\s*\{[^}]*grid-template-columns\s*:\s*minmax\(0,\s*1fr\)\s*40px\s*!important\s*;[^}]*min-height\s*:\s*40px\s*!important\s*;[^}]*\}/s,
-    "FOOD-Detailhero muss die 40px-Spalte und -Mindesthöhe verwenden",
+    /\.food-detail-hero\s*\{[^}]*--food-detail-icon-size\s*:\s*40px\s*;[^}]*grid-template-columns\s*:\s*minmax\(0,\s*1fr\)\s*var\(--food-detail-icon-size\)\s*;[^}]*min-height\s*:\s*var\(--food-detail-icon-size\)\s*;[^}]*\}/s,
+    "FOOD-Detailhero muss den zentralen 40px-Detailtoken verwenden",
   );
   assert.match(
     catalogNavigation,
-    /\.food-detail-hero-icon\s*\{[^}]*--icon-food\s*:\s*40px\s*!important\s*;[^}]*width\s*:\s*40px\s*!important\s*;[^}]*height\s*:\s*40px\s*!important\s*;[^}]*\}/s,
-    "FOOD-Detailicon muss bei 40px rendern",
+    /\.food-detail-hero-icon\s*\{[^}]*--icon-food\s*:\s*var\(--food-detail-icon-size\)\s*;[^}]*width\s*:\s*var\(--food-detail-icon-size\)\s*;[^}]*height\s*:\s*var\(--food-detail-icon-size\)\s*;[^}]*\}/s,
+    "FOOD-Detailicon muss seine Größe ausschließlich vom Detailtoken beziehen",
+  );
+  assert.doesNotMatch(
+    foodsJs,
+    /food-detail-hero[^>]*style=/,
+    "FOOD-Detailhero darf keine konkurrierende Inline-Größe mehr tragen",
+  );
+  assert.doesNotMatch(
+    foodsJs,
+    /food-detail-hero-icon[^>]*style=/,
+    "FOOD-Detailicon darf keine konkurrierende Inline-Größe mehr tragen",
   );
 });
 

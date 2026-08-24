@@ -10,6 +10,7 @@ const read = (relativePath) => fs.readFileSync(path.join(ROOT, relativePath), "u
 
 const styles = read("styles.css");
 const catalogNavigation = read("catalog-navigation.css");
+const catalogNavigationJs = read("js/catalog-navigation.js");
 const foodsJs = read("js/foods.js");
 const indexHtml = read("index.html");
 
@@ -31,11 +32,11 @@ test("Icon-Rendergrößen: FOOD-Katalog verwendet nur dort 32px", () => {
   );
 });
 
-test("Icon-Rendergrößen: FOOD-Detail verwendet genau eine raster-sichere 40px-Quelle", () => {
+test("Icon-Rendergrößen: FOOD-Detail behält 96px ohne konkurrierende Inline-Größe", () => {
   assert.match(
     catalogNavigation,
-    /\.food-detail-hero\s*\{[^}]*--food-detail-icon-size\s*:\s*40px\s*;[^}]*grid-template-columns\s*:\s*minmax\(0,\s*1fr\)\s*var\(--food-detail-icon-size\)\s*;[^}]*min-height\s*:\s*var\(--food-detail-icon-size\)\s*;[^}]*\}/s,
-    "FOOD-Detailhero muss den zentralen 40px-Detailtoken verwenden",
+    /\.food-detail-hero\s*\{[^}]*--food-detail-icon-size\s*:\s*96px\s*;[^}]*grid-template-columns\s*:\s*minmax\(0,\s*1fr\)\s*var\(--food-detail-icon-size\)\s*;[^}]*min-height\s*:\s*var\(--food-detail-icon-size\)\s*;[^}]*\}/s,
+    "FOOD-Detailhero muss den zentralen 96px-Detailtoken verwenden",
   );
   assert.match(
     catalogNavigation,
@@ -51,6 +52,34 @@ test("Icon-Rendergrößen: FOOD-Detail verwendet genau eine raster-sichere 40px-
     foodsJs,
     /food-detail-hero-icon[^>]*style=/,
     "FOOD-Detailicon darf keine konkurrierende Inline-Größe mehr tragen",
+  );
+});
+
+test("Icon-Rendergrößen: FOOD-Detail hat einen DPR-basierten HiDPI-Renderpfad", () => {
+  assert.match(
+    catalogNavigationJs,
+    /const\s+FOOD_DETAIL_MIN_RASTER_SIZE\s*=\s*384\s*;/,
+    "FOOD-Detail braucht mindestens ein 384px-HiDPI-Derivat",
+  );
+  assert.match(
+    catalogNavigationJs,
+    /requiredPhysicalSize\s*=\s*Math\.ceil\(cssSize\s*\*\s*dpr\)/,
+    "HiDPI-Zielgröße muss vom tatsächlich benötigten DPR abhängen",
+  );
+  assert.match(
+    catalogNavigationJs,
+    /Math\.ceil\(requiredPhysicalSize\s*\/\s*128\)\s*\*\s*128/,
+    "HiDPI-Derivat muss bei höheren DPRs über 384px hinaus skalieren können",
+  );
+  assert.match(
+    catalogNavigationJs,
+    /imageSmoothingQuality\s*=\s*"high"/,
+    "HiDPI-Derivat muss hochwertiges Browser-Resampling verwenden",
+  );
+  assert.match(
+    catalogNavigationJs,
+    /sharpenDetailRaster\(context,\s*targetSize,\s*targetSize\)/,
+    "HiDPI-Derivat muss nach dem Resampling dezent nachgeschärft werden",
   );
 });
 

@@ -459,10 +459,11 @@ function renderLogForm() {
   let individualRows = mainIds.map((id) => `<div class="food-outcome-row"><div class="food-outcome-name"><b>${esc(food(id)?.name || id)}</b><span>Bestandteil</span></div><select data-individual-result="${id}">${outcomeOptions.map(([value, title]) => `<option value="${value}" ${(p.foodOutcomes[id] || mainDefault) === value ? "selected" : ""}>${title}</option>`).join("")}</select><span></span></div>`).join("");
   let mainBlock = mainIds.length ? `<div class="field"><label>${mainIds.length === 1 ? "Lebensmittel bewerten" : "Mahlzeit bewerten"}</label>${mainIds.length > 1 && p.individualRatings ? `<div class="sample-outcome-list">${individualRows}</div><div class="individual-rating"><button class="text-button" id="toggleIndividualRatings" type="button">Gemeinsam bewerten</button></div>` : `<div class="grouped-outcome"><div><b>${mainIds.map((id) => esc(food(id)?.name || id)).join(" + ")}</b><span>${mainIds.length === 1 ? "Ergebnis" : "gemeinsam bewertet"}</span></div><select id="mainOutcome">${outcomeOptions.map(([value, title]) => `<option value="${value}" ${mainDefault === value ? "selected" : ""}>${title}</option>`).join("")}</select></div>${mainIds.length > 1 ? `<div class="individual-rating"><button class="text-button" id="toggleIndividualRatings" type="button">Zutaten einzeln bewerten ›</button></div>` : ""}`}</div>` : "";
   let sampleBlock = sampleIds.length ? `<div class="field"><label>Einführung und Wiederholung</label><div class="sample-outcome-list">${sampleIds.map((id) => `<div class="food-outcome-row"><div class="food-outcome-name"><b>${esc(food(id)?.name || id)}</b><span>${esc(logLearningLabel(id))}</span></div><select data-sample-result="${id}">${outcomeOptions.map(([value, title]) => `<option value="${value}" ${(p.foodOutcomes[id] || "tried") === value ? "selected" : ""}>${title}</option>`).join("")}</select><button class="iconbtn" data-remove-log-food="${id}" aria-label="${esc(food(id)?.name || id)} entfernen">×</button></div>`).join("")}</div></div>` : "";
-  let contextChanged = p.date !== p.__originalDate;
+  let mealOptions = LOG_MEAL_KEYS.map((meal) => `<option value="${meal}" ${p.meal === meal ? "selected" : ""}>${esc(mealName(meal))}</option>`).join("");
+  let contextChanged = p.date !== p.__originalDate || p.meal !== p.__originalMeal;
   let contextHint = p.__fromPlan && !contextChanged ? '<div class="small">aus dem Plan</div>' : "";
   let logContext = p.__mealContext
-    ? `<div class="field" style="margin-bottom:10px"><div class="row"><div class="grow"><b>${esc(nice(p.date, true))} · ${esc(mealName(p.meal))}</b>${contextHint}</div><button class="text-button" id="editLogContext" type="button" aria-expanded="${p.__contextEditing ? "true" : "false"}">${p.__contextEditing ? "Fertig" : "Datum ändern"}</button></div><div id="logContextFields" style="display:${p.__contextEditing ? "block" : "none"};margin-top:10px"><div class="field"><label>Datum</label><input type="date" id="logDate" value="${p.date}"></div></div></div>`
+    ? `<div class="field" style="margin-bottom:10px"><div class="row"><div class="grow"><b>${esc(nice(p.date, true))} · ${esc(mealName(p.meal))}</b>${contextHint}</div><button class="text-button" id="editLogContext" type="button" aria-expanded="${p.__contextEditing ? "true" : "false"}">${p.__contextEditing ? "Fertig" : "Ändern"}</button></div><div id="logContextFields" style="display:${p.__contextEditing ? "block" : "none"};margin-top:10px"><div class="grid2"><div class="field"><label>Datum</label><input type="date" id="logDate" value="${p.date}"></div><div class="field"><label>Mahlzeit</label><select id="logMeal">${mealOptions}</select></div></div></div></div>`
     : `<div class="log-date-grid"><div class="field"><label>Datum</label><input type="date" id="logDate" value="${p.date}"></div></div>`;
   let freeRecipePicker = !p.editId && !p.__mealContext ? `<div class="field log-recipe-picker"><label>Rezept auswählen (optional)</label><input id="logRecipeSearch" value="${esc(p.__recipeQuery || "")}" placeholder="Rezeptnamen eingeben" autocomplete="off"><div class="small log-recipe-results-label">${p.__recipeQuery ? "Suchergebnisse" : "Rezeptnamen eingeben"}</div><div class="log-recipe-results">${logRecipeResultsHtml(p.__recipeQuery || "")}</div></div>` : "";
   let freeRecipe = !p.editId && !p.__mealContext && p.recipeName ? recipeByName(p.recipeName) : null;
@@ -491,6 +492,7 @@ function renderLogForm() {
   document.querySelectorAll("#logForm select").forEach((select) => select.addEventListener("change", updateConditionalQuestions));
   document.getElementById("logDate").onchange = (event) => requestLogDateChange(event.target.value, p.date);
   document.getElementById("editLogContext")?.addEventListener("click", () => { p.__contextEditing = !p.__contextEditing; renderLogForm(); });
+  document.getElementById("logMeal")?.addEventListener("change", (event) => { captureLogDraft(); p.meal = event.target.value; p.__contextEditing = true; renderLogForm(); });
   document.getElementById("toggleIndividualRatings")?.addEventListener("click", () => { captureLogDraft(); p.individualRatings = !p.individualRatings; renderLogForm(); });
   document.querySelectorAll("[data-remove-log-food]").forEach((button) => button.onclick = () => { captureLogDraft(); let id = button.dataset.removeLogFood; selectedLogFoods.delete(id); selectedInventoryFoods.delete(id); p.sampleFoodIds = (p.sampleFoodIds || []).filter((x) => x !== id); p.baseFoodIds = (p.baseFoodIds || []).filter((x) => x !== id); delete p.foodOutcomes[id]; renderLogForm(); });
   document.getElementById("logRecipeSearch")?.addEventListener("input", renderLogRecipeResults);
@@ -525,6 +527,7 @@ function captureLogDraft(options = {}) {
   if (!pendingLog) return;
   let value = (id) => document.getElementById(id)?.value;
   if (!options.skipDate && value("logDate")) pendingLog.date = value("logDate");
+  if (pendingLog.__mealContext && value("logMeal")) pendingLog.meal = value("logMeal");
   pendingLog.amount = value("logAmount") || "";
   pendingLog.__textureValue = value("logTexture") ?? pendingLog.__textureValue ?? "";
   if (pendingLog.__textureValue) {
@@ -605,7 +608,7 @@ function saveLog() {
   let newLog = {
     id: pendingLog.editId || `${Date.now()}-${Math.random().toString(36).slice(2)}`,
     date: document.getElementById("logDate").value,
-    meal: pendingLog.editId
+    meal: pendingLog.editId && pendingLog.__legacyEntryType === "sample"
       ? String(pendingLog.__originalMeal ?? pendingLog.meal ?? "")
       : (pendingLog.__mealContext ? String(pendingLog.meal || "") : ""),
     foodIds: ids,

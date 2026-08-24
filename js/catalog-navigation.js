@@ -147,9 +147,10 @@
   }
 
   function enhanceFoodDetailIcons(root = document) {
-    const assets = root instanceof Element && root.matches(".food-detail-hero-icon .food-illustration")
+    const selector = ".food-detail-hero-icon .illustration-icon__asset";
+    const assets = root instanceof HTMLImageElement && root.matches(selector)
       ? [root]
-      : [...root.querySelectorAll?.(".food-detail-hero-icon .food-illustration") || []];
+      : [...root.querySelectorAll?.(selector) || []];
     assets.forEach(enhanceFoodDetailAsset);
   }
 

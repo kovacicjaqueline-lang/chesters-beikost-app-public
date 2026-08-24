@@ -96,11 +96,19 @@ function load() {
 }
 
 /* PLAN-FROM-TODAY START */
+function isIsoCalendarDate(value) {
+  let match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || ""));
+  if (!match) return false;
+  let year = Number(match[1]), month = Number(match[2]), day = Number(match[3]);
+  if (month < 1 || month > 12 || day < 1) return false;
+  let leapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  let daysInMonth = [31, leapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  return day <= daysInMonth[month - 1];
+}
 function syncPlanFromToToday(data = state, currentDate = today()) {
-  if (!data?.settings || !currentDate) return false;
+  if (!data?.settings || !isIsoCalendarDate(currentDate)) return false;
   let planFrom = String(data.settings.planFrom || "");
-  let validDate = /^\d{4}-\d{2}-\d{2}$/.test(planFrom);
-  if (validDate && planFrom >= currentDate) return false;
+  if (isIsoCalendarDate(planFrom) && planFrom >= currentDate) return false;
   data.settings.planFrom = currentDate;
   return true;
 }
@@ -108,6 +116,13 @@ async function syncPlanFromOnAppOpen() {
   if (!syncPlanFromToToday()) return false;
   await save();
   renderAll();
+  return true;
+}
+function installPlanFromVisibilitySync(doc) {
+  if (!doc?.addEventListener) return false;
+  doc.addEventListener("visibilitychange", () => {
+    if (doc.visibilityState === "visible") void syncPlanFromOnAppOpen();
+  });
   return true;
 }
 /* PLAN-FROM-TODAY END */
@@ -221,8 +236,4 @@ async function openSnapshots() {
   });
 }
 
-if (typeof document !== "undefined") {
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") void syncPlanFromOnAppOpen();
-  });
-}
+if (typeof document !== "undefined") installPlanFromVisibilitySync(document);

@@ -139,6 +139,20 @@ try {
   await page.locator("#logRecipeSearch").fill("Birne-Hirse-Pancakes");
   const recipeResult = page.locator(".selectLogRecipeResult").filter({ hasText: "Birne-Hirse-Pancakes" }).first();
   await recipeResult.waitFor();
+  const recipeResultLayout = await recipeResult.evaluate((element) => {
+    const copy = element.querySelector(".log-result-copy");
+    const add = element.querySelector(".log-result-add");
+    const rect = element.getBoundingClientRect();
+    const copyRect = copy?.getBoundingClientRect();
+    const addRect = add?.getBoundingClientRect();
+    return {
+      width: rect.width,
+      copyWidth: copyRect?.width || 0,
+      addOffset: addRect ? addRect.left - rect.left : 0,
+    };
+  });
+  assert.ok(recipeResultLayout.copyWidth >= recipeResultLayout.width * 0.7, "Rezeptname muss den Großteil der Trefferbreite nutzen");
+  assert.ok(recipeResultLayout.addOffset >= recipeResultLayout.width * 0.75, "Plus-Aktion muss am rechten Rand des Rezepttreffers liegen");
   await recipeResult.click();
   assert.match(await page.locator("#logForm").innerText(), /Birne-Hirse-Pancakes/);
   await page.locator("#logTexture").selectOption("2");

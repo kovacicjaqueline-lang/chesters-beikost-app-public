@@ -325,7 +325,7 @@ function logRecipeResultsHtml(query = pendingLog?.__recipeQuery || "") {
   if (!normalizeName(query)) return "";
   let recipes = logRecipeCandidates(query);
   if (!recipes.length) return '<div class="small">Kein passendes Rezept gefunden.</div>';
-  return recipes.map((recipe) => `<button type="button" class="live-result selectLogRecipeResult log-food-result" data-recipe="${esc(recipe.name)}" aria-label="${esc(recipe.name)} auswählen"><span class="grow log-result-copy"><b class="log-result-name">${esc(recipe.name)}</b><span class="small log-result-meta">Rezept und tatsächliche Zutaten übernehmen</span></span><span class="log-result-add" aria-hidden="true">＋</span></button>`).join("");
+  return recipes.map((recipe) => `<button type="button" class="live-result selectLogRecipeResult" data-recipe="${esc(recipe.name)}" aria-label="${esc(recipe.name)} auswählen"><span class="grow log-result-copy"><b class="log-result-name">${esc(recipe.name)}</b><span class="small log-result-meta">Rezept und tatsächliche Zutaten übernehmen</span></span><span class="log-result-add" aria-hidden="true">＋</span></button>`).join("");
 }
 
 function addLogFoodFromResult(id) {

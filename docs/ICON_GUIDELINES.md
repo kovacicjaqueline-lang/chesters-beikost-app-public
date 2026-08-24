@@ -121,7 +121,7 @@ Aktuelle verbindliche Rendergrößen:
 
 - kompakte FOOD-Kontexte, Auswahl und Protokoll: **25 px** (`--icon-food`);
 - FOOD-Katalogkarten: **32 px** als lokaler Katalog-Override;
-- FOOD-Detailansicht: **96 px**;
+- FOOD-Detailansicht: **40 px**; damit bleibt die 128×128-Rasterquelle auf 3×-Displays mit 120 physischen Pixeln ohne Browser-Upscaling;
 - allgemeines Feature-/kompaktes Recipe-Token: **27 px** (`--icon-feature`);
 - Recipe-Karten: **44 px**, auf schmalen Viewports bis 380 px **40 px**.
 

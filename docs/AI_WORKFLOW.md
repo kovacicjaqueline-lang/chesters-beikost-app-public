@@ -48,6 +48,16 @@ Ein neuer Datensatz mit Kategorie-/Generic-/Legacy-Iconfallback oder ein neues R
 
 Die verbindlichen Details stehen in `AGENTS.md`, `docs/FOOD_HANDLING_ORAL_PROCESSING_CONTRACT.md` und `docs/ICON_GUIDELINES.md`.
 
+## FOOD-/Recipe-V2: Bildgenerierung ist ein eigener Pflichtschritt
+
+Wenn ein Auftrag ein Icon bzw. eine Illustration **erstellen, generieren, neu generieren, neu zeichnen oder visuell ersetzen** soll, muss der sichtbare Bildinhalt mit der vorgesehenen Bild-KI / Image-Generation-Funktion erzeugt werden. Das bloße Auslesen, Extrahieren, Dekodieren, Skalieren oder Umverpacken eines vorhandenen Repository-Assets ist keine neue Bildgenerierung und darf nicht als solche bezeichnet werden.
+
+Bei ChatGPT-Arbeit gilt insbesondere: Ist ein Image-Generation-Tool verfügbar, muss es für die eigentliche visuelle Erzeugung verwendet werden. Ein per Code, SVG-Pfad, CSS, Emoji, Icon-Library oder durch Kopieren eines bestehenden Assets erzeugter Ersatz ist nicht zulässig, wenn Bildgenerierung beauftragt wurde.
+
+Wenn die Nutzerin das **generierte Icon sehen** möchte, ist das tatsächliche Ergebnis des Image-Generation-Schritts zu zeigen – nicht ersatzweise ein vorhandenes Repository-Asset. Technische Asset-Integration in SVG/128×128, Mapping und Precache erfolgt erst danach, sofern sie zum Scope gehört.
+
+Der vollständige operative Ablauf und die Abgrenzung zu reinem Audit bzw. technischer Asset-Arbeit stehen in `docs/AI_ICON_GENERATION_WORKFLOW.md`. Die fachlichen Stil- und Motivregeln bleiben in `docs/ICON_GUIDELINES.md` verbindlich.
+
 ## Testmatrix
 
 | Änderung | Standardprüfung |

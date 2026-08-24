@@ -116,14 +116,14 @@ try {
   const detailIcon = page.locator(".food-detail-hero-icon");
   await detailIcon.waitFor({ state: "visible" });
   await page.waitForFunction(() => {
-    const asset = document.querySelector(".food-detail-hero-icon .food-illustration");
+    const asset = document.querySelector(".food-detail-hero-icon .illustration-icon__asset");
     if (!(asset instanceof HTMLImageElement)) return false;
     const requiredPhysicalWidth = asset.getBoundingClientRect().width * window.devicePixelRatio;
     return asset.dataset.detailHidpiState === "ready" && asset.naturalWidth >= requiredPhysicalWidth;
   });
 
   const detailSize = await detailIcon.evaluate((wrapper) => {
-    const asset = wrapper.querySelector(".food-illustration");
+    const asset = wrapper.querySelector(".illustration-icon__asset");
     const wrapperRect = wrapper.getBoundingClientRect();
     const assetRect = asset?.getBoundingClientRect();
     return {

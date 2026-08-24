@@ -6,6 +6,7 @@ const path = require("node:path");
 const zlib = require("node:zlib");
 
 const OUTER_ALPHA_TOLERANCE = 4;
+const ALPHA_GEOMETRY_THRESHOLD = 16;
 
 function crc32(buffer) {
   let crc = 0xffffffff;
@@ -141,6 +142,61 @@ function embeddedPngFromSvg(svg, label) {
   return png;
 }
 
+function measureVisibleGeometry(decoded, alphaThreshold = ALPHA_GEOMETRY_THRESHOLD) {
+  let minX = decoded.width;
+  let minY = decoded.height;
+  let maxX = -1;
+  let maxY = -1;
+
+  for (let y = 0; y < decoded.height; y++) {
+    for (let x = 0; x < decoded.width; x++) {
+      if (decoded.alphaAt(x, y) < alphaThreshold) continue;
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x);
+      maxY = Math.max(maxY, y);
+    }
+  }
+
+  assert.ok(maxX >= minX && maxY >= minY, `kein sichtbares Motiv bei Alpha >= ${alphaThreshold}`);
+  const maxXExclusive = maxX + 1;
+  const maxYExclusive = maxY + 1;
+  const width = maxXExclusive - minX;
+  const height = maxYExclusive - minY;
+  const centerX = (minX + maxXExclusive) / 2;
+  const centerY = (minY + maxYExclusive) / 2;
+  const margins = {
+    left: minX,
+    top: minY,
+    right: decoded.width - maxXExclusive,
+    bottom: decoded.height - maxYExclusive,
+  };
+
+  return {
+    alphaThreshold,
+    bbox: { minX, minY, maxX: maxXExclusive, maxY: maxYExclusive },
+    width,
+    height,
+    longAxis: Math.max(width, height),
+    shortAxis: Math.min(width, height),
+    longAxisPercent: (Math.max(width, height) / Math.max(decoded.width, decoded.height)) * 100,
+    widthPercent: (width / decoded.width) * 100,
+    heightPercent: (height / decoded.height) * 100,
+    centerX,
+    centerY,
+    centerOffsetX: centerX - decoded.width / 2,
+    centerOffsetY: centerY - decoded.height / 2,
+    margins,
+    minMargin: Math.min(margins.left, margins.top, margins.right, margins.bottom),
+  };
+}
+
+function measureV2Asset(root, relativePath, alphaThreshold = ALPHA_GEOMETRY_THRESHOLD) {
+  const svg = fs.readFileSync(path.join(root, relativePath), "utf8");
+  const decoded = decodeEmbeddedPng(embeddedPngFromSvg(svg, relativePath), relativePath);
+  return measureVisibleGeometry(decoded, alphaThreshold);
+}
+
 function assertV2Asset(root, relativePath) {
   const svg = fs.readFileSync(path.join(root, relativePath), "utf8");
   const opening = svg.match(/<svg\b[^>]*>/i)?.[0] || "";
@@ -171,4 +227,9 @@ function assertV2Asset(root, relativePath) {
   assert.ok(transparent / pixels >= 0.1, `${relativePath}: mindestens 10 % der PNG-Fläche müssen vollständig transparent sein`);
 }
 
-module.exports = { assertV2Asset };
+module.exports = {
+  ALPHA_GEOMETRY_THRESHOLD,
+  assertV2Asset,
+  measureVisibleGeometry,
+  measureV2Asset,
+};

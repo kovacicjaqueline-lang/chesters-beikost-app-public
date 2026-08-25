@@ -145,6 +145,11 @@ try {
   const peachItem = page.locator('.manual-role-item').filter({ has: page.locator('[data-food="pfirsich"]') });
   await peachItem.waitFor();
   assert.equal(
+    await page.locator("#genericBody .recipe-presentation-summary").count(),
+    0,
+    "eine echte FOOD-Auswahl darf keine Rezept-Darreichung zurücklassen",
+  );
+  assert.equal(
     await peachItem.locator(".manual-preparation-field:visible").count(),
     0,
     "FOOD ohne expliziten Handling-Contract darf keine generische Fake-Auswahl zeigen",

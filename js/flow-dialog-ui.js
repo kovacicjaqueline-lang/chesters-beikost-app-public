@@ -84,9 +84,12 @@
         empty.className = "empty flow-meal-selector-empty";
         results.appendChild(empty);
       }
-      empty.textContent = document.getElementById("selectorRecipes")?.classList.contains("active")
-        ? "Kein passendes Rezept gefunden."
-        : "Kein Lebensmittel gefunden.";
+      setText(
+        empty,
+        document.getElementById("selectorRecipes")?.classList.contains("active")
+          ? "Kein passendes Rezept gefunden."
+          : "Kein Lebensmittel gefunden.",
+      );
     } else {
       empty?.remove();
     }

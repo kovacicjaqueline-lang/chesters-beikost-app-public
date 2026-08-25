@@ -1,7 +1,7 @@
 # Chesters Beikost-App – kanonisches Planner-Fachkonzept
 
-Stand: 23.08.2026  
-Dokumentationsbasis: aktueller Planner-Stand auf Basis von `main` bis `15d72f06de747cbac08de7c42b379d7b90bf2b36`, einschließlich gemergter Handling-/BLW-Schicht, dokumentiertem Oral-Processing-Contract, gemergtem Nuss-/Samen-/Topping-Block, vollständiger österreichischer `seasonMonths`-Matrix, aktuellem FOOD-COUNT-Identitätsstand und der fachlich freigegebenen täglichen Lebensmittel-Einführung; historischer Phasenmodell-v2-Stand `f9f886c82af2ce267c10571e5e89df787037c6b0`.
+Stand: 25.08.2026  
+Dokumentationsbasis: aktueller Planner-Stand auf Basis von `main` bis `15d72f06de747cbac08de7c42b379d7b90bf2b36`, einschließlich gemergter Handling-/BLW-Schicht, dokumentiertem Oral-Processing-Contract, gemergtem Nuss-/Samen-/Topping-Block, vollständiger österreichischer `seasonMonths`-Matrix, aktuellem FOOD-COUNT-Identitätsstand und der fachlich freigegebenen täglichen Lebensmittel-Einführung; historischer Phasenmodell-v2-Stand `f9f886c82af2ce267c10571e5e89df787037c6b0`. PHASE-TRANSITION ist zusätzlich auf dem Arbeitsbranch `feat/phase-readiness-core` gegen `main` `3aa9cf3db78c2cbcdcde61ac8b2d2fd86391b4f6` konkretisiert.
 
 Dieses Dokument führt die bisher über Phasenmodell, PLAN-07, PLAN-08, MILK-01, TODO3-Regressionen und spätere Fachentscheidungen verteilte Planner-Semantik an einer Stelle zusammen.
 
@@ -50,26 +50,81 @@ Zusätzlich gilt:
 - Die Texturentwicklung bleibt separat dokumentiert.
 - Historische Texturinformationen dürfen durch spätere Planner-Erweiterungen nicht stillschweigend umgedeutet werden.
 
-## 1.3 PHASE-TRANSITION – entwicklungsorientierte Empfehlung ⚠️ Soll/Ist-Gap
+## 1.3 PHASE-TRANSITION – entwicklungsorientierte Empfehlung 🟡 Branch/Integrations-PR
 
-Fachlich beschlossen ist:
+Der Readiness-Core beantwortet **ausschließlich**, ob der Übergang in die nächste Beikostphase empfohlen werden kann. Er verändert `phaseSelected` nicht, ruft keinen Phasenwechsel auf und bleibt vollständig getrennt von der bestehenden bewussten Nutzerbestätigung.
 
-1. Die App **empfiehlt** den Übergang in die nächste Beikostphase entwicklungsorientiert.
-2. Alter oder gegessene Grammwerte dürfen den Phasenwechsel nicht automatisch auslösen.
-3. Die Empfehlung ist kein Zwang und kein automatischer Wechsel.
-4. Die Nutzerin bestätigt den empfohlenen Wechsel bewusst/einmalig.
-5. Bestehende Logs, Vorräte, manuelle Mahlzeiten und Locks bleiben durch den Wechsel in ihrer bisherigen Semantik erhalten.
+Verbindlich gilt:
 
-Historisch nachgewiesenes Ist des Phasenmodell-v2:
+1. Die App unterscheidet `notYet`, `consider` und `recommended` und liefert dazu nachvollziehbare Gründe sowie fehlende qualitative Voraussetzungen.
+2. Fehlende Information ist nicht dasselbe wie ein negatives Entwicklungsmerkmal. Das aktuelle Mahlzeitenmuster wird daher als `unknown`, `established` oder `notEstablished` bewertet.
+3. `established` bedeutet ausschließlich qualitativ, dass die in der aktuellen Phase vorgesehenen Beikostmahlzeiten grundsätzlich angenommen bzw. etabliert sind. Dieser Zustand wird **nicht** aus Grammwerten, Anzahl der Logs, Zahl erfolgreicher Tage, FOOD-Statusschwellen oder Dauer in der Phase berechnet.
+4. Alter ist bei den Übergängen 1→2 und 2→3 eine Orientierung für die Stärke bzw. zeitliche Einordnung der Empfehlung, aber niemals allein ausreichendes Readiness-Kriterium und niemals automatischer Umschalter.
+5. Mengenorientierung, Texturstufe, BLW-/Handling-Fähigkeit, Allergenstatus, Milchmenge, Vorrat, manuelle Mahlzeiten und Locks sind keine PHASE-TRANSITION-Readiness-Signale.
+6. Der Übergang 3→4 ist bewusst anders: Er fügt im App-Modell den automatischen Snack hinzu und wird deshalb aus etablierten drei Hauptmahlzeiten plus beobachtetem zusätzlichem Snackbedarf abgeleitet, nicht aus einem Altersziel und nicht aus „Familienkost“-Textur.
+7. Ein tatsächlicher Wechsel erfolgt weiterhin ausschließlich über die bestehende bewusste Nutzeraktion. Logs, Vorräte, manuelle Mahlzeiten und Locks bleiben dabei in ihrer bisherigen Semantik erhalten.
 
-- Die Oberfläche erklärt korrekt, dass sich die Phase nach Entwicklung und Tagesablauf richtet.
-- `Zurück`/`Weiter` erlaubt den Wechsel zwischen den Phasen.
-- Vor dem Wechsel erscheint eine bewusste Bestätigung.
-- Alter und Grammwerte lösen den Wechsel nicht automatisch aus.
+### 1.3.1 Altersorientierung für Kennenlernen → Mahlzeitenaufbau
 
-**Noch nicht nachgewiesen ist eine eigenständige Entwicklungs-Empfehlungslogik**, die aus geeigneten Entwicklungsmerkmalen ableitet, dass nun der nächste Phasenwechsel empfohlen werden sollte.
+Ziel der nächsten Phase sind zwei automatisch geplante Mahlzeiten: Frühstück + Mittagessen.
 
-Damit ist PHASE-TRANSITION **keine offene Fachfrage**, sondern eine noch offene Soll-/Ist-Lücke. Vor einer Implementierung müssen die konkreten fachlichen Entwicklungsindikatoren separat festgelegt bzw. aus der ursprünglichen Freigabe eindeutig rekonstruiert werden. Es dürfen dafür keine neuen Schwellen aus Alter, Grammwerten oder technischen Bestandswerten erfunden werden.
+- unter 6 Monaten: `early`;
+- 6 bis unter 9 Monate: `inWindow`;
+- ab 9 Monaten: `targetPassed`.
+
+Entscheidung:
+
+- `currentPattern = established` + `early` → `consider`;
+- `currentPattern = established` + `inWindow|targetPassed` → `recommended`;
+- `currentPattern = unknown` + `early` → `notYet`;
+- `currentPattern = unknown` + `inWindow|targetPassed` → `consider`;
+- `currentPattern = notEstablished` → immer `notYet`; eine bereits erreichte bzw. überschrittene Altersorientierung bleibt trotzdem als Grund sichtbar.
+
+### 1.3.2 Altersorientierung für Mahlzeitenaufbau → Drei Hauptmahlzeiten
+
+Ziel der nächsten Phase sind Frühstück + Mittagessen + Abendessen.
+
+- unter 7 Monaten: `early`;
+- 7 bis unter 9 Monate: `inWindow`;
+- ab 9 Monaten: `targetPassed`.
+
+Entscheidung:
+
+- `currentPattern = established` + `early` → `consider`;
+- `currentPattern = established` + `inWindow|targetPassed` → `recommended`;
+- `currentPattern = unknown` + `early` → `notYet`;
+- `currentPattern = unknown` + `inWindow|targetPassed` → `consider`;
+- `currentPattern = notEstablished` → immer `notYet`; bei `targetPassed` bleibt das altersbezogene Ziel von drei Hauptmahlzeiten als eigener Grund sichtbar.
+
+Die Altersorientierung bildet die fachlich freigegebene Zielrichtung ab, im Verlauf des ersten Lebensjahres Frühstück, Mittagessen und Abendessen zu etablieren. Sie ist ausdrücklich **keine** starre Umschaltgrenze.
+
+### 1.3.3 Drei Hauptmahlzeiten → Familienkost
+
+Dieser Übergang erhält **keine** entsprechende altersgetriebene Readiness-Kurve. Relevant ist der zusätzliche automatisch geplante Snack:
+
+- aktuelles Muster nicht etabliert → `notYet`;
+- aktuelles Muster unbekannt → keine Empfehlung ohne Klärung des aktuellen Musters;
+- aktuelles Muster etabliert + Snackbedarf unbekannt → `consider`;
+- aktuelles Muster etabliert + kein Snackbedarf → `notYet`;
+- aktuelles Muster etabliert + Snackbedarf beobachtet → `recommended`.
+
+`snackNeed = yes|no|unknown` beschreibt ausschließlich, ob zwischen den drei Hauptmahlzeiten tatsächlich regelmäßig Bedarf an einer zusätzlichen Essgelegenheit besteht. Weder 12 Monate noch Textur, Fingerfood, Familienessen oder eine bestimmte orale Fähigkeit lösen Phase 4 aus.
+
+### 1.3.4 Technischer Readiness-Vertrag
+
+Der zentrale Readiness-Zustand liefert mindestens:
+
+- `currentPhase`;
+- `nextPhase`;
+- den neu hinzukommenden Mahlzeitenslot;
+- `recommendation`;
+- `recommendable`;
+- qualitative Entwicklungswerte;
+- getrennte `ageGuidance`;
+- `reasons`;
+- `missingPrerequisites`.
+
+Die Berechnung ist read-only. Die bestehende Funktion zum tatsächlichen Phasenwechsel bleibt davon unberührt.
 
 ---
 
@@ -534,7 +589,7 @@ Die vollständige österreichische `seasonMonths`-Matrix und die Nuss-/Samen-Rol
 
 ## 17.2 Fachlich beschlossen, aber noch nicht vollständig auf main nachgewiesen
 
-1. ⚠️ **PHASE-TRANSITION:** entwicklungsorientierte Empfehlung des nächsten Phasenwechsels plus bewusste Bestätigung. Bestätigung und manueller Wechsel sind vorhanden; eine eigenständige Entwicklungs-Empfehlungslogik ist noch nicht nachgewiesen.
+1. 🟡 **PHASE-TRANSITION:** Die eigenständige read-only Readiness-/Recommendation-Logik ist auf `feat/phase-readiness-core` umgesetzt. Sie trennt `notYet|consider|recommended`, qualitative Entwicklungsinformation und Altersorientierung vom weiterhin ausschließlich bewusst bestätigten Phasenwechsel. Bis zum Merge bleibt dieser Stand Branch/Integrations-PR und nicht `main`.
 
 Weitere offene FOOD-Datenfragen werden separat im FOOD-Fachregel-Track geklärt und dürfen nicht als implizite Planner-Regel erfunden werden.
 
@@ -545,7 +600,7 @@ Weitere offene FOOD-Datenfragen werden separat im FOOD-Fachregel-Track geklärt 
 Änderungen am Planner müssen mindestens folgende Verträge regressiv erhalten:
 
 - Phasenmodell und Mahlzeitenslots;
-- PHASE-TRANSITION: kein automatischer Phasenwechsel durch Alter oder Grammwerte; bei späterer Implementierung der Empfehlung klare Trennung zwischen Empfehlung und bestätigtem Wechsel;
+- PHASE-TRANSITION: Readiness ist read-only; Alter allein, Grammwerte, Loganzahl und Textur lösen weder `recommended` ohne qualitative Voraussetzung noch einen Phasenwechsel aus; `unknown` bleibt von `notEstablished` unterscheidbar; Phase 3→4 wird über Snackbedarf statt über Alter/Textur bewertet;
 - tägliche Nicht-Allergen-Einführung mit höchstens einem unbekannten FOOD je Frühstück/Mittag/Abend;
 - ein erfolgreich `Probiert`-FOOD blockiert keine geeignete offene Neueinführung; echte Ablehnung bleibt gezielter Wiederholungspfad;
 - Allergen-Einführung oder gezielte Allergen-Wiederholung bleibt die einzige automatische Lernaufgabe des Tages;
@@ -591,6 +646,7 @@ Aktuelle Kernquellen:
 
 - `js/state.js`
 - `js/model.js`
+- `js/phase-readiness.js`
 - `js/planning.js`
 - `js/planner-meal-eligibility.js`
 - `js/planner-milk-policy.js`
@@ -607,6 +663,7 @@ Aktuelle Kernquellen:
 Zentrale Regressionen:
 
 - `tests/todo3-phase-model.test.cjs`
+- `tests/phase-readiness.test.cjs`
 - `tests/todo3-food-auto-integration.test.cjs`
 - `tests/todo3-replanning.test.cjs`
 - `tests/planner-meal-eligibility-p0.test.cjs`

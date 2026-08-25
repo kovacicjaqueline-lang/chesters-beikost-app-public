@@ -140,3 +140,20 @@ test('PHASE-TRANSITION: ungültige qualitative Signale werden als unbekannt beha
   assert.ok(result.missingPrerequisites.includes('snackNeed'));
   assert.equal(result.recommendation, 'notYet');
 });
+
+test('PHASE-TRANSITION: Runtime lädt Readiness nach Model und vor Planning', () => {
+  const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+  const modelPos = html.indexOf('js/model.js?v=10.1.26');
+  const readinessPos = html.indexOf('js/phase-readiness.js?v=10.1.26');
+  const planningPos = html.indexOf('js/planning.js?v=10.1.26');
+
+  assert.ok(modelPos >= 0, 'model.js fehlt');
+  assert.ok(readinessPos > modelPos, 'Readiness muss nach model.js geladen werden');
+  assert.ok(planningPos > readinessPos, 'Readiness muss vor planning.js verfügbar sein');
+});
+
+test('PHASE-TRANSITION: Readiness-Core ist für den ersten Offline-Start vorgecached', () => {
+  const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
+  assert.match(sw, /\.\/js\/phase-readiness\.js\?v=10\.1\.26/);
+  assert.match(sw, /\.\.\.PHASE_READINESS_PRECACHE/);
+});

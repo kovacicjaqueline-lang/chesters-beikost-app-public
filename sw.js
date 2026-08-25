@@ -116,10 +116,12 @@ const PHASE_READINESS_PRECACHE = [
   "./js/phase-readiness.js?v=10.1.26",
 ];
 
-// Die strukturierte Planprüfung ist ein eigener Planner-Core. Sie wird nach der
-// UI-Definition und dem planId-Rollover-Core, aber vor dem ersten App-Render geladen.
+// Die strukturierte Planprüfung und ihre zentrale Lösungsschicht müssen vor dem
+// nächsten Offline-Render gemeinsam verfügbar sein.
 const PLAN_CHECK_PRECACHE = [
   "./js/plan-checks.js?v=10.1.26",
+  "./js/planner-plan-check-solutions.js?v=10.1.26",
+  "./js/plan-checks-ui.js?v=10.1.26",
 ];
 
 // Zusätzliche UI-/Flow-Dateien, die nicht im statischen FILES-Stamm von sw-core.js liegen.
@@ -130,6 +132,7 @@ const UI_PRECACHE = [
   "./ui-meal-editor-footer.css?v=10.1.26",
   "./flow-dialog-ui.css?v=10.1.26",
   "./catalog-navigation.css",
+  "./plan-checks-ui.css?v=10.1.26",
   "./js/manual-meal-flow.js",
   "./js/recipe-v2-component-options.js",
   "./js/meal-editor-recipe-variants.js",

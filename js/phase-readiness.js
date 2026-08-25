@@ -100,18 +100,19 @@ function phaseReadinessRecommendation(input = {}) {
   }
 
   if (phase === "drei") {
-    if (snackNeed === "unknown") {
-      reasons.push("snackNeedUnknown");
-      missingPrerequisites.push("snackNeed");
-    } else if (snackNeed === "yes") {
-      reasons.push("snackNeedObserved");
-    } else {
-      reasons.push("snackNeedNotObserved");
-    }
-
     let recommendation = "notYet";
-    if (currentPattern === "established" && snackNeed === "yes") recommendation = "recommended";
-    else if (currentPattern === "established" && snackNeed === "unknown") recommendation = "consider";
+    if (currentPattern === "established") {
+      if (snackNeed === "unknown") {
+        reasons.push("snackNeedUnknown");
+        missingPrerequisites.push("snackNeed");
+        recommendation = "consider";
+      } else if (snackNeed === "yes") {
+        reasons.push("snackNeedObserved");
+        recommendation = "recommended";
+      } else {
+        reasons.push("snackNeedNotObserved");
+      }
+    }
 
     return {
       currentPhase: phase,

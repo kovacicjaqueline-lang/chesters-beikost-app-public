@@ -230,6 +230,8 @@
 
   let baseLockedMeal = lockedMeal;
   let baseBuildDay = buildDay;
+  let baseBuildDays = buildDays;
+  let maintenanceBuildRange = null;
 
   function runtimeHelpers() {
     return {
@@ -330,6 +332,9 @@
   };
 
   buildDay = function maintenanceAwareBuildDay(date, index, ctx) {
+    if (maintenanceBuildRange) {
+      markPresetRange(ctx, maintenanceBuildRange.from, maintenanceBuildRange.count);
+    }
     let projected = CORE.ensureProjectedTargetSet(ctx);
     let projectedBeforeDay = new Set(projected);
     let provisionalTargets = new Set();
@@ -417,13 +422,13 @@
   }
 
   buildDays = function maintenanceAwareBuildDays(from, n = 7, applyAutoLocks = true) {
-    let ctx = freshPlanContext();
-    CORE.ensureProjectedTargetSet(ctx);
-    markPresetRange(ctx, from, n);
-    let arr = [];
-    for (let index = 0; index < n; index++) arr.push(buildDay(addDays(from, index), index, ctx));
-    if (applyAutoLocks && ensureAutoLocks(arr)) return buildDays(from, n, false);
-    return arr;
+    let previousRange = maintenanceBuildRange;
+    maintenanceBuildRange = { from, count: n };
+    try {
+      return baseBuildDays(from, n, applyAutoLocks);
+    } finally {
+      maintenanceBuildRange = previousRange;
+    }
   };
 
   globalScope.PlannerAllergenMaintenance = CORE;

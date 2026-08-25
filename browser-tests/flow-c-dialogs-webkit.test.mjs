@@ -132,23 +132,23 @@ try {
   await page.locator("#cancelManualMeal").click();
   assert.equal(await page.locator("#genericModal").evaluate((node) => node.classList.contains("open")), false);
 
-  // Geplante Hafer-Mahlzeit bearbeiten: Header bleibt im gemeinsamen Flow und die
-  // nachträglich ergänzte Darreichung muss unter Name/Entfernen statt daneben liegen.
+  // Geplante Karotten-Mahlzeit bearbeiten: Header bleibt im gemeinsamen Flow und die
+  // explizit strukturierte FOOD-Darreichung muss unter Name/Entfernen statt daneben liegen.
   await page.evaluate(() => {
     window.__beikostTest.reset();
     const state = window.__beikostTest.getState();
-    const hafer = state.foods.find((item) => item.id === "hafer");
-    if (!hafer) throw new Error("Test benötigt das Lebensmittel Hafer");
-    hafer.manualStatus = "Verträgliche Basis";
+    const karotte = state.foods.find((item) => item.id === "karotte");
+    if (!karotte) throw new Error("Test benötigt das Lebensmittel Karotte");
+    karotte.manualStatus = "Verträgliche Basis";
     window.__beikostTest.setState(state);
     window.__beikostTest.openManualMealSelector(window.__beikostTest.today(), "lunch", {
       meal: "lunch",
       active: true,
-      focusId: "hafer",
-      foodIds: ["hafer"],
-      baseFoodIds: ["hafer"],
+      focusId: "karotte",
+      foodIds: ["karotte"],
+      baseFoodIds: ["karotte"],
       sampleFoodIds: [],
-      foodRoles: { hafer: "base" },
+      foodRoles: { karotte: "base" },
       type: "known",
     });
   });
@@ -156,24 +156,24 @@ try {
   assert.equal(await page.locator("#genericModal .flow-dialog-header").count(), 1);
   assert.equal(await page.locator("#confirmManualMeal").textContent(), "Änderungen speichern");
 
-  const haferPreparation = page.locator('[data-manual-preparation="hafer"]');
-  await haferPreparation.waitFor();
-  const haferItem = page.locator(".manual-role-item").filter({ has: haferPreparation });
-  assert.equal(await haferItem.count(), 1, "Hafer muss genau eine Rollen-/Darreichungszeile besitzen");
+  const carrotPreparation = page.locator('[data-manual-preparation="karotte"]');
+  await carrotPreparation.waitFor();
+  const carrotItem = page.locator(".manual-role-item").filter({ has: carrotPreparation });
+  assert.equal(await carrotItem.count(), 1, "Karotte muss genau eine Rollen-/Darreichungszeile besitzen");
   assert.equal(
-    await haferItem.evaluate((node) => getComputedStyle(node).display),
+    await carrotItem.evaluate((node) => getComputedStyle(node).display),
     "grid",
     "Rollenzeile mit Darreichung muss als zweizeiliges Grid gerendert werden",
   );
 
-  const itemBox = await haferItem.boundingBox();
-  const foodBox = await haferItem.locator(":scope > .grow").boundingBox();
-  const actionBox = await haferItem.locator(":scope > .manual-role-actions").boundingBox();
-  const preparationBox = await haferItem.locator(":scope > .manual-preparation-field").boundingBox();
-  assert.ok(itemBox && foodBox && actionBox && preparationBox, "Hafer-Editor muss vollständig messbar sein");
+  const itemBox = await carrotItem.boundingBox();
+  const foodBox = await carrotItem.locator(":scope > .grow").boundingBox();
+  const actionBox = await carrotItem.locator(":scope > .manual-role-actions").boundingBox();
+  const preparationBox = await carrotItem.locator(":scope > .manual-preparation-field").boundingBox();
+  assert.ok(itemBox && foodBox && actionBox && preparationBox, "Karotten-Editor muss vollständig messbar sein");
   assert.ok(
     preparationBox.y >= Math.max(foodBox.y + foodBox.height, actionBox.y + actionBox.height) - 1,
-    "Konsistenz / Darreichung darf Hafer oder den Entfernen-Button nicht überlagern",
+    "Darreichung darf Karotte oder den Entfernen-Button nicht überlagern",
   );
   assert.ok(
     preparationBox.x >= itemBox.x - 1 && preparationBox.x + preparationBox.width <= itemBox.x + itemBox.width + 1,

@@ -9,6 +9,7 @@ const handling = require("../js/handling-readiness.js");
 const root = path.resolve(__dirname, "..");
 const handlingSource = fs.readFileSync(path.join(root, "js", "handling-readiness.js"), "utf8");
 const utilsSource = fs.readFileSync(path.join(root, "js", "utils.js"), "utf8");
+const swSource = fs.readFileSync(path.join(root, "sw.js"), "utf8");
 
 test("Planner-Boot: nur im aktuellen unvollständigen Seiten-Boot erzeugte normale Auto-Locks werden verworfen", () => {
   const startedAt = Date.parse("2026-08-18T21:30:00.000Z");
@@ -59,8 +60,20 @@ test("Planner-Boot: historische Locks bleiben unverändert, wenn kein sicherer S
   assert.ok(state.planLocks.existing);
 });
 
-test("Planner-Boot: Boot-Locks werden vor PresentationMode-Runtime und finalem sichtbaren Render bereinigt", () => {
+test("Planner-Boot: Allergenpflege wird nach Introduction und vor Handling/finalem Render installiert", () => {
   assert.match(utilsSource, /window\.__plannerPoliciesReady\s*=\s*false/);
+  assert.match(
+    utilsSource,
+    /installPlannerIntroductionPolicyRuntime\(\);[\s\S]*loadMaintenancePolicy\(\)/,
+  );
+  assert.match(
+    utilsSource,
+    /planner-allergen-maintenance\.js\?v=10\.1\.26[\s\S]*finishPlannerPolicies\(\)/,
+  );
+  assert.match(
+    swSource,
+    /planner-introduction-policy\.js[\s\S]*planner-allergen-maintenance\.js/,
+  );
   assert.match(
     handlingSource,
     /pruneCurrentPagePrePolicyAutoLocks\(state\);[\s\S]*installPresentationModeRuntime\(\)/,

@@ -116,6 +116,12 @@ const PHASE_READINESS_PRECACHE = [
   "./js/phase-readiness.js?v=10.1.26",
 ];
 
+// Die strukturierte Planprüfung ist ein eigener Planner-Core. Sie wird nach der
+// UI-Definition und dem planId-Rollover-Core, aber vor dem ersten App-Render geladen.
+const PLAN_CHECK_PRECACHE = [
+  "./js/plan-checks.js?v=10.1.26",
+];
+
 // Zusätzliche UI-/Flow-Dateien, die nicht im statischen FILES-Stamm von sw-core.js liegen.
 // Dateien, die index.html mit ?v=10.1.26 lädt, werden unter exakt derselben URL precached.
 // Dadurch überschreibt ein Service-Worker-Update auch einen bereits vorhandenen direkten
@@ -150,6 +156,7 @@ self.addEventListener("install", (event) => {
         ...UNIFIED_LOG_PRECACHE,
         ...UI_PRECACHE,
         ...PHASE_READINESS_PRECACHE,
+        ...PLAN_CHECK_PRECACHE,
       ]),
     ];
     const cache = await caches.open(CACHE);

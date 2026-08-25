@@ -63,7 +63,10 @@ try {
   const today = await page.evaluate(() => {
     window.__beikostTest.reset();
     const state = window.__beikostTest.getState();
-    for (const id of ["hafer", "hirse", "banane", "apfel", "birne", "kuhmilch", "naturjoghurt", "buttermilch", "haferdrink"]) {
+    for (const id of [
+      "hafer", "hirse", "banane", "apfel", "birne", "kuhmilch", "naturjoghurt",
+      "buttermilch", "haferdrink", "sojabohne", "mandel", "kokos", "kuerbis", "karotte",
+    ]) {
       const item = state.foods.find((food) => food.id === id);
       if (item) item.manualStatus = "Verträgliche Basis";
     }
@@ -147,7 +150,7 @@ try {
   await page.locator('[data-recipe-component-slot="oneOf"]').waitFor();
   assert.equal(await page.locator('[data-recipe-component-slot="oneOf"]').inputValue(), "apfel", "gespeicherte Obstauswahl muss beim Wiederöffnen vorausgefüllt sein");
 
-  // Milch-Getreide-Brei: getrennte Milch-/Getreideslots inklusive vorhandener Milchalternative.
+  // Milch-Getreide-Brei: alle vorgesehenen Milch-/Milchalternativen stammen aus vorhandenen FOOD-Identitäten.
   await page.evaluate((date) => {
     window.__beikostTest.openManualMealSelector(date, "breakfast", {
       meal: "breakfast",
@@ -166,19 +169,70 @@ try {
   await milkSlot.waitFor();
   assert.equal(await grainSlot.evaluate((select) => select.previousElementSibling?.textContent), "Getreide");
   assert.equal(await milkSlot.evaluate((select) => select.previousElementSibling?.textContent), "Milch / Milchalternative");
-  assert.equal(await milkSlot.locator('option[value="haferdrink"]').count(), 1, "Haferdrink muss als vorhandene zulässige Milchalternative auswählbar sein");
+  for (const [value, label] of [
+    ["haferdrink", "Haferdrink"],
+    ["sojabohne", "Sojamilch"],
+    ["mandel", "Mandelmilch"],
+    ["kokos", "Kokosmilch"],
+  ]) {
+    const option = milkSlot.locator(`option[value="${value}"]`);
+    assert.equal(await option.count(), 1, `${label} muss bei erfüllten Regeln auswählbar sein`);
+    assert.equal(await option.textContent(), label);
+  }
 
   await grainSlot.selectOption("hirse");
   await page.locator('[data-recipe-component-slot="oneOf"]').waitFor();
-  await page.locator('[data-recipe-component-slot="milkChoices"]').selectOption("haferdrink");
+  await page.locator('[data-recipe-component-slot="milkChoices"]').selectOption("mandel");
   await page.locator("#confirmManualMeal").click();
   await page.waitForFunction((date) => {
     const ids = window.__beikostTest.getState().planLocks?.[`${date}|breakfast`]?.foodIds || [];
-    return ids.includes("hirse") && ids.includes("haferdrink");
+    return ids.includes("hirse") && ids.includes("mandel");
   }, today);
   saved = await page.evaluate(() => window.__beikostTest.getState());
   assert.ok(saved.planLocks[`${today}|breakfast`].foodIds.includes("hirse"));
-  assert.ok(saved.planLocks[`${today}|breakfast`].foodIds.includes("haferdrink"));
+  assert.ok(saved.planLocks[`${today}|breakfast`].foodIds.includes("mandel"));
+  assert.equal(saved.planLocks[`${today}|breakfast`].recipeName, "Milch-Getreide-Brei");
+
+  // Nicht-variable Rezepte funktionieren weiter und zeigen keine Slot-Auswahl.
+  await page.evaluate((date) => {
+    window.__beikostTest.openManualMealSelector(date, "breakfast", {
+      meal: "breakfast",
+      active: true,
+      recipeName: "Kürbis-Hafer-Brei",
+      foodIds: ["kuerbis", "hafer"],
+      baseFoodIds: ["kuerbis", "hafer"],
+      sampleFoodIds: [],
+      foodRoles: { kuerbis: "base", hafer: "base" },
+      type: "bekannt",
+    });
+  }, today);
+  await page.locator('.selectRecipe.selected[data-recipe]').waitFor();
+  assert.equal(await page.locator(".recipe-component-controls").count(), 0);
+  await page.locator("#confirmManualMeal").click();
+  await page.waitForFunction((date) => window.__beikostTest.getState().planLocks?.[`${date}|breakfast`]?.recipeName === "Kürbis-Hafer-Brei", today);
+
+  // Lebensmittelmodus bleibt unabhängig vom Rezeptmodus speicher- und wiederöffnungsfähig.
+  await page.evaluate((date) => window.__beikostTest.openManualMealSelector(date, "lunch"), today);
+  await page.locator("#selectorFoods").click();
+  assert.match(await page.locator("#genericBody").innerText(), /Noch keine Lebensmittel ausgewählt\./);
+  const carrotRow = page.locator('.selectFood[data-food="karotte"]');
+  await carrotRow.waitFor();
+  await carrotRow.click();
+  await page.locator("#confirmManualMeal").click();
+  await page.waitForFunction((date) => {
+    const lock = window.__beikostTest.getState().planLocks?.[`${date}|lunch`];
+    return !!lock && !lock.recipeName && lock.foodIds?.includes("karotte");
+  }, today);
+  saved = await page.evaluate(() => window.__beikostTest.getState());
+  assert.equal(saved.planLocks[`${today}|lunch`].recipeName || "", "");
+  assert.ok(saved.planLocks[`${today}|lunch`].foodIds.includes("karotte"));
+
+  await page.evaluate((date) => {
+    const lock = window.__beikostTest.getState().planLocks[`${date}|lunch`];
+    window.__beikostTest.openManualMealSelector(date, "lunch", lock);
+  }, today);
+  await page.locator("#selectorFoods").click();
+  assert.equal(await page.locator('.selectFood.selected[data-food="karotte"]').count(), 1);
 
   await context.close();
 } finally {

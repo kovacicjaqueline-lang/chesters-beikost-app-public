@@ -19,9 +19,6 @@ function plannerFoodPresentationRole(item) {
 function plannerNeutralBreakfastTitle(meal, items) {
   if (meal?.meal !== "breakfast" || items.length !== 2) return "";
   let categories = new Set(items.map((item) => item.category));
-
-  // Ei + Obst ist als Kombination zulässig, aber ohne konkretes recipeName darf
-  // der Planner daraus weder eine Eierspeise noch automatisch Pancakes erfinden.
   if (categories.has("Ei") && categories.has("Obst")) {
     return naturalFoodList(items.map((item) => item.name));
   }
@@ -31,21 +28,17 @@ function plannerNeutralBreakfastTitle(meal, items) {
 function plannerAutomaticComponentTitle(meal) {
   if (!meal || meal.recipeName || meal.manualAdded) return "";
   if ((meal.sampleFoodIds || []).length) return "";
-
   let ids = [...new Set(meal.foodIds || [])].filter(Boolean);
   let items = ids.map((id) => food(id)).filter(Boolean);
   if (items.length < 2) return "";
-
   let neutralBreakfastTitle = plannerNeutralBreakfastTitle(meal, items);
   if (neutralBreakfastTitle) return neutralBreakfastTitle;
-
   let roles = items.map(plannerFoodPresentationRole);
   let hasFreshSide = roles.includes("fresh-side");
   let hasOtherComponent = roles.some((role) => role !== "fresh-side");
   if (hasFreshSide && hasOtherComponent) {
     return `${naturalFoodList(items.map((item) => item.name))} · getrennte Komponenten`;
   }
-
   return "";
 }
 
@@ -59,10 +52,7 @@ function plannerCompletedLogOnlyDayState(data, core, date) {
       ? core.logQualifiesAsCompletion(log)
       : false,
   );
-  let openPlans = core.openPlanInstances(
-    data,
-    (plan) => plan?.date === date,
-  ) || [];
+  let openPlans = core.openPlanInstances(data, (plan) => plan?.date === date) || [];
   return {
     canCollapse: completedLogs.length > 0 && openPlans.length === 0,
     count: logs.length,
@@ -95,7 +85,6 @@ function plannerCollapseFinishedLogOnlyDays() {
   let container = document.getElementById("blockPlan");
   let core = globalThis.__plannerLogRolloverCore;
   if (!container || !core || typeof visiblePlanStart !== "function") return 0;
-
   let from = visiblePlanStart();
   let current = today();
   let changed = 0;
@@ -105,12 +94,10 @@ function plannerCollapseFinishedLogOnlyDays() {
     if (date >= current) return;
     let summary = plannerCompletedLogOnlyDayState(state, core, date);
     if (!summary.canCollapse) return;
-
     let details = document.createElement("details");
     details.className = "card block completed-day";
     let label = nice(date, true);
     details.innerHTML = `<summary><span><span class="completed-day-title">${esc(label)} erledigt</span><span class="small">${summary.count} ${summary.count === 1 ? "Protokolleintrag" : "Protokolleinträge"}${summary.grams ? ` · ${summary.grams} g protokolliert` : ""}</span></span><span class="completed-day-chevron">▼</span></summary>`;
-
     let body = document.createElement("div");
     body.className = "completed-day-body";
     [...dayNode.children].forEach((child) => {
@@ -150,15 +137,12 @@ function installPlannerMealPresentationRuntime() {
     typeof food !== "function" ||
     typeof naturalFoodList !== "function"
   ) return false;
-
   globalThis.__plannerMealPresentationRuntimeInstalled = true;
   let originalDishTitle = dishTitle;
-
   dishTitle = function plan08DishTitle(meal) {
     let componentTitle = plannerAutomaticComponentTitle(meal);
     return componentTitle || originalDishTitle(meal);
   };
-
   if (typeof renderPlanCore === "function") {
     plannerInstallCompletedDayPresentationStyles();
     let originalRenderPlanCore = renderPlanCore;
@@ -169,7 +153,6 @@ function installPlannerMealPresentationRuntime() {
       return result;
     };
   }
-
   return true;
 }
 
@@ -210,9 +193,27 @@ function loadManualMealFlowRuntime() {
   return true;
 }
 
+function loadRecipeV2ComponentOptionsRuntime() {
+  if (typeof document === "undefined") return false;
+  let existing = document.querySelector('script[data-recipe-v2-component-options="v1"]');
+  if (existing) {
+    existing.addEventListener("load", loadManualMealFlowRuntime, { once: true });
+    return true;
+  }
+  let script = document.createElement("script");
+  script.src = "js/recipe-v2-component-options.js?v=10.1.26";
+  script.dataset.recipeV2ComponentOptions = "v1";
+  script.addEventListener("load", loadManualMealFlowRuntime, { once: true });
+  script.addEventListener("error", (event) => {
+    console.error("Recipe-V2-Komponentenoptionen konnten nicht geladen werden.", event);
+  }, { once: true });
+  document.head.appendChild(script);
+  return true;
+}
+
 if (typeof window !== "undefined" && typeof document !== "undefined") {
   installPlannerMealPresentationRuntime();
-  loadManualMealFlowRuntime();
+  loadRecipeV2ComponentOptionsRuntime();
 }
 
 if (typeof module !== "undefined" && module.exports) {
@@ -227,5 +228,6 @@ if (typeof module !== "undefined" && module.exports) {
     installPlannerMealPresentationRuntime,
     loadMealEditorRecipeVariantsRuntime,
     loadManualMealFlowRuntime,
+    loadRecipeV2ComponentOptionsRuntime,
   };
 }

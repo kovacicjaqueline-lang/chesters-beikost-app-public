@@ -42,8 +42,8 @@ function normalizePhaseReadinessValue(value, allowed, fallback = "unknown") {
 
 function phaseReadinessAgeGuidance(phase, ageMonths) {
   const rule = PHASE_READINESS_RULES[phase] || PHASE_READINESS_RULES.kennenlernen;
-  const normalizedAge = Number.isFinite(Number(ageMonths)) && Number(ageMonths) >= 0
-    ? Math.floor(Number(ageMonths))
+  const normalizedAge = typeof ageMonths === "number" && Number.isFinite(ageMonths) && ageMonths >= 0
+    ? Math.floor(ageMonths)
     : null;
 
   if (phase === "drei" || phase === "familie") {

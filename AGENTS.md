@@ -85,6 +85,8 @@ Prüfreihenfolge:
 
 Nie behaupten, ein Test sei bestanden, wenn er nicht tatsächlich ausgeführt bzw. als CI-Ergebnis geprüft wurde.
 
+Bei rotem CI nicht blind rerunnen oder anhand von Warnungen raten. Zuerst den fehlgeschlagenen Job und dessen vollständiges Log auslesen, den ersten tatsächlichen Fehler klassifizieren und nach dem Abschnitt `CI rot: Diagnose- und Reparaturweg` in `docs/AI_WORKFLOW.md` vorgehen.
+
 Bei reinen Dokumentationsänderungen ohne Code-/Konfigurationswirkung sind keine künstlichen Regressionstests erforderlich.
 
 ## Versionsregeln

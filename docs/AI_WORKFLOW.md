@@ -56,10 +56,35 @@ Die verbindlichen Details stehen in `AGENTS.md`, `docs/FOOD_HANDLING_ORAL_PROCES
 | FOOD-/Recipe-V2-Icons, Mapping, Precache | `npm run verify:icons` |
 | Datenmodell, Planner, Persistenz, zentrale Utilities | betroffene Tests + `npm run verify:fast` |
 | UI-/Browser-Fluss | betroffene Tests + `npm run verify:app` |
+| Browser-Test-/CI-Infrastruktur | betroffener Runner-/Workflow-Test + `npm run verify:app` |
 | Wrangler-/Deployment-Konfiguration | `npm run verify:deploy` |
 | Querschnitt, Release oder mehrere Bereiche | `npm run verify` |
 
 `npm run verify` ist bewusst kein Standard nach jeder kleinen Änderung. Es ist der vollständige Gate, wenn der Scope mehrere Bereiche berührt oder ein Abschluss-/Releasecheck gebraucht wird.
+
+## CI rot vermeiden: Pre-Push- und Integrationscheck
+
+CI soll möglichst die bereits geprüfte Änderung bestätigen und nicht der erste Ort sein, an dem ein deterministischer Featurefehler entdeckt wird.
+
+Vor jedem Push mit Code-, Test-, Workflow- oder Konfigurationsänderungen:
+
+1. den **direkt betroffenen Test** bzw. den kleinsten passenden Bereichs-Gate tatsächlich ausführen und grün prüfen, sofern die Arbeitsumgebung die Ausführung zulässt,
+2. danach nur die laut Testmatrix zusätzlich erforderlichen Gates ausführen,
+3. einen verfügbaren lokalen Zieltest nicht mit „CI wird es prüfen“ überspringen,
+4. wenn die lokale Ausführung technisch nicht möglich ist, das ausdrücklich dokumentieren und den dadurch erstmals ausführenden CI-Lauf direkt nach dem Push tatsächlich prüfen.
+
+Vor finalem Review bzw. vor einer Merge-Freigabe:
+
+1. den tatsächlichen aktuellen `main` erneut ermitteln,
+2. den Arbeitsbranch gegen diesen Stand vergleichen,
+3. wenn seit dem Branch-Ausgangspunkt relevante Änderungen an denselben Komponenten, Verträgen oder Regressionen in `main` gelandet sind, den Arbeitsbranch auf den aktuellen Integrationsstand bringen und den laut Testmatrix erforderlichen Gate auf diesem Stand erneut prüfen.
+
+Für Browserregressionen gilt zusätzlich:
+
+- den direkt betroffenen Browserfall bei Bedarf gezielt mit `node browser-tests/<datei>-webkit.test.mjs` ausführen,
+- feste Zeit-Waits wie `waitForTimeout(...)` nicht als Standard-Stabilisierung verwenden; auf einen fachlich/technisch beobachtbaren Zustand, Locator oder Event warten,
+- `npm run test:browser` führt bewusst **alle** WebKit-Regressionsskripte aus, sammelt mehrere Fehler in einem Lauf und liefert erst am Ende einen Fehlerstatus,
+- der Browser-Runner schreibt `artifacts/browser-tests/summary.json`, `summary.md` und pro Test ein `output.log`; bei einem roten App-Workflow werden diese Diagnoseartefakte aus CI hochgeladen.
 
 ## CI rot: Diagnose- und Reparaturweg
 

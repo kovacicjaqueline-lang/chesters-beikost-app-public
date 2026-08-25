@@ -14,6 +14,7 @@ on:
       - 'assets/illustrations-v2/**'
       - 'tests/**'
       - 'browser-tests/**'
+      - 'scripts/**'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/app-tests.yml'
@@ -29,6 +30,7 @@ on:
       - 'assets/illustrations-v2/**'
       - 'tests/**'
       - 'browser-tests/**'
+      - 'scripts/**'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/app-tests.yml'
@@ -93,3 +95,12 @@ jobs:
 
       - name: Run app verification gate
         run: npm run verify:app
+
+      - name: Upload browser regression diagnostics
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-regression-diagnostics-${{ github.run_id }}
+          path: artifacts/browser-tests/
+          if-no-files-found: ignore
+          retention-days: 7

@@ -3,6 +3,7 @@ node_modules/
 __pycache__/
 *.pyc
 release/
+artifacts/
 *.zip
 
 # Wrangler / Cloudflare local state

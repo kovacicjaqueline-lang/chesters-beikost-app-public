@@ -59,8 +59,7 @@
   height: var(--icon-food);
 }
 
-/* FOOD-Detail: Die fachlich festgelegte 96px-Hierarchie bleibt erhalten.
- * Der HiDPI-Renderpfad erzeugt dafür beim Öffnen eine ausreichend große Rasterquelle. */
+/* FOOD-Detail: Die verbindliche 96px-Hierarchie wird zentral über CSS gesteuert. */
 .food-detail-hero {
   --food-detail-icon-size: 96px;
   display: grid;

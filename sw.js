@@ -122,6 +122,8 @@ const PLAN_CHECK_PRECACHE = [
   "./js/plan-checks.js?v=10.1.26",
   "./js/planner-plan-check-solutions.js?v=10.1.26",
   "./js/plan-checks-ui.js?v=10.1.26",
+  "./js/plan-checks-contract-extension.js?v=10.1.26",
+  "./js/plan-checks-ui-core.js?v=10.1.26",
 ];
 
 // Zusätzliche UI-/Flow-Dateien, die nicht im statischen FILES-Stamm von sw-core.js liegen.

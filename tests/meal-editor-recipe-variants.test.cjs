@@ -4,11 +4,14 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const {
-  MEAL_EDITOR_MILK_CHOICE_FORMS,
   mealEditorRecipeComponentSlots,
   mealEditorRecipeSelectionFromFoodIds,
   mealEditorRecipeConfiguredFoodIds,
 } = require("../js/meal-editor-recipe-variants.js");
+const {
+  RECIPE_V2_COMPONENT_OPTIONS,
+  installRecipeV2ComponentOptions,
+} = require("../js/recipe-v2-component-options.js");
 
 const foods = [
   { id: "hafer", name: "Hafer", category: "Getreide/Stärke" },
@@ -53,13 +56,34 @@ test("gespeicherte variable Rezeptkomponente wird aus foodIds wiederhergestellt"
   );
 });
 
-test("Milch-Getreide-Brei exponiert Getreide und alle vorgesehenen milkChoices getrennt", () => {
-  const recipe = {
+test("Recipe-V2-Vertrag enthält alle vorgesehenen Milch-Identitäten zentral in milkChoices", () => {
+  assert.deepEqual(
+    RECIPE_V2_COMPONENT_OPTIONS["Milch-Getreide-Brei"].milkChoices,
+    ["Kuhmilch", "Naturjoghurt", "Buttermilch", "Haferdrink", "Sojabohne", "Mandel", "Kokos"],
+  );
+  const recipes = [{
     name: "Milch-Getreide-Brei",
     requires: [],
     oneOf: ["Hafer", "Hirse"],
     milkChoices: ["Kuhmilch", "Naturjoghurt", "Buttermilch"],
+  }];
+  assert.equal(installRecipeV2ComponentOptions(recipes), true);
+  assert.deepEqual(recipes[0].milkChoices, [
+    "Kuhmilch", "Naturjoghurt", "Buttermilch", "Haferdrink", "Sojabohne", "Mandel", "Kokos",
+  ]);
+  assert.equal(recipes[0].editorComponents.milkChoices.choiceLabels.Sojabohne, "Sojamilch");
+  assert.equal(recipes[0].editorComponents.milkChoices.choiceLabels.Mandel, "Mandelmilch");
+  assert.equal(recipes[0].editorComponents.milkChoices.choiceLabels.Kokos, "Kokosmilch");
+});
+
+test("Milch-Getreide-Brei liest Milchoptionen ausschließlich aus zentralen milkChoices", () => {
+  const recipe = {
+    name: "Milch-Getreide-Brei",
+    requires: [],
+    oneOf: ["Hafer", "Hirse"],
+    milkChoices: [],
   };
+  installRecipeV2ComponentOptions([recipe]);
   const slots = mealEditorRecipeComponentSlots(recipe, lookup);
   assert.deepEqual(slots.map((slot) => slot.field), ["oneOf", "milkChoices"]);
   assert.equal(slots[0].label, "Getreide");
@@ -80,19 +104,7 @@ test("Milch-Getreide-Brei exponiert Getreide und alle vorgesehenen milkChoices g
   );
 });
 
-test("pflanzliche milkChoices verwenden bestehende FOOD-Identitäten statt neue FOODs zu erfinden", () => {
-  assert.deepEqual(
-    MEAL_EDITOR_MILK_CHOICE_FORMS,
-    [
-      { foodId: "haferdrink", label: "Haferdrink" },
-      { foodId: "sojabohne", label: "Sojamilch" },
-      { foodId: "mandel", label: "Mandelmilch" },
-      { foodId: "kokos", label: "Kokosmilch" },
-    ],
-  );
-});
-
-test("milkChoices-Erweiterung greift nur bei vorhandenem milkChoices-Slot", () => {
+test("ohne milkChoices erfindet der Editor keine zusätzlichen Milchoptionen", () => {
   const recipe = { name: "Nur Getreide", requires: [], oneOf: ["Hafer", "Hirse"] };
   const slots = mealEditorRecipeComponentSlots(recipe, lookup);
   assert.equal(slots.length, 1);

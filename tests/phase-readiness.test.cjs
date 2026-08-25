@@ -89,6 +89,7 @@ test('PHASE-TRANSITION: Drei Hauptmahlzeiten -> Familienkost hängt vom Snackbed
     const result = __recommend({ phase: 'drei', ageMonths, currentPattern: 'established', snackNeed });
     assert.equal(result.recommendation, expected, `${ageMonths} Monate / ${snackNeed}`);
     assert.equal(result.ageGuidance.status, 'none');
+    assert.equal(result.ageGuidance.targetMeals, null);
   }
 
   const notEstablished = plain(__recommend({

@@ -253,19 +253,44 @@ if (typeof window !== "undefined" && typeof document !== "undefined") {
 
           let loadQualityPolicy = () => {
             let loadIntroductionPolicy = () => {
+              let loadMaintenancePolicy = () => {
+                let existingMaintenance = document.querySelector('script[data-planner-allergen-maintenance="maintenance-v2"]');
+                let installMaintenanceAndFinish = () => {
+                  if (typeof PlannerAllergenMaintenance === "undefined") {
+                    failPlannerPolicies(new Error("Planner-Allergenpflege fehlt."));
+                    return;
+                  }
+                  finishPlannerPolicies();
+                };
+                if (existingMaintenance) {
+                  if (typeof PlannerAllergenMaintenance !== "undefined") installMaintenanceAndFinish();
+                  else {
+                    existingMaintenance.addEventListener("load", installMaintenanceAndFinish, { once: true });
+                    attachPlannerLoadError(existingMaintenance);
+                  }
+                  return;
+                }
+                let maintenanceScript = document.createElement("script");
+                maintenanceScript.src = "js/planner-allergen-maintenance.js?v=10.1.26";
+                maintenanceScript.dataset.plannerAllergenMaintenance = "maintenance-v2";
+                maintenanceScript.addEventListener("load", installMaintenanceAndFinish, { once: true });
+                attachPlannerLoadError(maintenanceScript);
+                document.head.appendChild(maintenanceScript);
+              };
+
               let existingIntroduction = document.querySelector('script[data-planner-introduction-policy="daily-food-introductions"]');
-              let installIntroductionAndFinish = () => {
+              let installIntroductionAndContinue = () => {
                 if (typeof installPlannerIntroductionPolicyRuntime !== "function") {
                   failPlannerPolicies(new Error("Planner-Einführungspolicy fehlt."));
                   return;
                 }
                 installPlannerIntroductionPolicyRuntime();
-                finishPlannerPolicies();
+                loadMaintenancePolicy();
               };
               if (existingIntroduction) {
-                if (typeof installPlannerIntroductionPolicyRuntime === "function") installIntroductionAndFinish();
+                if (typeof installPlannerIntroductionPolicyRuntime === "function") installIntroductionAndContinue();
                 else {
-                  existingIntroduction.addEventListener("load", installIntroductionAndFinish, { once: true });
+                  existingIntroduction.addEventListener("load", installIntroductionAndContinue, { once: true });
                   attachPlannerLoadError(existingIntroduction);
                 }
                 return;
@@ -273,7 +298,7 @@ if (typeof window !== "undefined" && typeof document !== "undefined") {
               let introductionScript = document.createElement("script");
               introductionScript.src = "js/planner-introduction-policy.js?v=10.1.26";
               introductionScript.dataset.plannerIntroductionPolicy = "daily-food-introductions";
-              introductionScript.addEventListener("load", installIntroductionAndFinish, { once: true });
+              introductionScript.addEventListener("load", installIntroductionAndContinue, { once: true });
               attachPlannerLoadError(introductionScript);
               document.head.appendChild(introductionScript);
             };

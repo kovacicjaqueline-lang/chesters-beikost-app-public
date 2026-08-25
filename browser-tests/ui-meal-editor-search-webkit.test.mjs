@@ -84,6 +84,11 @@ try {
     true,
     "Das fokussierte Suchfeld darf beim Tippen nicht aus dem DOM ersetzt werden",
   );
+  assert.equal(
+    await search.evaluate((element) => document.activeElement === element),
+    true,
+    "Das Suchfeld muss nach zeichenweiser Eingabe fokussiert bleiben",
+  );
 
   const carrot = page.locator('.selectFood[data-food="karotte"]');
   const potato = page.locator('.selectFood[data-food="kartoffel"]');

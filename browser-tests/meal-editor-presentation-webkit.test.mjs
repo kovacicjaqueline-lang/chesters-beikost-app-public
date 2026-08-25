@@ -87,7 +87,7 @@ try {
 
   const recipePresentation = page.locator("#genericBody .recipe-presentation-summary");
   await recipePresentation.waitFor();
-  assert.match(await recipePresentation.innerText(), /^Darreichung/m);
+  assert.match(await recipePresentation.innerText(), /^Darreichung/im);
   assert.match(
     await recipePresentation.innerText(),
     /Fein und glatt vom Löffel|Weich zerdrückt|Weich stückig|Weiches Fingerfood|Kleine weiche Stücke/,
@@ -101,6 +101,20 @@ try {
     0,
     "bei einem Rezept darf keine Zutat eine eigene Darreichungsauswahl zeigen",
   );
+
+  // Ein Tabwechsel ist noch keine fachliche Umwandlung des Rezepts in eine freie FOOD-Mahlzeit.
+  // Erst die tatsächliche Auswahl eines FOODs darf die Rezeptidentität aufheben.
+  await page.locator("#selectorFoods").click();
+  await page.waitForFunction(() => document.getElementById("selectorFoods")?.classList.contains("active"));
+  assert.equal(
+    await page.locator("#genericBody .manual-preparation-field:visible").count(),
+    0,
+    "bloßes Öffnen des Lebensmittel-Tabs darf Rezeptzutaten nicht wieder einzeln editierbar machen",
+  );
+  await page.locator("#selectorRecipes").click();
+  await page.locator('.selectRecipe.selected[data-recipe]').waitFor();
+  await recipePresentation.waitFor();
+  assert.equal(await page.locator("#genericBody .manual-preparation-field:visible").count(), 0);
 
   await page.evaluate((date) => {
     window.__beikostTest.openManualMealSelector(date, "breakfast", {

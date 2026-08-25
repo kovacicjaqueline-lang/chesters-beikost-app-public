@@ -323,7 +323,7 @@
     const phase = currentPhase();
     if (!readiness) return;
     const reasons = (readiness.reasons || []).map((code) => ({ code, text: readinessReasonText(code) })).filter((item) => item.text);
-    const fulfilled = reasons.filter((item) => item.code.endsWith("Confirmed"));
+    const fulfilled = reasons.filter((item) => item.code.endsWith("Confirmed") && !item.code.endsWith("NotConfirmed"));
     const missing = reasons.filter((item) => item.code.endsWith("NotConfirmed") || item.code.endsWith("Unknown"));
     const representedMissing = new Set(missing.flatMap((item) => ["currentPatternAccepted", "additionalMealCue", "routineCompatible"].filter((signal) => item.code.startsWith(signal))));
     for (const signal of readiness.missingPrerequisites || []) {

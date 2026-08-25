@@ -74,12 +74,10 @@ try {
     return window.__beikostTest.today();
   });
 
-  // Rezept-Tab verwendet Rezepttexte statt Lebensmitteltexte.
   await page.evaluate((date) => window.__beikostTest.openManualMealSelector(date, "breakfast"), today);
   assert.match(await page.locator("#genericBody").innerText(), /Noch kein Rezept ausgewählt\./);
   assert.match(await page.locator("#genericBody").innerText(), /Bitte ein Rezept auswählen\./);
 
-  // Obst-Haferbrei: Hafer bleibt fix, Obst ist austauschbar.
   await page.evaluate((date) => {
     window.__beikostTest.openManualMealSelector(date, "breakfast", {
       meal: "breakfast",
@@ -106,7 +104,6 @@ try {
     assert.equal(await oatPreparation.isVisible(), false, "Hafer-Darreichung muss bei rezeptdefinierter Zubereitung verborgen sein");
   }
 
-  // Suche filtert nur die Ergebnisliste: identischer Input, Fokus und Scroll bleiben bestehen.
   const search = page.locator("#mealSelectorSearch");
   await search.focus();
   await page.waitForTimeout(100);
@@ -150,7 +147,6 @@ try {
   await page.locator('[data-recipe-component-slot="oneOf"]').waitFor();
   assert.equal(await page.locator('[data-recipe-component-slot="oneOf"]').inputValue(), "apfel", "gespeicherte Obstauswahl muss beim Wiederöffnen vorausgefüllt sein");
 
-  // Milch-Getreide-Brei: alle vorgesehenen Milch-/Milchalternativen stammen aus vorhandenen FOOD-Identitäten.
   await page.evaluate((date) => {
     window.__beikostTest.openManualMealSelector(date, "breakfast", {
       meal: "breakfast",
@@ -176,7 +172,7 @@ try {
     ["kokos", "Kokosmilch"],
   ]) {
     const option = milkSlot.locator(`option[value="${value}"]`);
-    assert.equal(await option.count(), 1, `${label} muss bei erfüllten Regeln auswählbar sein`);
+    assert.equal(await option.count(), 1, `${label} muss als milkChoices-Form bei erfüllten Regeln auswählbar sein`);
     assert.equal(await option.textContent(), label);
   }
 
@@ -193,7 +189,6 @@ try {
   assert.ok(saved.planLocks[`${today}|breakfast`].foodIds.includes("mandel"));
   assert.equal(saved.planLocks[`${today}|breakfast`].recipeName, "Milch-Getreide-Brei");
 
-  // Nicht-variable Rezepte funktionieren weiter und zeigen keine Slot-Auswahl.
   await page.evaluate((date) => {
     window.__beikostTest.openManualMealSelector(date, "breakfast", {
       meal: "breakfast",
@@ -211,7 +206,6 @@ try {
   await page.locator("#confirmManualMeal").click();
   await page.waitForFunction((date) => window.__beikostTest.getState().planLocks?.[`${date}|breakfast`]?.recipeName === "Kürbis-Hafer-Brei", today);
 
-  // Lebensmittelmodus bleibt unabhängig vom Rezeptmodus speicher- und wiederöffnungsfähig.
   await page.evaluate((date) => window.__beikostTest.openManualMealSelector(date, "lunch"), today);
   await page.locator("#selectorFoods").click();
   assert.match(await page.locator("#genericBody").innerText(), /Noch keine Lebensmittel ausgewählt\./);

@@ -8,6 +8,7 @@ const path = require("node:path");
 const {
   mealEditorPreparationControlModel,
   mealEditorRecipePresentationModel,
+  mealEditorRecipeNormalizePresentationData,
 } = require("../js/meal-editor-recipe-variants.js");
 
 test("freie FOOD-Darreichung zeigt nur strukturierte Auswahl und macht Einzeloption statisch", () => {
@@ -96,6 +97,48 @@ test("gesperrte Rezeptdarreichung wird nicht als vermeintlich zulässige Form an
   assert.deepEqual(
     mealEditorRecipePresentationModel(recipe, {}, contracts, eligibility),
     { mode: "", label: "Aktuell noch nicht passend", blocked: true },
+  );
+});
+
+test("ein echter Rezeptwechsel übernimmt keine veraltete Darreichung", () => {
+  const unchanged = {
+    recipeName: "Obst-Haferbrei",
+    presentationMode: "spoon-smooth",
+  };
+  assert.strictEqual(
+    mealEditorRecipeNormalizePresentationData(
+      unchanged,
+      "Obst-Haferbrei",
+      "finger-graspable",
+    ),
+    unchanged,
+    "ohne Rezeptwechsel bleibt die gespeicherte Darreichung unverändert",
+  );
+
+  assert.deepEqual(
+    mealEditorRecipeNormalizePresentationData(
+      {
+        recipeName: "Bananen-Ei-Pancakes",
+        presentationMode: "spoon-smooth",
+      },
+      "Obst-Haferbrei",
+      "finger-graspable",
+    ),
+    {
+      recipeName: "Bananen-Ei-Pancakes",
+      presentationMode: "finger-graspable",
+    },
+    "ein neues Rezept bekommt seine eigene Darreichung statt der alten",
+  );
+
+  assert.deepEqual(
+    mealEditorRecipeNormalizePresentationData(
+      { recipeName: "", presentationMode: "spoon-smooth" },
+      "Obst-Haferbrei",
+      "",
+    ),
+    { recipeName: "" },
+    "beim Wechsel auf freie FOODs darf keine Rezeptdarreichung hängen bleiben",
   );
 });
 

@@ -47,6 +47,19 @@ test('PHASE-TRANSITION: Kennenlernen nutzt Alter nur als Orientierung, nie allei
   assert.equal(__recommend({ phase: 'kennenlernen', ageMonths: 12, currentPattern: 'notEstablished' }).recommendation, 'notYet');
 });
 
+test('PHASE-TRANSITION: fehlendes Alter bleibt unbekannt statt als 0 Monate zu gelten', () => {
+  const { __recommend } = loadCore();
+  const result = plain(__recommend({
+    phase: 'kennenlernen',
+    ageMonths: null,
+    currentPattern: 'unknown',
+  }));
+
+  assert.equal(result.ageGuidance.status, 'unknown');
+  assert.equal(result.ageGuidance.ageMonths, null);
+  assert.equal(result.recommendation, 'notYet');
+});
+
 test('PHASE-TRANSITION: Mahlzeitenaufbau empfiehlt drei Hauptmahlzeiten im freigegebenen Altersfenster', () => {
   const { __recommend } = loadCore();
 

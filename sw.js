@@ -124,6 +124,8 @@ const UI_PRECACHE = [
   "./flow-dialog-ui.css?v=10.1.26",
   "./catalog-navigation.css",
   "./js/manual-meal-flow.js",
+  "./js/recipe-v2-component-options.js",
+  "./js/meal-editor-recipe-variants.js",
   "./js/flow-dialog-ui.js",
   "./js/planned-recipe-details.js?v=10.1.26",
   "./js/meal-card-unification.js?v=10.1.26",

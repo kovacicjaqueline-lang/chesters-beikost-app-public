@@ -12,6 +12,9 @@ self.addEventListener = (type, listener, options) => {
   if (type === "install") coreInstallHandler = listener;
 };
 
+// Der Core-Import ist absichtlich mit derselben App-Version versehen wie die Runtime-Assets.
+// Damit kann ein bereits installierter Worker beim Update nicht einen alten sw-core.js aus
+// dem HTTP-/Import-Cache übernehmen, obwohl der neue Top-Level-Worker schon geladen wurde.
 importScripts("./sw-core.js?v=10.1.26");
 
 self.addEventListener = nativeAddEventListener;
@@ -30,6 +33,7 @@ async function fetchAndStore(request) {
   if (response && response.ok) {
     const cache = await caches.open(CACHE);
     await cache.put(request, response.clone());
+
     const url = new URL(request.url);
     if (url.origin === self.location.origin && url.search) {
       url.search = "";
@@ -40,21 +44,30 @@ async function fetchAndStore(request) {
   return response;
 }
 
+// Stale-while-revalidate für bereits installierte App-Dateien: Der sichtbare
+// Wiederaufbau kommt sofort aus dem versionsgebundenen Cache. Parallel wird die
+// angeforderte Ressource aus dem Netz aktualisiert, damit spätere Deployments
+// ohne Service-Worker-Änderung nicht dauerhaft auf einem alten App-Stand hängen.
 nativeAddEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
+
   const cachedPromise = matchAppCache(event.request);
   event.waitUntil((async () => {
     const cached = await cachedPromise;
     if (!cached) return;
     try {
       await fetchAndStore(event.request);
-    } catch (_) {}
+    } catch (_) {
+      // Offline bleibt die bereits gecachte Ressource gültig.
+    }
   })());
+
   event.respondWith((async () => {
     const cached = await cachedPromise;
     if (cached) return cached;
+
     try {
       return await fetchAndStore(event.request);
     } catch (error) {
@@ -68,6 +81,9 @@ nativeAddEventListener("fetch", (event) => {
   })());
 });
 
+// PLAN-08 wird nach dem initialen HTML dynamisch geladen. Diese Dateien müssen
+// schon beim Service-Worker-Install in denselben App-Cache, damit der erste
+// Offline-Start nach einer frischen Installation die vollständige Policy-Kette hat.
 const PLAN08_PRECACHE = [
   "./js/planner-meal-eligibility.js",
   "./js/planner-milk-policy.js",
@@ -81,19 +97,28 @@ const PLAN08_PRECACHE = [
   "./js/planner-introduction-policy.js",
 ];
 
+// Handling-Readiness wird nach der PLAN-08-Kette ebenfalls dynamisch geladen.
+// Contract und Runtime müssen deshalb schon beim ersten Offline-Start verfügbar sein.
 const HANDLING_PRECACHE = [
   "./data/food-handling.js",
   "./js/handling-readiness.js",
 ];
 
+// Der einheitliche Essenslog wird vor app.js geladen und bleibt auch offline vollständig verfügbar.
 const UNIFIED_LOG_PRECACHE = [
   "./js/log-core.js",
 ];
 
+// Die Phase-Readiness ist ein eigenständiger read-only Core und muss für den ersten
+// Offline-Start zusammen mit dem übrigen App-Core verfügbar sein.
 const PHASE_READINESS_PRECACHE = [
   "./js/phase-readiness.js?v=10.1.26",
 ];
 
+// Zusätzliche UI-/Flow-Dateien, die nicht im statischen FILES-Stamm von sw-core.js liegen.
+// Dateien, die index.html mit ?v=10.1.26 lädt, werden unter exakt derselben URL precached.
+// Dadurch überschreibt ein Service-Worker-Update auch einen bereits vorhandenen direkten
+// Query-Cachetreffer und liefert die aktuelle UI-/Flow-Runtime beim nächsten Start.
 const UI_PRECACHE = [
   "./ui-meal-editor-footer.css?v=10.1.26",
   "./flow-dialog-ui.css?v=10.1.26",

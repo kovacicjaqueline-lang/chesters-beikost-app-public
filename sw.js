@@ -109,6 +109,12 @@ const UNIFIED_LOG_PRECACHE = [
   "./js/log-core.js",
 ];
 
+// Die Phase-Readiness ist ein eigenständiger read-only Core und muss für den ersten
+// Offline-Start zusammen mit dem übrigen App-Core verfügbar sein.
+const PHASE_READINESS_PRECACHE = [
+  "./js/phase-readiness.js?v=10.1.26",
+];
+
 // Zusätzliche UI-/Flow-Dateien, die nicht im statischen FILES-Stamm von sw-core.js liegen.
 // Dateien, die index.html mit ?v=10.1.26 lädt, werden unter exakt derselben URL precached.
 // Dadurch überschreibt ein Service-Worker-Update auch einen bereits vorhandenen direkten
@@ -139,6 +145,7 @@ self.addEventListener("install", (event) => {
         ...PLAN08_PRECACHE,
         ...HANDLING_PRECACHE,
         ...UNIFIED_LOG_PRECACHE,
+        ...PHASE_READINESS_PRECACHE,
         ...UI_PRECACHE,
       ]),
     ];

@@ -145,8 +145,8 @@ self.addEventListener("install", (event) => {
         ...PLAN08_PRECACHE,
         ...HANDLING_PRECACHE,
         ...UNIFIED_LOG_PRECACHE,
-        ...PHASE_READINESS_PRECACHE,
         ...UI_PRECACHE,
+        ...PHASE_READINESS_PRECACHE,
       ]),
     ];
     const cache = await caches.open(CACHE);

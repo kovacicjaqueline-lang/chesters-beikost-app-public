@@ -95,6 +95,7 @@ const PLAN08_PRECACHE = [
   "./js/planner-food-role-stability.js",
   "./js/planner-quality-rotation.js",
   "./js/planner-introduction-policy.js",
+  "./js/planner-allergen-maintenance.js",
 ];
 
 // Handling-Readiness wird nach der PLAN-08-Kette ebenfalls dynamisch geladen.

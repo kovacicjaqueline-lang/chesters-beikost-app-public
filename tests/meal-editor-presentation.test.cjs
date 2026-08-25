@@ -2,6 +2,8 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
 
 const {
   mealEditorPreparationControlModel,
@@ -95,4 +97,16 @@ test("gesperrte Rezeptdarreichung wird nicht als vermeintlich zulässige Form an
     mealEditorRecipePresentationModel(recipe, {}, contracts, eligibility),
     { mode: "", label: "Aktuell noch nicht passend", blocked: true },
   );
+});
+
+const runtimeSource = fs.readFileSync(
+  path.resolve(__dirname, "..", "js", "meal-editor-recipe-variants.js"),
+  "utf8",
+);
+
+test("Editor filtert nur die UI und löscht bestehende foodPreparationKeys nicht still", () => {
+  assert.match(runtimeSource, /handlingPreparationOptions\(foodId, state\.settings, FOOD_HANDLING_CONTRACT\)/);
+  assert.doesNotMatch(runtimeSource, /manualMealFlowPreparationOptions/);
+  assert.doesNotMatch(runtimeSource, /dispatchEvent\(/);
+  assert.match(runtimeSource, /recipe-presentation-summary/);
 });

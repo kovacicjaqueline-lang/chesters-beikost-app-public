@@ -106,9 +106,11 @@ try {
   // Suche filtert nur die Ergebnisliste: identischer Input, Fokus und Scroll bleiben bestehen.
   const search = page.locator("#mealSelectorSearch");
   await search.focus();
+  await page.waitForTimeout(100);
   await page.evaluate(() => {
     window.__mealEditorStableSearchNode = document.getElementById("mealSelectorSearch");
     const sheet = window.__mealEditorStableSearchNode.closest(".sheet");
+    if (sheet) sheet.scrollTop = Math.min(120, Math.max(0, sheet.scrollHeight - sheet.clientHeight));
     window.__mealEditorStableScrollTop = sheet?.scrollTop || 0;
   });
   await search.type("Obst", { delay: 10 });

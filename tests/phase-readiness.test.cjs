@@ -90,6 +90,16 @@ test('PHASE-TRANSITION: Drei Hauptmahlzeiten -> Familienkost hängt vom Snackbed
     assert.equal(result.recommendation, expected, `${ageMonths} Monate / ${snackNeed}`);
     assert.equal(result.ageGuidance.status, 'none');
   }
+
+  const notEstablished = plain(__recommend({
+    phase: 'drei',
+    ageMonths: 14,
+    currentPattern: 'notEstablished',
+    snackNeed: 'unknown',
+  }));
+  assert.equal(notEstablished.recommendation, 'notYet');
+  assert.deepEqual(notEstablished.missingPrerequisites, []);
+  assert.ok(!notEstablished.reasons.includes('snackNeedUnknown'));
 });
 
 test('PHASE-TRANSITION: Familienkost ist terminal und erzeugt keine weitere Empfehlung', () => {
@@ -136,8 +146,8 @@ test('PHASE-TRANSITION: ungültige qualitative Signale werden als unbekannt beha
 
   assert.equal(result.development.currentPattern, 'unknown');
   assert.equal(result.development.snackNeed, 'unknown');
-  assert.ok(result.missingPrerequisites.includes('currentPattern'));
-  assert.ok(result.missingPrerequisites.includes('snackNeed'));
+  assert.deepEqual(result.missingPrerequisites, ['currentPattern']);
+  assert.ok(!result.reasons.includes('snackNeedUnknown'));
   assert.equal(result.recommendation, 'notYet');
 });
 

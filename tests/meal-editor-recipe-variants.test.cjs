@@ -4,7 +4,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const {
-  MEAL_EDITOR_MILK_ALTERNATIVE_FORMS,
+  MEAL_EDITOR_MILK_CHOICE_FORMS,
   mealEditorRecipeComponentSlots,
   mealEditorRecipeSelectionFromFoodIds,
   mealEditorRecipeConfiguredFoodIds,
@@ -39,7 +39,6 @@ test("Obst-Haferbrei behandelt Hafer als fixe Basis und Obst als variablen Slot"
   assert.equal(slots[0].label, "Obst");
   assert.equal(slots[0].preparationSelectable, true);
   assert.deepEqual(slots[0].foodIds, ["banane", "apfel", "birne"]);
-
   assert.deepEqual(
     mealEditorRecipeConfiguredFoodIds(recipe, ["hafer", "banane"], { oneOf: "apfel" }, lookup),
     ["hafer", "apfel"],
@@ -54,7 +53,7 @@ test("gespeicherte variable Rezeptkomponente wird aus foodIds wiederhergestellt"
   );
 });
 
-test("Milch-Getreide-Brei exponiert Getreide und alle vorgesehenen Milchformen getrennt", () => {
+test("Milch-Getreide-Brei exponiert Getreide und alle vorgesehenen milkChoices getrennt", () => {
   const recipe = {
     name: "Milch-Getreide-Brei",
     requires: [],
@@ -75,16 +74,15 @@ test("Milch-Getreide-Brei exponiert Getreide und alle vorgesehenen Milchformen g
     slots[1].choices.map((choice) => choice.label),
     ["Kuhmilch", "Naturjoghurt", "Buttermilch", "Haferdrink", "Sojamilch", "Mandelmilch", "Kokosmilch"],
   );
-
   assert.deepEqual(
     mealEditorRecipeConfiguredFoodIds(recipe, ["hafer", "kuhmilch"], { oneOf: "hirse", milkChoices: "mandel" }, lookup),
     ["hirse", "mandel"],
   );
 });
 
-test("pflanzliche Milchformen verwenden bestehende FOOD-Identitäten statt neue FOODs zu erfinden", () => {
+test("pflanzliche milkChoices verwenden bestehende FOOD-Identitäten statt neue FOODs zu erfinden", () => {
   assert.deepEqual(
-    MEAL_EDITOR_MILK_ALTERNATIVE_FORMS,
+    MEAL_EDITOR_MILK_CHOICE_FORMS,
     [
       { foodId: "haferdrink", label: "Haferdrink" },
       { foodId: "sojabohne", label: "Sojamilch" },
@@ -94,7 +92,7 @@ test("pflanzliche Milchformen verwenden bestehende FOOD-Identitäten statt neue 
   );
 });
 
-test("Milchalternativen werden nur bei vorhandenem milkChoices-Slot ergänzt", () => {
+test("milkChoices-Erweiterung greift nur bei vorhandenem milkChoices-Slot", () => {
   const recipe = { name: "Nur Getreide", requires: [], oneOf: ["Hafer", "Hirse"] };
   const slots = mealEditorRecipeComponentSlots(recipe, lookup);
   assert.equal(slots.length, 1);

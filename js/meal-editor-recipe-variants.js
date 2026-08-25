@@ -544,12 +544,12 @@ function mealEditorRecipeEnhance() {
   mealEditorRecipeVariantEnhancing = true;
   mealEditorRecipeVariantObserver?.disconnect();
   try {
-    mealEditorRecipeEnsureContext();
+    let context = mealEditorRecipeEnsureContext();
     mealEditorRecipeEnsureFilterEmpty();
     mealEditorInstallStableSearch();
     mealEditorRecipeFixModeCopy();
     mealEditorRecipeEnhanceRecipeMode();
-    mealEditorRecipeSyncPreparationControls(mealEditorRecipeCurrentSelectedName());
+    mealEditorRecipeSyncPreparationControls(context?.recipeName || mealEditorRecipeCurrentSelectedName());
     mealEditorRecipeFilterResults();
   } finally {
     mealEditorRecipeVariantEnhancing = false;
@@ -570,10 +570,11 @@ function mealEditorRecipeHandleCapture(event) {
   if (!context) return;
   if (target.id === "selectorRecipes" || target.id === "selectorFoods") {
     context.searchQuery = "";
-    if (target.id === "selectorFoods") {
-      context.recipeName = "";
-      context.selections = {};
-    }
+    return;
+  }
+  if (target.classList.contains("selectFood") || target.classList.contains("removeManualSelected")) {
+    context.recipeName = "";
+    context.selections = {};
     return;
   }
   if (target.classList.contains("selectRecipe")) {

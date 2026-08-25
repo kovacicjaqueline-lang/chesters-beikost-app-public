@@ -22,7 +22,7 @@ const PHASE_READINESS_RULES = Object.freeze({
     nextMeal: "snack",
     ageWindowStartMonths: null,
     ageTargetMonths: null,
-    targetMeals: 4,
+    targetMeals: null,
   }),
   familie: Object.freeze({
     nextPhase: null,

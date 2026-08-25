@@ -158,6 +158,26 @@ function mealEditorRecipePresentationModel(
   };
 }
 
+function mealEditorRecipeNormalizePresentationData(data = {}, initialRecipeName = "", presentationMode = "") {
+  let nextRecipeName = String(data?.recipeName || "");
+  if (String(initialRecipeName || "") === nextRecipeName) return data;
+  let next = { ...data };
+  delete next.presentationMode;
+  if (nextRecipeName && presentationMode) next.presentationMode = presentationMode;
+  return next;
+}
+
+function mealEditorRecipePresentationModeForName(recipeName = "") {
+  if (!recipeName || typeof recipeByName !== "function") return "";
+  let recipe = recipeByName(recipeName);
+  if (!recipe) return "";
+  let contracts = typeof RECIPE_HANDLING_CONTRACT !== "undefined" ? RECIPE_HANDLING_CONTRACT : {};
+  let settings = typeof state !== "undefined" ? state.settings : {};
+  let eligibility = typeof recipeHandlingEligibility === "function" ? recipeHandlingEligibility : null;
+  let model = mealEditorRecipePresentationModel(recipe, settings, contracts, eligibility);
+  return model && !model.blocked ? model.mode || "" : "";
+}
+
 function mealEditorRecipeRuntimeLookup() {
   return {
     byName: (name) => typeof foodByName === "function" ? foodByName(name) : null,
@@ -209,7 +229,15 @@ function mealEditorRecipeEnsureContext() {
   let date = manualContext?.targetDate || manualContext?.sourceDate || mealEditorRecipeVariantContext?.date || "";
   let recipeName = mealEditorRecipeCurrentSelectedName();
   if (!mealEditorRecipeVariantContext) {
-    mealEditorRecipeVariantContext = { date, meal, recipeName: "", selections: {}, searchQuery: "", refreshingSlot: false };
+    mealEditorRecipeVariantContext = {
+      date,
+      meal,
+      recipeName: "",
+      initialRecipeName: recipeName || "",
+      selections: {},
+      searchQuery: "",
+      refreshingSlot: false,
+    };
   } else {
     if (date) mealEditorRecipeVariantContext.date = date;
     if (meal) mealEditorRecipeVariantContext.meal = meal;
@@ -591,6 +619,36 @@ function mealEditorRecipeHandleCapture(event) {
   }
 }
 
+function mealEditorRecipeInstallPersistenceGuard() {
+  let wrap = (original) => {
+    let guarded = function mealEditorPresentationAwareSave(date, meal, data, ...rest) {
+      let context = mealEditorRecipeVariantContext;
+      let initialRecipeName = context?.initialRecipeName || "";
+      let nextRecipeName = String(data?.recipeName || "");
+      let presentationMode = nextRecipeName === initialRecipeName
+        ? String(data?.presentationMode || "")
+        : mealEditorRecipePresentationModeForName(nextRecipeName);
+      let normalized = mealEditorRecipeNormalizePresentationData(
+        data || {},
+        initialRecipeName,
+        presentationMode,
+      );
+      return original.call(this, date, meal, normalized, ...rest);
+    };
+    guarded.__mealEditorPresentationPersistenceGuard = true;
+    return guarded;
+  };
+
+  if (
+    typeof saveManualMeal === "function" &&
+    !saveManualMeal.__mealEditorPresentationPersistenceGuard
+  ) saveManualMeal = wrap(saveManualMeal);
+  if (
+    typeof saveEditedPlanMeal === "function" &&
+    !saveEditedPlanMeal.__mealEditorPresentationPersistenceGuard
+  ) saveEditedPlanMeal = wrap(saveEditedPlanMeal);
+}
+
 function installMealEditorRecipeVariantsRuntime() {
   if (typeof globalThis === "undefined") return false;
   if (globalThis.__mealEditorRecipeVariantsInstalled) return false;
@@ -599,6 +657,7 @@ function installMealEditorRecipeVariantsRuntime() {
     typeof manualMealValidation !== "function" ||
     typeof recipeFoodIds !== "function"
   ) return false;
+  mealEditorRecipeInstallPersistenceGuard();
   globalThis.__mealEditorRecipeVariantsInstalled = true;
   if (typeof document !== "undefined") {
     document.addEventListener("click", mealEditorRecipeHandleCapture, true);
@@ -634,6 +693,7 @@ if (typeof module !== "undefined" && module.exports) {
     mealEditorRecipeConfiguredFoodIds,
     mealEditorPreparationControlModel,
     mealEditorRecipePresentationModel,
+    mealEditorRecipeNormalizePresentationData,
     installMealEditorRecipeVariantsRuntime,
   };
 }

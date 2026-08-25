@@ -54,63 +54,40 @@ Zusätzlich gilt:
 
 Der Readiness-Core beantwortet **ausschließlich**, ob der Übergang in die nächste Beikostphase empfohlen werden kann. Er verändert `phaseSelected` nicht, ruft keinen Phasenwechsel auf und bleibt vollständig getrennt von der bestehenden bewussten Nutzerbestätigung.
 
-Verbindlich gilt:
+Die Kriterien folgen der fachlich freigegebenen, aus offiziellen Beikostempfehlungen abgeleiteten qualitativen Logik: Mahlzeitenrhythmus wird schrittweise, ohne Druck und nach den individuellen Signalen des Kindes an den Familienrhythmus angepasst. Daraus werden **keine** starren Alters-, Mengen- oder Zeitgrenzen für den individuellen Phasenwechsel abgeleitet.
 
-1. Die App unterscheidet `notYet`, `consider` und `recommended` und liefert dazu nachvollziehbare Gründe sowie fehlende qualitative Voraussetzungen.
-2. Fehlende Information ist nicht dasselbe wie ein negatives Entwicklungsmerkmal. Das aktuelle Mahlzeitenmuster wird daher als `unknown`, `established` oder `notEstablished` bewertet.
-3. `established` bedeutet ausschließlich qualitativ, dass die in der aktuellen Phase vorgesehenen Beikostmahlzeiten grundsätzlich angenommen bzw. etabliert sind. Dieser Zustand wird **nicht** aus Grammwerten, Anzahl der Logs, Zahl erfolgreicher Tage, FOOD-Statusschwellen oder Dauer in der Phase berechnet.
-4. Alter ist bei den Übergängen 1→2 und 2→3 eine Orientierung für die Stärke bzw. zeitliche Einordnung der Empfehlung, aber niemals allein ausreichendes Readiness-Kriterium und niemals automatischer Umschalter.
-5. Mengenorientierung, Texturstufe, BLW-/Handling-Fähigkeit, Allergenstatus, Milchmenge, Vorrat, manuelle Mahlzeiten und Locks sind keine PHASE-TRANSITION-Readiness-Signale.
-6. Der Übergang 3→4 ist bewusst anders: Er fügt im App-Modell den automatischen Snack hinzu und wird deshalb aus etablierten drei Hauptmahlzeiten plus beobachtetem zusätzlichem Snackbedarf abgeleitet, nicht aus einem Altersziel und nicht aus „Familienkost“-Textur.
-7. Ein tatsächlicher Wechsel erfolgt weiterhin ausschließlich über die bestehende bewusste Nutzeraktion. Logs, Vorräte, manuelle Mahlzeiten und Locks bleiben dabei in ihrer bisherigen Semantik erhalten.
+Verbindlich sind für jeden Übergang genau drei qualitative Signale:
 
-### 1.3.1 Altersorientierung für Kennenlernen → Mahlzeitenaufbau
+1. `currentPatternAccepted`: Die in der aktuellen Phase vorgesehenen Beikostmahlzeiten werden grundsätzlich angenommen bzw. sind im Alltag etabliert.
+2. `additionalMealCue`: Das Kind zeigt an der konkret neu hinzukommenden Essensgelegenheit Hunger, Interesse oder einen tatsächlichen zusätzlichen Essbedarf.
+3. `routineCompatible`: Die zusätzliche regelmäßige Mahlzeit passt sinnvoll in den Tages-/Familienrhythmus.
 
-Ziel der nächsten Phase sind zwei automatisch geplante Mahlzeiten: Frühstück + Mittagessen.
+Alle drei Signale werden ausdrücklich als `yes`, `no` oder `unknown` behandelt. `unknown` ist keine negative Bewertung, sondern eine fehlende Voraussetzung für eine Empfehlung.
 
-- unter 6 Monaten: `early`;
-- 6 bis unter 9 Monate: `inWindow`;
-- ab 9 Monaten: `targetPassed`.
+Die Übergänge verwenden dieselbe Kernregel:
 
-Entscheidung:
-
-- `currentPattern = established` + `early` → `consider`;
-- `currentPattern = established` + `inWindow|targetPassed` → `recommended`;
-- `currentPattern = unknown` + `early` → `notYet`;
-- `currentPattern = unknown` + `inWindow|targetPassed` → `consider`;
-- `currentPattern = notEstablished` → immer `notYet`; eine bereits erreichte bzw. überschrittene Altersorientierung bleibt trotzdem als Grund sichtbar.
-
-### 1.3.2 Altersorientierung für Mahlzeitenaufbau → Drei Hauptmahlzeiten
-
-Ziel der nächsten Phase sind Frühstück + Mittagessen + Abendessen.
-
-- unter 7 Monaten: `early`;
-- 7 bis unter 9 Monate: `inWindow`;
-- ab 9 Monaten: `targetPassed`.
+| Aktuelle Phase | Nächste Phase | Neuer Auto-Slot | Spezifische Bedeutung von `additionalMealCue` |
+|---|---|---|---|
+| Kennenlernen | Mahlzeitenaufbau | Frühstück | Hunger/Interesse an einer zusätzlichen regelmäßigen Frühstücks-Essensgelegenheit |
+| Mahlzeitenaufbau | Drei Hauptmahlzeiten | Abendessen | Hunger/Interesse an einer zusätzlichen regelmäßigen Abend-Essensgelegenheit |
+| Drei Hauptmahlzeiten | Familienkost | Snack | tatsächlicher regelmäßiger Zusatzbedarf zwischen den drei Hauptmahlzeiten |
+| Familienkost | – | – | terminale Phase; keine weitere Empfehlung |
 
 Entscheidung:
 
-- `currentPattern = established` + `early` → `consider`;
-- `currentPattern = established` + `inWindow|targetPassed` → `recommended`;
-- `currentPattern = unknown` + `early` → `notYet`;
-- `currentPattern = unknown` + `inWindow|targetPassed` → `consider`;
-- `currentPattern = notEstablished` → immer `notYet`; bei `targetPassed` bleibt das altersbezogene Ziel von drei Hauptmahlzeiten als eigener Grund sichtbar.
+- nur `currentPatternAccepted = yes` **und** `additionalMealCue = yes` **und** `routineCompatible = yes` → `recommended`;
+- sobald ein Signal `no` ist → `notYet`;
+- solange mindestens ein benötigtes Signal `unknown` ist → `notYet` mit explizit ausgewiesener fehlender Voraussetzung.
 
-Die Altersorientierung bildet die fachlich freigegebene Zielrichtung ab, im Verlauf des ersten Lebensjahres Frühstück, Mittagessen und Abendessen zu etablieren. Sie ist ausdrücklich **keine** starre Umschaltgrenze.
+Insbesondere gilt:
 
-### 1.3.3 Drei Hauptmahlzeiten → Familienkost
+- Alter ist **kein** PHASE-TRANSITION-Gate und verändert `recommended` nicht;
+- Grammwerte, Anzahl der Logs, Zahl erfolgreicher Tage oder Dauer in der Phase sind keine Readiness-Schwellen;
+- Texturstufe, BLW-/Handling-Fähigkeit, Allergenstatus, Milchmenge, Vorrat, manuelle Mahlzeiten und Locks sind keine PHASE-TRANSITION-Readiness-Signale;
+- bei 3→4 reicht „drei Mahlzeiten funktionieren“ allein nicht: Für den automatischen Snack muss ein tatsächlicher zusätzlicher Essbedarf vorliegen;
+- ein tatsächlicher Phasenwechsel erfolgt weiterhin ausschließlich über die bestehende bewusste Nutzeraktion; Logs, Vorräte, manuelle Mahlzeiten und Locks behalten ihre Semantik.
 
-Dieser Übergang erhält **keine** entsprechende altersgetriebene Readiness-Kurve. Relevant ist der zusätzliche automatisch geplante Snack:
-
-- aktuelles Muster nicht etabliert → `notYet`;
-- aktuelles Muster unbekannt → keine Empfehlung ohne Klärung des aktuellen Musters;
-- aktuelles Muster etabliert + Snackbedarf unbekannt → `consider`;
-- aktuelles Muster etabliert + kein Snackbedarf → `notYet`;
-- aktuelles Muster etabliert + Snackbedarf beobachtet → `recommended`.
-
-`snackNeed = yes|no|unknown` beschreibt ausschließlich, ob zwischen den drei Hauptmahlzeiten tatsächlich regelmäßig Bedarf an einer zusätzlichen Essgelegenheit besteht. Weder 12 Monate noch Textur, Fingerfood, Familienessen oder eine bestimmte orale Fähigkeit lösen Phase 4 aus.
-
-### 1.3.4 Technischer Readiness-Vertrag
+### 1.3.1 Technischer Readiness-Vertrag
 
 Der zentrale Readiness-Zustand liefert mindestens:
 
@@ -119,12 +96,11 @@ Der zentrale Readiness-Zustand liefert mindestens:
 - den neu hinzukommenden Mahlzeitenslot;
 - `recommendation`;
 - `recommendable`;
-- qualitative Entwicklungswerte;
-- getrennte `ageGuidance`;
+- die drei qualitativen `signals`;
 - `reasons`;
 - `missingPrerequisites`.
 
-Die Berechnung ist read-only. Die bestehende Funktion zum tatsächlichen Phasenwechsel bleibt davon unberührt.
+Die Berechnung ist read-only und leitet die qualitativen Signale nicht stillschweigend aus Alter, Grammwerten, Logs oder Textur ab. Die bestehende Funktion zum tatsächlichen Phasenwechsel bleibt davon unberührt.
 
 ---
 
@@ -589,7 +565,7 @@ Die vollständige österreichische `seasonMonths`-Matrix und die Nuss-/Samen-Rol
 
 ## 17.2 Fachlich beschlossen, aber noch nicht vollständig auf main nachgewiesen
 
-1. 🟡 **PHASE-TRANSITION:** Die eigenständige read-only Readiness-/Recommendation-Logik ist auf `feat/phase-readiness-core` umgesetzt. Sie trennt `notYet|consider|recommended`, qualitative Entwicklungsinformation und Altersorientierung vom weiterhin ausschließlich bewusst bestätigten Phasenwechsel. Bis zum Merge bleibt dieser Stand Branch/Integrations-PR und nicht `main`.
+1. 🟡 **PHASE-TRANSITION:** Die eigenständige read-only Readiness-/Recommendation-Logik ist auf `feat/phase-readiness-core` umgesetzt. Sie verlangt für jeden Übergang das akzeptierte aktuelle Mahlzeitenmuster, ein konkretes Signal für die zusätzliche Essensgelegenheit und die Passung in den Tages-/Familienrhythmus. Alter, Grammwerte, Loganzahl, Phasendauer und Textur werden nicht als Readiness-Schwellen verwendet. Bis zum Merge bleibt dieser Stand Branch/Integrations-PR und nicht `main`.
 
 Weitere offene FOOD-Datenfragen werden separat im FOOD-Fachregel-Track geklärt und dürfen nicht als implizite Planner-Regel erfunden werden.
 
@@ -600,7 +576,7 @@ Weitere offene FOOD-Datenfragen werden separat im FOOD-Fachregel-Track geklärt 
 Änderungen am Planner müssen mindestens folgende Verträge regressiv erhalten:
 
 - Phasenmodell und Mahlzeitenslots;
-- PHASE-TRANSITION: Readiness ist read-only; Alter allein, Grammwerte, Loganzahl und Textur lösen weder `recommended` ohne qualitative Voraussetzung noch einen Phasenwechsel aus; `unknown` bleibt von `notEstablished` unterscheidbar; Phase 3→4 wird über Snackbedarf statt über Alter/Textur bewertet;
+- PHASE-TRANSITION: Readiness ist read-only; `recommended` setzt `currentPatternAccepted`, `additionalMealCue` und `routineCompatible` gemeinsam voraus; Alter, Grammwerte, Loganzahl, Phasendauer und Textur verändern die Empfehlung nicht und lösen niemals einen Phasenwechsel aus; fehlende qualitative Signale bleiben explizit `unknown`;
 - tägliche Nicht-Allergen-Einführung mit höchstens einem unbekannten FOOD je Frühstück/Mittag/Abend;
 - ein erfolgreich `Probiert`-FOOD blockiert keine geeignete offene Neueinführung; echte Ablehnung bleibt gezielter Wiederholungspfad;
 - Allergen-Einführung oder gezielte Allergen-Wiederholung bleibt die einzige automatische Lernaufgabe des Tages;

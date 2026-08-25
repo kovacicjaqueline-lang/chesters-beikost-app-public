@@ -3,34 +3,15 @@
 /*
  * Mahlzeit-Editor: generische Recipe-V2-Komponenten.
  *
- * `requires` bleibt die feste Rezeptbasis. `oneOf` und `milkChoices` werden als
- * austauschbare Rezeptkomponenten behandelt. Die konkrete Auswahl wird über die
- * ohnehin persistierten `foodIds` gespeichert; es gibt kein zusätzliches State-Schema.
- *
- * Wichtig: Diese Runtime ersetzt weder `recipeFoodIds` noch `openManualMealSelector`
- * dauerhaft. Für einen Slotwechsel wird nur das aktuell angeklickte Rezeptobjekt
- * synchron auf die gewählte Variante eingeengt, der bestehende Editor-Handler
- * ausgeführt und das Rezept unmittelbar danach wiederhergestellt.
+ * `requires` bleibt die feste Rezeptbasis. `oneOf` und `milkChoices` sind die
+ * einzigen Quellen für austauschbare Rezeptkomponenten. Konkrete Auswahlen
+ * werden über die bereits persistierten `foodIds` gespeichert.
  */
 
 const MEAL_EDITOR_RECIPE_COMPONENT_FIELDS = Object.freeze({
   oneOf: Object.freeze({ label: "", preparation: "category" }),
   milkChoices: Object.freeze({ label: "Milch / Milchalternative", preparation: "recipe" }),
 });
-
-/*
- * `milkChoices` bezeichnet im Editor die fachliche Gruppe Milch/Milchalternative.
- * Die folgenden Einträge bilden bereits vorhandene kanonische FOOD-Identitäten auf
- * ihre Rezeptform ab. Es werden bewusst keine neuen FOOD-Datensätze erfunden:
- * Sojamilch, Mandelmilch und Kokosmilch bleiben Zubereitungsformen von
- * Sojabohne, Mandel und Kokos; Haferdrink besitzt bereits eine eigene FOOD-ID.
- */
-const MEAL_EDITOR_MILK_CHOICE_FORMS = Object.freeze([
-  Object.freeze({ foodId: "haferdrink", label: "Haferdrink" }),
-  Object.freeze({ foodId: "sojabohne", label: "Sojamilch" }),
-  Object.freeze({ foodId: "mandel", label: "Mandelmilch" }),
-  Object.freeze({ foodId: "kokos", label: "Kokosmilch" }),
-]);
 
 function mealEditorRecipeUnique(values) {
   return [...new Set((values || []).filter(Boolean))];
@@ -51,13 +32,8 @@ function mealEditorRecipeComponentLabel(field, foods) {
   return categories[0];
 }
 
-function mealEditorMilkChoiceForms(lookup) {
-  return MEAL_EDITOR_MILK_CHOICE_FORMS
-    .map((choice) => {
-      let foodRecord = mealEditorRecipeLookup(lookup, "id", choice.foodId);
-      return foodRecord ? { food: foodRecord, label: choice.label } : null;
-    })
-    .filter(Boolean);
+function mealEditorRecipeChoiceLabel(recipe, field, sourceName, item) {
+  return recipe?.editorComponents?.[field]?.choiceLabels?.[sourceName] || item?.name || sourceName;
 }
 
 function mealEditorRecipeComponentSlots(recipe, lookup = {}) {
@@ -69,14 +45,12 @@ function mealEditorRecipeComponentSlots(recipe, lookup = {}) {
       let choices = [];
       for (let name of sourceNames) {
         let item = mealEditorRecipeLookup(lookup, "name", name);
-        if (item && !choices.some((current) => current.food.id === item.id)) {
-          choices.push({ food: item, label: item.name });
-        }
-      }
-      if (field === "milkChoices") {
-        for (let choice of mealEditorMilkChoiceForms(lookup)) {
-          if (!choices.some((current) => current.food.id === choice.food.id)) choices.push(choice);
-        }
+        if (!item || choices.some((current) => current.food.id === item.id)) continue;
+        choices.push({
+          sourceName: name,
+          food: item,
+          label: mealEditorRecipeChoiceLabel(recipe, field, name, item),
+        });
       }
       if (!choices.length) return null;
 
@@ -335,7 +309,7 @@ function mealEditorRecipeLockIngredientControls(slots) {
   });
 }
 
-function mealEditorRecipeChoiceLabel(slot, foodId) {
+function mealEditorRecipeChoiceLabelForFood(slot, foodId) {
   return slot.choices.find((choice) => choice.food.id === foodId)?.label ||
     slot.foods.find((item) => item.id === foodId)?.name || foodId;
 }
@@ -351,8 +325,8 @@ function mealEditorRecipeApplySelectionThroughExistingHandler(recipe, slot, sele
     for (let currentSlot of slots) {
       originals.set(currentSlot.field, recipe[currentSlot.field]);
       let id = context.selections[currentSlot.field] || currentSlot.foodIds[0];
-      let selectedFood = currentSlot.foods.find((item) => item.id === id);
-      recipe[currentSlot.field] = selectedFood ? [selectedFood.name] : recipe[currentSlot.field];
+      let choice = currentSlot.choices.find((item) => item.food.id === id);
+      recipe[currentSlot.field] = choice ? [choice.sourceName] : recipe[currentSlot.field];
     }
     context.refreshingSlot = true;
     activeRecipe.click();
@@ -394,7 +368,7 @@ function mealEditorRecipeRenderSlots(recipe, slots) {
       if (currentFood) {
         let option = document.createElement("option");
         option.value = currentFood.id;
-        option.textContent = `${mealEditorRecipeChoiceLabel(slot, currentFood.id)} · aktuell nicht auswählbar`;
+        option.textContent = `${mealEditorRecipeChoiceLabelForFood(slot, currentFood.id)} · aktuell nicht auswählbar`;
         option.disabled = true;
         option.selected = true;
         select.appendChild(option);
@@ -403,7 +377,7 @@ function mealEditorRecipeRenderSlots(recipe, slots) {
     for (let item of allowed) {
       let option = document.createElement("option");
       option.value = item.id;
-      option.textContent = mealEditorRecipeChoiceLabel(slot, item.id);
+      option.textContent = mealEditorRecipeChoiceLabelForFood(slot, item.id);
       option.selected = item.id === current;
       select.appendChild(option);
     }
@@ -525,9 +499,8 @@ if (typeof window !== "undefined" && typeof document !== "undefined") installMea
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     MEAL_EDITOR_RECIPE_COMPONENT_FIELDS,
-    MEAL_EDITOR_MILK_CHOICE_FORMS,
     mealEditorRecipeComponentLabel,
-    mealEditorMilkChoiceForms,
+    mealEditorRecipeChoiceLabel,
     mealEditorRecipeComponentSlots,
     mealEditorRecipeSelectionFromFoodIds,
     mealEditorRecipeConfiguredFoodIds,

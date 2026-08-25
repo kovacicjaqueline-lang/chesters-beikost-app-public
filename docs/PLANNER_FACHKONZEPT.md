@@ -1,7 +1,7 @@
 # Chesters Beikost-App – kanonisches Planner-Fachkonzept
 
-Stand: 23.08.2026  
-Dokumentationsbasis: aktueller Planner-Stand auf Basis von `main` bis `15d72f06de747cbac08de7c42b379d7b90bf2b36`, einschließlich gemergter Handling-/BLW-Schicht, dokumentiertem Oral-Processing-Contract, gemergtem Nuss-/Samen-/Topping-Block, vollständiger österreichischer `seasonMonths`-Matrix, aktuellem FOOD-COUNT-Identitätsstand und der fachlich freigegebenen täglichen Lebensmittel-Einführung; historischer Phasenmodell-v2-Stand `f9f886c82af2ce267c10571e5e89df787037c6b0`.
+Stand: 25.08.2026  
+Dokumentationsbasis: aktueller Planner-Stand auf Basis von `main` bis `15d72f06de747cbac08de7c42b379d7b90bf2b36`, einschließlich gemergter Handling-/BLW-Schicht, dokumentiertem Oral-Processing-Contract, gemergtem Nuss-/Samen-/Topping-Block, vollständiger österreichischer `seasonMonths`-Matrix, aktuellem FOOD-COUNT-Identitätsstand und der fachlich freigegebenen täglichen Lebensmittel-Einführung; historischer Phasenmodell-v2-Stand `f9f886c82af2ce267c10571e5e89df787037c6b0`. PHASE-TRANSITION ist zusätzlich auf dem Arbeitsbranch `feat/phase-readiness-core` gegen `main` `3aa9cf3db78c2cbcdcde61ac8b2d2fd86391b4f6` konkretisiert.
 
 Dieses Dokument führt die bisher über Phasenmodell, PLAN-07, PLAN-08, MILK-01, TODO3-Regressionen und spätere Fachentscheidungen verteilte Planner-Semantik an einer Stelle zusammen.
 
@@ -50,26 +50,57 @@ Zusätzlich gilt:
 - Die Texturentwicklung bleibt separat dokumentiert.
 - Historische Texturinformationen dürfen durch spätere Planner-Erweiterungen nicht stillschweigend umgedeutet werden.
 
-## 1.3 PHASE-TRANSITION – entwicklungsorientierte Empfehlung ⚠️ Soll/Ist-Gap
+## 1.3 PHASE-TRANSITION – entwicklungsorientierte Empfehlung 🟡 Branch/Integrations-PR
 
-Fachlich beschlossen ist:
+Der Readiness-Core beantwortet **ausschließlich**, ob der Übergang in die nächste Beikostphase empfohlen werden kann. Er verändert `phaseSelected` nicht, ruft keinen Phasenwechsel auf und bleibt vollständig getrennt von der bestehenden bewussten Nutzerbestätigung.
 
-1. Die App **empfiehlt** den Übergang in die nächste Beikostphase entwicklungsorientiert.
-2. Alter oder gegessene Grammwerte dürfen den Phasenwechsel nicht automatisch auslösen.
-3. Die Empfehlung ist kein Zwang und kein automatischer Wechsel.
-4. Die Nutzerin bestätigt den empfohlenen Wechsel bewusst/einmalig.
-5. Bestehende Logs, Vorräte, manuelle Mahlzeiten und Locks bleiben durch den Wechsel in ihrer bisherigen Semantik erhalten.
+Die Kriterien folgen der fachlich freigegebenen, aus offiziellen Beikostempfehlungen abgeleiteten qualitativen Logik: Mahlzeitenrhythmus wird schrittweise, ohne Druck und nach den individuellen Signalen des Kindes an den Familienrhythmus angepasst. Daraus werden **keine** starren Alters-, Mengen- oder Zeitgrenzen für den individuellen Phasenwechsel abgeleitet.
 
-Historisch nachgewiesenes Ist des Phasenmodell-v2:
+Verbindlich sind für jeden Übergang genau drei qualitative Signale:
 
-- Die Oberfläche erklärt korrekt, dass sich die Phase nach Entwicklung und Tagesablauf richtet.
-- `Zurück`/`Weiter` erlaubt den Wechsel zwischen den Phasen.
-- Vor dem Wechsel erscheint eine bewusste Bestätigung.
-- Alter und Grammwerte lösen den Wechsel nicht automatisch aus.
+1. `currentPatternAccepted`: Die in der aktuellen Phase vorgesehenen Beikostmahlzeiten werden grundsätzlich angenommen bzw. sind im Alltag etabliert.
+2. `additionalMealCue`: Das Kind zeigt an der konkret neu hinzukommenden Essensgelegenheit Hunger, Interesse oder einen tatsächlichen zusätzlichen Essbedarf.
+3. `routineCompatible`: Die zusätzliche regelmäßige Mahlzeit passt sinnvoll in den Tages-/Familienrhythmus.
 
-**Noch nicht nachgewiesen ist eine eigenständige Entwicklungs-Empfehlungslogik**, die aus geeigneten Entwicklungsmerkmalen ableitet, dass nun der nächste Phasenwechsel empfohlen werden sollte.
+Alle drei Signale werden ausdrücklich als `yes`, `no` oder `unknown` behandelt. `unknown` ist keine negative Bewertung, sondern eine fehlende Voraussetzung für eine Empfehlung.
 
-Damit ist PHASE-TRANSITION **keine offene Fachfrage**, sondern eine noch offene Soll-/Ist-Lücke. Vor einer Implementierung müssen die konkreten fachlichen Entwicklungsindikatoren separat festgelegt bzw. aus der ursprünglichen Freigabe eindeutig rekonstruiert werden. Es dürfen dafür keine neuen Schwellen aus Alter, Grammwerten oder technischen Bestandswerten erfunden werden.
+Die Übergänge verwenden dieselbe Kernregel:
+
+| Aktuelle Phase | Nächste Phase | Neuer Auto-Slot | Spezifische Bedeutung von `additionalMealCue` |
+|---|---|---|---|
+| Kennenlernen | Mahlzeitenaufbau | Frühstück | Hunger/Interesse an einer zusätzlichen regelmäßigen Frühstücks-Essensgelegenheit |
+| Mahlzeitenaufbau | Drei Hauptmahlzeiten | Abendessen | Hunger/Interesse an einer zusätzlichen regelmäßigen Abend-Essensgelegenheit |
+| Drei Hauptmahlzeiten | Familienkost | Snack | tatsächlicher regelmäßiger Zusatzbedarf zwischen den drei Hauptmahlzeiten |
+| Familienkost | – | – | terminale Phase; keine weitere Empfehlung |
+
+Entscheidung:
+
+- nur `currentPatternAccepted = yes` **und** `additionalMealCue = yes` **und** `routineCompatible = yes` → `recommended`;
+- sobald ein Signal `no` ist → `notYet`;
+- solange mindestens ein benötigtes Signal `unknown` ist → `notYet` mit explizit ausgewiesener fehlender Voraussetzung.
+
+Insbesondere gilt:
+
+- Alter ist **kein** PHASE-TRANSITION-Gate und verändert `recommended` nicht;
+- Grammwerte, Anzahl der Logs, Zahl erfolgreicher Tage oder Dauer in der Phase sind keine Readiness-Schwellen;
+- Texturstufe, BLW-/Handling-Fähigkeit, Allergenstatus, Milchmenge, Vorrat, manuelle Mahlzeiten und Locks sind keine PHASE-TRANSITION-Readiness-Signale;
+- bei 3→4 reicht „drei Mahlzeiten funktionieren“ allein nicht: Für den automatischen Snack muss ein tatsächlicher zusätzlicher Essbedarf vorliegen;
+- ein tatsächlicher Phasenwechsel erfolgt weiterhin ausschließlich über die bestehende bewusste Nutzeraktion; Logs, Vorräte, manuelle Mahlzeiten und Locks behalten ihre Semantik.
+
+### 1.3.1 Technischer Readiness-Vertrag
+
+Der zentrale Readiness-Zustand liefert mindestens:
+
+- `currentPhase`;
+- `nextPhase`;
+- den neu hinzukommenden Mahlzeitenslot;
+- `recommendation`;
+- `recommendable`;
+- die drei qualitativen `signals`;
+- `reasons`;
+- `missingPrerequisites`.
+
+Die Berechnung ist read-only und leitet die qualitativen Signale nicht stillschweigend aus Alter, Grammwerten, Logs oder Textur ab. Die bestehende Funktion zum tatsächlichen Phasenwechsel bleibt davon unberührt.
 
 ---
 
@@ -534,7 +565,7 @@ Die vollständige österreichische `seasonMonths`-Matrix und die Nuss-/Samen-Rol
 
 ## 17.2 Fachlich beschlossen, aber noch nicht vollständig auf main nachgewiesen
 
-1. ⚠️ **PHASE-TRANSITION:** entwicklungsorientierte Empfehlung des nächsten Phasenwechsels plus bewusste Bestätigung. Bestätigung und manueller Wechsel sind vorhanden; eine eigenständige Entwicklungs-Empfehlungslogik ist noch nicht nachgewiesen.
+1. 🟡 **PHASE-TRANSITION:** Die eigenständige read-only Readiness-/Recommendation-Logik ist auf `feat/phase-readiness-core` umgesetzt. Sie verlangt für jeden Übergang das akzeptierte aktuelle Mahlzeitenmuster, ein konkretes Signal für die zusätzliche Essensgelegenheit und die Passung in den Tages-/Familienrhythmus. Alter, Grammwerte, Loganzahl, Phasendauer und Textur werden nicht als Readiness-Schwellen verwendet. Bis zum Merge bleibt dieser Stand Branch/Integrations-PR und nicht `main`.
 
 Weitere offene FOOD-Datenfragen werden separat im FOOD-Fachregel-Track geklärt und dürfen nicht als implizite Planner-Regel erfunden werden.
 
@@ -545,7 +576,7 @@ Weitere offene FOOD-Datenfragen werden separat im FOOD-Fachregel-Track geklärt 
 Änderungen am Planner müssen mindestens folgende Verträge regressiv erhalten:
 
 - Phasenmodell und Mahlzeitenslots;
-- PHASE-TRANSITION: kein automatischer Phasenwechsel durch Alter oder Grammwerte; bei späterer Implementierung der Empfehlung klare Trennung zwischen Empfehlung und bestätigtem Wechsel;
+- PHASE-TRANSITION: Readiness ist read-only; `recommended` setzt `currentPatternAccepted`, `additionalMealCue` und `routineCompatible` gemeinsam voraus; Alter, Grammwerte, Loganzahl, Phasendauer und Textur verändern die Empfehlung nicht und lösen niemals einen Phasenwechsel aus; fehlende qualitative Signale bleiben explizit `unknown`;
 - tägliche Nicht-Allergen-Einführung mit höchstens einem unbekannten FOOD je Frühstück/Mittag/Abend;
 - ein erfolgreich `Probiert`-FOOD blockiert keine geeignete offene Neueinführung; echte Ablehnung bleibt gezielter Wiederholungspfad;
 - Allergen-Einführung oder gezielte Allergen-Wiederholung bleibt die einzige automatische Lernaufgabe des Tages;
@@ -591,6 +622,7 @@ Aktuelle Kernquellen:
 
 - `js/state.js`
 - `js/model.js`
+- `js/phase-readiness.js`
 - `js/planning.js`
 - `js/planner-meal-eligibility.js`
 - `js/planner-milk-policy.js`
@@ -607,6 +639,7 @@ Aktuelle Kernquellen:
 Zentrale Regressionen:
 
 - `tests/todo3-phase-model.test.cjs`
+- `tests/phase-readiness.test.cjs`
 - `tests/todo3-food-auto-integration.test.cjs`
 - `tests/todo3-replanning.test.cjs`
 - `tests/planner-meal-eligibility-p0.test.cjs`

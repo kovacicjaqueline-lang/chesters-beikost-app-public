@@ -8,9 +8,7 @@ const root = path.resolve(__dirname, '..');
 const source = fs.readFileSync(path.join(root, 'js', 'phase-readiness.js'), 'utf8');
 
 function loadCore(extra = {}) {
-  const context = {
-    ...extra,
-  };
+  const context = { ...extra };
   vm.createContext(context);
   vm.runInContext(`${source}\nthis.__recommend = phaseReadinessRecommendation; this.__current = currentPhaseReadiness;`, context);
   return context;
@@ -20,6 +18,12 @@ function plain(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+const READY = {
+  currentPatternAccepted: true,
+  additionalMealCue: true,
+  routineCompatible: true,
+};
+
 test('PHASE-TRANSITION: nächste Phase und neuer Slot folgen exakt dem Phasenmodell', () => {
   const { __recommend } = loadCore();
   const expected = {
@@ -28,107 +32,103 @@ test('PHASE-TRANSITION: nächste Phase und neuer Slot folgen exakt dem Phasenmod
     drei: ['familie', 'snack'],
     familie: [null, null],
   };
+
   for (const [phase, [nextPhase, nextMeal]] of Object.entries(expected)) {
-    const result = __recommend({ phase, ageMonths: 8 });
+    const result = __recommend({ phase, ...READY });
     assert.equal(result.nextPhase, nextPhase, phase);
     assert.equal(result.nextMeal, nextMeal, phase);
   }
 });
 
-test('PHASE-TRANSITION: Kennenlernen nutzt Alter nur als Orientierung, nie allein als Empfehlung', () => {
+test('PHASE-TRANSITION: Empfehlung braucht alle drei qualitativen Voraussetzungen', () => {
   const { __recommend } = loadCore();
 
-  assert.equal(__recommend({ phase: 'kennenlernen', ageMonths: 5, currentPattern: 'unknown' }).recommendation, 'notYet');
-  assert.equal(__recommend({ phase: 'kennenlernen', ageMonths: 7, currentPattern: 'unknown' }).recommendation, 'consider');
-  assert.equal(__recommend({ phase: 'kennenlernen', ageMonths: 9, currentPattern: 'unknown' }).recommendation, 'consider');
-  assert.equal(__recommend({ phase: 'kennenlernen', ageMonths: 5, currentPattern: 'established' }).recommendation, 'consider');
-  assert.equal(__recommend({ phase: 'kennenlernen', ageMonths: 7, currentPattern: 'established' }).recommendation, 'recommended');
-  assert.equal(__recommend({ phase: 'kennenlernen', ageMonths: 9, currentPattern: 'established' }).recommendation, 'recommended');
-  assert.equal(__recommend({ phase: 'kennenlernen', ageMonths: 12, currentPattern: 'notEstablished' }).recommendation, 'notYet');
-});
-
-test('PHASE-TRANSITION: fehlendes Alter bleibt unbekannt statt als 0 Monate zu gelten', () => {
-  const { __recommend } = loadCore();
-  const result = plain(__recommend({
-    phase: 'kennenlernen',
-    ageMonths: null,
-    currentPattern: 'unknown',
-  }));
-
-  assert.equal(result.ageGuidance.status, 'unknown');
-  assert.equal(result.ageGuidance.ageMonths, null);
-  assert.equal(result.recommendation, 'notYet');
-});
-
-test('PHASE-TRANSITION: Mahlzeitenaufbau empfiehlt drei Hauptmahlzeiten im freigegebenen Altersfenster', () => {
-  const { __recommend } = loadCore();
-
-  assert.equal(__recommend({ phase: 'aufbau', ageMonths: 6, currentPattern: 'established' }).recommendation, 'consider');
-  assert.equal(__recommend({ phase: 'aufbau', ageMonths: 7, currentPattern: 'established' }).recommendation, 'recommended');
-  assert.equal(__recommend({ phase: 'aufbau', ageMonths: 9, currentPattern: 'established' }).recommendation, 'recommended');
-
-  const behindTarget = plain(__recommend({ phase: 'aufbau', ageMonths: 10, currentPattern: 'notEstablished' }));
-  assert.equal(behindTarget.recommendation, 'notYet');
-  assert.equal(behindTarget.ageGuidance.status, 'targetPassed');
-  assert.ok(behindTarget.reasons.includes('currentPatternNotEstablished'));
-  assert.ok(behindTarget.reasons.includes('mealFrequencyBelowAgeGuidance'));
-});
-
-test('PHASE-TRANSITION: unbekannt bleibt von nicht etabliert unterscheidbar', () => {
-  const { __recommend } = loadCore();
-  const unknown = plain(__recommend({ phase: 'aufbau', ageMonths: 8 }));
-  const notEstablished = plain(__recommend({ phase: 'aufbau', ageMonths: 8, currentPattern: 'notEstablished' }));
-
-  assert.equal(unknown.development.currentPattern, 'unknown');
-  assert.deepEqual(unknown.missingPrerequisites, ['currentPattern']);
-  assert.equal(unknown.recommendation, 'consider');
-  assert.equal(notEstablished.development.currentPattern, 'notEstablished');
-  assert.deepEqual(notEstablished.missingPrerequisites, []);
-  assert.equal(notEstablished.recommendation, 'notYet');
-});
-
-test('PHASE-TRANSITION: Drei Hauptmahlzeiten -> Familienkost hängt vom Snackbedarf ab, nicht vom Alter', () => {
-  const { __recommend } = loadCore();
-
-  const cases = [
-    [8, 'yes', 'recommended'],
-    [14, 'yes', 'recommended'],
-    [8, 'no', 'notYet'],
-    [14, 'no', 'notYet'],
-    [8, 'unknown', 'consider'],
-    [14, 'unknown', 'consider'],
-  ];
-  for (const [ageMonths, snackNeed, expected] of cases) {
-    const result = __recommend({ phase: 'drei', ageMonths, currentPattern: 'established', snackNeed });
-    assert.equal(result.recommendation, expected, `${ageMonths} Monate / ${snackNeed}`);
-    assert.equal(result.ageGuidance.status, 'none');
-    assert.equal(result.ageGuidance.targetMeals, null);
+  for (const phase of ['kennenlernen', 'aufbau', 'drei']) {
+    const result = plain(__recommend({ phase, ...READY }));
+    assert.equal(result.recommendation, 'recommended', phase);
+    assert.equal(result.recommendable, true, phase);
+    assert.deepEqual(result.missingPrerequisites, [], phase);
   }
+});
 
-  const notEstablished = plain(__recommend({
-    phase: 'drei',
-    ageMonths: 14,
-    currentPattern: 'notEstablished',
-    snackNeed: 'unknown',
+test('PHASE-TRANSITION: jede ausdrücklich fehlende Voraussetzung blockiert die Empfehlung', () => {
+  const { __recommend } = loadCore();
+
+  for (const signal of Object.keys(READY)) {
+    const input = { phase: 'aufbau', ...READY, [signal]: false };
+    const result = plain(__recommend(input));
+    assert.equal(result.recommendation, 'notYet', signal);
+    assert.equal(result.recommendable, false, signal);
+    assert.equal(result.signals[signal], 'no', signal);
+  }
+});
+
+test('PHASE-TRANSITION: unbekannte Voraussetzungen bleiben explizit offen', () => {
+  const { __recommend } = loadCore();
+  const result = plain(__recommend({ phase: 'kennenlernen', currentPatternAccepted: true }));
+
+  assert.equal(result.recommendation, 'notYet');
+  assert.equal(result.recommendable, false);
+  assert.deepEqual(result.missingPrerequisites, ['additionalMealCue', 'routineCompatible']);
+  assert.equal(result.signals.currentPatternAccepted, 'yes');
+  assert.equal(result.signals.additionalMealCue, 'unknown');
+  assert.equal(result.signals.routineCompatible, 'unknown');
+});
+
+test('PHASE-TRANSITION: Alter, Grammwerte, Logs und Textur beeinflussen die Empfehlung nicht', () => {
+  const { __recommend } = loadCore();
+  const blockedYoung = plain(__recommend({
+    phase: 'aufbau',
+    ageMonths: 4,
+    amountG: 999,
+    logCount: 1000,
+    textureStage: 99,
+    currentPatternAccepted: true,
+    additionalMealCue: false,
+    routineCompatible: true,
   }));
-  assert.equal(notEstablished.recommendation, 'notYet');
-  assert.deepEqual(notEstablished.missingPrerequisites, []);
-  assert.ok(!notEstablished.reasons.includes('snackNeedUnknown'));
+  const blockedOld = plain(__recommend({
+    phase: 'aufbau',
+    ageMonths: 24,
+    amountG: 1,
+    logCount: 0,
+    textureStage: 0,
+    currentPatternAccepted: true,
+    additionalMealCue: false,
+    routineCompatible: true,
+  }));
+
+  assert.deepEqual(blockedYoung, blockedOld);
+  assert.equal(blockedYoung.recommendation, 'notYet');
+
+  const readyYoung = plain(__recommend({ phase: 'aufbau', ageMonths: 4, ...READY }));
+  const readyOld = plain(__recommend({ phase: 'aufbau', ageMonths: 24, ...READY }));
+  assert.deepEqual(readyYoung, readyOld);
+  assert.equal(readyYoung.recommendation, 'recommended');
+});
+
+test('PHASE-TRANSITION: Drei Hauptmahlzeiten -> Familienkost braucht tatsächlichen Zusatzbedarf und Tagespassung', () => {
+  const { __recommend } = loadCore();
+
+  assert.equal(__recommend({ phase: 'drei', ...READY }).recommendation, 'recommended');
+  assert.equal(__recommend({ phase: 'drei', ...READY, additionalMealCue: false }).recommendation, 'notYet');
+  assert.equal(__recommend({ phase: 'drei', ...READY, routineCompatible: false }).recommendation, 'notYet');
 });
 
 test('PHASE-TRANSITION: Familienkost ist terminal und erzeugt keine weitere Empfehlung', () => {
   const { __recommend } = loadCore();
-  const result = plain(__recommend({ phase: 'familie', ageMonths: 18, currentPattern: 'established', snackNeed: 'yes' }));
+  const result = plain(__recommend({ phase: 'familie', ...READY }));
 
   assert.equal(result.nextPhase, null);
+  assert.equal(result.nextMeal, null);
   assert.equal(result.recommendable, false);
   assert.equal(result.recommendation, 'notYet');
   assert.deepEqual(result.reasons, ['finalPhaseReached']);
 });
 
-test('PHASE-TRANSITION: Readiness ist read-only und ignoriert technische Planner-/Mengen-/Texturwerte', () => {
+test('PHASE-TRANSITION: Readiness ist read-only und verändert keinen bestehenden App-Zustand', () => {
   const state = {
-    settings: { phaseSelected: 'aufbau', birthDate: '2026-01-24', textureStage: 99, amountSelected: 'established' },
+    settings: { phaseSelected: 'aufbau', birthDate: '2026-01-24', textureStage: 99, amountSelected: 'full' },
     logs: [{ amountG: 999, outcome: 'eaten' }],
     inventory: [{ foodId: 'x', portions: 99 }],
     manualMeals: { '2026-08-25|dinner': { focusId: 'x' } },
@@ -140,13 +140,11 @@ test('PHASE-TRANSITION: Readiness ist read-only und ignoriert technische Planner
   const context = loadCore({
     state,
     currentPhase: () => state.settings.phaseSelected,
-    today: () => '2026-08-25',
-    monthsOld: () => 7,
     save: () => { saveCalls += 1; },
     renderAll: () => { renderCalls += 1; },
   });
 
-  const result = context.__current({ currentPattern: 'established' });
+  const result = context.__current(READY);
   assert.equal(result.recommendation, 'recommended');
   assert.equal(state.settings.phaseSelected, 'aufbau');
   assert.deepEqual(state, before);
@@ -156,12 +154,23 @@ test('PHASE-TRANSITION: Readiness ist read-only und ignoriert technische Planner
 
 test('PHASE-TRANSITION: ungültige qualitative Signale werden als unbekannt behandelt', () => {
   const { __recommend } = loadCore();
-  const result = plain(__recommend({ phase: 'drei', ageMonths: 20, currentPattern: 'yes', snackNeed: true }));
+  const result = plain(__recommend({
+    phase: 'drei',
+    currentPatternAccepted: 'established',
+    additionalMealCue: 1,
+    routineCompatible: 'sometimes',
+  }));
 
-  assert.equal(result.development.currentPattern, 'unknown');
-  assert.equal(result.development.snackNeed, 'unknown');
-  assert.deepEqual(result.missingPrerequisites, ['currentPattern']);
-  assert.ok(!result.reasons.includes('snackNeedUnknown'));
+  assert.deepEqual(result.signals, {
+    currentPatternAccepted: 'unknown',
+    additionalMealCue: 'unknown',
+    routineCompatible: 'unknown',
+  });
+  assert.deepEqual(result.missingPrerequisites, [
+    'currentPatternAccepted',
+    'additionalMealCue',
+    'routineCompatible',
+  ]);
   assert.equal(result.recommendation, 'notYet');
 });
 

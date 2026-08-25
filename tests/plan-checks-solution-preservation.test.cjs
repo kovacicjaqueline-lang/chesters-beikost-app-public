@@ -19,6 +19,11 @@ test("Plan-Checks-Loader installiert Contract vor Preservation vor UI-Core", () 
   assert.ok(uiCore > preservation, "UI-Core darf erst nach der Preservation starten");
 });
 
+test("Solution-Preservation ist für den ersten Offline-Start precached", () => {
+  const source = fs.readFileSync(path.join(root, "sw.js"), "utf8");
+  assert.match(source, /\.\/js\/plan-checks-solution-preservation\.js\?v=10\.1\.26/);
+});
+
 test("Preservation verwirft Lösung, die projected Allergen-Einführung wieder öffnet", () => {
   const source = fs.readFileSync(path.join(root, "js", "plan-checks-solution-preservation.js"), "utf8");
   const candidates = [

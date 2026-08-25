@@ -13,6 +13,14 @@ const MEAL_EDITOR_RECIPE_COMPONENT_FIELDS = Object.freeze({
   milkChoices: Object.freeze({ label: "Milch / Milchalternative", preparation: "recipe" }),
 });
 
+const MEAL_EDITOR_HANDLING_LABELS = Object.freeze({
+  "spoon-smooth": "Fein und glatt vom Löffel",
+  "spoon-mashed": "Weich zerdrückt",
+  "spoon-soft-lumpy": "Weich stückig",
+  "finger-graspable": "Weiches Fingerfood",
+  "finger-small-soft": "Kleine weiche Stücke",
+});
+
 function mealEditorRecipeUnique(values) {
   return [...new Set((values || []).filter(Boolean))];
 }
@@ -99,6 +107,77 @@ function mealEditorRecipeConfiguredFoodIds(recipe, defaultIds, selections, looku
   return result;
 }
 
+function mealEditorPreparationControlModel(options = [], recipeSelected = false) {
+  let structured = [];
+  for (let option of options || []) {
+    if (!option?.key || structured.some((item) => item.key === option.key)) continue;
+    structured.push({
+      key: option.key,
+      label: option.label || option.key,
+      text: option.text || "",
+    });
+  }
+  if (recipeSelected || !structured.length) {
+    return { visible: false, selectable: false, staticLabel: "", keys: [] };
+  }
+  if (structured.length === 1) {
+    return {
+      visible: true,
+      selectable: false,
+      staticLabel: structured[0].label,
+      keys: [structured[0].key],
+    };
+  }
+  return {
+    visible: true,
+    selectable: true,
+    staticLabel: "",
+    keys: structured.map((option) => option.key),
+  };
+}
+
+function mealEditorRecipePresentationModel(
+  recipe,
+  settings = {},
+  contractMap = {},
+  eligibilityFn = null,
+) {
+  let contract = recipe?.name ? contractMap?.[recipe.name] : null;
+  if (!contract) return null;
+  let handling = typeof eligibilityFn === "function"
+    ? eligibilityFn(recipe, settings, contractMap)
+    : null;
+  let blocked = !!handling?.migrated && !(handling.eligibleModes || []).length;
+  let mode = handling?.preferredModes?.[0] || (blocked ? "" : contract.modes?.[0] || "");
+  return {
+    mode,
+    label: blocked
+      ? "Aktuell noch nicht passend"
+      : MEAL_EDITOR_HANDLING_LABELS[mode] || mode || "Rezeptdefinierte Form",
+    blocked,
+  };
+}
+
+function mealEditorRecipeNormalizePresentationData(data = {}, initialRecipeName = "", presentationMode = "") {
+  let nextRecipeName = String(data?.recipeName || "");
+  if (String(initialRecipeName || "") === nextRecipeName) return data;
+  let next = { ...data };
+  delete next.presentationMode;
+  if (nextRecipeName && presentationMode) next.presentationMode = presentationMode;
+  return next;
+}
+
+function mealEditorRecipePresentationModeForName(recipeName = "") {
+  if (!recipeName || typeof recipeByName !== "function") return "";
+  let recipe = recipeByName(recipeName);
+  if (!recipe) return "";
+  let contracts = typeof RECIPE_HANDLING_CONTRACT !== "undefined" ? RECIPE_HANDLING_CONTRACT : {};
+  let settings = typeof state !== "undefined" ? state.settings : {};
+  let eligibility = typeof recipeHandlingEligibility === "function" ? recipeHandlingEligibility : null;
+  let model = mealEditorRecipePresentationModel(recipe, settings, contracts, eligibility);
+  return model && !model.blocked ? model.mode || "" : "";
+}
+
 function mealEditorRecipeRuntimeLookup() {
   return {
     byName: (name) => typeof foodByName === "function" ? foodByName(name) : null,
@@ -150,7 +229,15 @@ function mealEditorRecipeEnsureContext() {
   let date = manualContext?.targetDate || manualContext?.sourceDate || mealEditorRecipeVariantContext?.date || "";
   let recipeName = mealEditorRecipeCurrentSelectedName();
   if (!mealEditorRecipeVariantContext) {
-    mealEditorRecipeVariantContext = { date, meal, recipeName: "", selections: {}, searchQuery: "", refreshingSlot: false };
+    mealEditorRecipeVariantContext = {
+      date,
+      meal,
+      recipeName: "",
+      initialRecipeName: recipeName || "",
+      selections: {},
+      searchQuery: "",
+      refreshingSlot: false,
+    };
   } else {
     if (date) mealEditorRecipeVariantContext.date = date;
     if (meal) mealEditorRecipeVariantContext.meal = meal;
@@ -279,9 +366,13 @@ function mealEditorRecipeFixModeCopy() {
   if (warning) warning.innerHTML = "<b>So passt die Auswahl noch nicht</b><div>Bitte ein Rezept auswählen.</div>";
 }
 
-function mealEditorRecipePreparationCount(foodId) {
-  if (typeof manualMealFlowPreparationOptions !== "function") return 0;
-  return (manualMealFlowPreparationOptions(foodId) || []).length;
+function mealEditorStructuredPreparationOptions(foodId) {
+  if (
+    typeof handlingPreparationOptions !== "function" ||
+    typeof state === "undefined" ||
+    typeof FOOD_HANDLING_CONTRACT === "undefined"
+  ) return [];
+  return handlingPreparationOptions(foodId, state.settings, FOOD_HANDLING_CONTRACT) || [];
 }
 
 function mealEditorRecipeLockIngredientControls(slots) {
@@ -295,17 +386,42 @@ function mealEditorRecipeLockIngredientControls(slots) {
     item.dataset.recipeComponent = slot?.field || "fixed";
     let actions = item.querySelector(".manual-role-actions");
     if (actions) actions.hidden = true;
+  });
+}
+
+function mealEditorRecipeSyncPreparationControls(recipeName = "") {
+  let recipeSelected = !!recipeName;
+  document.querySelectorAll("#genericBody .manual-role-item").forEach((item) => {
+    let remove = item.querySelector(".removeManualSelected[data-food]");
+    let foodId = remove?.dataset.food || "";
     let preparation = item.querySelector(".manual-preparation-field");
-    if (!preparation) return;
-    let allowPreparation = !!slot?.preparationSelectable && mealEditorRecipePreparationCount(foodId) > 1;
-    preparation.hidden = !allowPreparation;
-    if (!allowPreparation) {
-      let select = preparation.querySelector("select[data-manual-preparation]");
-      if (select?.value) {
-        select.value = "";
-        select.dispatchEvent(new Event("change", { bubbles: true }));
-      }
+    if (!foodId || !preparation) return;
+
+    let options = mealEditorStructuredPreparationOptions(foodId);
+    let model = mealEditorPreparationControlModel(options, recipeSelected);
+    preparation.querySelector(".meal-editor-preparation-static")?.remove();
+    preparation.hidden = !model.visible;
+    if (!model.visible) return;
+
+    let label = preparation.querySelector("label");
+    if (label) label.textContent = "Darreichung";
+    let select = preparation.querySelector("select[data-manual-preparation]");
+    if (!select) return;
+
+    if (!model.selectable) {
+      select.hidden = true;
+      let info = document.createElement("div");
+      info.className = "small meal-editor-preparation-static";
+      info.textContent = model.staticLabel;
+      preparation.appendChild(info);
+      return;
     }
+
+    select.hidden = false;
+    let allowed = new Set(model.keys);
+    [...select.options].forEach((option) => {
+      if (option.value && !allowed.has(option.value)) option.remove();
+    });
   });
 }
 
@@ -397,12 +513,48 @@ function mealEditorRecipeRenderSlots(recipe, slots) {
   overview.insertAdjacentElement("afterend", wrapper);
 }
 
+function mealEditorRecipeRenderPresentation(recipe) {
+  let overview = document.querySelector("#genericBody .manual-role-overview");
+  let existing = document.querySelector("#genericBody .recipe-presentation-summary");
+  if (!overview || !recipe) {
+    existing?.remove();
+    return;
+  }
+  let contracts = typeof RECIPE_HANDLING_CONTRACT !== "undefined" ? RECIPE_HANDLING_CONTRACT : {};
+  let settings = typeof state !== "undefined" ? state.settings : {};
+  let eligibility = typeof recipeHandlingEligibility === "function" ? recipeHandlingEligibility : null;
+  let model = mealEditorRecipePresentationModel(recipe, settings, contracts, eligibility);
+  if (!model) {
+    existing?.remove();
+    return;
+  }
+
+  let wrapper = existing || document.createElement("div");
+  wrapper.className = "recipe-presentation-summary manual-role-group";
+  wrapper.dataset.recipePresentation = recipe.name;
+  wrapper.replaceChildren();
+  let heading = document.createElement("div");
+  heading.className = "manual-role-heading";
+  heading.textContent = "Darreichung";
+  let value = document.createElement("div");
+  value.className = "meal-editor-recipe-presentation-value";
+  value.textContent = model.label;
+  let note = document.createElement("div");
+  note.className = "small";
+  note.textContent = "Vom Rezept vorgegeben; einzelne Zutaten haben hier keine eigene Konsistenzauswahl.";
+  wrapper.append(heading, value, note);
+
+  let anchor = document.querySelector("#genericBody .recipe-component-controls") || overview;
+  if (!existing || wrapper.previousElementSibling !== anchor) anchor.insertAdjacentElement("afterend", wrapper);
+}
+
 function mealEditorRecipeEnhanceRecipeMode() {
   let context = mealEditorRecipeEnsureContext();
   let recipesActive = document.getElementById("selectorRecipes")?.classList.contains("active");
   let selectedButton = document.querySelector("#genericBody .selectRecipe.selected");
   if (!context || !recipesActive || !selectedButton) {
     document.querySelector("#genericBody .recipe-component-controls")?.remove();
+    document.querySelector("#genericBody .recipe-presentation-summary")?.remove();
     return;
   }
   let name = mealEditorRecipeCurrentSelectedName();
@@ -412,6 +564,7 @@ function mealEditorRecipeEnhanceRecipeMode() {
   let slots = mealEditorRecipeComponentSlots(recipe, mealEditorRecipeRuntimeLookup());
   mealEditorRecipeLockIngredientControls(slots);
   mealEditorRecipeRenderSlots(recipe, slots);
+  mealEditorRecipeRenderPresentation(recipe);
 }
 
 function mealEditorRecipeEnhance() {
@@ -419,11 +572,12 @@ function mealEditorRecipeEnhance() {
   mealEditorRecipeVariantEnhancing = true;
   mealEditorRecipeVariantObserver?.disconnect();
   try {
-    mealEditorRecipeEnsureContext();
+    let context = mealEditorRecipeEnsureContext();
     mealEditorRecipeEnsureFilterEmpty();
     mealEditorInstallStableSearch();
     mealEditorRecipeFixModeCopy();
     mealEditorRecipeEnhanceRecipeMode();
+    mealEditorRecipeSyncPreparationControls(context?.recipeName || mealEditorRecipeCurrentSelectedName());
     mealEditorRecipeFilterResults();
   } finally {
     mealEditorRecipeVariantEnhancing = false;
@@ -444,10 +598,11 @@ function mealEditorRecipeHandleCapture(event) {
   if (!context) return;
   if (target.id === "selectorRecipes" || target.id === "selectorFoods") {
     context.searchQuery = "";
-    if (target.id === "selectorFoods") {
-      context.recipeName = "";
-      context.selections = {};
-    }
+    return;
+  }
+  if (target.classList.contains("selectFood") || target.classList.contains("removeManualSelected")) {
+    context.recipeName = "";
+    context.selections = {};
     return;
   }
   if (target.classList.contains("selectRecipe")) {
@@ -464,6 +619,36 @@ function mealEditorRecipeHandleCapture(event) {
   }
 }
 
+function mealEditorRecipeInstallPersistenceGuard() {
+  let wrap = (original) => {
+    let guarded = function mealEditorPresentationAwareSave(date, meal, data, ...rest) {
+      let context = mealEditorRecipeVariantContext;
+      let initialRecipeName = context?.initialRecipeName || "";
+      let nextRecipeName = String(data?.recipeName || "");
+      let presentationMode = nextRecipeName === initialRecipeName
+        ? String(data?.presentationMode || "")
+        : mealEditorRecipePresentationModeForName(nextRecipeName);
+      let normalized = mealEditorRecipeNormalizePresentationData(
+        data || {},
+        initialRecipeName,
+        presentationMode,
+      );
+      return original.call(this, date, meal, normalized, ...rest);
+    };
+    guarded.__mealEditorPresentationPersistenceGuard = true;
+    return guarded;
+  };
+
+  if (
+    typeof saveManualMeal === "function" &&
+    !saveManualMeal.__mealEditorPresentationPersistenceGuard
+  ) saveManualMeal = wrap(saveManualMeal);
+  if (
+    typeof saveEditedPlanMeal === "function" &&
+    !saveEditedPlanMeal.__mealEditorPresentationPersistenceGuard
+  ) saveEditedPlanMeal = wrap(saveEditedPlanMeal);
+}
+
 function installMealEditorRecipeVariantsRuntime() {
   if (typeof globalThis === "undefined") return false;
   if (globalThis.__mealEditorRecipeVariantsInstalled) return false;
@@ -472,6 +657,7 @@ function installMealEditorRecipeVariantsRuntime() {
     typeof manualMealValidation !== "function" ||
     typeof recipeFoodIds !== "function"
   ) return false;
+  mealEditorRecipeInstallPersistenceGuard();
   globalThis.__mealEditorRecipeVariantsInstalled = true;
   if (typeof document !== "undefined") {
     document.addEventListener("click", mealEditorRecipeHandleCapture, true);
@@ -499,11 +685,15 @@ if (typeof window !== "undefined" && typeof document !== "undefined") installMea
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     MEAL_EDITOR_RECIPE_COMPONENT_FIELDS,
+    MEAL_EDITOR_HANDLING_LABELS,
     mealEditorRecipeComponentLabel,
     mealEditorRecipeChoiceLabel,
     mealEditorRecipeComponentSlots,
     mealEditorRecipeSelectionFromFoodIds,
     mealEditorRecipeConfiguredFoodIds,
+    mealEditorPreparationControlModel,
+    mealEditorRecipePresentationModel,
+    mealEditorRecipeNormalizePresentationData,
     installMealEditorRecipeVariantsRuntime,
   };
 }

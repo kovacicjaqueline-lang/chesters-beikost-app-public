@@ -1,8 +1,9 @@
 "use strict";
 
 /*
- * Kleiner Loader, damit die AP3-Vertragserweiterung garantiert vor der sichtbaren
- * Plan-Checks-UI installiert ist. Beide Dateien bleiben separat precachebar.
+ * Kleiner Loader, damit die zentrale Solution-Preservation und die AP3-Vertragserweiterung
+ * garantiert vor der sichtbaren Plan-Checks-UI installiert sind. Die Dateien bleiben
+ * separat precachebar und werden strikt in dieser Reihenfolge geladen.
  */
 (function loadPlanChecksUi() {
   if (typeof document === "undefined" || globalThis.__planChecksUiLoaderStarted) return;
@@ -12,6 +13,7 @@
   const version = current ? new URL(current, document.baseURI).search : "";
   const base = current ? new URL("./", new URL(current, document.baseURI)) : new URL("./js/", document.baseURI);
   const files = [
+    `plan-checks-solution-preservation.js${version}`,
     `plan-checks-contract-extension.js${version}`,
     `plan-checks-ui-core.js${version}`,
   ];

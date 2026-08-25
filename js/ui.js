@@ -200,7 +200,14 @@ function renderHomeCore() {
   bindInactiveMealActions();
   if (document.getElementById("homeFreeLog")) document.getElementById("homeFreeLog").onclick = () => openLog(null);
   let selected = currentPhase(), idx = phaseIndex(selected);
-  document.getElementById("phaseCard").innerHTML = `<details class="home-control-details">
+  let readiness = typeof currentPhaseReadiness === "function"
+    ? currentPhaseReadiness(state.settings.phaseReadinessSignals || {})
+    : null;
+  let nextImpact = readiness?.nextMeal ? `Mit der nächsten Phase plant die App zusätzlich ${readiness.nextMeal === "breakfast" ? "ein Frühstück" : readiness.nextMeal === "dinner" ? "ein Abendessen" : "einen Snack"}. ${phaseMealKeys().map(mealName).join(" und ")} ${phaseMealKeys().length === 1 ? "bleibt" : "bleiben"} bestehen.` : "";
+  let readinessHint = readiness?.recommendable
+    ? `<div class="phase-readiness-hint"><b>Bereit für ${esc(PHASES[readiness.nextPhase].label)}</b><div class="small">${esc(nextImpact)}</div><button class="btn secondary smallbtn" id="openPhaseReadinessHint">Mehr erfahren</button></div>`
+    : "";
+  document.getElementById("phaseCard").innerHTML = `<details class="home-control-details" id="phaseDetails">
     <summary>
       <span>
         <small>Beikostphase</small>
@@ -210,10 +217,12 @@ function renderHomeCore() {
     </summary>
     <div class="home-control-body">
       <div class="small phase-guidance">Die Phase richtet sich nach Chesters Entwicklung und eurem Tagesablauf. Alter oder Grammwerte wechseln sie nicht automatisch.</div>
+      <button class="btn secondary full" id="openPhaseDetails" type="button">Phase-Details ansehen</button>
       <div class="phase-controls">
         <button class="btn secondary" id="phaseBack" ${idx <= 0 ? "disabled" : ""}>Zurück</button>
         <button class="btn secondary" id="phaseForward" ${idx >= 3 ? "disabled" : ""}>Weiter</button>
       </div>
+      ${readinessHint}
     </div>
   </details>`;
   let requestPhase = (delta) => {
@@ -226,6 +235,20 @@ function renderHomeCore() {
     document.getElementById("cancelPhaseChange").onclick = closeGeneric;
     document.getElementById("confirmPhaseChange").onclick = () => { closeGeneric(); setPhase(next); };
   };
+  let readinessCriterionLabel = (code) => ({
+    currentPatternAccepted: "Die Mahlzeiten der aktuellen Phase sind im Alltag etabliert",
+    additionalMealCue: readiness?.nextMeal === "breakfast" ? "Interesse oder Hunger bei einer regelmäßigen Frühstücksgelegenheit" : readiness?.nextMeal === "dinner" ? "Interesse oder Hunger bei einer regelmäßigen Abendessensgelegenheit" : "Regelmäßiger zusätzlicher Essbedarf zwischen den Hauptmahlzeiten",
+    routineCompatible: "Die zusätzliche Mahlzeit passt in euren Tages- und Familienrhythmus",
+  }[code] || code);
+  let openPhaseDetails = () => {
+    let rows = Object.entries(readiness?.signals || {}).map(([code, value]) => `<div class="readiness-row ${value}"><span aria-hidden="true">${value === "yes" ? "✓" : value === "no" ? "–" : "?"}</span><div><b>${esc(readinessCriterionLabel(code))}</b><div class="small">${value === "yes" ? "Erfüllt" : value === "no" ? "Noch nicht erfüllt" : "Noch nicht angegeben"}</div></div></div>`).join("");
+    let conclusion = readiness?.recommendable ? `Die nächste Phase wird empfohlen. ${nextImpact}` : readiness?.nextPhase ? `Die nächste Phase wird noch nicht empfohlen. ${nextImpact}` : "Familienkost ist die letzte Beikostphase; es kommt kein weiterer automatischer Mahlzeitenslot hinzu.";
+    let action = readiness?.recommendable ? `<button class="btn" id="startRecommendedPhase">${esc(PHASES[readiness.nextPhase].label)} starten</button>` : "";
+    openGeneric(`${PHASES[selected].label} · Phase-Details`, `${rows}<div class="notice olive phase-readiness-conclusion">${esc(conclusion)}</div>${action ? `<div class="sticky-form-actions ds-actionbar">${action}</div>` : ""}`);
+    document.getElementById("startRecommendedPhase")?.addEventListener("click", () => { closeGeneric(); requestPhase(1); });
+  };
+  document.getElementById("openPhaseDetails").onclick = openPhaseDetails;
+  document.getElementById("openPhaseReadinessHint")?.addEventListener("click", openPhaseDetails);
   document.getElementById("phaseBack").onclick = () => requestPhase(-1);
   document.getElementById("phaseForward").onclick = () => requestPhase(1);
   renderTextureCoach();
@@ -361,17 +384,138 @@ function planQualityIssues(days) {
 
   return [...new Set(issues)].slice(0, 2);
 }
+let planCheckUxSession = { dismissed: new Set(), rejected: new Set(), days: [], signature: "" };
+function planCheckReport(days) {
+  return typeof window.PlannerPlanChecks?.report === "function"
+    ? window.PlannerPlanChecks.report(days, { phaseReadinessSignals: state.settings.phaseReadinessSignals || {} })
+    : { items: [], domainStates: {} };
+}
+function allergenTargetLabel(item) {
+  let target = item.refs?.allergenTargets?.[0];
+  return target?.value || target?.allergenGroup || food(item.refs?.foodIds?.[0])?.name || "Allergen";
+}
+function planCheckMealTitle(meal) {
+  return meal?.recipeName || mealDisplayTitle(meal) || "geplante Mahlzeit";
+}
+function allergenSolutions(item, days) {
+  let targetIds = new Set(item.refs?.foodIds || []);
+  let candidates = [];
+  for (let day of days) for (let meal of day.meals || []) {
+    if (!meal.active || meal.empty || !meal.focusId || mealIsCompleted(day.date, meal.meal)) continue;
+    let lock = state.planLocks?.[planLockKey(day.date, meal.meal)];
+    for (let id of targetIds) {
+      let candidateFood = food(id);
+      if (!candidateFood || !candidateFood.active || rank(candidateFood) < 2) continue;
+      if (!(candidateFood.meals || []).includes(meal.meal) || (meal.foodIds || []).includes(id)) continue;
+      candidates.push({ day, meal, food: candidateFood, protected: !!lock || !!meal.manualAdded });
+    }
+  }
+  return candidates.sort((a, b) => Number(a.protected) - Number(b.protected) || a.day.date.localeCompare(b.day.date) || a.meal.meal.localeCompare(b.meal.meal));
+}
+function applyAllergenSolution(solution) {
+  let { day, meal, food: candidateFood } = solution;
+  let key = planLockKey(day.date, meal.meal);
+  let existingLock = state.planLocks?.[key];
+  let existingManual = state.manualMeals?.[key];
+  let updated = {
+    ...meal,
+    foodIds: [...new Set([...(meal.foodIds || []), candidateFood.id])],
+    baseFoodIds: [...new Set([...(meal.baseFoodIds || []), candidateFood.id])],
+    foodRoles: { ...(meal.foodRoles || {}), [candidateFood.id]: "component" },
+    note: meal.note || `${candidateFood.name} bewusst ergänzt.`,
+  };
+  let mode = existingLock?.mode || (existingManual ? "manual" : "auto");
+  state.planLocks ||= {};
+  state.planLocks[key] = mealSnapshot(day.date, meal.meal, updated, mode);
+  state.planLocks[key].mode = mode;
+  if (existingManual) state.manualMeals[key] = { ...existingManual, ...updated, manualAdded: existingManual.manualAdded !== false };
+  save();
+}
+function openAllergenSolution(item) {
+  let key = item.details?.allergenTargetKey || allergenTargetLabel(item);
+  let solutions = allergenSolutions(item, planCheckUxSession.days).filter((solution) =>
+    !planCheckUxSession.rejected.has(`${key}|${solution.day.date}|${solution.meal.meal}|${solution.food.id}`),
+  );
+  let solution = solutions[0];
+  if (!solution) {
+    openGeneric(allergenTargetLabel(item), '<p>Für diese Woche gibt es keine passende Möglichkeit.</p><div class="sticky-form-actions ds-actionbar"><button class="btn secondary" id="dismissPlanGoal">Diese Woche so lassen</button></div>');
+    document.getElementById("dismissPlanGoal").onclick = () => { planCheckUxSession.dismissed.add(key); closeGeneric(); renderPlan(); };
+    return;
+  }
+  let currentTitle = planCheckMealTitle(solution.meal);
+  let nextTitle = `${currentTitle} und ${solution.food.name}`;
+  let protectedCopy = solution.protected ? `<div class="notice warn"><b>Dafür müsste die geplante Mahlzeit am ${esc(nice(solution.day.date, true))} geändert werden.</b><div class="plan-change"><span>Vorher</span><b>${esc(currentTitle)}</b><span>Nachher</span><b>${esc(nextTitle)}</b></div></div>` : "";
+  openGeneric(allergenTargetLabel(item), `<div class="plan-solution"><b>${esc(nice(solution.day.date, true))} · ${esc(mealName(solution.meal.meal))}</b><p>${esc(solution.food.name)} zur geplanten Mahlzeit „${esc(currentTitle)}“ ergänzen.</p>${protectedCopy}</div><div class="sticky-form-actions ds-actionbar"><button class="btn" id="applyPlanSolution">Änderung übernehmen</button><button class="btn secondary" id="otherPlanSolution">Andere Lösung</button><button class="btn secondary" id="dismissPlanGoal">Diese Woche so lassen</button></div>`);
+  document.getElementById("applyPlanSolution").onclick = () => { applyAllergenSolution(solution); closeGeneric(); renderAll(); showToast("Plan aktualisiert"); };
+  document.getElementById("otherPlanSolution").onclick = () => { planCheckUxSession.rejected.add(`${key}|${solution.day.date}|${solution.meal.meal}|${solution.food.id}`); openAllergenSolution(item); };
+  document.getElementById("dismissPlanGoal").onclick = () => { planCheckUxSession.dismissed.add(key); closeGeneric(); renderPlan(); };
+}
+function hardBlockerCopy(item) {
+  let meal = item.refs?.meals?.[0] || {};
+  let day = meal.date ? nice(meal.date, true) : "Der Plan";
+  if (item.code === "MILK_WITH_MEAT_OR_FISH") return `${day} kombiniert in „${planCheckMealTitle(meal)}“ Milchprodukt und Fleisch oder Fisch.`;
+  if (item.code === "MULTIPLE_FULL_MILK_MEALS") return `${day} enthält mehrere volle Milchmahlzeiten.`;
+  if (item.code === "NEW_FOOD_WITHOUT_TRUSTED_BASE") return `${food(item.details?.focusId)?.name || "Ein neues Lebensmittel"} ist ohne verträgliche Basis geplant.`;
+  return `${day} verletzt eine verbindliche Planregel.`;
+}
+function openHardBlockerSolution(blockers) {
+  let changes = blockers.map((item) => `<div class="plan-change"><b>${esc(hardBlockerCopy(item))}</b><span>Die betroffene Mahlzeit wird unter allen aktuellen Regeln neu geplant.</span></div>`).join("");
+  openGeneric("Vorgeschlagene Korrektur", `${changes}<div class="sticky-form-actions ds-actionbar"><button class="btn" id="applyPlanCorrection">Änderungen übernehmen</button></div>`);
+  document.getElementById("applyPlanCorrection").onclick = () => {
+    let affected = new Map();
+    for (let item of blockers) for (let ref of item.refs?.meals || []) {
+      let key = planLockKey(ref.date, ref.meal);
+      if (!affected.has(key)) affected.set(key, {
+        ref,
+        lockMode: state.planLocks?.[key]?.mode || "",
+        manual: state.manualMeals?.[key] || null,
+      });
+      delete state.planLocks?.[key];
+      delete state.manualMeals?.[key];
+      delete state.overrides?.[key];
+    }
+    for (let [key, entry] of affected) {
+      let generated = buildDaysUnlocked(entry.ref.date, 1)[0]?.meals?.find((meal) => meal.meal === entry.ref.meal && meal.active && !meal.empty);
+      if (!generated) continue;
+      let mode = entry.lockMode || (entry.manual ? "manual" : "auto");
+      state.planLocks[key] = mealSnapshot(entry.ref.date, entry.ref.meal, generated, mode);
+      state.planLocks[key].mode = mode;
+      if (entry.manual) state.manualMeals[key] = { ...generated, date: entry.ref.date, meal: entry.ref.meal, manualAdded: entry.manual.manualAdded !== false, type: "manuell", createdAt: entry.manual.createdAt || new Date().toISOString() };
+    }
+    save(); closeGeneric(); renderAll(); showToast("Plan aktualisiert");
+  };
+}
 function renderPlanQuality(days) {
-  let issues = planQualityIssues(days);
+  let signature = (days || []).flatMap((day) => (day.meals || []).map((meal) => `${day.date}|${meal.meal}|${meal.planId || ""}|${(meal.foodIds || []).join(",")}`)).join(";");
+  if (planCheckUxSession.signature && signature !== planCheckUxSession.signature) {
+    planCheckUxSession.dismissed.clear();
+    planCheckUxSession.rejected.clear();
+  }
+  planCheckUxSession.signature = signature;
+  planCheckUxSession.days = days;
+  let report = planCheckReport(days);
+  let blockers = report.items.filter((item) => item.type === "hard_blocker");
+  let goals = report.items.filter((item) => item.type === "open_goal" && !planCheckUxSession.dismissed.has(item.details?.allergenTargetKey || allergenTargetLabel(item)));
   let box = document.getElementById("planQuality");
-  if (!issues.length) {
+  if (!blockers.length && !goals.length) {
     box.style.display = "none";
     box.innerHTML = "";
     return;
   }
   box.style.display = "block";
-  box.className = "notice plan-quality-warn";
-  box.innerHTML = `<b>Planprüfung</b><br>${issues.map(esc).join("<br>")}`;
+  if (blockers.length) {
+    box.className = "notice plan-check-alert hard";
+    box.innerHTML = `<b>Plan anpassen</b><div>${esc(hardBlockerCopy(blockers[0]))}</div><button class="btn smallbtn" id="openPlanCorrection">Korrektur ansehen</button>`;
+    document.getElementById("openPlanCorrection").onclick = () => openHardBlockerSolution(blockers);
+    return;
+  }
+  goals.sort((a, b) => String(a.details?.lastEatenDate || "").localeCompare(String(b.details?.lastEatenDate || "")));
+  let labels = goals.map(allergenTargetLabel);
+  box.className = "notice plan-check-alert open-goal";
+  box.innerHTML = goals.length === 1
+    ? `<b>${esc(labels[0])} diese Woche noch offen</b><button class="btn secondary smallbtn" id="openPlanSolution">Lösung ansehen</button>`
+    : `<b>${goals.length} Allergene noch nicht eingeplant</b><div>${esc(labels.join(" · "))}</div><button class="btn secondary smallbtn" id="openPlanSolution">Lösung ansehen</button>`;
+  document.getElementById("openPlanSolution").onclick = () => openAllergenSolution(goals[0]);
 }
 function availableExtraMeals(day) {
   let candidates = ["breakfast", "dinner"];
@@ -1376,7 +1520,11 @@ function bind() {
     save();
     renderAll();
   };
-  document.getElementById("planRecalculate").onclick = clearAutomaticLocks;
+  document.getElementById("planRecalculate").onclick = () => {
+    planCheckUxSession.dismissed.clear();
+    planCheckUxSession.rejected.clear();
+    clearAutomaticLocks();
+  };
   document.getElementById("planRebuildAll")?.addEventListener("click", openFullPlanRebuild);
   document.getElementById("calculateBatch").onclick = calculateBatch;
   document.getElementById("freeLog").onclick = (event) => { event.preventDefault(); openLog(null); };

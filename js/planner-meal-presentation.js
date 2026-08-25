@@ -173,14 +173,36 @@ function installPlannerMealPresentationRuntime() {
   return true;
 }
 
+function loadMealEditorRecipeVariantsRuntime() {
+  if (typeof document === "undefined") return false;
+  if (globalThis.__mealEditorRecipeVariantsInstalled) return true;
+  let existing = document.querySelector('script[data-meal-editor-recipe-variants="v1"]');
+  if (existing) return true;
+  let script = document.createElement("script");
+  script.src = "js/meal-editor-recipe-variants.js?v=10.1.26";
+  script.dataset.mealEditorRecipeVariants = "v1";
+  script.addEventListener("error", (event) => {
+    console.error("Rezeptvarianten im Mahlzeit-Editor konnten nicht geladen werden.", event);
+  }, { once: true });
+  document.head.appendChild(script);
+  return true;
+}
+
 function loadManualMealFlowRuntime() {
   if (typeof document === "undefined") return false;
-  if (globalThis.__manualMealFlowRuntimeInstalled) return true;
+  if (globalThis.__manualMealFlowRuntimeInstalled) {
+    loadMealEditorRecipeVariantsRuntime();
+    return true;
+  }
   let existing = document.querySelector('script[data-manual-meal-flow="v1"]');
-  if (existing) return true;
+  if (existing) {
+    existing.addEventListener("load", loadMealEditorRecipeVariantsRuntime, { once: true });
+    return true;
+  }
   let script = document.createElement("script");
   script.src = "js/manual-meal-flow.js?v=10.1.25";
   script.dataset.manualMealFlow = "v1";
+  script.addEventListener("load", loadMealEditorRecipeVariantsRuntime, { once: true });
   script.addEventListener("error", (event) => {
     console.error("Manueller Mahlzeiten-Flow konnte nicht geladen werden.", event);
   }, { once: true });
@@ -203,6 +225,7 @@ if (typeof module !== "undefined" && module.exports) {
     plannerCollapseFinishedLogOnlyDays,
     plannerCenterCompletedEditActions,
     installPlannerMealPresentationRuntime,
+    loadMealEditorRecipeVariantsRuntime,
     loadManualMealFlowRuntime,
   };
 }

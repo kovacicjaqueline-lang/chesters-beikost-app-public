@@ -59,6 +59,8 @@ try {
     hasTouch: true,
   });
   const page = await context.newPage();
+  const pageErrors = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
 
   await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => !!window.__beikostTest?.openManualMealSelector);
@@ -113,6 +115,7 @@ try {
     "Kein Lebensmittel gefunden.",
     "Eine leere Suche muss den passenden Hinweis zeigen",
   );
+  assert.deepEqual(pageErrors, [], "Der Suchfluss darf keine JavaScript-Fehler auslösen");
 
   await context.close();
   console.log("ui-meal-editor-search-webkit: ok");

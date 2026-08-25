@@ -170,6 +170,10 @@ test("Runtime: fällige Glutenpflege wird nicht zur Lernaufgabe und blockiert ei
       let second = known ? { meal: "dinner", active: true, focusId: known.f.id, foodIds: [known.f.id], baseFoodIds: [known.f.id], sampleFoodIds: [], type: known.type } : { meal: "dinner", active: true, empty: true };
       return { date, index, meals: [first, second] };
     }
+    function buildDays(from, n = 7) {
+      let ctx = freshPlanContext();
+      return Array.from({ length: n }, (_, index) => buildDay(addDays(from, index), index, ctx));
+    }
   `, context);
   vm.runInContext(source, context);
   const day = vm.runInContext(`buildDay("2026-08-20", 0, freshPlanContext())`, context);

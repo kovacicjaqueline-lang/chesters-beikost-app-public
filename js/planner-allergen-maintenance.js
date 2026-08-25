@@ -2,12 +2,19 @@
 
 /* Langfristige Allergenpflege
  * Trennt etablierte Maintenance-Expositionen von Einführungs-/Lernaufgaben.
- * Gleichwertige Expositionen werden ausschließlich über das bereits strukturierte
- * allergenFamily-Modell zusammengeführt; ohne Familie bleibt die FOOD-Identität erhalten.
+ * Maintenance-Ziele werden datengetrieben aus dem vorhandenen Allergenmodell
+ * abgeleitet. Für ausdrücklich gruppenweite Pflegeziele (derzeit glutenhaltiges
+ * Getreide) kann eine andere bereits geeignete Quelle desselben Allergens die
+ * Exposition erfüllen. Feinere vorhandene allergenFamily-Ziele – insbesondere
+ * einzelne Nussfamilien – bleiben getrennt.
  */
 (function plannerAllergenMaintenanceModule(globalScope) {
-  const FEATURE_VERSION = 1;
+  const FEATURE_VERSION = 2;
   const CONTEXT_KEY = "allergenMaintenanceProjectedTargets";
+  const GROUP_LEVEL_MAINTENANCE_TARGETS = Object.freeze([
+    "Glutenhaltiges Getreide",
+  ]);
+  const GROUP_LEVEL_MAINTENANCE_TARGET_SET = new Set(GROUP_LEVEL_MAINTENANCE_TARGETS);
 
   function text(value) {
     return String(value || "").trim();
@@ -17,6 +24,23 @@
     if (!foodRecord) return null;
     let family = text(foodRecord.allergenFamily);
     let group = text(foodRecord.allergenGroup);
+    if (!group) return null;
+
+    // Langfristige Glutenpflege ist ausdrücklich ein gemeinsames Allergen-Ziel.
+    // Das erweitert NICHT die Einführungsfamilie und verändert daher weder rank()
+    // noch familyPlanningRank() für Hafer, Weizen, Dinkel etc.
+    if (GROUP_LEVEL_MAINTENANCE_TARGET_SET.has(group)) {
+      return {
+        key: `allergen:${group}`,
+        kind: "allergen",
+        value: group,
+        allergenGroup: group,
+      };
+    }
+
+    // Wo das Repository bereits eine feinere allergenFamily modelliert, bleibt
+    // sie für Maintenance maßgeblich. So werden z. B. Mandel und Walnuss nicht
+    // allein über die breite Gruppe „Schalenfrüchte“ gleichgesetzt.
     if (family) {
       return {
         key: `family:${family}`,
@@ -25,11 +49,13 @@
         allergenGroup: group,
       };
     }
-    if (!group || !text(foodRecord.id)) return null;
+
+    // Ohne feinere Familie ist die bestehende strukturierte Allergengruppe das
+    // zentrale Pflegeziel (z. B. Ei, Fisch, Soja).
     return {
-      key: `food:${foodRecord.id}`,
-      kind: "food",
-      value: foodRecord.id,
+      key: `allergen:${group}`,
+      kind: "allergen",
+      value: group,
       allergenGroup: group,
     };
   }
@@ -183,6 +209,7 @@
   const CORE = Object.freeze({
     FEATURE_VERSION,
     CONTEXT_KEY,
+    GROUP_LEVEL_MAINTENANCE_TARGETS,
     targetForFood,
     targetMatchesFood,
     targetFoodIds,
@@ -280,8 +307,9 @@
   }
 
   // Kompatibilitätsabfrage für bestehende Status-/Planprüfungen: genau ein
-  // Vertreter pro Maintenance-Ziel wird als fällig gemeldet. Die Lernkandidaten
-  // blenden diese Langzeitpflege innerhalb von buildDay separat aus.
+  // Vertreter pro Maintenance-Ziel wird als fällig gemeldet. Während der
+  // bestehenden Quality-/Introduction-Baseline wird diese Langzeitpflege
+  // vorübergehend ausgeblendet, damit sie keine Lernaufgabe erzeugt.
   dueAllergen = function maintenanceAwareDueAllergen(foodRecord, on) {
     return maintenanceFoodIsDue(foodRecord, on);
   };
@@ -340,8 +368,10 @@
     };
 
     try {
-      // Langzeitpflege ist keine Lernaufgabe. Nur der bestehende Lernpfad sieht
-      // deshalb während der Basiserzeugung keine Maintenance-Fälligkeiten.
+      // Langzeitpflege ist keine Lernaufgabe. Die komplette bestehende
+      // Quality-/Introduction-Baseline sieht deshalb während der Erzeugung keine
+      // Maintenance-Fälligkeiten. maintenanceKnownCandidate() bleibt davon
+      // unabhängig und priorisiert fällige Ziele nur in normalen bekannten Pfaden.
       dueAllergen = () => false;
       let day = baseBuildDay(date, index, ctx);
       let actualTargetKeys = new Set();
@@ -361,9 +391,12 @@
     }
   };
 
-  if (typeof planIssues === "function") {
-    let basePlanIssues = planIssues;
-    planIssues = function maintenanceAwarePlanIssues(days = []) {
+  // Die bestehende sichtbare Planprüfung bleibt textlich unverändert. Technisch
+  // wird lediglich verhindert, dass sie eine FOOD-ID beanstandet, obwohl dieselbe
+  // Maintenance-Quelle bereits durch ein anderes geeignetes FOOD/Rezept abgedeckt ist.
+  if (typeof planQualityIssues === "function") {
+    let basePlanQualityIssues = planQualityIssues;
+    planQualityIssues = function maintenanceAwarePlanQualityIssues(days = []) {
       let projected = new Set();
       for (let day of days || []) {
         for (let meal of day?.meals || []) {
@@ -376,7 +409,7 @@
         return !!target && !projected.has(target.key) && liveDueAllergen(foodRecord, on);
       };
       try {
-        return basePlanIssues(days);
+        return basePlanQualityIssues(days);
       } finally {
         dueAllergen = liveDueAllergen;
       }

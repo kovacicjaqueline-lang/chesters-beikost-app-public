@@ -19,12 +19,13 @@ const MEAL_EDITOR_RECIPE_COMPONENT_FIELDS = Object.freeze({
 });
 
 /*
- * Bereits vorhandene kanonische FOOD-Identitäten, die im Milch-Getreide-Brei
- * als pflanzliche Milchform verwendet werden können. Es werden bewusst keine
- * neuen FOOD-Datensätze erfunden: Sojamilch, Mandelmilch und Kokosmilch bleiben
- * Zubereitungsformen der bestehenden Identitäten Sojabohne, Mandel und Kokos.
+ * `milkChoices` bezeichnet im Editor die fachliche Gruppe Milch/Milchalternative.
+ * Die folgenden Einträge bilden bereits vorhandene kanonische FOOD-Identitäten auf
+ * ihre Rezeptform ab. Es werden bewusst keine neuen FOOD-Datensätze erfunden:
+ * Sojamilch, Mandelmilch und Kokosmilch bleiben Zubereitungsformen von
+ * Sojabohne, Mandel und Kokos; Haferdrink besitzt bereits eine eigene FOOD-ID.
  */
-const MEAL_EDITOR_MILK_ALTERNATIVE_FORMS = Object.freeze([
+const MEAL_EDITOR_MILK_CHOICE_FORMS = Object.freeze([
   Object.freeze({ foodId: "haferdrink", label: "Haferdrink" }),
   Object.freeze({ foodId: "sojabohne", label: "Sojamilch" }),
   Object.freeze({ foodId: "mandel", label: "Mandelmilch" }),
@@ -50,8 +51,8 @@ function mealEditorRecipeComponentLabel(field, foods) {
   return categories[0];
 }
 
-function mealEditorMilkAlternativeChoices(lookup) {
-  return MEAL_EDITOR_MILK_ALTERNATIVE_FORMS
+function mealEditorMilkChoiceForms(lookup) {
+  return MEAL_EDITOR_MILK_CHOICE_FORMS
     .map((choice) => {
       let foodRecord = mealEditorRecipeLookup(lookup, "id", choice.foodId);
       return foodRecord ? { food: foodRecord, label: choice.label } : null;
@@ -73,7 +74,7 @@ function mealEditorRecipeComponentSlots(recipe, lookup = {}) {
         }
       }
       if (field === "milkChoices") {
-        for (let choice of mealEditorMilkAlternativeChoices(lookup)) {
+        for (let choice of mealEditorMilkChoiceForms(lookup)) {
           if (!choices.some((current) => current.food.id === choice.food.id)) choices.push(choice);
         }
       }
@@ -524,9 +525,9 @@ if (typeof window !== "undefined" && typeof document !== "undefined") installMea
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     MEAL_EDITOR_RECIPE_COMPONENT_FIELDS,
-    MEAL_EDITOR_MILK_ALTERNATIVE_FORMS,
+    MEAL_EDITOR_MILK_CHOICE_FORMS,
     mealEditorRecipeComponentLabel,
-    mealEditorMilkAlternativeChoices,
+    mealEditorMilkChoiceForms,
     mealEditorRecipeComponentSlots,
     mealEditorRecipeSelectionFromFoodIds,
     mealEditorRecipeConfiguredFoodIds,

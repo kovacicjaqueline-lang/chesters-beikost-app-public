@@ -236,15 +236,38 @@ Allergenlogik verwendet das strukturierte `allergenGroup`/Allergen-Familienmodel
 
 Neue Allergengruppen müssen durch dieselbe Plannerlogik laufen wie bereits vorhandene.
 
-## 6.2 Einführung und Wiederholung ✅ main
+## 6.2 Einführung und gezielte Wiederholung ✅ main
 
 - Ein noch offenes Allergen kann nur eingeführt werden, wenn eine geeignete bekannte Basis vorhanden ist.
-- Fällige Allergene können gezielt wiederholt werden.
-- Allergen-Wiederholungen dürfen vorhandene harte Mahlzeiten-/Safety-Gates nicht umgehen.
-- Sobald automatisch eine Allergen-Einführung oder gezielte Allergen-Wiederholung geplant wird, ist sie die **einzige automatische Lernaufgabe dieses Tages**; weitere neue Nicht-Allergene oder andere automatische Lernwiederholungen werden an diesem Tag nicht zusätzlich eingeplant.
+- Eine gezielte Wiederholung bleibt Teil der Lernphase, wenn sie fachlich noch zur Einführung gehört, etwa als bewusstes Follow-up nach einer Einführung oder Reaktion/Ablehnung.
+- Solche Allergen-Wiederholungen dürfen vorhandene harte Mahlzeiten-/Safety-Gates nicht umgehen.
+- Sobald automatisch eine Allergen-Einführung oder tatsächlich noch zur Lernphase gehörende gezielte Allergen-Wiederholung geplant wird, ist sie die **einzige automatische Lernaufgabe dieses Tages**; weitere neue Nicht-Allergene oder andere automatische Lernwiederholungen werden an diesem Tag nicht zusätzlich eingeplant.
 - Eine bereits manuell/fest geplante andere Kostprobe verhindert umgekehrt, dass zusätzlich automatisch ein Allergen als zweite Lernaufgabe desselben Tages eingeschoben wird.
+- Eine routinemäßige Langzeitpflege eines bereits vertragenen Allergens gehört **nicht** in diesen Lernpfad; dafür gilt Abschnitt 6.3.
 
-## 6.3 Nüsse/Samen: Komponente, Sample und Topping ✅ main
+## 6.3 Langfristige Allergenpflege 🟡 Branch/Integrations-PR
+
+Für bereits verträgliche Allergene ist die regelmäßige Pflegeexposition fachlich von Einführung und gezielter Lernwiederholung getrennt:
+
+- Langfristige Pflege ist **keine neue FOOD-Einführung, keine Kostprobe und keine Lernaufgabe**. Sie darf daher keinen ansonsten freien FOOD-Einführungsslot verbrauchen und wird als normale bekannte Mahlzeit/Komponente behandelt.
+- Die Fälligkeit wird nicht mehr allein pro FOOD-ID über `lastDate(foodId)` bewertet. Maßgeblich ist ein zentrales Maintenance-Ziel aus dem vorhandenen strukturierten Allergenmodell.
+- Wo eine feinere `allergenFamily` fachlich eine konkrete Allergenquelle trennt, bleibt diese Trennung erhalten. Insbesondere werden unterschiedliche Nussfamilien nicht allein über die breite Gruppe `Schalenfrüchte` gleichgesetzt.
+- Für die ausdrücklich freigegebene **Glutenpflege** gilt dagegen `Glutenhaltiges Getreide` als gemeinsames langfristiges Maintenance-Ziel. Ein bereits geeignetes glutenhaltiges Lebensmittel wie Hafer, Weizen oder Dinkel kann deshalb dasselbe Pflegeziel erfüllen. Das macht diese FOODs **nicht** zu derselben Einführungsfamilie und verändert ihre Einführungs-/Statuslogik nicht.
+- Ohne feinere Familie wird die bestehende strukturierte `allergenGroup` als langfristiges Pflegeziel verwendet; es wird dafür keine neue medizinische Gruppe erfunden.
+- Ein anderes FOOD darf ein Pflegeziel nur erfüllen, wenn es selbst über den normalen bekannten Planner-Pfad für die konkrete Mahlzeit geeignet ist. `autoPlan`, Mahlzeiteneignung, `minPhase`, Alter, `Pausiert`, Safety, Rollen und weitere harte Gates bleiben vollständig wirksam.
+- Rezepte können ein oder mehrere Pflegeziele über ihre **tatsächlichen kanonischen Zutaten** abdecken. Ein bloßer Rezeptname genügt nicht.
+- Eine bereits geplante passende Mahlzeit oder ein passendes Rezept zählt als **voraussichtliche Abdeckung** für die Planung. Historisch erfüllt bzw. zeitlich zurückgesetzt wird das Pflegeziel erst durch eine protokollierte relevante Zutat mit Ergebnis `eaten`.
+- Eine normale Mahlzeit darf mehrere bereits bekannte Pflegeziele gleichzeitig abdecken.
+- Der Planner versucht Pflege innerhalb ohnehin geeigneter normaler Mahlzeiten, bekannter Komponenten oder geeigneter Rezepte unterzubringen. Bei wenigen verfügbaren Mahlzeiten darf Pflege nicht praktisch alle Slots als Lernslots blockieren; eine echte FOOD-Einführung behält ihren eigenen Lernslot.
+- Ist in einem knappen Plan keine geeignete normale Abdeckung möglich, wird daraus **keine künstliche neue Lernaufgabe** konstruiert.
+
+Referenzfall:
+
+**„Hafer sollte als Allergen wieder angeboten werden; kein geeigneter freier Slot.“**
+
+Eine fällige Langzeitpflege darf diesen FOOD-Lernslot nicht mehr allein wegen der FOOD-ID `hafer` blockieren. Ist das gemeinsame Glutenpflegeziel bereits durch eine andere geeignete geplante glutenhaltige Quelle oder ein passendes Rezept abgedeckt, gilt die Planung voraussichtlich als gedeckt; tatsächlich erfüllt ist sie erst nach protokolliertem Essen der relevanten Zutat.
+
+## 6.4 Nüsse/Samen: Komponente, Sample und Topping ✅ main
 
 Fachlich beschlossen und auf `main` integriert:
 
@@ -329,7 +352,7 @@ Das eine neue FOOD muss bereits die einzige geplante Kostprobe der Mahlzeit sein
 
 Ohne geplante Kostprobe darf Recipe-first kein unbekanntes FOOD ergänzen.
 
-Ein nach Abschnitt 6.3 geplantes Nuss-/Samenmus-Topping bleibt die eine Kostprobe der Mahlzeit. Die zugrunde liegenden Zutaten des Obst-Getreide-Breis müssen vollständig bekannt und geeignet sein; das Topping wird nicht in die kanonische Rezeptzutatenmenge umgedeutet.
+Ein nach Abschnitt 6.4 geplantes Nuss-/Samenmus-Topping bleibt die eine Kostprobe der Mahlzeit. Die zugrunde liegenden Zutaten des Obst-Getreide-Breis müssen vollständig bekannt und geeignet sein; das Topping wird nicht in die kanonische Rezeptzutatenmenge umgedeutet.
 
 ## 9.3 Mehrdeutige Rezepte
 
@@ -549,6 +572,11 @@ Weitere offene FOOD-Datenfragen werden separat im FOOD-Fachregel-Track geklärt 
 - tägliche Nicht-Allergen-Einführung mit höchstens einem unbekannten FOOD je Frühstück/Mittag/Abend;
 - ein erfolgreich `Probiert`-FOOD blockiert keine geeignete offene Neueinführung; echte Ablehnung bleibt gezielter Wiederholungspfad;
 - Allergen-Einführung oder gezielte Allergen-Wiederholung bleibt die einzige automatische Lernaufgabe des Tages;
+- langfristige Allergenpflege ist keine Lernaufgabe, kein `sample` und verbraucht keinen FOOD-Einführungsslot;
+- Maintenance-Fälligkeit wird pro Pflegeziel statt ausschließlich pro FOOD-ID bewertet; nur `eaten` erfüllt die historische Exposition;
+- Glutenpflege darf durch eine andere bereits geeignete glutenhaltige Quelle oder ein Rezept mit tatsächlicher kanonischer Gluten-Zutat abgedeckt werden, ohne Hafer/Weizen/Dinkel als Einführungsfamilie gleichzusetzen;
+- feinere vorhandene Allergenfamilien – insbesondere einzelne Nussfamilien – bleiben als getrennte Maintenance-Ziele erhalten;
+- geplante FOODs/Rezepte zählen nur als voraussichtliche Maintenance-Abdeckung; mehrere bekannte Pflegeziele dürfen durch dieselbe normale Mahlzeit abgedeckt werden;
 - Snack führt keine neuen FOODs ein, darf aber ein geeignetes Rezept oder bekanntes Obst sein;
 - der Obst-Snackpfad erzeugt kein generisches FOOD-`snack`-Modell für andere Kategorien;
 - Mahlzeiteneignung/PLAN-07;
@@ -600,6 +628,7 @@ Aktuelle Kernquellen:
 - `js/planner-food-role-stability.js`
 - `js/planner-quality-rotation.js`
 - `js/planner-introduction-policy.js`
+- `js/planner-allergen-maintenance.js`
 - `docs/PLAN-08_COMBINATION_AUDIT.md`
 - `docs/PLAN-08_RECIPE_FIRST.md`
 - `docs/FOOD_SEASONMONTHS_AT_AUDIT.md`
@@ -619,6 +648,7 @@ Zentrale Regressionen:
 - `tests/planner-proactive-recipe-intro-exact.test.cjs`
 - `tests/planner-quality-rotation.test.cjs`
 - `tests/planner-introduction-frequency.test.cjs`
+- `tests/planner-allergen-maintenance.test.cjs`
 - `tests/planner-nut-seed-toppings.test.cjs`
 - `tests/planner-nut-seed-review-fixes.test.cjs`
 - `tests/planner-nut-seed-focus-gate-chain.test.cjs`

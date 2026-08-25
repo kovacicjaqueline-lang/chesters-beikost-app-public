@@ -387,7 +387,7 @@ try {
   // 9. Phase-Details zeigen tatsächliche erfüllte und fehlende Kriterien.
   await page.evaluate(() => window.__beikostTest.reset());
   await showView(page, "home");
-  await page.locator(".open-phase-details").click();
+  await page.locator(".phase-details-trigger").click();
   await page.locator('[data-readiness-signal="currentPatternAccepted"][data-readiness-value="yes"]').click();
   await page.locator('[data-readiness-signal="additionalMealCue"][data-readiness-value="no"]').click();
   await page.locator('[data-readiness-signal="routineCompatible"][data-readiness-value="unknown"]').click();

@@ -64,7 +64,7 @@ try {
   const today = await page.evaluate(() => {
     window.__beikostTest.reset();
     const state = window.__beikostTest.getState();
-    for (const id of ["hafer", "banane", "kuhmilch", "pfirsich", "karotte"]) {
+    for (const id of ["hafer", "banane", "ei", "kuhmilch", "pfirsich", "karotte"]) {
       const item = state.foods.find((food) => food.id === id);
       if (item) item.manualStatus = "Verträgliche Basis";
     }
@@ -81,6 +81,7 @@ try {
       baseFoodIds: ["hafer", "banane"],
       sampleFoodIds: [],
       foodRoles: { hafer: "base", banane: "base" },
+      presentationMode: "spoon-smooth",
       type: "bekannt",
     });
   }, today);
@@ -115,6 +116,29 @@ try {
   await page.locator('.selectRecipe.selected[data-recipe]').waitFor();
   await recipePresentation.waitFor();
   assert.equal(await page.locator("#genericBody .manual-preparation-field:visible").count(), 0);
+
+  // Review-Regression: Beim Wechsel auf ein anderes Rezept darf die alte Rezeptdarreichung
+  // nicht im neu gespeicherten Plan-Lock hängen bleiben.
+  const pancakeRecipe = page.locator('.selectRecipe[data-recipe="Bananen-Ei-Pancakes"]');
+  await pancakeRecipe.waitFor();
+  await pancakeRecipe.click();
+  await recipePresentation.waitFor();
+  assert.match(
+    await recipePresentation.innerText(),
+    /Weiches Fingerfood/,
+    "das neu gewählte Rezept muss seine eigene rezeptdefinierte Darreichung anzeigen",
+  );
+  await page.locator("#confirmManualMeal").click();
+  await page.locator("#genericModal").waitFor({ state: "hidden" });
+  const changedRecipeLock = await page.evaluate((date) =>
+    window.__beikostTest.getState().planLocks?.[`${date}|breakfast`],
+  today);
+  assert.equal(changedRecipeLock?.recipeName, "Bananen-Ei-Pancakes");
+  assert.equal(
+    changedRecipeLock?.presentationMode,
+    "finger-graspable",
+    "der neue Lock darf nicht die alte spoon-smooth-Darreichung übernehmen",
+  );
 
   await page.evaluate((date) => {
     window.__beikostTest.openManualMealSelector(date, "breakfast", {

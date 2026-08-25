@@ -2,11 +2,6 @@
 
 /* Langfristige Allergenpflege
  * Trennt etablierte Maintenance-Expositionen von Einführungs-/Lernaufgaben.
- * Maintenance-Ziele werden datengetrieben aus dem vorhandenen Allergenmodell
- * abgeleitet. Für ausdrücklich gruppenweite Pflegeziele (derzeit glutenhaltiges
- * Getreide) kann eine andere bereits geeignete Quelle desselben Allergens die
- * Exposition erfüllen. Feinere vorhandene allergenFamily-Ziele – insbesondere
- * einzelne Nussfamilien – bleiben getrennt.
  */
 (function plannerAllergenMaintenanceModule(globalScope) {
   const FEATURE_VERSION = 2;
@@ -26,9 +21,6 @@
     let group = text(foodRecord.allergenGroup);
     if (!group) return null;
 
-    // Langfristige Glutenpflege ist ausdrücklich ein gemeinsames Allergen-Ziel.
-    // Das erweitert NICHT die Einführungsfamilie und verändert daher weder rank()
-    // noch familyPlanningRank() für Hafer, Weizen, Dinkel etc.
     if (GROUP_LEVEL_MAINTENANCE_TARGET_SET.has(group)) {
       return {
         key: `allergen:${group}`,
@@ -38,9 +30,6 @@
       };
     }
 
-    // Wo das Repository bereits eine feinere allergenFamily modelliert, bleibt
-    // sie für Maintenance maßgeblich. So werden z. B. Mandel und Walnuss nicht
-    // allein über die breite Gruppe „Schalenfrüchte“ gleichgesetzt.
     if (family) {
       return {
         key: `family:${family}`,
@@ -50,8 +39,6 @@
       };
     }
 
-    // Ohne feinere Familie ist die bestehende strukturierte Allergengruppe das
-    // zentrale Pflegeziel (z. B. Ei, Fisch, Soja).
     return {
       key: `allergen:${group}`,
       kind: "allergen",
@@ -125,7 +112,13 @@
     return Number.isFinite(a) && Number.isFinite(b) ? a - b : NaN;
   }
 
-  function latestSuccessfulExposureDate(target, foods = [], logs = [], outcomeForFoodFn = () => "", on = "") {
+  function latestSuccessfulExposureDate(
+    target,
+    foods = [],
+    logs = [],
+    outcomeForFoodFn = () => "",
+    on = "",
+  ) {
     let ids = new Set(targetFoodIds(target, foods));
     if (!ids.size) return "";
     let latest = "";
@@ -145,8 +138,7 @@
     for (let foodRecord of foods || []) {
       let target = targetForFood(foodRecord);
       if (!target || Number(rankFn(foodRecord)) < 2) continue;
-      let current = byKey.get(target.key);
-      if (!current) {
+      if (!byKey.has(target.key)) {
         byKey.set(target.key, {
           ...target,
           representativeFoodId: foodRecord.id,
@@ -173,7 +165,13 @@
     return establishedTargets(foods, rankFn)
       .map((target) => ({
         ...target,
-        lastEatenDate: latestSuccessfulExposureDate(target, foods, logs, outcomeForFoodFn, on),
+        lastEatenDate: latestSuccessfulExposureDate(
+          target,
+          foods,
+          logs,
+          outcomeForFoodFn,
+          on,
+        ),
       }))
       .filter((target) =>
         target.lastEatenDate &&
@@ -252,19 +250,38 @@
     });
   }
 
-  function markRuntimeRecord(ctx, record) {
+  function runtimeMealCompleted(date, meal) {
+    return !!(
+      date &&
+      meal &&
+      typeof mealIsCompleted === "function" &&
+      mealIsCompleted(date, meal)
+    );
+  }
+
+  function markRuntimeRecord(ctx, record, date = "") {
+    if (!record || runtimeMealCompleted(date, record.meal)) {
+      return CORE.ensureProjectedTargetSet(ctx);
+    }
     return CORE.markProjectedRecord(ctx, record, state.foods, runtimeHelpers());
+  }
+
+  function runtimePresetFor(date, meal) {
+    if (runtimeMealCompleted(date, meal)) return null;
+    return manualMealFor(date, meal) || lockedMeal(date, meal);
   }
 
   function markPresetRange(ctx, from, count) {
     let end = addDays(from, Math.max(0, Number(count || 0) - 1));
-    for (let [key, record] of Object.entries(state.manualMeals || {})) {
-      let date = key.split("|")[0];
-      if (date >= from && date <= end) markRuntimeRecord(ctx, record);
-    }
-    for (let [key, record] of Object.entries(state.planLocks || {})) {
-      let date = key.split("|")[0];
-      if (date >= from && date <= end) markRuntimeRecord(ctx, record);
+    let keys = new Set([
+      ...Object.keys(state.manualMeals || {}),
+      ...Object.keys(state.planLocks || {}),
+    ]);
+    for (let key of keys) {
+      let [date, meal] = key.split("|");
+      if (!date || !meal || date < from || date > end) continue;
+      let record = runtimePresetFor(date, meal);
+      if (record) markRuntimeRecord(ctx, record, date);
     }
   }
 
@@ -290,6 +307,20 @@
     return liveKnownCandidate(meal, on, ctx, exclude);
   }
 
+  function maintenanceRecipeSelection(candidates, on, ctx, selectFn) {
+    if (typeof selectFn !== "function") return { result: null, target: null };
+    let regular = (candidates || []).filter((candidate) => !candidate?.sampleFoodId);
+    for (let target of runtimeDueTargets(on, ctx)) {
+      let matching = regular.filter((candidate) =>
+        (candidate?.ids || []).some((id) => CORE.targetMatchesFood(target, food(id))),
+      );
+      if (!matching.length) continue;
+      let selected = selectFn(matching, ctx);
+      if (selected) return { result: selected, target };
+    }
+    return { result: selectFn(candidates, ctx), target: null };
+  }
+
   function maintenanceFoodIsDue(foodRecord, on) {
     let target = CORE.targetForFood(foodRecord);
     if (!target) return false;
@@ -308,10 +339,6 @@
       CORE.dayDistance(on, lastEatenDate) >= Math.max(1, Number(state.settings.allergenDays) || 7);
   }
 
-  // Kompatibilitätsabfrage für bestehende Status-/Planprüfungen: genau ein
-  // Vertreter pro Maintenance-Ziel wird als fällig gemeldet. Während der
-  // bestehenden Quality-/Introduction-Baseline wird diese Langzeitpflege
-  // vorübergehend ausgeblendet, damit sie keine Lernaufgabe erzeugt.
   dueAllergen = function maintenanceAwareDueAllergen(foodRecord, on) {
     return maintenanceFoodIsDue(foodRecord, on);
   };
@@ -338,21 +365,31 @@
     let projected = CORE.ensureProjectedTargetSet(ctx);
     let projectedBeforeDay = new Set(projected);
     let provisionalTargets = new Set();
+    let provisionalFoodTargets = new Map();
+
     for (let meal of ["breakfast", "lunch", "snack", "dinner"]) {
-      let preset = manualMealFor(date, meal) || lockedMeal(date, meal);
-      if (preset) markRuntimeRecord(ctx, preset);
+      let preset = runtimePresetFor(date, meal);
+      if (preset) markRuntimeRecord(ctx, preset, date);
     }
 
     let liveDueAllergen = dueAllergen;
     let liveKnownCandidate = knownCandidate;
     let liveRecipeStockCandidate = recipeStockCandidate;
     let liveSnackRecipeCandidate = snackRecipeCandidate;
+    let liveCombinationPaused = typeof combinationPaused === "function" ? combinationPaused : null;
+    let liveSelectProactiveRecipe = typeof plannerSelectProactiveRecipe === "function"
+      ? plannerSelectProactiveRecipe
+      : null;
 
     knownCandidate = function maintenancePriorityKnownCandidate(meal, on, innerCtx, exclude = []) {
       let result = maintenanceKnownCandidate(liveKnownCandidate, meal, on, innerCtx, exclude);
-      if (result?.allergenMaintenanceTarget) provisionalTargets.add(result.allergenMaintenanceTarget);
+      if (result?.allergenMaintenanceTarget) {
+        provisionalTargets.add(result.allergenMaintenanceTarget);
+        provisionalFoodTargets.set(result.f.id, result.allergenMaintenanceTarget);
+      }
       return result;
     };
+
     recipeStockCandidate = function maintenanceAwareRecipeStockCandidate(meal, on, innerCtx) {
       let result = liveRecipeStockCandidate(meal, on, innerCtx);
       if (result) {
@@ -362,6 +399,7 @@
       }
       return result;
     };
+
     snackRecipeCandidate = function maintenanceAwareSnackRecipeCandidate(on, innerCtx) {
       let result = liveSnackRecipeCandidate(on, innerCtx);
       if (result) {
@@ -372,17 +410,49 @@
       return result;
     };
 
+    if (liveCombinationPaused) {
+      combinationPaused = function maintenanceAwareCombinationPaused(ids, on) {
+        let paused = liveCombinationPaused(ids, on);
+        if (!paused) return paused;
+        for (let id of ids || []) {
+          let targetKey = provisionalFoodTargets.get(id);
+          if (!targetKey) continue;
+          projected.delete(targetKey);
+          provisionalTargets.delete(targetKey);
+          provisionalFoodTargets.delete(id);
+        }
+        return paused;
+      };
+    }
+
+    if (liveSelectProactiveRecipe) {
+      plannerSelectProactiveRecipe = function maintenanceAwareProactiveRecipeSelection(candidates, innerCtx = {}) {
+        let selection = maintenanceRecipeSelection(
+          candidates,
+          date,
+          innerCtx,
+          liveSelectProactiveRecipe,
+        );
+        if (selection.target) {
+          CORE.ensureProjectedTargetSet(innerCtx).add(selection.target.key);
+          provisionalTargets.add(selection.target.key);
+        }
+        return selection.result;
+      };
+    }
+
     try {
-      // Langzeitpflege ist keine Lernaufgabe. Die komplette bestehende
-      // Quality-/Introduction-Baseline sieht deshalb während der Erzeugung keine
-      // Maintenance-Fälligkeiten. maintenanceKnownCandidate() bleibt davon
-      // unabhängig und priorisiert fällige Ziele nur in normalen bekannten Pfaden.
       dueAllergen = () => false;
       let day = baseBuildDay(date, index, ctx);
       let actualTargetKeys = new Set();
       for (let meal of day?.meals || []) {
-        markRuntimeRecord(ctx, meal);
-        for (let key of CORE.projectedTargetKeysForRecord(meal, state.foods, runtimeHelpers())) actualTargetKeys.add(key);
+        if (runtimeMealCompleted(date, meal?.meal)) continue;
+        markRuntimeRecord(ctx, meal, date);
+        for (let key of CORE.projectedTargetKeysForRecord(
+          meal,
+          state.foods,
+          runtimeHelpers(),
+        )) actualTargetKeys.add(key);
       }
       for (let key of provisionalTargets) {
         if (!actualTargetKeys.has(key) && !projectedBeforeDay.has(key)) projected.delete(key);
@@ -393,19 +463,23 @@
       knownCandidate = liveKnownCandidate;
       recipeStockCandidate = liveRecipeStockCandidate;
       snackRecipeCandidate = liveSnackRecipeCandidate;
+      if (liveCombinationPaused) combinationPaused = liveCombinationPaused;
+      if (liveSelectProactiveRecipe) plannerSelectProactiveRecipe = liveSelectProactiveRecipe;
     }
   };
 
-  // Die bestehende sichtbare Planprüfung bleibt textlich unverändert. Technisch
-  // wird lediglich verhindert, dass sie eine FOOD-ID beanstandet, obwohl dieselbe
-  // Maintenance-Quelle bereits durch ein anderes geeignetes FOOD/Rezept abgedeckt ist.
   if (typeof planQualityIssues === "function") {
     let basePlanQualityIssues = planQualityIssues;
     planQualityIssues = function maintenanceAwarePlanQualityIssues(days = []) {
       let projected = new Set();
       for (let day of days || []) {
         for (let meal of day?.meals || []) {
-          for (let key of CORE.projectedTargetKeysForRecord(meal, state.foods, runtimeHelpers())) projected.add(key);
+          if (runtimeMealCompleted(day?.date, meal?.meal)) continue;
+          for (let key of CORE.projectedTargetKeysForRecord(
+            meal,
+            state.foods,
+            runtimeHelpers(),
+          )) projected.add(key);
         }
       }
       let liveDueAllergen = dueAllergen;

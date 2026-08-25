@@ -4,6 +4,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const {
+  MEAL_EDITOR_MILK_ALTERNATIVE_FORMS,
   mealEditorRecipeComponentSlots,
   mealEditorRecipeSelectionFromFoodIds,
   mealEditorRecipeConfiguredFoodIds,
@@ -19,6 +20,9 @@ const foods = [
   { id: "naturjoghurt", name: "Naturjoghurt", category: "Milchprodukt" },
   { id: "buttermilch", name: "Buttermilch", category: "Milchprodukt" },
   { id: "haferdrink", name: "Haferdrink", category: "Getreide/Stärke" },
+  { id: "sojabohne", name: "Sojabohne", category: "Hülsenfrucht" },
+  { id: "mandel", name: "Mandel", category: "Nuss" },
+  { id: "kokos", name: "Kokos", category: "Obst/Fett" },
 ];
 const byId = new Map(foods.map((item) => [item.id, item]));
 const byName = new Map(foods.map((item) => [item.name, item]));
@@ -50,7 +54,7 @@ test("gespeicherte variable Rezeptkomponente wird aus foodIds wiederhergestellt"
   );
 });
 
-test("Milch-Getreide-Brei exponiert Getreide und Milch getrennt", () => {
+test("Milch-Getreide-Brei exponiert Getreide und alle vorgesehenen Milchformen getrennt", () => {
   const recipe = {
     name: "Milch-Getreide-Brei",
     requires: [],
@@ -63,17 +67,44 @@ test("Milch-Getreide-Brei exponiert Getreide und Milch getrennt", () => {
   assert.equal(slots[0].preparationSelectable, false);
   assert.equal(slots[1].label, "Milch / Milchalternative");
   assert.equal(slots[1].preparationSelectable, false);
-  assert.deepEqual(slots[1].foodIds, ["kuhmilch", "naturjoghurt", "buttermilch", "haferdrink"]);
+  assert.deepEqual(
+    slots[1].foodIds,
+    ["kuhmilch", "naturjoghurt", "buttermilch", "haferdrink", "sojabohne", "mandel", "kokos"],
+  );
+  assert.deepEqual(
+    slots[1].choices.map((choice) => choice.label),
+    ["Kuhmilch", "Naturjoghurt", "Buttermilch", "Haferdrink", "Sojamilch", "Mandelmilch", "Kokosmilch"],
+  );
 
   assert.deepEqual(
-    mealEditorRecipeConfiguredFoodIds(recipe, ["hafer", "kuhmilch"], { oneOf: "hirse", milkChoices: "haferdrink" }, lookup),
-    ["hirse", "haferdrink"],
+    mealEditorRecipeConfiguredFoodIds(recipe, ["hafer", "kuhmilch"], { oneOf: "hirse", milkChoices: "mandel" }, lookup),
+    ["hirse", "mandel"],
   );
 });
 
-test("zusätzliche Milchalternative wird nur bei vorhandenem milkChoices-Slot ergänzt", () => {
+test("pflanzliche Milchformen verwenden bestehende FOOD-Identitäten statt neue FOODs zu erfinden", () => {
+  assert.deepEqual(
+    MEAL_EDITOR_MILK_ALTERNATIVE_FORMS,
+    [
+      { foodId: "haferdrink", label: "Haferdrink" },
+      { foodId: "sojabohne", label: "Sojamilch" },
+      { foodId: "mandel", label: "Mandelmilch" },
+      { foodId: "kokos", label: "Kokosmilch" },
+    ],
+  );
+});
+
+test("Milchalternativen werden nur bei vorhandenem milkChoices-Slot ergänzt", () => {
   const recipe = { name: "Nur Getreide", requires: [], oneOf: ["Hafer", "Hirse"] };
   const slots = mealEditorRecipeComponentSlots(recipe, lookup);
   assert.equal(slots.length, 1);
-  assert.equal(slots[0].foodIds.includes("haferdrink"), false);
+  for (const id of ["haferdrink", "sojabohne", "mandel", "kokos"]) {
+    assert.equal(slots[0].foodIds.includes(id), false);
+  }
+});
+
+test("nicht-variable Rezepte erzeugen keine Komponentenslots", () => {
+  const recipe = { name: "Kürbis-Hafer-Brei", requires: ["Kürbis", "Hafer"] };
+  assert.deepEqual(mealEditorRecipeComponentSlots(recipe, lookup), []);
+  assert.deepEqual(mealEditorRecipeConfiguredFoodIds(recipe, ["hafer"], {}, lookup), ["hafer"]);
 });

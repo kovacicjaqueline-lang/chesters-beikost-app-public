@@ -68,7 +68,11 @@ test("Planner-Boot: Allergenpflege wird nach Introduction und vor Handling/final
   );
   assert.match(
     utilsSource,
-    /planner-allergen-maintenance\.js\?v=10\.1\.26[\s\S]*finishPlannerPolicies\(\)/,
+    /let installMaintenanceAndFinish = \(\) => \{[\s\S]*PlannerAllergenMaintenance[\s\S]*finishPlannerPolicies\(\);[\s\S]*\};/,
+  );
+  assert.match(
+    utilsSource,
+    /maintenanceScript\.src = "js\/planner-allergen-maintenance\.js\?v=10\.1\.26";[\s\S]*maintenanceScript\.addEventListener\("load", installMaintenanceAndFinish, \{ once: true \}\)/,
   );
   assert.match(
     swSource,

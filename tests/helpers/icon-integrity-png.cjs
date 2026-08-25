@@ -73,8 +73,8 @@ function decodeEmbeddedPng(png, label) {
   const height = ihdr.readUInt32BE(4);
   const bitDepth = ihdr[8];
   const colorType = ihdr[9];
-  assert.equal(width, 128, `${label}: eingebettete PNG-Breite`);
-  assert.equal(height, 128, `${label}: eingebettete PNG-Höhe`);
+  assert.ok(width >= 128, `${label}: eingebettete PNG-Breite muss mindestens 128 sein`);
+  assert.equal(height, width, `${label}: eingebettetes PNG muss quadratisch sein`);
   assert.equal(bitDepth, 8, `${label}: nur 8-Bit-PNGs im V2-Assetformat`);
   assert.equal(ihdr[10], 0, `${label}: PNG-Kompressionsmethode`);
   assert.equal(ihdr[11], 0, `${label}: PNG-Filtermethode`);

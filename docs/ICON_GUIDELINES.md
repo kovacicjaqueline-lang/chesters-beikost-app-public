@@ -80,7 +80,7 @@ Ziel ist eine freundliche FOOD-Illustration für eine Baby-/Beikost-App, nicht e
 
 - Transparenter Hintergrund muss tatsächlich als Alpha-Transparenz vorliegen; ein eingebranntes Schachbrett gilt nicht als transparent.
 - Quadratisches Ausgangsformat mit ausreichend Rand um das Motiv.
-- Food-V2 und Recipe-V2 verwenden das bestehende 128×128-Assetformat.
+- Food-V2 und Recipe-V2 verwenden einen 128×128-SVG-Wrapper; das eingebettete quadratische PNG darf für scharfe Darstellung bei 96 px hochauflösend größer als 128×128 sein.
 - Jedes kanonische FOOD erhält ein eigenes Asset und eine eindeutige zentrale Zuordnung.
 - Keine Kategorie-Fallbacks für kanonische FOODs, wenn ein eigenes Asset vorgesehen ist.
 

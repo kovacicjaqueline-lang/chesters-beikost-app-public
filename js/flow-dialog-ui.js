@@ -73,6 +73,7 @@
     rows.forEach((row) => {
       const matches = selectorRowMatches(row, query);
       row.hidden = !matches;
+      row.style.display = matches ? "" : "none";
       if (matches) visibleRows += 1;
     });
 

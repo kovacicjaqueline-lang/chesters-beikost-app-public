@@ -85,19 +85,23 @@ try {
     "Das fokussierte Suchfeld darf beim Tippen nicht aus dem DOM ersetzt werden",
   );
 
-  const visibleFoodIds = await page.evaluate(() =>
-    Array.from(document.querySelectorAll(".selector-results .selectFood"))
-      .filter((element) => !element.hidden)
-      .map((element) => element.dataset.food),
-  );
-  assert.deepEqual(visibleFoodIds, ["karotte"], "Die Suche muss die Lebensmittelliste während des Tippens filtern");
+  const carrot = page.locator('.selectFood[data-food="karotte"]');
+  const potato = page.locator('.selectFood[data-food="kartoffel"]');
+  assert.equal(await carrot.isVisible(), true, "Karotte muss als Suchtreffer sichtbar bleiben");
+  assert.equal(await potato.isVisible(), false, "Nicht passende Lebensmittel müssen während der Suche ausgeblendet werden");
+
+  await carrot.click();
+  await page.waitForFunction(() => document.getElementById("mealSelectorSearch")?.value === "Karo");
+  const carrotClasses = (await page.locator('.selectFood[data-food="karotte"]').getAttribute("class")) || "";
   assert.equal(
-    await page.locator('.selectFood[data-food="karotte"]').isVisible(),
+    carrotClasses.split(/\s+/).includes("selected"),
     true,
-    "Karotte muss als Treffer sichtbar bleiben",
+    "Ein sichtbarer Suchtreffer muss weiterhin auswählbar sein",
   );
 
-  await search.press("ControlOrMeta+A");
+  const currentSearch = page.locator("#mealSelectorSearch");
+  await currentSearch.click();
+  await currentSearch.evaluate((element) => element.setSelectionRange(0, element.value.length));
   await page.keyboard.type("kein-treffer", { delay: 10 });
   assert.equal(
     await page.locator(".flow-meal-selector-empty").textContent(),

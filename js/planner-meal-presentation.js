@@ -187,7 +187,7 @@ function loadManualMealFlowRuntime() {
   }
   let script = document.createElement("script");
   script.src = "js/manual-meal-flow.js?v=10.1.25";
-  script.dataset.manualMealFlowRuntime = "v1";
+  script.dataset.manualMealFlow = "v1";
   script.addEventListener("load", loadMealEditorRecipeVariantsRuntime, { once: true });
   script.addEventListener("error", (event) => {
     console.error("Manueller Mahlzeiten-Flow konnte nicht geladen werden.", event);

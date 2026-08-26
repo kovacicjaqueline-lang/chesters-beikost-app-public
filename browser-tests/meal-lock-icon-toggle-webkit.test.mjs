@@ -125,10 +125,8 @@ try {
   const lockedButton = meal.locator(".meal-lock.locked");
   await lockedButton.waitFor();
   assert.equal(await lockedButton.locator(".lock-svg-open").count(), 0, "Geschützter Slot zeigt das geschlossene Schloss");
-  assert.deepEqual(await computedThemeColor(lockedButton, "--accent"), {
-    actual: "rgb(109, 118, 81)",
-    expected: "rgb(109, 118, 81)",
-  });
+  const lockedColors = await computedThemeColor(lockedButton, "--accent");
+  assert.equal(lockedColors.actual, lockedColors.expected, "Der geschützte Zustand verwendet die Akzentfarbe");
 
   const lockedMarkup = await lockedButton.innerHTML();
   await lockedButton.click();
@@ -155,10 +153,8 @@ try {
   const relockedButton = meal.locator(".meal-lock.locked");
   await relockedButton.waitFor();
   assert.equal(await relockedButton.locator(".lock-svg-open").count(), 0, "Beim erneuten Tippen erscheint wieder das geschlossene Schloss");
-  assert.deepEqual(await computedThemeColor(relockedButton, "--accent"), {
-    actual: "rgb(109, 118, 81)",
-    expected: "rgb(109, 118, 81)",
-  });
+  const relockedColors = await computedThemeColor(relockedButton, "--accent");
+  assert.equal(relockedColors.actual, relockedColors.expected, "Beim erneuten Sperren wird wieder die Akzentfarbe verwendet");
 
   const afterRelock = await page.evaluate((date) => {
     const state = window.__beikostTest.getState();

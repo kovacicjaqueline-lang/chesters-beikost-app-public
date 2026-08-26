@@ -2,7 +2,10 @@
 
 const assert = require("node:assert/strict");
 const test = require("node:test");
+const maintenance = require("../js/planner-allergen-maintenance.js");
 const solutions = require("../js/planner-plan-check-solutions.js");
+
+const groupLevelTargets = maintenance.GROUP_LEVEL_MAINTENANCE_TARGETS;
 
 test("Solution-IDs sind stabil und unterscheiden konkrete Mutationen", () => {
   const base = {
@@ -74,4 +77,156 @@ test("Goal-Key verwendet strukturierte Zielidentität statt sichtbarer Texte", (
     solutions.goalKey({ code: solutions.INTRO_OPEN_CODE, details: { allergenIntroductionKey: "family:erdnuss" } }),
     "family:erdnuss",
   );
+});
+
+test("Gluten-Einführungsidentitäten bleiben für Hafer und Brot getrennt", () => {
+  const hafer = {
+    id: "hafer",
+    name: "Hafer",
+    allergenGroup: "Glutenhaltiges Getreide",
+    allergenFamily: "hafer",
+  };
+  const brot = {
+    id: "brot",
+    name: "Brot",
+    allergenGroup: "Glutenhaltiges Getreide",
+  };
+  assert.equal(solutions.allergenIntroductionTarget(hafer).key, "family:hafer");
+  assert.equal(solutions.allergenIntroductionTarget(brot).key, "food:brot");
+  assert.notEqual(
+    solutions.allergenIntroductionTarget(hafer).key,
+    solutions.allergenIntroductionTarget(brot).key,
+  );
+});
+
+test("Etablierte Glutenpflege verhindert ein neues FOOD-spezifisches Brot-Fortsetzungsziel", () => {
+  const foods = [
+    {
+      id: "hafer",
+      name: "Hafer",
+      allergenGroup: "Glutenhaltiges Getreide",
+      allergenFamily: "hafer",
+    },
+    {
+      id: "brot",
+      name: "Brot",
+      allergenGroup: "Glutenhaltiges Getreide",
+    },
+  ];
+  const establishedTargets = maintenance.establishedTargets(
+    foods,
+    (item) => item.id === "hafer" ? 2 : 1,
+  );
+  assert.equal(
+    solutions.allergenIntroductionNeedsContinuation(
+      foods[1],
+      1,
+      establishedTargets,
+      groupLevelTargets,
+      maintenance.targetForFood,
+    ),
+    false,
+  );
+  assert.equal(
+    solutions.allergenIntroductionNeedsContinuation(
+      foods[0],
+      1,
+      establishedTargets,
+      groupLevelTargets,
+      maintenance.targetForFood,
+    ),
+    true,
+  );
+});
+
+test("Einmal Hafer plus einmal Brot gilt nicht allein deshalb als etablierte Gluten-Einführung", () => {
+  const foods = [
+    {
+      id: "hafer",
+      name: "Hafer",
+      allergenGroup: "Glutenhaltiges Getreide",
+      allergenFamily: "hafer",
+    },
+    {
+      id: "brot",
+      name: "Brot",
+      allergenGroup: "Glutenhaltiges Getreide",
+    },
+  ];
+  const establishedTargets = maintenance.establishedTargets(foods, () => 1);
+  assert.equal(establishedTargets.length, 0);
+  assert.equal(
+    solutions.allergenIntroductionNeedsContinuation(
+      foods[1],
+      1,
+      establishedTargets,
+      groupLevelTargets,
+      maintenance.targetForFood,
+    ),
+    true,
+  );
+});
+
+test("Andere Allergen-Gruppen werden nicht pauschal über Maintenance unterdrückt", () => {
+  const lachs = {
+    id: "lachs",
+    name: "Lachs",
+    allergenGroup: "Fisch",
+  };
+  const establishedTargets = [{ key: maintenance.targetForFood(lachs).key }];
+  assert.equal(
+    solutions.allergenIntroductionNeedsContinuation(
+      lachs,
+      1,
+      establishedTargets,
+      groupLevelTargets,
+      maintenance.targetForFood,
+    ),
+    true,
+  );
+});
+
+test("Allergen-Fortsetzung verdrängt keine andere laufende Kostprobe", () => {
+  const item = { refs: { foodIds: ["brot"] } };
+  const before = {
+    foodIds: ["banane", "mais"],
+    baseFoodIds: ["banane"],
+    sampleFoodIds: ["mais"],
+  };
+  const after = {
+    foodIds: ["pfirsich", "brot"],
+    baseFoodIds: ["pfirsich"],
+    sampleFoodIds: ["brot"],
+  };
+  assert.equal(solutions.introductionMutationKeepsMealContext(item, before, after), false);
+});
+
+test("Allergen-Fortsetzung erfindet keinen neuen Begleiter", () => {
+  const item = { refs: { foodIds: ["brot"] } };
+  const before = {
+    foodIds: ["banane"],
+    baseFoodIds: ["banane"],
+    sampleFoodIds: [],
+  };
+  const after = {
+    foodIds: ["pfirsich", "brot"],
+    baseFoodIds: ["pfirsich"],
+    sampleFoodIds: ["brot"],
+  };
+  assert.equal(solutions.introductionMutationKeepsMealContext(item, before, after), false);
+});
+
+test("Allergen-Fortsetzung darf eine bestehende Basis weiterverwenden", () => {
+  const item = { refs: { foodIds: ["brot"] } };
+  const before = {
+    foodIds: ["banane"],
+    baseFoodIds: ["banane"],
+    sampleFoodIds: [],
+  };
+  const after = {
+    foodIds: ["banane", "brot"],
+    baseFoodIds: ["banane"],
+    sampleFoodIds: ["brot"],
+  };
+  assert.equal(solutions.introductionMutationKeepsMealContext(item, before, after), true);
 });

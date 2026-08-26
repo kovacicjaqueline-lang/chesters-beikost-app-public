@@ -167,6 +167,13 @@ test("tatsächliche Rezept-Ergänzungen bleiben im Titel sichtbar", () => {
     }),
     "Pfirsich-Polentabrei mit Brot",
   );
+  assert.equal(
+    runtime.plannerMealDisplayTitle({
+      recipeName: "Obst-Polentabrei",
+      foodIds: ["polenta", "pfirsich", "ei"],
+    }),
+    "Pfirsich-Polentabrei mit Ei",
+  );
 });
 
 test("Milch-Getreide-Brei nennt konkrete Milchquelle, Getreideart und Ergänzung", () => {

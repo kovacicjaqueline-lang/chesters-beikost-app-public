@@ -88,7 +88,10 @@ function plannerRecipeConfiguredIds(recipe) {
 
 function plannerRecipeNameEncodesItem(recipeName, item) {
   if (!recipeName || !item?.name || typeof normalizeName !== "function") return false;
-  return normalizeName(recipeName).includes(normalizeName(item.name));
+  let normalizedRecipeName = normalizeName(recipeName);
+  let normalizedItemName = normalizeName(item.name);
+  if (!normalizedRecipeName || !normalizedItemName) return false;
+  return ` ${normalizedRecipeName} `.includes(` ${normalizedItemName} `);
 }
 
 function plannerAppendRecipeExtras(title, meal, excludedIds = new Set()) {

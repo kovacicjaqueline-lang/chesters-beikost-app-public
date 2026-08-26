@@ -45,10 +45,85 @@
     return (hash >>> 0).toString(36);
   }
 
+  function allergenIntroductionTarget(record = {}) {
+    const group = text(record?.allergenGroup);
+    if (!group) return null;
+    const family = text(record?.allergenFamily);
+    if (family) {
+      return {
+        key: `family:${family}`,
+        kind: "family",
+        value: record.name || group || family,
+        allergenGroup: group,
+      };
+    }
+    const id = text(record?.id);
+    if (!id) return null;
+    return {
+      key: `food:${id}`,
+      kind: "food",
+      value: record.name || group || id,
+      allergenGroup: group,
+    };
+  }
+
+  function foodSpecificIntroductionCoveredByEstablishedMaintenance(
+    record = {},
+    establishedTargets = [],
+    groupLevelTargets = [],
+    targetForFoodFn = null,
+  ) {
+    const group = text(record?.allergenGroup);
+    if (!group || text(record?.allergenFamily)) return false;
+    const groupLevel = new Set((groupLevelTargets || []).map(text));
+    if (!groupLevel.has(group) || typeof targetForFoodFn !== "function") return false;
+    const maintenanceTarget = targetForFoodFn(record);
+    if (!maintenanceTarget?.key) return false;
+    return (establishedTargets || []).some((target) => target?.key === maintenanceTarget.key);
+  }
+
+  function allergenIntroductionNeedsContinuation(
+    record = {},
+    successfulExposureCount = 0,
+    establishedTargets = [],
+    groupLevelTargets = [],
+    targetForFoodFn = null,
+  ) {
+    if (Number(successfulExposureCount) !== 1) return false;
+    return !foodSpecificIntroductionCoveredByEstablishedMaintenance(
+      record,
+      establishedTargets,
+      groupLevelTargets,
+      targetForFoodFn,
+    );
+  }
+
   function goalKey(item = {}) {
     return text(item.details?.allergenIntroductionKey) ||
       text(item.details?.allergenTargetKey) ||
       `${text(item.code)}:${hashText(stableStringify(item.refs || {}))}`;
+  }
+
+  function introductionMutationKeepsMealContext(item = {}, before = {}, after = {}) {
+    const goalIds = new Set(unique(item?.refs?.foodIds || []));
+    if (!goalIds.size) return false;
+
+    const beforeIds = new Set(unique(before?.foodIds || []));
+    const afterIds = new Set(unique(after?.foodIds || []));
+    if (![...goalIds].some((id) => afterIds.has(id))) return false;
+
+    const unrelatedSamples = unique(before?.sampleFoodIds || [])
+      .filter((id) => !goalIds.has(id));
+    if (unrelatedSamples.length) return false;
+
+    const addedUnrelated = [...afterIds]
+      .filter((id) => !beforeIds.has(id) && !goalIds.has(id));
+    if (addedUnrelated.length) return false;
+
+    const beforeBases = unique(before?.baseFoodIds || []);
+    if (beforeBases.length && !beforeBases.some((id) => afterIds.has(id))) return false;
+
+    return true;
   }
 
   function planSignature(days = []) {
@@ -86,7 +161,11 @@
     FEATURE_VERSION,
     INTRO_OPEN_CODE,
     INTRO_PROJECTED_CODE,
+    allergenIntroductionTarget,
+    foodSpecificIntroductionCoveredByEstablishedMaintenance,
+    allergenIntroductionNeedsContinuation,
     goalKey,
+    introductionMutationKeepsMealContext,
     planSignature,
     solutionId,
     sortGoalItems,
@@ -123,9 +202,7 @@
   }
 
   function familyKey(record) {
-    if (!record) return "";
-    if (text(record.allergenFamily)) return `family:${text(record.allergenFamily)}`;
-    return `food:${text(record.id)}`;
+    return CORE.allergenIntroductionTarget(record)?.key || "";
   }
 
   function familyFoodIds(record) {
@@ -166,6 +243,15 @@
     return latest;
   }
 
+  function establishedMaintenanceTargets() {
+    const maintenance = globalScope.PlannerAllergenMaintenance;
+    if (!maintenance || typeof maintenance.establishedTargets !== "function") return [];
+    return maintenance.establishedTargets(
+      state.foods || [],
+      (record) => typeof rank === "function" ? rank(record) : 0,
+    );
+  }
+
   function visibleOpenMeals(days = []) {
     return (days || []).flatMap((day) => (day.meals || [])
       .filter((meal) =>
@@ -180,14 +266,29 @@
   function introductionItems(days = []) {
     const meals = visibleOpenMeals(days);
     const groups = new Map();
+    const maintenance = globalScope.PlannerAllergenMaintenance;
+    const establishedTargets = establishedMaintenanceTargets();
+    const groupLevelTargets = maintenance?.GROUP_LEVEL_MAINTENANCE_TARGETS || [];
+    const targetForFoodFn = typeof maintenance?.targetForFood === "function"
+      ? maintenance.targetForFood
+      : null;
     for (const record of state.foods || []) {
       if (!record?.active || !record.allergenGroup) continue;
       if (typeof status === "function" && status(record) === "Pausiert") continue;
       const count = successfulFamilyExposureCount(record);
-      if (count !== 1) continue;
-      const key = familyKey(record);
+      if (!CORE.allergenIntroductionNeedsContinuation(
+        record,
+        count,
+        establishedTargets,
+        groupLevelTargets,
+        targetForFoodFn,
+      )) continue;
+      const target = CORE.allergenIntroductionTarget(record);
+      const key = target?.key || "";
       if (!key || groups.has(key)) continue;
       const ids = familyFoodIds(record);
+      const latest = latestFamilyExposure(record);
+      const representativeFoodId = record.id;
       const coveringMeals = meals.filter((meal) => (meal.foodIds || []).some((id) => ids.includes(id)));
       const projected = coveringMeals.length > 0;
       groups.set(key, {
@@ -198,11 +299,11 @@
           foodIds: ids,
           allergenTargets: [{
             key,
-            kind: text(record.allergenFamily) ? "family" : "food",
-            value: record.name || record.allergenGroup || record.id,
+            kind: target.kind,
+            value: target.value,
             allergenGroup: record.allergenGroup || "",
-            representativeFoodId: record.id,
-            lastEatenDate: latestFamilyExposure(record),
+            representativeFoodId,
+            lastEatenDate: latest,
           }],
           recipeNames: unique(coveringMeals.map((meal) => meal.recipeName)),
           meals: coveringMeals.map((meal) => ({
@@ -224,8 +325,8 @@
         }],
         details: {
           allergenIntroductionKey: key,
-          representativeFoodId: record.id,
-          lastExposureDate: latestFamilyExposure(record),
+          representativeFoodId,
+          lastExposureDate: latest,
           successfulExposureCount: count,
           projectedCovered: projected,
         },
@@ -538,6 +639,7 @@
       const proposedMap = planMealMap(proposedDays);
       const after = proposedMap.get(meta.key) || null;
       if (!after || sameMealPlan(before, after) || !mealCoversGoal(item, after)) return null;
+      if (item.code === INTRO_OPEN_CODE && !CORE.introductionMutationKeepsMealContext(item, before, after)) return null;
       const proposedReport = report(proposedDays);
       if ((proposedReport.items || []).some((entry) => entry.type === "hard_blocker")) return null;
       if (!goalIsCovered(proposedReport, item)) return null;

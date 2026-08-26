@@ -51,6 +51,28 @@
       `${text(item.code)}:${hashText(stableStringify(item.refs || {}))}`;
   }
 
+  function introductionMutationKeepsMealContext(item = {}, before = {}, after = {}) {
+    const goalIds = new Set(unique(item?.refs?.foodIds || []));
+    if (!goalIds.size) return false;
+
+    const beforeIds = new Set(unique(before?.foodIds || []));
+    const afterIds = new Set(unique(after?.foodIds || []));
+    if (![...goalIds].some((id) => afterIds.has(id))) return false;
+
+    const unrelatedSamples = unique(before?.sampleFoodIds || [])
+      .filter((id) => !goalIds.has(id));
+    if (unrelatedSamples.length) return false;
+
+    const addedUnrelated = [...afterIds]
+      .filter((id) => !beforeIds.has(id) && !goalIds.has(id));
+    if (addedUnrelated.length) return false;
+
+    const beforeBases = unique(before?.baseFoodIds || []);
+    if (beforeBases.length && !beforeBases.some((id) => afterIds.has(id))) return false;
+
+    return true;
+  }
+
   function planSignature(days = []) {
     return (days || []).flatMap((day) => (day.meals || [])
       .filter((meal) => meal?.active && !meal.empty && meal.focusId)
@@ -87,6 +109,7 @@
     INTRO_OPEN_CODE,
     INTRO_PROJECTED_CODE,
     goalKey,
+    introductionMutationKeepsMealContext,
     planSignature,
     solutionId,
     sortGoalItems,
@@ -538,6 +561,7 @@
       const proposedMap = planMealMap(proposedDays);
       const after = proposedMap.get(meta.key) || null;
       if (!after || sameMealPlan(before, after) || !mealCoversGoal(item, after)) return null;
+      if (item.code === INTRO_OPEN_CODE && !CORE.introductionMutationKeepsMealContext(item, before, after)) return null;
       const proposedReport = report(proposedDays);
       if ((proposedReport.items || []).some((entry) => entry.type === "hard_blocker")) return null;
       if (!goalIsCovered(proposedReport, item)) return null;

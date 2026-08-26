@@ -45,6 +45,90 @@
     return (hash >>> 0).toString(36);
   }
 
+  function allergenIntroductionTarget(record = {}, groupLevelTargets = []) {
+    const group = text(record?.allergenGroup);
+    if (!group) return null;
+    const groupLevel = new Set((groupLevelTargets || []).map(text));
+    if (groupLevel.has(group)) {
+      return {
+        key: `allergen:${group}`,
+        kind: "allergen",
+        value: group,
+        allergenGroup: group,
+      };
+    }
+    const family = text(record?.allergenFamily);
+    if (family) {
+      return {
+        key: `family:${family}`,
+        kind: "family",
+        value: record.name || group || family,
+        allergenGroup: group,
+      };
+    }
+    const id = text(record?.id);
+    if (!id) return null;
+    return {
+      key: `food:${id}`,
+      kind: "food",
+      value: record.name || group || id,
+      allergenGroup: group,
+    };
+  }
+
+  function introductionTargetFoodIds(record = {}, foods = [], groupLevelTargets = []) {
+    const key = allergenIntroductionTarget(record, groupLevelTargets)?.key || "";
+    if (!key) return [];
+    return unique((foods || [])
+      .filter((candidate) =>
+        candidate?.allergenGroup &&
+        allergenIntroductionTarget(candidate, groupLevelTargets)?.key === key
+      )
+      .map((candidate) => candidate.id));
+  }
+
+  function successfulIntroductionExposureCount(
+    record = {},
+    foods = [],
+    logs = [],
+    outcomeForFoodFn = () => "",
+    exposureKeyFn = null,
+    groupLevelTargets = [],
+  ) {
+    const ids = new Set(introductionTargetFoodIds(record, foods, groupLevelTargets));
+    if (!ids.size) return 0;
+    const exposures = new Set();
+    for (const log of logs || []) {
+      for (const id of log?.foodIds || []) {
+        if (!ids.has(id) || outcomeForFoodFn(log, id) !== "eaten") continue;
+        exposures.add(typeof exposureKeyFn === "function"
+          ? exposureKeyFn(log)
+          : `${log.date}|${log.meal || log.id || "entry"}`);
+      }
+    }
+    return exposures.size;
+  }
+
+  function latestIntroductionExposure(
+    record = {},
+    foods = [],
+    logs = [],
+    outcomeForFoodFn = () => "",
+    groupLevelTargets = [],
+  ) {
+    const ids = new Set(introductionTargetFoodIds(record, foods, groupLevelTargets));
+    let latest = { date: "", foodId: "" };
+    for (const log of logs || []) {
+      const date = text(log?.date);
+      if (!date) continue;
+      for (const id of log?.foodIds || []) {
+        if (!ids.has(id) || outcomeForFoodFn(log, id) !== "eaten") continue;
+        if (!latest.date || date > latest.date) latest = { date, foodId: id };
+      }
+    }
+    return latest;
+  }
+
   function goalKey(item = {}) {
     return text(item.details?.allergenIntroductionKey) ||
       text(item.details?.allergenTargetKey) ||
@@ -108,6 +192,10 @@
     FEATURE_VERSION,
     INTRO_OPEN_CODE,
     INTRO_PROJECTED_CODE,
+    allergenIntroductionTarget,
+    introductionTargetFoodIds,
+    successfulIntroductionExposureCount,
+    latestIntroductionExposure,
     goalKey,
     introductionMutationKeepsMealContext,
     planSignature,
@@ -145,48 +233,42 @@
     return true;
   }
 
+  function groupLevelIntroductionTargets() {
+    return globalScope.PlannerAllergenMaintenance?.GROUP_LEVEL_MAINTENANCE_TARGETS || [];
+  }
+
   function familyKey(record) {
-    if (!record) return "";
-    if (text(record.allergenFamily)) return `family:${text(record.allergenFamily)}`;
-    return `food:${text(record.id)}`;
+    return CORE.allergenIntroductionTarget(record, groupLevelIntroductionTargets())?.key || "";
   }
 
   function familyFoodIds(record) {
-    const key = familyKey(record);
-    if (!key) return [];
-    return (state.foods || [])
-      .filter((candidate) => candidate?.allergenGroup && familyKey(candidate) === key)
-      .map((candidate) => candidate.id);
+    return CORE.introductionTargetFoodIds(record, state.foods, groupLevelIntroductionTargets());
   }
 
   function successfulFamilyExposureCount(record) {
     if (!record) return 0;
-    if (typeof familySuccessfulExposureCount === "function") {
+    const target = CORE.allergenIntroductionTarget(record, groupLevelIntroductionTargets());
+    if (target?.kind !== "allergen" && typeof familySuccessfulExposureCount === "function") {
       return Number(familySuccessfulExposureCount(record, state.foods, state.logs, outcomeForFood)) || 0;
     }
-    const ids = new Set(familyFoodIds(record));
-    const exposures = new Set();
-    for (const log of state.logs || []) {
-      for (const id of log.foodIds || []) {
-        if (!ids.has(id) || outcomeForFood(log, id) !== "eaten") continue;
-        exposures.add(typeof plannerLogExposureKey === "function"
-          ? plannerLogExposureKey(log)
-          : `${log.date}|${log.meal || log.id || "entry"}`);
-      }
-    }
-    return exposures.size;
+    return CORE.successfulIntroductionExposureCount(
+      record,
+      state.foods,
+      state.logs,
+      outcomeForFood,
+      typeof plannerLogExposureKey === "function" ? plannerLogExposureKey : null,
+      groupLevelIntroductionTargets(),
+    );
   }
 
   function latestFamilyExposure(record) {
-    const ids = new Set(familyFoodIds(record));
-    let latest = "";
-    for (const log of state.logs || []) {
-      if (!log?.date) continue;
-      if ((log.foodIds || []).some((id) => ids.has(id) && outcomeForFood(log, id) === "eaten")) {
-        if (!latest || log.date > latest) latest = log.date;
-      }
-    }
-    return latest;
+    return CORE.latestIntroductionExposure(
+      record,
+      state.foods,
+      state.logs,
+      outcomeForFood,
+      groupLevelIntroductionTargets(),
+    ).date;
   }
 
   function visibleOpenMeals(days = []) {
@@ -208,9 +290,20 @@
       if (typeof status === "function" && status(record) === "Pausiert") continue;
       const count = successfulFamilyExposureCount(record);
       if (count !== 1) continue;
-      const key = familyKey(record);
+      const target = CORE.allergenIntroductionTarget(record, groupLevelIntroductionTargets());
+      const key = target?.key || "";
       if (!key || groups.has(key)) continue;
       const ids = familyFoodIds(record);
+      const latest = target.kind === "allergen"
+        ? CORE.latestIntroductionExposure(
+            record,
+            state.foods,
+            state.logs,
+            outcomeForFood,
+            groupLevelIntroductionTargets(),
+          )
+        : { date: latestFamilyExposure(record), foodId: record.id };
+      const representativeFoodId = latest.foodId || record.id;
       const coveringMeals = meals.filter((meal) => (meal.foodIds || []).some((id) => ids.includes(id)));
       const projected = coveringMeals.length > 0;
       groups.set(key, {
@@ -221,11 +314,11 @@
           foodIds: ids,
           allergenTargets: [{
             key,
-            kind: text(record.allergenFamily) ? "family" : "food",
-            value: record.name || record.allergenGroup || record.id,
+            kind: target.kind,
+            value: target.value,
             allergenGroup: record.allergenGroup || "",
-            representativeFoodId: record.id,
-            lastEatenDate: latestFamilyExposure(record),
+            representativeFoodId,
+            lastEatenDate: latest.date,
           }],
           recipeNames: unique(coveringMeals.map((meal) => meal.recipeName)),
           meals: coveringMeals.map((meal) => ({
@@ -247,8 +340,8 @@
         }],
         details: {
           allergenIntroductionKey: key,
-          representativeFoodId: record.id,
-          lastExposureDate: latestFamilyExposure(record),
+          representativeFoodId,
+          lastExposureDate: latest.date,
           successfulExposureCount: count,
           projectedCovered: projected,
         },

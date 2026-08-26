@@ -79,7 +79,7 @@ test("Goal-Key verwendet strukturierte Zielidentität statt sichtbarer Texte", (
   );
 });
 
-test("Gluten-Einführung nutzt für Hafer und Brot dasselbe Gruppenziel", () => {
+test("Gluten-Einführungsidentitäten bleiben für Hafer und Brot getrennt", () => {
   const hafer = {
     id: "hafer",
     name: "Hafer",
@@ -91,21 +91,15 @@ test("Gluten-Einführung nutzt für Hafer und Brot dasselbe Gruppenziel", () => 
     name: "Brot",
     allergenGroup: "Glutenhaltiges Getreide",
   };
-  assert.equal(
-    solutions.allergenIntroductionTarget(hafer, groupLevelTargets).key,
-    "allergen:Glutenhaltiges Getreide",
-  );
-  assert.equal(
-    solutions.allergenIntroductionTarget(brot, groupLevelTargets).key,
-    "allergen:Glutenhaltiges Getreide",
-  );
-  assert.deepEqual(
-    solutions.introductionTargetFoodIds(brot, [hafer, brot], groupLevelTargets),
-    ["hafer", "brot"],
+  assert.equal(solutions.allergenIntroductionTarget(hafer).key, "family:hafer");
+  assert.equal(solutions.allergenIntroductionTarget(brot).key, "food:brot");
+  assert.notEqual(
+    solutions.allergenIntroductionTarget(hafer).key,
+    solutions.allergenIntroductionTarget(brot).key,
   );
 });
 
-test("Etablierte Gluten-Exposition macht Brot nicht wieder zu einem Einmal-Kontakt", () => {
+test("Etablierte Glutenpflege verhindert ein neues FOOD-spezifisches Brot-Fortsetzungsziel", () => {
   const foods = [
     {
       id: "hafer",
@@ -119,42 +113,77 @@ test("Etablierte Gluten-Exposition macht Brot nicht wieder zu einem Einmal-Konta
       allergenGroup: "Glutenhaltiges Getreide",
     },
   ];
-  const logs = [
-    { date: "2026-08-14", meal: "breakfast", foodIds: ["hafer"] },
-    { date: "2026-08-16", meal: "lunch", foodIds: ["brot"] },
-  ];
-  const eaten = () => "eaten";
-  assert.equal(
-    solutions.successfulIntroductionExposureCount(
-      foods[1],
-      foods,
-      logs,
-      eaten,
-      null,
-      groupLevelTargets,
-    ),
-    2,
+  const establishedTargets = maintenance.establishedTargets(
+    foods,
+    (item) => item.id === "hafer" ? 2 : 1,
   );
-  assert.deepEqual(
-    solutions.latestIntroductionExposure(foods[1], foods, logs, eaten, groupLevelTargets),
-    { date: "2026-08-16", foodId: "brot" },
+  assert.equal(
+    solutions.allergenIntroductionNeedsContinuation(
+      foods[1],
+      1,
+      establishedTargets,
+      groupLevelTargets,
+      maintenance.targetForFood,
+    ),
+    false,
+  );
+  assert.equal(
+    solutions.allergenIntroductionNeedsContinuation(
+      foods[0],
+      1,
+      establishedTargets,
+      groupLevelTargets,
+      maintenance.targetForFood,
+    ),
+    true,
   );
 });
 
-test("Andere Allergen-Einführungsziele werden nicht pauschal auf Gruppenebene gezogen", () => {
-  const sesam = {
-    id: "tahin",
-    name: "Tahin",
-    allergenGroup: "Sesam",
-    allergenFamily: "sesam",
-  };
+test("Einmal Hafer plus einmal Brot gilt nicht allein deshalb als etablierte Gluten-Einführung", () => {
+  const foods = [
+    {
+      id: "hafer",
+      name: "Hafer",
+      allergenGroup: "Glutenhaltiges Getreide",
+      allergenFamily: "hafer",
+    },
+    {
+      id: "brot",
+      name: "Brot",
+      allergenGroup: "Glutenhaltiges Getreide",
+    },
+  ];
+  const establishedTargets = maintenance.establishedTargets(foods, () => 1);
+  assert.equal(establishedTargets.length, 0);
+  assert.equal(
+    solutions.allergenIntroductionNeedsContinuation(
+      foods[1],
+      1,
+      establishedTargets,
+      groupLevelTargets,
+      maintenance.targetForFood,
+    ),
+    true,
+  );
+});
+
+test("Andere Allergen-Gruppen werden nicht pauschal über Maintenance unterdrückt", () => {
   const lachs = {
     id: "lachs",
     name: "Lachs",
     allergenGroup: "Fisch",
   };
-  assert.equal(solutions.allergenIntroductionTarget(sesam, groupLevelTargets).key, "family:sesam");
-  assert.equal(solutions.allergenIntroductionTarget(lachs, groupLevelTargets).key, "food:lachs");
+  const establishedTargets = [{ key: maintenance.targetForFood(lachs).key }];
+  assert.equal(
+    solutions.allergenIntroductionNeedsContinuation(
+      lachs,
+      1,
+      establishedTargets,
+      groupLevelTargets,
+      maintenance.targetForFood,
+    ),
+    true,
+  );
 });
 
 test("Allergen-Fortsetzung verdrängt keine andere laufende Kostprobe", () => {

@@ -2,7 +2,10 @@
 
 const assert = require("node:assert/strict");
 const test = require("node:test");
+const maintenance = require("../js/planner-allergen-maintenance.js");
 const solutions = require("../js/planner-plan-check-solutions.js");
+
+const groupLevelTargets = maintenance.GROUP_LEVEL_MAINTENANCE_TARGETS;
 
 test("Solution-IDs sind stabil und unterscheiden konkrete Mutationen", () => {
   const base = {
@@ -74,6 +77,84 @@ test("Goal-Key verwendet strukturierte Zielidentität statt sichtbarer Texte", (
     solutions.goalKey({ code: solutions.INTRO_OPEN_CODE, details: { allergenIntroductionKey: "family:erdnuss" } }),
     "family:erdnuss",
   );
+});
+
+test("Gluten-Einführung nutzt für Hafer und Brot dasselbe Gruppenziel", () => {
+  const hafer = {
+    id: "hafer",
+    name: "Hafer",
+    allergenGroup: "Glutenhaltiges Getreide",
+    allergenFamily: "hafer",
+  };
+  const brot = {
+    id: "brot",
+    name: "Brot",
+    allergenGroup: "Glutenhaltiges Getreide",
+  };
+  assert.equal(
+    solutions.allergenIntroductionTarget(hafer, groupLevelTargets).key,
+    "allergen:Glutenhaltiges Getreide",
+  );
+  assert.equal(
+    solutions.allergenIntroductionTarget(brot, groupLevelTargets).key,
+    "allergen:Glutenhaltiges Getreide",
+  );
+  assert.deepEqual(
+    solutions.introductionTargetFoodIds(brot, [hafer, brot], groupLevelTargets),
+    ["hafer", "brot"],
+  );
+});
+
+test("Etablierte Gluten-Exposition macht Brot nicht wieder zu einem Einmal-Kontakt", () => {
+  const foods = [
+    {
+      id: "hafer",
+      name: "Hafer",
+      allergenGroup: "Glutenhaltiges Getreide",
+      allergenFamily: "hafer",
+    },
+    {
+      id: "brot",
+      name: "Brot",
+      allergenGroup: "Glutenhaltiges Getreide",
+    },
+  ];
+  const logs = [
+    { date: "2026-08-14", meal: "breakfast", foodIds: ["hafer"] },
+    { date: "2026-08-16", meal: "lunch", foodIds: ["brot"] },
+  ];
+  const eaten = () => "eaten";
+  assert.equal(
+    solutions.successfulIntroductionExposureCount(
+      foods[1],
+      foods,
+      logs,
+      eaten,
+      null,
+      groupLevelTargets,
+    ),
+    2,
+  );
+  assert.deepEqual(
+    solutions.latestIntroductionExposure(foods[1], foods, logs, eaten, groupLevelTargets),
+    { date: "2026-08-16", foodId: "brot" },
+  );
+});
+
+test("Andere Allergen-Einführungsziele werden nicht pauschal auf Gruppenebene gezogen", () => {
+  const sesam = {
+    id: "tahin",
+    name: "Tahin",
+    allergenGroup: "Sesam",
+    allergenFamily: "sesam",
+  };
+  const lachs = {
+    id: "lachs",
+    name: "Lachs",
+    allergenGroup: "Fisch",
+  };
+  assert.equal(solutions.allergenIntroductionTarget(sesam, groupLevelTargets).key, "family:sesam");
+  assert.equal(solutions.allergenIntroductionTarget(lachs, groupLevelTargets).key, "food:lachs");
 });
 
 test("Allergen-Fortsetzung verdrängt keine andere laufende Kostprobe", () => {

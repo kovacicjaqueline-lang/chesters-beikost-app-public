@@ -75,6 +75,7 @@ function plannerInstallCompletedDayPresentationStyles() {
 #blockPlan .completed-edit-actions .editCompletedLog {
   margin: 0 !important;
 }
+/* Log-only summaries render the title and count as adjacent spans. */
 #blockPlan .completed-day-title + .small {
   margin-left: 8px;
 }

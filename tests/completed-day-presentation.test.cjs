@@ -66,3 +66,14 @@ test("Bearbeiten-Aktion wird im Plan in einer zentrierten Vollbreiten-Zeile plat
   assert.match(source, /actions\.className = "completed-edit-actions";/);
   assert.match(source, /plannerCollapseFinishedLogOnlyDays\(\);\s*plannerCenterCompletedEditActions\(\);/);
 });
+
+test("eingeklappte erledigte Tage halten 8 px Abstand zwischen Titel und Protokollzahl", () => {
+  const source = fs.readFileSync(
+    path.join(__dirname, "..", "js", "planner-meal-presentation.js"),
+    "utf8",
+  );
+  assert.match(
+    source,
+    /#blockPlan \.completed-day-title \+ \.small\s*\{[\s\S]*?margin-left:\s*8px;/,
+  );
+});

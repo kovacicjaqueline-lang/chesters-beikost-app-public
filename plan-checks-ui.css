@@ -5,6 +5,7 @@
 .plan-check-introduction,.plan-check-open{background:var(--surface-soft,#f7f3ea)}
 .plan-required-actions,.plan-solution-actions{flex-wrap:wrap}
 .plan-required-actions .btn,.plan-solution-actions .btn{flex:1 1 140px}
+.plan-required-actions>.btn:only-child,.plan-solution-actions>.btn:nth-child(3):last-child,.ds-actionbar>#leavePlanGoal:only-child,.ds-actionbar>#applyHardCorrection,.ds-actionbar>#startRecommendedPhase{grid-column:1/-1}
 .plan-solution-card{display:grid;gap:8px}
 .plan-solution-card p{margin:0}
 .plan-solution-protected{margin-top:8px}

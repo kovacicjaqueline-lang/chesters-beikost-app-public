@@ -6,8 +6,8 @@ import { fileURLToPath } from "node:url";
 import { webkit } from "playwright";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const artifactDir = process.env.BROWSER_TEST_ARTIFACT_DIR || path.join(root, "artifacts", "browser-tests", "plan-checks-ux-webkit");
-fs.mkdirSync(artifactDir, { recursive: true });
+const screenshotDir = path.join(root, "artifacts", "browser-tests", "plan-checks-ux-webkit");
+fs.mkdirSync(screenshotDir, { recursive: true });
 
 const mimeTypes = {
   ".html": "text/html; charset=utf-8",
@@ -108,7 +108,7 @@ try {
   assert.match(await page.locator("#genericBody").textContent(), /zusätzlich ein Frühstück\. Mittagessen bleibt bestehen/);
   assert.equal(await page.locator("#toast").isVisible(), false, "Abnahmescreenshot darf keinen alten Toast enthalten");
   await assertSheetFitsMobile(page);
-  await page.screenshot({ path: path.join(artifactDir, "phase-readiness-clean.png"), fullPage: false });
+  await page.screenshot({ path: path.join(screenshotDir, "phase-readiness-clean.png"), fullPage: false });
 
   assert.deepEqual(pageErrors, [], `Phase-Readiness darf keine JavaScript-Fehler auslösen: ${pageErrors.join(" | ")}`);
   await context.close();

@@ -75,3 +75,48 @@ test("Goal-Key verwendet strukturierte Zielidentität statt sichtbarer Texte", (
     "family:erdnuss",
   );
 });
+
+test("Allergen-Fortsetzung verdrängt keine andere laufende Kostprobe", () => {
+  const item = { refs: { foodIds: ["brot"] } };
+  const before = {
+    foodIds: ["banane", "mais"],
+    baseFoodIds: ["banane"],
+    sampleFoodIds: ["mais"],
+  };
+  const after = {
+    foodIds: ["pfirsich", "brot"],
+    baseFoodIds: ["pfirsich"],
+    sampleFoodIds: ["brot"],
+  };
+  assert.equal(solutions.introductionMutationKeepsMealContext(item, before, after), false);
+});
+
+test("Allergen-Fortsetzung erfindet keinen neuen Begleiter", () => {
+  const item = { refs: { foodIds: ["brot"] } };
+  const before = {
+    foodIds: ["banane"],
+    baseFoodIds: ["banane"],
+    sampleFoodIds: [],
+  };
+  const after = {
+    foodIds: ["pfirsich", "brot"],
+    baseFoodIds: ["pfirsich"],
+    sampleFoodIds: ["brot"],
+  };
+  assert.equal(solutions.introductionMutationKeepsMealContext(item, before, after), false);
+});
+
+test("Allergen-Fortsetzung darf eine bestehende Basis weiterverwenden", () => {
+  const item = { refs: { foodIds: ["brot"] } };
+  const before = {
+    foodIds: ["banane"],
+    baseFoodIds: ["banane"],
+    sampleFoodIds: [],
+  };
+  const after = {
+    foodIds: ["banane", "brot"],
+    baseFoodIds: ["banane"],
+    sampleFoodIds: ["brot"],
+  };
+  assert.equal(solutions.introductionMutationKeepsMealContext(item, before, after), true);
+});

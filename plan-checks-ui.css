@@ -37,8 +37,8 @@
 
 /* Meal-Lock: Der offene Zustand muss auch auf dem kleinen Karten-Icon sofort
  * vom geschlossenen Schloss unterscheidbar bleiben. Die Meal-Card-Runtime setzt
- * ihre neutralere Grundfarbe später inline; die höhere Spezifität hält deshalb
- * bewusst die bestehende Ocker-Semantik für "nicht geschützt" fest. */
+ * ihre neutrale Grundfarbe selbst mit !important; dieser gezielte Zustands-Override
+ * hält deshalb die bestehende Ocker-Semantik für "nicht geschützt" fest. */
 body .mealbox .meal-lock.unlocked{
  color:var(--ochre)!important;
 }

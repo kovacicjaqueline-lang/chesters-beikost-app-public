@@ -65,7 +65,26 @@ try {
     const future = window.__beikostTest.addDays(current, 2);
     const carriedDate = window.__beikostTest.addDays(current, 3);
     const state = window.__beikostTest.getState();
-    state.logs = [];
+    state.logs = [
+      {
+        id: "missing-ingredient-apfel-history",
+        date: window.__beikostTest.addDays(current, -2),
+        meal: "breakfast",
+        foodIds: ["apfel"],
+        foodOutcomes: { apfel: "eaten" },
+        outcome: "eaten",
+        createdAt: `${window.__beikostTest.addDays(current, -2)}T08:00:00.000Z`,
+      },
+      {
+        id: "missing-ingredient-birne-history",
+        date: window.__beikostTest.addDays(current, -1),
+        meal: "breakfast",
+        foodIds: ["birne"],
+        foodOutcomes: { birne: "eaten" },
+        outcome: "eaten",
+        createdAt: `${window.__beikostTest.addDays(current, -1)}T08:00:00.000Z`,
+      },
+    ];
     state.settings.phaseSelected = "aufbau";
     state.settings.planFrom = current;
     state.shoppingHints = {};
@@ -139,7 +158,7 @@ try {
     };
 
     window.__beikostTest.setState(state);
-    return { current, future, currentKey, futureKey, carriedPlanId };
+    return { current, future, currentKey, futureKey, carriedPlanId, initialLogCount: state.logs.length };
   });
 
   const actions = page.locator("#todayCard details.meal-plan-actions").filter({
@@ -183,7 +202,7 @@ try {
     };
   }, setup);
 
-  assert.equal(after.logs.length, 0, "Plan-Aktion darf keinen Essens-Log erzeugen");
+  assert.equal(after.logs.length, setup.initialLogCount, "Plan-Aktion darf keinen Essens-Log erzeugen");
   assert.equal(after.hint?.status, "needed");
   assert.equal(after.hint?.source, "plan");
   assert.equal(after.pantry, false);

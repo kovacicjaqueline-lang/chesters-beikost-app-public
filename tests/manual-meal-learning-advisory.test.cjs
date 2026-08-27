@@ -12,7 +12,7 @@ const {
 const root = path.resolve(__dirname, "..");
 const runtimeSource = fs.readFileSync(path.join(root, "js", "manual-meal-flow.js"), "utf8");
 
-function validationFor(statuses, names = {}) {
+function validationFor(statuses, names = {}, overrides = {}) {
   const ids = Object.keys(statuses);
   return manualMealFlowLearningValidation(
     {
@@ -29,6 +29,7 @@ function validationFor(statuses, names = {}) {
       messages: ids.length > 1
         ? [`Nur eine neue oder unsichere Einführung gleichzeitig: ${ids.join(", ")}.`]
         : [],
+      ...overrides,
     },
     (id) => statuses[id] || "",
     (id) => names[id] || id,
@@ -63,15 +64,23 @@ test("mehrere offene Lebensmittel erzeugen nur einen nicht blockierenden Hinweis
   assert.match(result.advisory, /Bangus \(Milkfish\), Tofu/);
 });
 
-test("andere bestehende manuelle Schutzblocker bleiben unverändert wirksam", () => {
+test("strukturelle Auswahlfehler bleiben trotz nicht blockierendem Lernhinweis blockierend", () => {
   const result = validationFor(
-    { bangus: "Offen", allergen: "Pausiert" },
-    { bangus: "Bangus (Milkfish)", allergen: "Pausiertes Lebensmittel" },
+    { bangus: "Offen", tofu: "Offen" },
+    { bangus: "Bangus (Milkfish)", tofu: "Tofu" },
+    {
+      unsafeBaseIds: ["bangus"],
+      messages: [
+        "Noch nicht als Hauptbasis geeignet: Bangus (Milkfish).",
+        "Nur eine neue oder unsichere Einführung gleichzeitig: bangus, tofu.",
+      ],
+    },
   );
 
   assert.equal(result.ok, false);
-  assert.deepEqual(result.multipleUnsafeIds, ["bangus", "allergen"]);
-  assert.equal(result.messages.length, 1);
+  assert.deepEqual(result.multipleUnsafeIds, []);
+  assert.deepEqual(result.messages, ["Noch nicht als Hauptbasis geeignet: Bangus (Milkfish)."]);
+  assert.equal(result.advisories.length, 1);
 });
 
 test("Editor wandelt den grünen Zustand bei mehreren offenen Lernlebensmitteln in einen Hinweis um", () => {

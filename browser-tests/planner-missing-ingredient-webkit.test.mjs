@@ -214,7 +214,8 @@ try {
   assert.equal(after.currentMeal.foodIds.includes("banane"), false);
   assert.ok(after.currentMeal.foodIds.some((id) => ["apfel", "birne"].includes(id)), "fehlendes Obst wird innerhalb der Recipe-V2-Auswahl ersetzt");
   assert.equal(after.futureManual, null, "zukünftiger offener manueller Banane-Slot wird freigegeben");
-  assert.equal(after.futureLock, null, "zukünftiger offener Banane-Lock wird freigegeben");
+  assert.ok(after.futureLock, "freigegebener Zukunftsslot darf direkt ohne Banane neu geplant werden");
+  assert.equal(after.futureLock.foodIds.includes("banane"), false, "neu geplanter Zukunftsslot enthält die fehlende Zutat nicht");
   assert.equal(after.futureOverride, null, "zukünftiger Banane-Override wird entfernt");
   assert.equal(after.carried, null, "auch ein verschobener offener Rollover-Plan mit Banane wird entfernt");
   assert.match(await page.locator("#toastText").innerText(), /Einkaufsliste.*Plan wurde angepasst/i);

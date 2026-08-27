@@ -6,6 +6,20 @@ const path = require("node:path");
 const vm = require("node:vm");
 
 const source = fs.readFileSync(path.join(__dirname, "..", "js", "deferred-render.js"), "utf8");
+const deferredActionIds = [
+  "saveLog",
+  "saveConcreteProduct",
+  "deleteConcreteProduct",
+  "foodToggleActive",
+  "deactivateReplace",
+  "deactivateKeep",
+  "saveInv",
+  "saveSettings",
+  "confirmTextureStage",
+  "textureBack",
+  "saveCustom",
+  "useExistingCustom",
+];
 
 function createHarness() {
   const events = [];
@@ -42,6 +56,15 @@ function actionEvent(id) {
       },
     },
   };
+}
+
+for (const id of deferredActionIds) {
+  const h = createHarness();
+  h.clickCapture(actionEvent(id));
+  h.sandbox.renderAll();
+  assert.deepEqual(h.events, [], `${id}: Voll-Render darf im unmittelbaren Save-/Confirm-Task nicht laufen`);
+  assert.equal(h.raf.length, 1, `${id}: Voll-Render muss hinter die nächste Render-Gelegenheit verschoben werden`);
+  assert.equal(h.microtasks.length, 1, `${id}: renderAll muss nach dem Benutzer-Event wiederhergestellt werden`);
 }
 
 {

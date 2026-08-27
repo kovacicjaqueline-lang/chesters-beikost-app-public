@@ -9,6 +9,71 @@
   const MODE_FOODS = "foods";
   const MODE_RECIPES = "recipes";
 
+  function recipeCatalogSearchTerms(recipe) {
+    const aliases = typeof recipeAliasValues === "function" ? recipeAliasValues(recipe) : [];
+    const structuredLabels = [
+      ...(recipe?.requires || []),
+      ...((recipe?.alternatives || []).flat()),
+      ...(recipe?.oneOf || []),
+      ...(recipe?.milkChoices || []),
+    ];
+    const structuredTerms = structuredLabels.flatMap((label) => {
+      if (
+        typeof recipeFoodFromStructuredLabel !== "function" ||
+        typeof FOOD_DB === "undefined" ||
+        typeof foodAliasTerms !== "function"
+      ) return [label];
+      const item = recipeFoodFromStructuredLabel(label, FOOD_DB);
+      return item ? [item.name, ...foodAliasTerms(item)] : [label];
+    });
+    return [
+      recipe?.name || "",
+      ...aliases,
+      ...(recipe?.variantLabels || []),
+      ...structuredTerms,
+    ].filter(Boolean);
+  }
+
+  function recipeCatalogSearchMatches(recipe, query) {
+    const normalizedQuery = normalizeName(query || "");
+    if (!normalizedQuery) return true;
+
+    const exactOrPrefixMatch = recipeCatalogSearchTerms(recipe).some((term) => {
+      const normalizedTerm = normalizeName(term || "");
+      if (!normalizedTerm) return false;
+      if (normalizedTerm === normalizedQuery || normalizedTerm.startsWith(normalizedQuery)) return true;
+      return normalizedTerm
+        .split(" ")
+        .filter(Boolean)
+        .some((word) => word === normalizedQuery || word.startsWith(normalizedQuery));
+    });
+    if (exactOrPrefixMatch) return true;
+
+    // Sehr kurze Suchbegriffe dürfen nicht irgendwo mitten in einem Wort treffen
+    // (z. B. „Ei“ in „Brei“, „Reis“ oder „Weizen“). Ab drei Zeichen bleibt die
+    // bisherige flexible Volltextsuche inklusive Zutatenbeschreibung erhalten.
+    if (normalizedQuery.length < 3) return false;
+    return normalizeName(recipeSearchText(recipe)).includes(normalizedQuery);
+  }
+
+  function installIngredientAwareRecipeSearch() {
+    if (typeof renderPrep !== "function" || typeof recipeSearchText !== "function") return;
+    const baseRenderPrep = renderPrep;
+    renderPrep = function renderPrepWithIngredientAwareRecipeSearch(...args) {
+      const currentQuery = typeof recipeQuery !== "undefined" ? recipeQuery : "";
+      if (!normalizeName(currentQuery)) return baseRenderPrep.apply(this, args);
+
+      const baseRecipeSearchText = recipeSearchText;
+      recipeSearchText = (recipe) =>
+        recipeCatalogSearchMatches(recipe, currentQuery) ? baseRecipeSearchText(recipe) : "";
+      try {
+        return baseRenderPrep.apply(this, args);
+      } finally {
+        recipeSearchText = baseRecipeSearchText;
+      }
+    };
+  }
+
   function setCatalogMode(mode) {
     const foodsSection = document.getElementById("foodsCatalogSection");
     const recipesSection = document.getElementById("recipesSection");
@@ -52,6 +117,8 @@
       !document.querySelector("#more #recipesDetails");
     auditRow.innerHTML = `<span class="statusdot ${ok ? "good" : "warn"}"></span><div><b>${ok ? "Geprüft" : "Prüfen"}:</b> Protokoll liegt unter Mehr; Rezepte liegen im gemeinsamen Lebensmittel-Tab</div>`;
   }
+
+  installIngredientAwareRecipeSearch();
 
   const switcher = document.getElementById("catalogSwitch");
   switcher?.querySelectorAll("[data-catalog-mode]").forEach((button) => {

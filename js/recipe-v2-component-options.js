@@ -24,8 +24,10 @@ function foodHasRecipeComponentKind(foodRecord, kind) {
 }
 
 function foodAllowsSmoothPasteComponent(foodRecord) {
-  if (!foodRecord || !["Nuss", "Samen"].includes(String(foodRecord.category || ""))) return false;
-  return /\bMus\b/i.test(String(foodRecord.safeForm || ""));
+  if (!foodRecord || !/\bMus\b/i.test(String(foodRecord.safeForm || ""))) return false;
+  let category = String(foodRecord.category || "");
+  if (category === "Nuss") return true;
+  return category === "Samen" && String(foodRecord.allergenGroup || "") === "Sesam";
 }
 
 function installFoodRecipeComponentMetadata(foods = typeof FOOD_DB !== "undefined" ? FOOD_DB : null) {

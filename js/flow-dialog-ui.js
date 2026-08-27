@@ -23,6 +23,7 @@
   let genericOpen = genericModal.classList.contains("open");
   let logOpen = logModal.classList.contains("open");
   let mealSelectorQuery = "";
+  let logSelectorMode = "recipes";
 
   function setText(node, value) {
     if (node && node.textContent !== value) node.textContent = value;
@@ -146,11 +147,108 @@
     return subtitle;
   }
 
+  function logContextNode() {
+    return logBody.querySelector(".log-date-grid") ||
+      logBody.querySelector("#editLogContext")?.closest(".field") ||
+      null;
+  }
+
+  function decorateLogSelectorRows(container, kind) {
+    if (!container) return;
+    const selector = kind === "recipes" ? ".selectLogRecipeResult" : ".addLogFoodResult";
+    const kindClass = kind === "recipes" ? "selectRecipe" : "selectFood";
+    container.querySelectorAll(selector).forEach((row) =>
+      row.classList.add("selector-row", kindClass),
+    );
+  }
+
+  function ensureLogSelector() {
+    const foodPicker = logBody.querySelector(".log-food-picker");
+    const recipePicker = logBody.querySelector(".log-recipe-picker");
+    if (!foodPicker) return;
+
+    let selector = logBody.querySelector(".flow-log-selector");
+    if (!selector) {
+      selector = document.createElement("div");
+      selector.className = "flow-log-selector flow-dialog-selection";
+      const context = logContextNode();
+      if (context) context.insertAdjacentElement("afterend", selector);
+      else logBody.prepend(selector);
+    }
+
+    if (recipePicker && !selector.contains(recipePicker)) selector.appendChild(recipePicker);
+    if (!selector.contains(foodPicker)) selector.appendChild(foodPicker);
+
+    recipePicker?.classList.add("flow-log-selector-panel");
+    foodPicker.classList.add("flow-log-selector-panel");
+    if (recipePicker) recipePicker.id = "flowLogRecipePanel";
+    foodPicker.id = "flowLogFoodPanel";
+
+    const recipeInput = recipePicker?.querySelector("#logRecipeSearch") || null;
+    const foodInput = foodPicker.querySelector("#logFoodSearch");
+    const recipeResults = recipePicker?.querySelector(".log-recipe-results") || null;
+    const foodResults = foodPicker.querySelector(".log-food-results");
+    recipeResults?.classList.add("selector-results");
+    foodResults?.classList.add("selector-results");
+    decorateLogSelectorRows(recipeResults, "recipes");
+    decorateLogSelectorRows(foodResults, "foods");
+
+    const recipeLabel = recipePicker?.querySelector(":scope > label") || null;
+    const foodLabel = foodPicker.querySelector(":scope > label");
+    setText(recipeLabel, "Suchen");
+    setText(foodLabel, "Suchen");
+    if (recipeInput) recipeInput.placeholder = "Rezept suchen";
+    if (foodInput) foodInput.placeholder = "Lebensmittel suchen";
+
+    const recipeResultsLabel = recipePicker?.querySelector(".log-recipe-results-label") || null;
+    if (recipeResultsLabel) {
+      const hasRecipeQuery = !!String(recipeInput?.value || "").trim();
+      setHidden(recipeResultsLabel, !hasRecipeQuery);
+      if (hasRecipeQuery) setText(recipeResultsLabel, "Suchergebnisse");
+    }
+
+    let tabs = selector.querySelector(".flow-log-selector-tabs");
+    if (recipePicker) {
+      if (!tabs) {
+        tabs = document.createElement("div");
+        tabs.className = "meal-selector-tabs flow-log-selector-tabs";
+        tabs.setAttribute("role", "group");
+        tabs.setAttribute("aria-label", "Rezepte oder Lebensmittel auswählen");
+        tabs.innerHTML = `<button type="button" data-flow-log-selector="recipes" aria-controls="flowLogRecipePanel">Rezepte</button><button type="button" data-flow-log-selector="foods" aria-controls="flowLogFoodPanel">Lebensmittel</button>`;
+        selector.prepend(tabs);
+      }
+    } else {
+      tabs?.remove();
+      tabs = null;
+      logSelectorMode = "foods";
+    }
+
+    if (foodPicker.classList.contains("field-error")) logSelectorMode = "foods";
+    const mode = recipePicker && logSelectorMode === "recipes" ? "recipes" : "foods";
+    logSelectorMode = mode;
+
+    if (tabs) {
+      tabs.querySelectorAll("[data-flow-log-selector]").forEach((button) => {
+        const active = button.dataset.flowLogSelector === mode;
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-pressed", active ? "true" : "false");
+      });
+    }
+    setHidden(recipePicker, mode !== "recipes");
+    setHidden(foodPicker, mode !== "foods");
+
+    if (foodPicker.classList.contains("field-error") && foodInput) {
+      queueMicrotask(() => {
+        if (!foodPicker.hidden) foodInput.focus();
+      });
+    }
+  }
+
   function markSections(body) {
     body.querySelectorAll(".log-date-grid, .manual-meal-target-date").forEach((node) =>
       node.classList.add("flow-dialog-context"),
     );
-    body.querySelectorAll(".meal-selector-tabs, .log-recipe-picker, .log-food-picker").forEach((node) =>
+    body.querySelectorAll(".meal-selector-tabs, .flow-log-selector").forEach((node) =>
       node.classList.add("flow-dialog-selection"),
     );
     body.querySelectorAll(".manual-role-overview, .selected-target, .log-recipe-choice").forEach((node) =>
@@ -243,6 +341,7 @@
     }
 
     let subtitle = document.getElementById("logSubtitle");
+    ensureLogSelector();
     decorate(logModal, logBody, subtitle);
 
     if (!logContentObserver) {
@@ -271,6 +370,7 @@
     const open = logModal.classList.contains("open");
     if (open === logOpen) return;
     logOpen = open;
+    if (open) logSelectorMode = "recipes";
     syncLog();
   });
   logStateObserver.observe(logModal, {
@@ -287,6 +387,17 @@
 
   genericModal.addEventListener("change", (event) => {
     if (event.target?.id === "manualMealTargetDate") syncGeneric();
+  });
+
+  logModal.addEventListener("click", (event) => {
+    const button = event.target.closest?.("[data-flow-log-selector]");
+    if (!button || !logBody.contains(button)) return;
+    logSelectorMode = button.dataset.flowLogSelector === "recipes" ? "recipes" : "foods";
+    ensureLogSelector();
+    const input = logSelectorMode === "recipes"
+      ? logBody.querySelector("#logRecipeSearch")
+      : logBody.querySelector("#logFoodSearch");
+    input?.focus();
   });
 
   syncGeneric();

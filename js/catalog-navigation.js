@@ -1,8 +1,58 @@
 "use strict";
 
 /* Gemeinsamer Katalog-Tab für Lebensmittel und Rezepte.
- * Rezeptdaten, Planner und direkte Rezeptdetail-Dialoge bleiben unverändert.
+ * Variable Obst-Komponenten werden zentral aus dem kanonischen FOOD-Stamm abgeleitet.
  */
+
+function recipeCategoryFoodByName(name, foods = []) {
+  if (typeof foodByName === "function") return foodByName(name, foods);
+  return (foods || []).find((item) => item?.name === name) || null;
+}
+
+function recipeCategoryChoiceNames(category, foods = []) {
+  return (foods || [])
+    .filter((item) => item?.active !== false && item?.category === category && item?.name)
+    .sort((a, b) => Number(a.priority || 0) - Number(b.priority || 0))
+    .map((item) => item.name);
+}
+
+function installRecipeCategoryComponentOptions(
+  recipes = typeof RECIPES !== "undefined" ? RECIPES : null,
+  foods = typeof FOOD_DB !== "undefined" ? FOOD_DB : null,
+) {
+  if (!Array.isArray(recipes) || !Array.isArray(foods)) return false;
+  const fruitNames = recipeCategoryChoiceNames("Obst", foods);
+  if (!fruitNames.length) return false;
+
+  let changed = false;
+  for (const recipe of recipes) {
+    if (!Array.isArray(recipe?.oneOf) || !recipe.oneOf.length) continue;
+    const sourceFoods = recipe.oneOf.map((name) => recipeCategoryFoodByName(name, foods));
+    if (sourceFoods.some((item) => !item) || sourceFoods.some((item) => item.category !== "Obst")) continue;
+
+    if (recipe.oneOf.length !== fruitNames.length || recipe.oneOf.some((name, index) => name !== fruitNames[index])) {
+      recipe.oneOf = [...fruitNames];
+      changed = true;
+    }
+    if (Array.isArray(recipe.variantLabels)) recipe.variantLabels = [...fruitNames];
+    if (recipe.family && /^\d+ Obstvarianten$/.test(String(recipe.familyLabel || ""))) {
+      recipe.familyLabel = `${fruitNames.length} Obstvarianten`;
+    }
+  }
+  return changed;
+}
+
+if (typeof RECIPES !== "undefined" && typeof FOOD_DB !== "undefined") {
+  installRecipeCategoryComponentOptions(RECIPES, FOOD_DB);
+}
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    recipeCategoryChoiceNames,
+    installRecipeCategoryComponentOptions,
+  };
+}
+
 (function catalogNavigationModule() {
   if (typeof document === "undefined") return;
 

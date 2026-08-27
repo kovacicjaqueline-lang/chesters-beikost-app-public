@@ -37,15 +37,11 @@ function manualMealFlowLearningAdvisoryText(ids, nameForId = (id) => id) {
 
 function manualMealFlowLearningValidation(validation, statusForId = () => "", nameForId = (id) => id) {
   let source = validation || {};
-  let multipleUnsafeIds = [...new Set((source.multipleUnsafeIds || []).filter(Boolean))];
-  let learningOnlyConflict = multipleUnsafeIds.length > 0 && multipleUnsafeIds.every((id) =>
-    ["Offen", "Probiert"].includes(statusForId(id)),
-  );
   let newIds = [...new Set((source.samples || []).filter((id) => statusForId(id) === "Offen"))];
   let multipleNewIds = newIds.length > 1 ? newIds : [];
   let obsoleteMessagePrefix = "Nur eine neue oder unsichere Einführung gleichzeitig:";
   let messages = (source.messages || []).filter((message) =>
-    !learningOnlyConflict || !String(message).startsWith(obsoleteMessagePrefix),
+    !String(message).startsWith(obsoleteMessagePrefix),
   );
   let advisory = manualMealFlowLearningAdvisoryText(multipleNewIds, nameForId);
   let ok = !!(source.ids || []).length &&
@@ -58,7 +54,7 @@ function manualMealFlowLearningValidation(validation, statusForId = () => "", na
     ok,
     newIds,
     multipleNewIds,
-    multipleUnsafeIds: learningOnlyConflict ? [] : multipleUnsafeIds,
+    multipleUnsafeIds: [],
     messages,
     advisories: advisory ? [advisory] : [],
     message: messages.join(" "),

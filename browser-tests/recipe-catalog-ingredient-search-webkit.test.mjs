@@ -71,22 +71,30 @@ try {
   await page.locator('#catalogSwitch [data-catalog-mode="recipes"]').click();
   await page.locator('[data-recipe-filter="all"]').click();
 
+  const search = page.locator("#recipeSearch");
   const recipeNames = () => page.locator("#recipeList .recipe-card-v2 summary b").allTextContents();
   const beforeSearch = await recipeNames();
   assert.ok(beforeSearch.includes("Obst-Hafer-Pancakes"), "Ei-Rezept muss vor der Suche im Alle-Filter vorhanden sein");
   assert.ok(beforeSearch.includes("Milch-Getreide-Brei"), "Kontrollrezept muss vor der Suche im Alle-Filter vorhanden sein");
 
-  await page.locator("#recipeSearch").fill("Ei");
-  const afterSearch = await recipeNames();
+  await search.fill("Ei");
+  const afterEggSearch = await recipeNames();
 
   assert.ok(
-    afterSearch.includes("Obst-Hafer-Pancakes"),
+    afterEggSearch.includes("Obst-Hafer-Pancakes"),
     "Die Suche nach Ei muss Rezepte finden, die Ei als strukturierte Zutat enthalten",
   );
   assert.equal(
-    afterSearch.includes("Milch-Getreide-Brei"),
+    afterEggSearch.includes("Milch-Getreide-Brei"),
     false,
     "Die Suche nach Ei darf nicht nur wegen der Buchstabenfolge in „Brei“ treffen",
+  );
+
+  await search.fill("flocken");
+  const afterLongSearch = await recipeNames();
+  assert.ok(
+    afterLongSearch.includes("Obst-Hafer-Pancakes"),
+    "Längere Suchbegriffe müssen weiterhin in der Zutatenbeschreibung gefunden werden",
   );
   assert.deepEqual(pageErrors, [], "Die Rezeptsuche darf keine JavaScript-Fehler auslösen");
 

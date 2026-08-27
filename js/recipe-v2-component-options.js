@@ -188,12 +188,22 @@ function installRecipeV2ComponentRuntime() {
   if (typeof RECIPES !== "undefined") installRecipeV2ComponentOptions(RECIPES, foods);
 }
 
+function installRecipeV2ComponentBeforeFirstRender() {
+  if (typeof renderAll !== "function") return false;
+  let originalRenderAll = renderAll;
+  let installed = false;
+  renderAll = function recipeComponentAwareRenderAll(...args) {
+    if (!installed) {
+      installed = true;
+      installRecipeV2ComponentRuntime();
+    }
+    return originalRenderAll(...args);
+  };
+  return true;
+}
+
 if (typeof window !== "undefined" && typeof document !== "undefined") {
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", installRecipeV2ComponentRuntime, { once: true });
-  } else {
-    installRecipeV2ComponentRuntime();
-  }
+  installRecipeV2ComponentBeforeFirstRender();
 }
 
 if (typeof module !== "undefined" && module.exports) {
@@ -210,5 +220,6 @@ if (typeof module !== "undefined" && module.exports) {
     recipeComponentFoodNames,
     installRecipeV2ComponentOptions,
     installRecipeV2ComponentRuntime,
+    installRecipeV2ComponentBeforeFirstRender,
   };
 }

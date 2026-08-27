@@ -89,6 +89,24 @@ try {
     false,
     "Die Suche nach Ei darf nicht nur wegen der Buchstabenfolge in „Brei“ treffen",
   );
+  const nonEggIngredientResults = await page.evaluate((names) => {
+    const egg = foodByName("Ei", FOOD_DB);
+    return names.filter((name) => {
+      const recipe = recipeByName(name);
+      const labels = [
+        ...(recipe?.requires || []),
+        ...((recipe?.alternatives || []).flat()),
+        ...(recipe?.oneOf || []),
+        ...(recipe?.milkChoices || []),
+      ];
+      return !egg || !labels.some((label) => recipeFoodFromStructuredLabel(label, FOOD_DB)?.id === egg.id);
+    });
+  }, afterEggSearch);
+  assert.deepEqual(
+    nonEggIngredientResults,
+    [],
+    "Jeder Treffer für die exakte Lebensmittelsuche Ei muss Ei als strukturierte Rezeptzutat enthalten",
+  );
 
   await search.fill("flocken");
   const afterLongSearch = await recipeNames();

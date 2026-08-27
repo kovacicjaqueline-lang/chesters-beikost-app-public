@@ -12,7 +12,7 @@ const {
 const root = path.resolve(__dirname, "..");
 const runtimeSource = fs.readFileSync(path.join(root, "js", "manual-meal-flow.js"), "utf8");
 
-function validationFor(statuses, names = {}, overrides = {}) {
+function validationFor(statuses, names = {}, overrides = {}, postValidate = null) {
   const ids = Object.keys(statuses);
   return manualMealFlowLearningValidation(
     {
@@ -33,6 +33,7 @@ function validationFor(statuses, names = {}, overrides = {}) {
     },
     (id) => statuses[id] || "",
     (id) => names[id] || id,
+    postValidate,
   );
 }
 
@@ -83,10 +84,43 @@ test("strukturelle Auswahlfehler bleiben trotz nicht blockierendem Lernhinweis b
   assert.equal(result.advisories.length, 1);
 });
 
+test("nach Entfernen des Lernblockers läuft die nachgelagerte Strukturprüfung erneut", () => {
+  let calls = 0;
+  const result = validationFor(
+    { bangus: "Offen", tofu: "Offen" },
+    { bangus: "Bangus (Milkfish)", tofu: "Tofu", tahin: "Tahin" },
+    {
+      ids: ["bangus", "tofu", "tahin"],
+      samples: ["bangus", "tofu"],
+      components: ["tahin"],
+      unsafeIds: ["bangus", "tofu"],
+      multipleUnsafeIds: ["bangus", "tofu"],
+      messages: ["Nur eine neue oder unsichere Einführung gleichzeitig: bangus, tofu."],
+    },
+    (adjusted) => {
+      calls += 1;
+      assert.equal(adjusted.ok, true, "der reine Lernblocker muss vor der Strukturprüfung entfernt sein");
+      const message = "Komponentenformen brauchen außerhalb eines Rezepts eine geeignete Hauptbasis: Tahin.";
+      return {
+        ...adjusted,
+        ok: false,
+        messages: [...adjusted.messages, message],
+        message,
+      };
+    },
+  );
+
+  assert.equal(calls, 1);
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.messages, ["Komponentenformen brauchen außerhalb eines Rezepts eine geeignete Hauptbasis: Tahin."]);
+  assert.equal(result.advisories.length, 1);
+});
+
 test("Editor wandelt den grünen Zustand bei mehreren offenen Lernlebensmitteln in einen Hinweis um", () => {
   assert.match(runtimeSource, /\.manual-role-group\.sample \.removeManualSelected\[data-food\]/);
   assert.match(runtimeSource, /status\(item\) === "Offen"/);
   assert.match(runtimeSource, /Hinweis zur Einführung/);
   assert.match(runtimeSource, /notice olive manual-role-advisory/);
   assert.match(runtimeSource, /manualMealValidation = function manualFlowManualMealValidation/);
+  assert.match(runtimeSource, /plannerManualComponentBaseViolation\(/);
 });

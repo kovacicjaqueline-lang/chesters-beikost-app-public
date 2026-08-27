@@ -69,8 +69,9 @@
     const aFood = typeof food === "function" ? food(a.dataset.food) : null;
     const bFood = typeof food === "function" ? food(b.dataset.food) : null;
     if (query && aFood && bFood && typeof foodSearchScore === "function") {
-      const searchOrder = foodSearchScore(aFood, query) - foodSearchScore(bFood, query);
-      if (searchOrder) return searchOrder;
+      const aScore = foodSearchScore(aFood, query);
+      const bScore = foodSearchScore(bFood, query);
+      if (aScore !== bScore) return aScore - bScore;
     }
 
     if (aFood && bFood && typeof rank === "function") {
@@ -91,11 +92,12 @@
 
     const query = mealSelectorQuery.trim();
     const rows = Array.from(results.querySelectorAll(".selector-row.selectFood, .selector-row.selectRecipe"));
-    const foodRows = rows.filter((row) => row.classList.contains("selectFood"));
-    if (foodRows.length) {
-      foodRows.sort((a, b) => compareFoodSelectorRows(a, b, query));
+    const currentFoodRows = rows.filter((row) => row.classList.contains("selectFood"));
+    const sortedFoodRows = [...currentFoodRows].sort((a, b) => compareFoodSelectorRows(a, b, query));
+    const foodOrderChanged = sortedFoodRows.some((row, index) => row !== currentFoodRows[index]);
+    if (foodOrderChanged) {
       const currentEmpty = results.querySelector(".flow-meal-selector-empty");
-      foodRows.forEach((row) => results.insertBefore(row, currentEmpty || null));
+      sortedFoodRows.forEach((row) => results.insertBefore(row, currentEmpty || null));
     }
 
     let visibleRows = 0;

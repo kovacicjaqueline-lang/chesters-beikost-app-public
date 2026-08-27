@@ -10,7 +10,7 @@ const {
   RECIPE_COMPONENT_KINDS,
   RECIPE_V2_COMPONENT_OPTIONS,
   foodHasRecipeComponentKind,
-  installFoodRecipeComponentMetadata,
+  foodIsDedicatedSmoothPasteVariant,
   installRecipeV2ComponentOptions,
 } = require("../js/recipe-v2-component-options.js");
 
@@ -29,36 +29,36 @@ test("Milch-Getreide-Brei definiert alle Milchoptionen zentral", () => {
   assert.deepEqual(recipe.milkChoices, [...RECIPE_V2_COMPONENT_OPTIONS["Milch-Getreide-Brei"].milkChoices]);
 });
 
-test("FOOD-Metadaten kennzeichnen sichere Nuss-/Sesampasten ohne allgemeine Samenfreigabe", () => {
+test("Nuss-/Sesampasten werden nur aus strukturierten FOOD-Eigenschaften abgeleitet", () => {
   const foods = actualFoods();
-  assert.equal(installFoodRecipeComponentMetadata(foods), true);
 
-  for (const id of ["erdnuss", "mandel", "walnuss", "haselnuss", "cashew", "pistazie", "pecannuss", "paranuss", "macadamia"]) {
+  for (const id of ["erdnuss", "mandel", "walnuss", "haselnuss", "cashew", "pistazie", "pecannuss", "paranuss", "macadamia", "sesam"]) {
     const item = foods.find((food) => food.id === id);
     assert.ok(item, id);
-    assert.equal(
-      foodHasRecipeComponentKind(item, RECIPE_COMPONENT_KINDS.SMOOTH_PASTE),
-      true,
-      id,
-    );
+    assert.equal(foodHasRecipeComponentKind(item, RECIPE_COMPONENT_KINDS.SMOOTH_PASTE), true, id);
   }
-
-  const sesam = foods.find((food) => food.id === "sesam");
-  assert.ok(sesam);
-  assert.equal(foodHasRecipeComponentKind(sesam, RECIPE_COMPONENT_KINDS.SMOOTH_PASTE), true);
 
   for (const id of ["maroni", "leinsamen"]) {
     const item = foods.find((food) => food.id === id);
     assert.ok(item, id);
-    assert.equal(
-      foodHasRecipeComponentKind(item, RECIPE_COMPONENT_KINDS.SMOOTH_PASTE),
-      false,
-      id,
-    );
+    assert.equal(foodHasRecipeComponentKind(item, RECIPE_COMPONENT_KINDS.SMOOTH_PASTE), false, id);
   }
+
+  const fixture = {
+    id: "fixture-nut",
+    name: "Fixture-Nuss",
+    category: "Nuss",
+    allergenGroup: "Schalenfrüchte",
+    safeForm: "Dieser sichtbare Text erwähnt absichtlich kein Mus.",
+  };
+  assert.equal(
+    foodHasRecipeComponentKind(fixture, RECIPE_COMPONENT_KINDS.SMOOTH_PASTE),
+    true,
+    "UI-/Safety-Freitext darf die Maschinenklassifikation nicht steuern",
+  );
 });
 
-test("Joghurt-Nussmus bezieht alle geeigneten aktiven Nüsse aus FOOD", () => {
+test("Joghurt-Nussmus bezieht geeignete kanonische Nüsse zentral aus FOOD", () => {
   const foods = actualFoods();
   const recipe = {
     name: "Joghurt-Nussmus-Miniportion",
@@ -69,6 +69,7 @@ test("Joghurt-Nussmus bezieht alle geeigneten aktiven Nüsse aus FOOD", () => {
   const expected = foods
     .filter((item) => item.active !== false && item.category === "Nuss")
     .filter((item) => foodHasRecipeComponentKind(item, RECIPE_COMPONENT_KINDS.SMOOTH_PASTE))
+    .filter((item) => !foodIsDedicatedSmoothPasteVariant(item))
     .sort((a, b) =>
       (Number(a.priority) || 9999) - (Number(b.priority) || 9999) ||
       String(a.name || "").localeCompare(String(b.name || ""), "de"),
@@ -79,6 +80,8 @@ test("Joghurt-Nussmus bezieht alle geeigneten aktiven Nüsse aus FOOD", () => {
   for (const name of ["Pistazie", "Pecannuss", "Paranuss", "Macadamia"]) {
     assert.ok(recipe.oneOf.includes(name), name);
   }
-  assert.equal(recipe.oneOf.includes("Maroni"), false);
+  for (const name of ["Maroni", "Erdnussmus", "Pistazienmus", "Tahin"]) {
+    assert.equal(recipe.oneOf.includes(name), false, name);
+  }
   assert.equal(recipe.editorComponents.oneOf.label, "Nussmus");
 });

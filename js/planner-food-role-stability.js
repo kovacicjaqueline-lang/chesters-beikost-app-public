@@ -25,15 +25,6 @@ const PLANNER_NUT_SEED_SAMPLE_TYPES = new Set([
   "manuell",
 ]);
 const PLANNER_NUT_SEED_TOPPING_KIND = "smooth-paste";
-const PLANNER_NUT_SEED_PREPARED_TOPPING_IDS = new Set([
-  "erdnussmus",
-  "mandelmus",
-  "haselnussmus",
-  "cashewmus",
-  "walnussmus",
-  "pistazienmus",
-  "tahin",
-]);
 
 function plannerNutSeedComponentFood(foodRecord) {
   return !!foodRecord && PLANNER_NUT_SEED_CATEGORIES.has(String(foodRecord.category || ""));
@@ -48,6 +39,23 @@ function plannerNutSeedToppingForm(foodRecord) {
   let allergenGroup = String(foodRecord.allergenGroup || "");
   if (category === "Nuss") return allergenGroup === "Erdnuss" || allergenGroup === "Schalenfrüchte";
   return category === "Samen" && allergenGroup === "Sesam";
+}
+
+function plannerNutSeedComponentForm(foodRecord) {
+  if (!plannerNutSeedToppingForm(foodRecord)) return "";
+  if (typeof foodRecipeComponentForm === "function") {
+    return foodRecipeComponentForm(foodRecord, PLANNER_NUT_SEED_TOPPING_KIND);
+  }
+  let category = String(foodRecord.category || "");
+  let family = String(foodRecord.foodFamily || foodRecord.allergenFamily || "");
+  let canonicalId = String(foodRecord.id || "");
+  if (category === "Nuss" && family.startsWith("nuss:")) canonicalId = family.slice("nuss:".length);
+  else if (category === "Samen" && family) canonicalId = family;
+  return String(foodRecord.id || "") === canonicalId ? "canonical" : "prepared";
+}
+
+function plannerNutSeedPreparedToppingForm(foodRecord) {
+  return plannerNutSeedComponentForm(foodRecord) === "prepared";
 }
 
 function plannerNutSeedRelatedIds(foodRecord, foods = []) {
@@ -75,13 +83,12 @@ function plannerNutSeedPreferredToppingForm(foodRecord, foods = [], eligibleFn =
     .filter((candidate) =>
       candidate?.id !== foodRecord.id &&
       related.has(candidate.id) &&
-      PLANNER_NUT_SEED_PREPARED_TOPPING_IDS.has(String(candidate.id || "")) &&
-      plannerNutSeedToppingForm(candidate) &&
+      plannerNutSeedPreparedToppingForm(candidate) &&
       eligible(candidate),
     )
     .sort((a, b) => (Number(a.priority) || 9999) - (Number(b.priority) || 9999))[0];
   if (prepared) return prepared;
-  return plannerNutSeedToppingForm(foodRecord) && eligible(foodRecord) ? foodRecord : foodRecord;
+  return foodRecord;
 }
 
 function plannerNutSeedNormalizeIntroductionResult(result, foods = [], eligibleFn = null) {
@@ -526,9 +533,10 @@ if (typeof module !== "undefined" && module.exports) {
     PLANNER_NUT_SEED_CATEGORIES,
     PLANNER_NUT_SEED_SAMPLE_TYPES,
     PLANNER_NUT_SEED_TOPPING_KIND,
-    PLANNER_NUT_SEED_PREPARED_TOPPING_IDS,
     plannerNutSeedComponentFood,
     plannerNutSeedToppingForm,
+    plannerNutSeedComponentForm,
+    plannerNutSeedPreparedToppingForm,
     plannerNutSeedRelatedIds,
     plannerNutSeedPreferredToppingForm,
     plannerNutSeedNormalizeIntroductionResult,

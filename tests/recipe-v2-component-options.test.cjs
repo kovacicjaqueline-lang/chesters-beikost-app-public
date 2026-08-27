@@ -17,6 +17,11 @@ const {
   installRecipeV2ComponentOptions,
 } = require("../js/recipe-v2-component-options.js");
 
+const componentSource = fs.readFileSync(
+  path.resolve(__dirname, "..", "js", "recipe-v2-component-options.js"),
+  "utf8",
+);
+
 function actualFoods() {
   const source = fs.readFileSync(path.resolve(__dirname, "..", "data", "foods.js"), "utf8");
   const context = {};
@@ -103,4 +108,32 @@ test("Joghurt-Nussmus bezieht geeignete kanonische Nüsse zentral aus FOOD", () 
     assert.equal(recipe.oneOf.includes(name), false, name);
   }
   assert.equal(recipe.editorComponents.oneOf.label, "Nussmus");
+});
+
+test("Runtime installiert FOOD-Komponenten vor dem ersten echten renderAll", () => {
+  const foods = policyFoods();
+  const recipes = [{ name: "Joghurt-Nussmus-Miniportion", oneOf: ["Erdnuss"] }];
+  const stateFoods = foods.map((item) => ({ ...item }));
+  const renderSnapshots = [];
+  const context = {
+    FOOD_DB: foods,
+    RECIPES: recipes,
+    state: { foods: stateFoods },
+    renderAll() {
+      renderSnapshots.push([...recipes[0].oneOf]);
+    },
+  };
+  vm.createContext(context);
+  vm.runInContext(componentSource, context);
+
+  assert.equal(context.installRecipeV2ComponentBeforeFirstRender(), true);
+  context.renderAll();
+
+  assert.equal(renderSnapshots.length, 1);
+  assert.ok(renderSnapshots[0].includes("Pecannuss"));
+  assert.equal(renderSnapshots[0].includes("Erdnussmus"), false);
+  assert.equal(
+    context.state.foods.find((item) => item.id === "erdnussmus")?.recipeComponentForm,
+    "prepared",
+  );
 });

@@ -491,6 +491,7 @@ function renderLogForm() {
     ${!p.editId && !recipeItem && stockedSelected.length ? `<div class="field"><label>Aus dem Gefriervorrat verwendet</label><div class="chips">${stockedSelected.map((f) => `<label class="chip toggle-chip"><input class="ds-toggle-input" type="checkbox" data-inventory-food="${f.id}" ${selectedInventoryFoods.has(f.id) ? "checked" : ""}><span>1 Portion ${esc(f.name)} <small>(${inventoryPortions(f.id)} vorhanden)</small></span></label>`).join("")}</div></div>` : ""}
     <div class="sticky-form-actions"><div class="ds-actionbar"><button class="btn secondary" id="cancelLog" type="button">Abbrechen</button><button class="btn" id="saveLog">${p.editId ? "Änderungen speichern" : "Speichern"}</button></div></div>`;
   document.querySelectorAll("#logForm select").forEach((select) => select.addEventListener("change", updateConditionalQuestions));
+  document.getElementById("logTexture")?.addEventListener("change", clearLogTextureValidation);
   document.getElementById("logDate").onchange = (event) => requestLogDateChange(event.target.value, p.date);
   document.getElementById("editLogContext")?.addEventListener("click", () => { p.__contextEditing = !p.__contextEditing; renderLogForm(); });
   document.getElementById("logMeal")?.addEventListener("change", (event) => { captureLogDraft(); p.meal = event.target.value; p.__contextEditing = true; renderLogForm(); });
@@ -549,6 +550,34 @@ function captureLogDraft(options = {}) {
   pendingLog.notOfferedReason = document.querySelector('input[name="notOfferedReason"]:checked')?.value || pendingLog.notOfferedReason || "";
 }
 
+function clearLogTextureValidation() {
+  let textureField = document.getElementById("logTexture")?.closest(".field");
+  textureField?.classList.remove("field-error");
+  textureField?.querySelector(".unified-texture-error")?.remove();
+}
+
+function requestLogTextureSelection() {
+  let select = document.getElementById("logTexture");
+  if (!select) return;
+  select.scrollIntoView({ block: "center", inline: "nearest" });
+  if (typeof select.showPicker === "function") {
+    try {
+      select.showPicker();
+      return;
+    } catch {}
+  }
+  let coarsePointer = typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches;
+  if (coarsePointer) {
+    select.blur();
+    return;
+  }
+  try {
+    select.focus({ preventScroll: true });
+  } catch {
+    select.focus();
+  }
+}
+
 function saveLog() {
   captureLogDraft();
   let freeRecipe = !pendingLog.editId && !pendingLog.__mealContext && pendingLog.recipeName ? recipeByName(pendingLog.recipeName) : null;
@@ -601,7 +630,7 @@ function saveLog() {
   if (textureRequired) {
     textureField?.classList.add("field-error");
     textureField?.insertAdjacentHTML("beforeend", '<div class="field-error-message unified-texture-error">Bitte die tatsächlich angebotene Konsistenz auswählen.</div>');
-    document.getElementById("logTexture")?.focus();
+    requestLogTextureSelection();
     return;
   }
 

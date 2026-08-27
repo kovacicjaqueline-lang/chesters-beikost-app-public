@@ -100,6 +100,29 @@
     return projected;
   }
 
+  function annotateMaintenanceFoodIds(dueTargets = [], meals = [], foods = [], helpers = {}) {
+    let remaining = new Map(
+      (dueTargets || [])
+        .filter((target) => target?.key)
+        .map((target) => [target.key, target]),
+    );
+    for (let meal of meals || []) {
+      if (!meal || !remaining.size) continue;
+      let sampleIds = new Set(meal.sampleFoodIds || []);
+      let ids = foodIdsForPlannedRecord(meal, helpers)
+        .filter((id) => !sampleIds.has(id));
+      let matched = [];
+      for (let [key, target] of remaining) {
+        let targetIds = ids.filter((id) => targetMatchesFood(target, foodById(foods, id)));
+        if (!targetIds.length) continue;
+        matched.push(...targetIds);
+        remaining.delete(key);
+      }
+      if (matched.length) meal.allergenMaintenanceFoodIds = [...new Set(matched)];
+    }
+    return meals;
+  }
+
   function isoDayNumber(value) {
     let parts = text(value).split("-").map(Number);
     if (parts.length !== 3 || parts.some((part) => !Number.isFinite(part))) return NaN;
@@ -216,6 +239,7 @@
     projectedTargetKeysForRecord,
     ensureProjectedTargetSet,
     markProjectedRecord,
+    annotateMaintenanceFoodIds,
     latestSuccessfulExposureDate,
     establishedTargets,
     dueTargets,
@@ -359,6 +383,7 @@
   };
 
   buildDay = function maintenanceAwareBuildDay(date, index, ctx) {
+    let dueTargetsBeforeDay = runtimeDueTargets(date, ctx);
     if (maintenanceBuildRange) {
       markPresetRange(ctx, maintenanceBuildRange.from, maintenanceBuildRange.count);
     }
@@ -444,6 +469,12 @@
     try {
       dueAllergen = () => false;
       let day = baseBuildDay(date, index, ctx);
+      CORE.annotateMaintenanceFoodIds(
+        dueTargetsBeforeDay,
+        day?.meals || [],
+        state.foods,
+        runtimeHelpers(),
+      );
       let actualTargetKeys = new Set();
       for (let meal of day?.meals || []) {
         if (runtimeMealCompleted(date, meal?.meal)) continue;

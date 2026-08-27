@@ -211,8 +211,8 @@ try {
     has: page.locator(`.replaceMeal[data-date="${dates.today}"][data-meal="lunch"]`),
   });
   const lockedPlannerTitle = await lockedPlannerCard.locator(".dish-title").innerText();
-  assert.match(lockedPlannerTitle, /Banane/, "normaler manuell gesperrter Planner-Slot behält den Basistitel");
-  assert.doesNotMatch(lockedPlannerTitle, /Pfirsich|Einführung|Wiederholung/, "manuelles Sperren allein darf nicht den Manual-Card-Titel erzwingen");
+  assert.equal(lockedPlannerTitle, "Banane mit Pfirsich", "normaler manuell gesperrter Planner-Slot nutzt den deskriptiven FOOD-Titel");
+  assert.doesNotMatch(lockedPlannerTitle, /Einführung|Wiederholung/, "manuelles Sperren allein darf keine Lernrolle in den Titel schreiben");
 
   // Für den eigentlichen Zusatzmahlzeiten-/Rekey-Flow wieder einen freien Zustand herstellen.
   await page.evaluate(() => {

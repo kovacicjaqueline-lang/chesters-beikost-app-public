@@ -17,6 +17,25 @@
       .replace(/\s+/g, " ");
   }
 
+  function groupOutcomeItems(items = []) {
+    let groups = [];
+    let byOutcome = new Map();
+    for (let item of items || []) {
+      let name = String(item?.name || "").trim();
+      let outcome = String(item?.outcome || "").trim();
+      if (!name || !outcome) continue;
+      let key = normalizeComparable(outcome);
+      let group = byOutcome.get(key);
+      if (!group) {
+        group = { outcome, names: [] };
+        byOutcome.set(key, group);
+        groups.push(group);
+      }
+      if (!group.names.includes(name)) group.names.push(name);
+    }
+    return groups;
+  }
+
   function compactStockBadgeData(kind, names = "") {
     let cleanNames = String(names || "")
       .split(",")
@@ -67,6 +86,7 @@
   if (typeof module !== "undefined" && module.exports) {
     module.exports = {
       REMOVED_PLAN_MARKER,
+      groupOutcomeItems,
       compactStockBadgeData,
       stockBadgeIconMarkup,
       stripVisibleLockLabel,
@@ -109,6 +129,47 @@
   padding: 9px 12px !important;
   margin-top: 8px;
   border-radius: 13px;
+}
+#todayCard .mealbox.completed .completed-main {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+}
+#todayCard .mealbox.completed .completed-title {
+  line-height: 1.3;
+}
+#todayCard .mealbox.completed .completed-main > .pill.ok {
+  padding: 4px 7px;
+  font-size: 11px;
+  opacity: .72;
+}
+#todayCard .mealbox.completed .log-outcome-grid {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+  margin-top: 6px;
+}
+#todayCard .mealbox.completed .log-outcome-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: baseline;
+}
+#todayCard .mealbox.completed .log-outcome-item b {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+#todayCard .mealbox.completed .completed-body-direct {
+  margin: 8px 0 0;
+}
+#todayCard .mealbox.completed .completed-body-direct .editCompletedLog {
+  display: block;
+  min-height: 38px;
+  margin: 8px auto 0 !important;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  font-size: 13px;
 }
 .stock-chip .stock-badge-icon,
 .recipe-stock-chip .stock-badge-icon {
@@ -307,6 +368,32 @@
     });
   }
 
+  function compactTodayCompletedOutcomes(container) {
+    if (!container?.querySelectorAll) return;
+    container.querySelectorAll(".mealbox.completed .log-outcome-grid").forEach((grid) => {
+      let rows = [...grid.querySelectorAll(".log-outcome-item")];
+      if (rows.length < 2) return;
+      let items = rows.map((row) => ({
+        name: row.querySelector("b")?.textContent?.trim() || "",
+        outcome: row.querySelector("span")?.textContent?.trim() || "",
+      }));
+      if (items.some((item) => !item.name || !item.outcome)) return;
+      let groups = groupOutcomeItems(items);
+      if (!groups.length) return;
+      grid.textContent = "";
+      groups.forEach((group) => {
+        let row = document.createElement("div");
+        row.className = "log-outcome-item today-outcome-group";
+        let names = document.createElement("b");
+        names.textContent = group.names.join(", ");
+        let outcome = document.createElement("span");
+        outcome.textContent = group.outcome;
+        row.append(names, outcome);
+        grid.appendChild(row);
+      });
+    });
+  }
+
   function flattenSinglePlanAction() {
     let details = document.querySelector("details.plan-secondary-actions");
     if (!details) return;
@@ -459,17 +546,15 @@
     let todayHeading = active.length && openMeals.length === 0
       ? "Heute erledigt"
       : "Heute anbieten";
-    let todayBadge = active.length && openMeals.length === 0
-      ? '<span class="pill ok">Vollständig</span>'
-      : "";
     let progressStatus =
       active.length && openMeals.length < active.length && openMeals.length > 0
         ? `<div class="status-chips"><span class="pill ok">${active.length - openMeals.length} erledigt</span></div>`
         : "";
 
-    card.innerHTML = `<div class="row"><div class="grow"><h2>${todayHeading}</h2><div class="small">${nice(on, true)} · ${age} Monate</div></div>${todayBadge}</div>${progressStatus}${todayHtml}<div class="add-meal-row"><button class="btn secondary smallbtn" id="homeAddEntry">＋ Essen eintragen</button></div>`;
+    card.innerHTML = `<div class="row"><div class="grow"><h2>${todayHeading}</h2><div class="small">${nice(on, true)} · ${age} Monate</div></div></div>${progressStatus}${todayHtml}<div class="add-meal-row"><button class="btn secondary smallbtn" id="homeAddEntry">＋ Essen eintragen</button></div>`;
 
     bindTodayMealActions(card);
+    compactTodayCompletedOutcomes(card);
     if (typeof bindInactiveMealActions === "function") bindInactiveMealActions();
     let freeLog = document.getElementById("homeFreeLog");
     if (freeLog) freeLog.onclick = () => openLog(null);
@@ -486,12 +571,14 @@
 
   root.__mealCardUnification = {
     REMOVED_PLAN_MARKER,
+    groupOutcomeItems,
     compactStockBadgeData,
     stockBadgeIconMarkup,
     stripVisibleLockLabel,
     simplifyMealTypeLabel,
     isRemovedPlanSlot,
     flattenCompletedDetails,
+    compactTodayCompletedOutcomes,
     flattenSinglePlanAction,
     simplifyMealCards,
     renderUnifiedTodayCard,

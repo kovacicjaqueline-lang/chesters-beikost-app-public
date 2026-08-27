@@ -139,7 +139,8 @@ test('MISSING-INGREDIENT-04: Loader und Offline-Precache enthalten die neue Verf
   assert.match(source, /Welche Zutat fehlt\?/);
   assert.match(source, /steht auf der Einkaufsliste/);
   assert.match(source, /renderAllAfterNextPaint/);
-  assert.match(source, /recipeInventoryPortions/);
+  assert.match(source, /PREPARED_STOCK_FLAG/);
+  assert.match(source, /withBaseRecipeAvailability/);
   assert.doesNotMatch(source, /state\.logs\.push/);
 });
 
@@ -171,6 +172,11 @@ test('MISSING-INGREDIENT-05: fertiger Rezeptvorrat wird weder angeboten noch als
     ),
     '',
   );
+
+  const stockRecipe = feature.markPreparedStockRecipe({ name: 'Baby-Bananenbrot' });
+  assert.equal(feature.isPreparedStockRecipe(stockRecipe), true);
+  assert.equal(stockRecipe[feature.PREPARED_STOCK_FLAG], true);
+  assert.equal(feature.isPreparedStockRecipe({ name: 'Baby-Bananenbrot' }), false, 'frisches Rezept bleibt ungekennzeichnet');
 });
 
 test('MISSING-INGREDIENT-06: Plan-Hinweis entfernt alte Log-Provenienz und konserviert Ablehnungs-Wiedervorlage samt Basis', () => {

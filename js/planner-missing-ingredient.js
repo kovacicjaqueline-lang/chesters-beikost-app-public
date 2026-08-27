@@ -11,6 +11,9 @@
  */
 (function plannerMissingIngredientModule(globalScope) {
   const REPLACEABLE_RECIPE_FIELDS = Object.freeze(["oneOf", "milkChoices"]);
+  const PREPARED_STOCK_FLAG = "__missingIngredientPreparedStock";
+  let baseRecipeIngredientReady = null;
+  let baseRecipeFoodIds = null;
 
   function uniqueIds(values) {
     return [...new Set((values || []).filter(Boolean))];
@@ -181,6 +184,14 @@
     };
   }
 
+  function markPreparedStockRecipe(recipe) {
+    return recipe ? { ...recipe, [PREPARED_STOCK_FLAG]: true } : null;
+  }
+
+  function isPreparedStockRecipe(recipe) {
+    return !!recipe?.[PREPARED_STOCK_FLAG];
+  }
+
   function clearUnavailableFoodFromStoredPlans(
     data,
     foodId,
@@ -282,6 +293,7 @@
 
   const API = {
     REPLACEABLE_RECIPE_FIELDS,
+    PREPARED_STOCK_FLAG,
     mealContainsFood,
     mealRequiresIngredientAvailability,
     canMarkMissingIngredient,
@@ -290,6 +302,8 @@
     planShoppingHint,
     followUpResumeRequest,
     awaitingStockFollowUp,
+    markPreparedStockRecipe,
+    isPreparedStockRecipe,
     clearUnavailableFoodFromStoredPlans,
   };
 
@@ -329,10 +343,7 @@
 
   function availabilityAwareRecipeFoodIds(recipe, originalRecipeFoodIds) {
     if (!recipe || typeof originalRecipeFoodIds !== "function") return [];
-    if (
-      typeof recipeInventoryPortions === "function" &&
-      Number(recipeInventoryPortions(recipe.name) || 0) > 0
-    ) return originalRecipeFoodIds(recipe);
+    if (isPreparedStockRecipe(recipe)) return originalRecipeFoodIds(recipe);
 
     const lookup = (name) => typeof foodByName === "function" ? foodByName(name, state?.foods || []) : null;
     const hasUnavailable = structuredRecipeNames(recipe).some((name) => {
@@ -375,9 +386,24 @@
     return uniqueIds(ids);
   }
 
+  function withBaseRecipeAvailability(callback) {
+    if (typeof callback !== "function") return null;
+    const liveReady = typeof recipeIngredientReady === "function" ? recipeIngredientReady : null;
+    const liveIds = typeof recipeFoodIds === "function" ? recipeFoodIds : null;
+    if (baseRecipeIngredientReady) recipeIngredientReady = baseRecipeIngredientReady;
+    if (baseRecipeFoodIds) recipeFoodIds = baseRecipeFoodIds;
+    try {
+      return callback();
+    } finally {
+      if (liveReady) recipeIngredientReady = liveReady;
+      if (liveIds) recipeFoodIds = liveIds;
+    }
+  }
+
   function installAvailabilityPolicies() {
     if (typeof recipeIngredientReady === "function" && !recipeIngredientReady.__missingIngredientAware) {
       const original = recipeIngredientReady;
+      baseRecipeIngredientReady ||= original;
       const wrapped = function missingIngredientAwareRecipeIngredientReady(name, ...args) {
         const item = typeof foodByName === "function" ? foodByName(name, state?.foods || []) : null;
         if (item && unavailable(item.id)) return false;
@@ -389,11 +415,38 @@
 
     if (typeof recipeFoodIds === "function" && !recipeFoodIds.__missingIngredientAware) {
       const original = recipeFoodIds;
+      baseRecipeFoodIds ||= original;
       const wrapped = function missingIngredientAwareRecipeFoodIds(recipe) {
         return availabilityAwareRecipeFoodIds(recipe, original);
       };
       wrapped.__missingIngredientAware = true;
       recipeFoodIds = wrapped;
+    }
+
+    if (typeof recipeStockCandidate === "function" && !recipeStockCandidate.__missingIngredientAware) {
+      const original = recipeStockCandidate;
+      const wrapped = function missingIngredientAwareRecipeStockCandidate(...args) {
+        const candidate = withBaseRecipeAvailability(() => original(...args));
+        return markPreparedStockRecipe(candidate);
+      };
+      wrapped.__missingIngredientAware = true;
+      recipeStockCandidate = wrapped;
+    }
+
+    if (typeof snackRecipeCandidate === "function" && !snackRecipeCandidate.__missingIngredientAware) {
+      const original = snackRecipeCandidate;
+      const wrapped = function missingIngredientAwareSnackRecipeCandidate(on, ctx, ...args) {
+        const stocked = withBaseRecipeAvailability(() => original(on, ctx, ...args));
+        const reserved = stocked?.name ? Number(ctx?.recipeReserved?.get(stocked.name) || 0) : 0;
+        if (
+          stocked?.name &&
+          typeof recipeInventoryPortions === "function" &&
+          Number(recipeInventoryPortions(stocked.name) || 0) > reserved
+        ) return markPreparedStockRecipe(stocked);
+        return original(on, ctx, ...args);
+      };
+      wrapped.__missingIngredientAware = true;
+      snackRecipeCandidate = wrapped;
     }
 
     if (

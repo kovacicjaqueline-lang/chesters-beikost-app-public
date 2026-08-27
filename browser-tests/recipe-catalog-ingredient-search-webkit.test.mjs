@@ -114,6 +114,28 @@ try {
     afterLongSearch.includes("Obst-Hafer-Pancakes"),
     "Längere Suchbegriffe müssen weiterhin in der Zutatenbeschreibung gefunden werden",
   );
+
+  await search.fill("Pecannuss");
+  const afterPecanSearch = await recipeNames();
+  assert.ok(
+    afterPecanSearch.includes("Joghurt-Nussmus-Miniportion"),
+    "Eine neuere geeignete Nuss aus FOOD muss automatisch das generische Nussmus-Rezept erreichen",
+  );
+  const nutButterRuntime = await page.evaluate(() => {
+    const pecan = FOOD_DB.find((item) => item.id === "pecannuss");
+    const maroni = FOOD_DB.find((item) => item.id === "maroni");
+    const recipe = recipeByName("Joghurt-Nussmus-Miniportion");
+    return {
+      pecanKinds: [...(pecan?.recipeComponentKinds || [])],
+      maroniKinds: [...(maroni?.recipeComponentKinds || [])],
+      choices: [...(recipe?.oneOf || [])],
+    };
+  });
+  assert.ok(nutButterRuntime.pecanKinds.includes("smooth-paste"));
+  assert.equal(nutButterRuntime.maroniKinds.includes("smooth-paste"), false);
+  assert.ok(nutButterRuntime.choices.includes("Pecannuss"));
+  assert.equal(nutButterRuntime.choices.includes("Maroni"), false);
+
   assert.deepEqual(pageErrors, [], "Die Rezeptsuche darf keine JavaScript-Fehler auslösen");
 
   await context.close();

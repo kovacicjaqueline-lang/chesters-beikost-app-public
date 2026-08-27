@@ -131,6 +131,20 @@ async function lockPresentation(meal) {
   });
 }
 
+async function computedThemeColor(button, variableName) {
+  return button.evaluate((node, cssVariable) => {
+    const probe = document.createElement("span");
+    probe.style.color = `var(${cssVariable})`;
+    document.body.appendChild(probe);
+    const result = {
+      actual: getComputedStyle(node).color,
+      expected: getComputedStyle(probe).color,
+    };
+    probe.remove();
+    return result;
+  }, variableName);
+}
+
 async function mealVisualStyle(meal) {
   return meal.evaluate((node) => {
     const style = getComputedStyle(node);
@@ -191,6 +205,42 @@ try {
   assert.ok(homeLock.width >= 44 && homeLock.height >= 44, "Schloss behält ein ausreichend großes Touchziel");
   assert.ok(homeLock.iconWidth <= 20 && homeLock.iconHeight <= 20, "Schloss-Icon wird visuell zurückgenommen");
   assert.equal(homeLock.backgroundColor, "rgba(0, 0, 0, 0)", "Schloss erhält keine hervorgehobene Buttonfläche mehr");
+
+  const lockedButton = homeMeal.locator(".meal-lock.locked");
+  assert.equal(await lockedButton.locator(".lock-svg-open").count(), 0, "Geschützter Slot zeigt das geschlossene Schloss");
+  const lockedColors = await computedThemeColor(lockedButton, "--accent");
+  assert.equal(lockedColors.actual, lockedColors.expected, "Der geschützte Zustand verwendet die Akzentfarbe");
+  const lockedMarkup = await lockedButton.innerHTML();
+
+  await lockedButton.click();
+  const unlockedButton = homeMeal.locator(".meal-lock.unlocked");
+  await unlockedButton.waitFor();
+  assert.equal(
+    await unlockedButton.getAttribute("aria-label"),
+    "Mahlzeit vor automatischer Änderung schützen",
+    "Nach dem Tippen beschreibt die Aktion wieder das Sperren",
+  );
+  assert.equal(await unlockedButton.locator(".lock-svg-open").count(), 1, "Nach dem Tippen wird das offene Schloss gerendert");
+  assert.notEqual(await unlockedButton.innerHTML(), lockedMarkup, "Das sichtbare Icon-Markup muss beim Entsperren wechseln");
+  const unlockedColors = await computedThemeColor(unlockedButton, "--ochre");
+  assert.equal(unlockedColors.actual, unlockedColors.expected, "Der offene Zustand erhält eine eindeutige Ocker-Farbe");
+  assert.equal(
+    await page.evaluate((date) => !!window.__beikostTest.getState().planLocks?.[`${date}|lunch`], today),
+    false,
+    "Der Tap hebt den Lock auch im Zustand auf",
+  );
+
+  await unlockedButton.click();
+  const relockedButton = homeMeal.locator(".meal-lock.locked");
+  await relockedButton.waitFor();
+  assert.equal(await relockedButton.locator(".lock-svg-open").count(), 0, "Beim erneuten Tippen erscheint wieder das geschlossene Schloss");
+  const relockedColors = await computedThemeColor(relockedButton, "--accent");
+  assert.equal(relockedColors.actual, relockedColors.expected, "Beim erneuten Sperren wird wieder die Akzentfarbe verwendet");
+  assert.equal(
+    await page.evaluate((date) => window.__beikostTest.getState().planLocks?.[`${date}|lunch`]?.mode || "", today),
+    "manual",
+    "Erneutes Tippen schützt den Slot wieder manuell",
+  );
 
   const homeStockBadge = homeMeal.locator(".stock-chip");
   assert.equal(await homeStockBadge.innerText(), "Vorrat: Kartoffel");

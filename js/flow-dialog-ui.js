@@ -62,6 +62,28 @@
     return normalizeSearch(row.textContent).includes(normalizeSearch(query));
   }
 
+  function compareFoodSelectorRows(a, b, query) {
+    const selectedOrder = Number(b.classList.contains("selected")) - Number(a.classList.contains("selected"));
+    if (selectedOrder) return selectedOrder;
+
+    const aFood = typeof food === "function" ? food(a.dataset.food) : null;
+    const bFood = typeof food === "function" ? food(b.dataset.food) : null;
+    if (query && aFood && bFood && typeof foodSearchScore === "function") {
+      const searchOrder = foodSearchScore(aFood, query) - foodSearchScore(bFood, query);
+      if (searchOrder) return searchOrder;
+    }
+
+    if (aFood && bFood && typeof rank === "function") {
+      const rankOrder = rank(bFood) - rank(aFood);
+      if (rankOrder) return rankOrder;
+    }
+    if (aFood && bFood && typeof inventoryPortions === "function") {
+      const inventoryOrder = Number(inventoryPortions(bFood.id) > 0) - Number(inventoryPortions(aFood.id) > 0);
+      if (inventoryOrder) return inventoryOrder;
+    }
+    return Number(aFood?.priority || 0) - Number(bFood?.priority || 0);
+  }
+
   function filterMealSelectorResults() {
     const input = document.getElementById("mealSelectorSearch");
     const results = genericBody.querySelector(".selector-results");
@@ -69,6 +91,13 @@
 
     const query = mealSelectorQuery.trim();
     const rows = Array.from(results.querySelectorAll(".selector-row.selectFood, .selector-row.selectRecipe"));
+    const foodRows = rows.filter((row) => row.classList.contains("selectFood"));
+    if (foodRows.length) {
+      foodRows.sort((a, b) => compareFoodSelectorRows(a, b, query));
+      const currentEmpty = results.querySelector(".flow-meal-selector-empty");
+      foodRows.forEach((row) => results.insertBefore(row, currentEmpty || null));
+    }
+
     let visibleRows = 0;
     rows.forEach((row) => {
       const matches = selectorRowMatches(row, query);

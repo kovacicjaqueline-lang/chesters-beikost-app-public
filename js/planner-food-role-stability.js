@@ -9,8 +9,7 @@
  * Ergänzung Nuss/Samen:
  * - Nuss-/Samen-FOODs sind keine automatische Hauptbasis und kein normaler bekannter Fokus.
  * - Einführung, gezielte frühe Wiederholung und Allergen-Wiederholung bleiben Sample-Pfade.
- * - Für bereits verknüpfte Familien darf eine explizit freigegebene Mus-/Pastenform als
- *   sichere Sample-Form bevorzugt werden.
+ * - Eine FOOD-seitig freigegebene Mus-/Pastenform kann als sichere Sample-Form genutzt werden.
  * - Ein solches Sample kann nach der normalen Planner-Auswahl als Kostproben-Topping
  *   auf einen eindeutigen Obst-Getreide-Brei gesetzt werden. Das Topping bleibt Sample
  *   und verändert die Rezeptidentität nicht.
@@ -24,22 +23,19 @@ const PLANNER_NUT_SEED_SAMPLE_TYPES = new Set([
   "Allergen wiederholen",
   "manuell",
 ]);
-const PLANNER_NUT_SEED_TOPPING_IDS = new Set([
-  "erdnussmus",
-  "mandelmus",
-  "haselnussmus",
-  "cashewmus",
-  "walnussmus",
-  "pistazienmus",
-  "tahin",
-]);
+const PLANNER_NUT_SEED_TOPPING_KIND = "smooth-paste";
 
 function plannerNutSeedComponentFood(foodRecord) {
   return !!foodRecord && PLANNER_NUT_SEED_CATEGORIES.has(String(foodRecord.category || ""));
 }
 
 function plannerNutSeedToppingForm(foodRecord) {
-  return plannerNutSeedComponentFood(foodRecord) && PLANNER_NUT_SEED_TOPPING_IDS.has(String(foodRecord.id || ""));
+  if (!plannerNutSeedComponentFood(foodRecord)) return false;
+  if (typeof foodHasRecipeComponentKind === "function") {
+    return foodHasRecipeComponentKind(foodRecord, PLANNER_NUT_SEED_TOPPING_KIND);
+  }
+  return Array.isArray(foodRecord.recipeComponentKinds) &&
+    foodRecord.recipeComponentKinds.includes(PLANNER_NUT_SEED_TOPPING_KIND);
 }
 
 function plannerNutSeedRelatedIds(foodRecord, foods = []) {
@@ -514,7 +510,7 @@ if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     PLANNER_NUT_SEED_CATEGORIES,
     PLANNER_NUT_SEED_SAMPLE_TYPES,
-    PLANNER_NUT_SEED_TOPPING_IDS,
+    PLANNER_NUT_SEED_TOPPING_KIND,
     plannerNutSeedComponentFood,
     plannerNutSeedToppingForm,
     plannerNutSeedRelatedIds,

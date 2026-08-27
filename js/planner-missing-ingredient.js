@@ -20,6 +20,19 @@
     return !!foodId && (meal?.foodIds || []).includes(foodId);
   }
 
+  function canMarkMissingIngredient(day, meal, todayValue = "", isCompletedFn = null) {
+    if (
+      !day?.date ||
+      !meal?.active ||
+      meal.empty ||
+      meal.recipeInventoryId ||
+      !(meal.foodIds || []).length
+    ) return false;
+    if (todayValue && day.date < todayValue) return false;
+    if (typeof isCompletedFn === "function" && isCompletedFn(day.date, meal.meal)) return false;
+    return true;
+  }
+
   function replaceIdList(values, missingId, replacementId) {
     return uniqueIds((values || []).map((id) => id === missingId ? replacementId : id));
   }
@@ -63,6 +76,7 @@
     compareFn = null,
   ) {
     if (!recipe || !meal || !missingId || typeof lookupByName !== "function") return "";
+    if (meal.recipeInventoryId) return "";
     if (meal.focusId === missingId || (meal.sampleFoodIds || []).includes(missingId)) return "";
 
     for (const field of REPLACEABLE_RECIPE_FIELDS) {
@@ -81,6 +95,76 @@
       return candidates[0]?.food?.id || "";
     }
     return "";
+  }
+
+  function planShoppingHint(previousHint, foodId, planDate, meal, now) {
+    const { sourceLogId: _sourceLogId, ...retained } = previousHint || {};
+    return {
+      ...retained,
+      foodId,
+      status: "needed",
+      createdAt: retained.createdAt || now,
+      updatedAt: now,
+      source: "plan",
+      planDate: planDate || retained.planDate || "",
+      meal: meal || retained.meal || "",
+    };
+  }
+
+  function followUpResumeRequest(record = {}, fallbackMeal = "lunch") {
+    let reason = record.resumeReason || "";
+    let detail = record.resumeDetail || "";
+    if (!reason) {
+      if (record.reason === "rejection") {
+        reason = "rejection";
+        detail = record.detail || "interest";
+      } else if (record.reason === "not_offered" && record.detail && record.detail !== "unavailable") {
+        reason = "not_offered";
+        detail = record.detail;
+      } else {
+        reason = "not_offered";
+        detail = "no_opportunity";
+      }
+    }
+    if (!detail) detail = reason === "rejection" ? "interest" : "no_opportunity";
+    return {
+      reason,
+      detail,
+      meal: record.meal || fallbackMeal || "lunch",
+    };
+  }
+
+  function awaitingStockFollowUp(
+    previousFollowUp,
+    foodId,
+    meal,
+    preparationText,
+    previousBaseIds,
+    now,
+  ) {
+    const previous = previousFollowUp || {};
+    const resume = followUpResumeRequest(previous, meal);
+    return {
+      ...previous,
+      id: previous.id || `${foodId}-${Date.now()}`,
+      foodId,
+      reason: "not_offered",
+      detail: "unavailable",
+      status: "awaiting_stock",
+      createdAt: previous.createdAt || now,
+      updatedAt: now,
+      dueDate: "",
+      meal: meal || resume.meal,
+      baseFoodId: "",
+      baseMode: "none",
+      alternativeBaseIds: [],
+      previousBaseIds: previousBaseIds || [],
+      preparationKey: previous.preparationKey || "standard",
+      preparationText: preparationText || previous.preparationText || "",
+      source: "plan",
+      resumeReason: resume.reason,
+      resumeDetail: resume.detail,
+    };
   }
 
   function clearUnavailableFoodFromStoredPlans(
@@ -185,8 +269,12 @@
   const API = {
     REPLACEABLE_RECIPE_FIELDS,
     mealContainsFood,
+    canMarkMissingIngredient,
     replaceFoodIdInMeal,
     recipeComponentReplacementId,
+    planShoppingHint,
+    followUpResumeRequest,
+    awaitingStockFollowUp,
     clearUnavailableFoodFromStoredPlans,
   };
 
@@ -303,7 +391,7 @@
   }
 
   function recipeReplacementForStoredMeal(entry, context) {
-    if (!entry?.recipeName || !mealContainsFood(entry, context.foodId)) return null;
+    if (!entry?.recipeName || entry.recipeInventoryId || !mealContainsFood(entry, context.foodId)) return null;
     const recipe = typeof recipeByName === "function" ? recipeByName(entry.recipeName) : null;
     if (!recipe) return null;
 
@@ -336,6 +424,14 @@
     return valid.includes(candidate) ? candidate : "lunch";
   }
 
+  function requestFullRender() {
+    if (typeof renderAllAfterNextPaint === "function") {
+      renderAllAfterNextPaint();
+      return;
+    }
+    if (typeof renderAll === "function") renderAll();
+  }
+
   function markFoodUnavailable(foodId, context = {}) {
     const item = typeof food === "function" ? food(foodId) : null;
     if (!item) return { ok: false, reason: "food" };
@@ -347,69 +443,81 @@
     const now = new Date().toISOString();
     const previousHint = state.shoppingHints[foodId] || {};
     const previousFollowUp = state.followUps[foodId] || {};
+    const meal = followUpMeal(context);
 
-    state.shoppingHints[foodId] = {
-      ...previousHint,
+    state.shoppingHints[foodId] = planShoppingHint(
+      previousHint,
       foodId,
-      status: "needed",
-      createdAt: previousHint.createdAt || now,
-      updatedAt: now,
-      source: previousHint.sourceLogId ? previousHint.source || "log" : "plan",
-      planDate: context.date || previousHint.planDate || "",
-      meal: followUpMeal(context),
-    };
+      context.date || "",
+      meal,
+      now,
+    );
     state.pantry[foodId] = false;
-    state.followUps[foodId] = {
-      ...previousFollowUp,
-      id: previousFollowUp.id || `${foodId}-${Date.now()}`,
+    state.followUps[foodId] = awaitingStockFollowUp(
+      previousFollowUp,
       foodId,
-      reason: "not_offered",
-      detail: "unavailable",
-      status: "awaiting_stock",
-      createdAt: previousFollowUp.createdAt || now,
-      updatedAt: now,
-      dueDate: "",
-      meal: followUpMeal(context),
-      baseFoodId: "",
-      baseMode: "none",
-      alternativeBaseIds: [],
-      previousBaseIds: typeof priorBaseIds === "function" ? priorBaseIds(foodId) : [],
-      preparationKey: previousFollowUp.preparationKey || "standard",
-      preparationText: item.safeForm || previousFollowUp.preparationText || "",
-      source: previousFollowUp.source || "plan",
-    };
+      meal,
+      item.safeForm || "",
+      typeof priorBaseIds === "function" ? priorBaseIds(foodId) : [],
+      now,
+    );
 
     const cleanup = clearUnavailableFoodFromStoredPlans(
       state,
       foodId,
       typeof today === "function" ? today() : String(context.date || ""),
-      (date, meal, entry) => {
+      (date, concreteMeal, entry) => {
         const core = globalScope.__plannerLogRolloverCore;
         if (entry?.planId && core?.linkedCompletionLog) {
-          return !!core.linkedCompletionLog(state, entry.planId, date, meal);
+          return !!core.linkedCompletionLog(state, entry.planId, date, concreteMeal);
         }
-        return typeof mealIsCompleted === "function" && mealIsCompleted(date, meal);
+        return typeof mealIsCompleted === "function" && mealIsCompleted(date, concreteMeal);
       },
       (entry, slot) => recipeReplacementForStoredMeal(entry, { ...slot, foodId }),
     );
 
     if (typeof save === "function") save();
-    if (typeof renderAll === "function") renderAll();
     if (typeof showToast === "function") {
       showToast(`${item.name} fehlt und steht auf der Einkaufsliste. Der Plan wurde angepasst.`);
     }
+    requestFullRender();
     return { ok: true, foodId, ...cleanup };
   }
 
+  function markPlanMissingFoodAvailable(foodId) {
+    const hint = state.shoppingHints?.[foodId];
+    if (!hint || hint.source !== "plan") return false;
+    state.pantry ||= {};
+    const now = new Date().toISOString();
+    state.shoppingHints[foodId] = { ...hint, status: "available", updatedAt: now };
+    state.pantry[foodId] = true;
+
+    const resume = followUpResumeRequest(state.followUps?.[foodId] || {}, hint.meal || "lunch");
+    if (typeof scheduleFollowUp === "function") {
+      scheduleFollowUp(
+        foodId,
+        typeof today === "function" ? today() : hint.planDate || "",
+        resume.meal,
+        resume.reason,
+        resume.detail,
+      );
+    }
+    if (typeof save === "function") save();
+    if (typeof showToast === "function") {
+      showToast(`${typeof food === "function" ? food(foodId)?.name || "Zutat" : "Zutat"} ist vorhanden und wird wieder eingeplant.`);
+    }
+    requestFullRender();
+    return true;
+  }
+
   function missingButtonHtml(day, meal) {
-    if (
-      !day?.date ||
-      day.date < (typeof today === "function" ? today() : day.date) ||
-      !meal?.active ||
-      meal.empty ||
-      !(meal.foodIds || []).length ||
-      (typeof mealIsCompleted === "function" && mealIsCompleted(day.date, meal.meal))
-    ) return "";
+    const todayValue = typeof today === "function" ? today() : day?.date || "";
+    if (!canMarkMissingIngredient(
+      day,
+      meal,
+      todayValue,
+      typeof mealIsCompleted === "function" ? mealIsCompleted : null,
+    )) return "";
     const foods = encodeURIComponent(JSON.stringify(uniqueIds(meal.foodIds || [])));
     return `<button type="button" class="btn secondary missingIngredient" data-missing-date="${esc(day.date)}" data-missing-meal="${esc(meal.meal)}" data-missing-foods="${foods}">Zutat fehlt</button>`;
   }
@@ -483,6 +591,14 @@
         if (planCount && planCount === needed.length) title.textContent = "Fehlende Zutaten";
         else if (planCount) title.textContent = "Fehlende und nicht angebotene Lebensmittel";
       }
+      document.querySelectorAll("[data-shopping-hint]").forEach((checkbox) => {
+        const id = checkbox.dataset.shoppingHint || "";
+        if (state.shoppingHints?.[id]?.source !== "plan") return;
+        checkbox.onchange = () => {
+          if (!checkbox.checked) return;
+          markPlanMissingFoodAvailable(id);
+        };
+      });
       return result;
     };
   }
@@ -513,6 +629,7 @@
   globalScope.__plannerMissingIngredient = Object.freeze({
     ...API,
     markFoodUnavailable,
+    markPlanMissingFoodAvailable,
     installAvailabilityPolicies,
   });
 })(typeof globalThis !== "undefined" ? globalThis : this);

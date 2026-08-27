@@ -148,6 +148,7 @@ const UI_PRECACHE = [
   "./js/planner-log-rollover-cascade.js",
   "./js/planner-log-rollover-review-fixes.js",
   "./js/planner-random-swap.js",
+  "./js/planner-missing-ingredient.js",
   "./js/product-allergens.js",
   "./js/product-allergens-guards.js",
   "./js/catalog-navigation.js",

@@ -131,5 +131,81 @@ test('MISSING-INGREDIENT-04: Loader und Offline-Precache enthalten die neue Verf
   assert.match(sw, /\.\/js\/planner-missing-ingredient\.js/);
   assert.match(source, /Welche Zutat fehlt\?/);
   assert.match(source, /steht auf der Einkaufsliste/);
+  assert.match(source, /renderAllAfterNextPaint/);
   assert.doesNotMatch(source, /state\.logs\.push/);
+});
+
+test('MISSING-INGREDIENT-05: fertiger Rezeptvorrat wird weder angeboten noch als Komponentenrezept umgeschrieben', () => {
+  const meal = {
+    meal: 'breakfast',
+    active: true,
+    focusId: 'hafer',
+    foodIds: ['hafer', 'banane'],
+    baseFoodIds: ['hafer'],
+    sampleFoodIds: [],
+    recipeName: 'Obst-Haferbrei',
+    recipeInventoryId: 'recipe-batch-1',
+  };
+  assert.equal(
+    feature.canMarkMissingIngredient({ date: '2026-08-27' }, meal, '2026-08-27', () => false),
+    false,
+  );
+  const byName = (name) => ({ Banane: { id: 'banane' }, Apfel: { id: 'apfel' } })[name] || null;
+  assert.equal(
+    feature.recipeComponentReplacementId(
+      { oneOf: ['Banane', 'Apfel'] },
+      meal,
+      'banane',
+      byName,
+      () => true,
+      () => true,
+    ),
+    '',
+  );
+});
+
+test('MISSING-INGREDIENT-06: Plan-Hinweis entfernt alte Log-Provenienz und konserviert eine Ablehnungs-Wiedervorlage', () => {
+  const hint = feature.planShoppingHint(
+    {
+      foodId: 'banane',
+      status: 'available',
+      source: 'log',
+      sourceLogId: 'old-log',
+      createdAt: '2026-08-20T10:00:00.000Z',
+    },
+    'banane',
+    '2026-08-27',
+    'breakfast',
+    '2026-08-27T20:00:00.000Z',
+  );
+  assert.equal(hint.source, 'plan');
+  assert.equal(hint.sourceLogId, undefined);
+  assert.equal(hint.status, 'needed');
+
+  const waiting = feature.awaitingStockFollowUp(
+    {
+      id: 'banane-prior',
+      foodId: 'banane',
+      reason: 'rejection',
+      detail: 'refused',
+      status: 'scheduled',
+      meal: 'breakfast',
+      createdAt: '2026-08-26T10:00:00.000Z',
+    },
+    'banane',
+    'breakfast',
+    'sehr reif zerdrücken',
+    ['hafer'],
+    '2026-08-27T20:00:00.000Z',
+  );
+  assert.equal(waiting.status, 'awaiting_stock');
+  assert.equal(waiting.reason, 'not_offered');
+  assert.equal(waiting.detail, 'unavailable');
+  assert.equal(waiting.resumeReason, 'rejection');
+  assert.equal(waiting.resumeDetail, 'refused');
+  assert.deepEqual(feature.followUpResumeRequest(waiting), {
+    reason: 'rejection',
+    detail: 'refused',
+    meal: 'breakfast',
+  });
 });

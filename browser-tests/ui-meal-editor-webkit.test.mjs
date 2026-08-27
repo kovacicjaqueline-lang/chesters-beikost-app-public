@@ -210,6 +210,7 @@ try {
   const lockedPlannerCard = page.locator("#blockPlan .mealbox").filter({
     has: page.locator(`.replaceMeal[data-date="${dates.today}"][data-meal="lunch"]`),
   });
+  await lockedPlannerCard.locator(".dish-title").filter({ hasText: "Banane mit Pfirsich" }).waitFor();
   const lockedPlannerTitle = await lockedPlannerCard.locator(".dish-title").innerText();
   assert.equal(lockedPlannerTitle, "Banane mit Pfirsich", "normaler manuell gesperrter Planner-Slot nutzt den deskriptiven FOOD-Titel");
   assert.doesNotMatch(lockedPlannerTitle, /Einführung|Wiederholung/, "manuelles Sperren allein darf keine Lernrolle in den Titel schreiben");

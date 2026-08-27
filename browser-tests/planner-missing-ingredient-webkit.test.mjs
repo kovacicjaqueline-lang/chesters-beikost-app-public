@@ -226,8 +226,7 @@ try {
   assert.match(await shoppingRow.innerText(), /Zutat nicht verfügbar.*nach Kauf wieder einplanen/i);
   assert.equal(await page.locator(".shopping-followup-title").innerText(), "Fehlende Zutaten");
 
-  const checkbox = page.locator('[data-shopping-hint="banane"]');
-  await checkbox.check({ force: true });
+  await shoppingRow.click();
   await page.waitForFunction(() => window.__beikostTest.getState().shoppingHints?.banane?.status === "available");
   const purchased = await page.evaluate(() => {
     const state = window.__beikostTest.getState();

@@ -220,6 +220,48 @@ try {
   assert.equal(after.carried, null, "auch ein verschobener offener Rollover-Plan mit Banane wird entfernt");
   assert.match(await page.locator("#toastText").innerText(), /Einkaufsliste.*Plan wurde angepasst/i);
 
+  const stockProbe = await page.evaluate((current) => {
+    const state = window.__beikostTest.getState();
+    state.settings.preferInventoryInPlan = true;
+    state.settings.textureStage = 3;
+    for (const name of ["Ube (violette Yamswurzel)", "Ei", "Hafer", "Banane"]) {
+      const item = window.foodByName(name, state.foods);
+      if (item) item.manualStatus = "Regelmäßig";
+    }
+    state.inventory = [
+      ...(state.inventory || []).filter((item) => item.id !== "missing-ingredient-recipe-stock"),
+      {
+        id: "missing-ingredient-recipe-stock",
+        kind: "recipe",
+        recipeName: "Ube-Bananen-Pancakes",
+        portions: 1,
+        size: "Stück",
+        frozenDate: current,
+        note: "Browser-Regression",
+      },
+    ];
+    window.__beikostTest.setState(state);
+    window.__plannerMissingIngredient.installAvailabilityPolicies();
+    const ctx = window.freshPlanContext();
+    const candidate = window.recipeStockCandidate("breakfast", current, ctx);
+    const preparedIds = candidate ? window.recipeFoodIds(candidate) : [];
+    const freshRecipe = window.recipeByName("Ube-Bananen-Pancakes");
+    const freshIds = freshRecipe ? window.recipeFoodIds(freshRecipe) : [];
+    const freshState = window.recipeStates().find((recipe) => recipe.name === "Ube-Bananen-Pancakes") || null;
+    return {
+      candidateName: candidate?.name || "",
+      preparedStock: !!candidate?.__missingIngredientPreparedStock,
+      preparedIds,
+      freshIds,
+      freshUnlocked: freshState?.unlocked ?? null,
+    };
+  }, setup.current);
+  assert.equal(stockProbe.candidateName, "Ube-Bananen-Pancakes", "fertiger Rezeptvorrat bleibt als Planner-Kandidat erhalten");
+  assert.equal(stockProbe.preparedStock, true, "nur der echte Rezeptvorrat erhält den Availability-Bypass");
+  assert.ok(stockProbe.preparedIds.includes("banane"), "fertige Portion behält ihre tatsächlich enthaltene Banane");
+  assert.equal(stockProbe.freshIds.length, 0, "frisch zuzubereitendes Rezept bleibt bei fehlender Banane gesperrt");
+  assert.equal(stockProbe.freshUnlocked, false, "Rezeptkatalog darf die frische Variante nicht freischalten");
+
   await page.locator('nav button[data-view="prep"]').click();
   const shoppingRow = page.locator('.shopping-row[data-shopping-hint], .shopping-row').filter({ hasText: "Banane" }).first();
   await shoppingRow.waitFor();

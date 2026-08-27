@@ -224,9 +224,22 @@ try {
     const state = window.__beikostTest.getState();
     state.settings.preferInventoryInPlan = true;
     state.settings.textureStage = 3;
+    let exposureIndex = 0;
     for (const name of ["Ube (violette Yamswurzel)", "Ei", "Hafer", "Banane"]) {
       const item = window.foodByName(name, state.foods);
-      if (item) item.manualStatus = "Regelmäßig";
+      if (!item) continue;
+      item.manualStatus = "Regelmäßig";
+      if (!state.logs.some((log) => (log.foodIds || []).includes(item.id) && log.foodOutcomes?.[item.id] === "eaten")) {
+        state.logs.push({
+          id: `missing-stock-history-${item.id}`,
+          date: current,
+          meal: "breakfast",
+          foodIds: [item.id],
+          foodOutcomes: { [item.id]: "eaten" },
+          outcome: "eaten",
+          createdAt: `${current}T06:${String(exposureIndex++).padStart(2, "0")}:00.000Z`,
+        });
+      }
     }
     state.inventory = [
       ...(state.inventory || []).filter((item) => item.id !== "missing-ingredient-recipe-stock"),

@@ -9,15 +9,30 @@
   const MODE_FOODS = "foods";
   const MODE_RECIPES = "recipes";
 
-  function recipeCatalogSearchTerms(recipe) {
-    const aliases = typeof recipeAliasValues === "function" ? recipeAliasValues(recipe) : [];
-    const structuredLabels = [
+  function recipeCatalogStructuredLabels(recipe) {
+    return [
       ...(recipe?.requires || []),
       ...((recipe?.alternatives || []).flat()),
       ...(recipe?.oneOf || []),
       ...(recipe?.milkChoices || []),
     ];
-    const structuredTerms = structuredLabels.flatMap((label) => {
+  }
+
+  function recipeCatalogExactFood(query) {
+    if (typeof FOOD_DB === "undefined" || typeof foodByName !== "function") return null;
+    return foodByName(query, FOOD_DB);
+  }
+
+  function recipeCatalogContainsFood(recipe, targetFood) {
+    if (!targetFood || typeof FOOD_DB === "undefined" || typeof recipeFoodFromStructuredLabel !== "function") return false;
+    return recipeCatalogStructuredLabels(recipe).some((label) =>
+      recipeFoodFromStructuredLabel(label, FOOD_DB)?.id === targetFood.id,
+    );
+  }
+
+  function recipeCatalogSearchTerms(recipe) {
+    const aliases = typeof recipeAliasValues === "function" ? recipeAliasValues(recipe) : [];
+    const structuredTerms = recipeCatalogStructuredLabels(recipe).flatMap((label) => {
       if (
         typeof recipeFoodFromStructuredLabel !== "function" ||
         typeof FOOD_DB === "undefined" ||
@@ -38,6 +53,12 @@
     const normalizedQuery = normalizeName(query || "");
     if (!normalizedQuery) return true;
 
+    // Ist die Eingabe exakt ein bekanntes Lebensmittel (z. B. „Ei“), zählt
+    // ausschließlich die strukturierte Rezept-Zutatenbeziehung. So kann ein
+    // zufälliger Titeltext niemals einen Zutaten-Treffer vortäuschen.
+    const exactFood = recipeCatalogExactFood(query);
+    if (exactFood) return recipeCatalogContainsFood(recipe, exactFood);
+
     const exactOrPrefixMatch = recipeCatalogSearchTerms(recipe).some((term) => {
       const normalizedTerm = normalizeName(term || "");
       if (!normalizedTerm) return false;
@@ -49,9 +70,9 @@
     });
     if (exactOrPrefixMatch) return true;
 
-    // Sehr kurze Suchbegriffe dürfen nicht irgendwo mitten in einem Wort treffen
-    // (z. B. „Ei“ in „Brei“, „Reis“ oder „Weizen“). Ab drei Zeichen bleibt die
-    // bisherige flexible Volltextsuche inklusive Zutatenbeschreibung erhalten.
+    // Sehr kurze Suchbegriffe dürfen nicht irgendwo mitten in einem Wort treffen.
+    // Ab drei Zeichen bleibt die bisherige flexible Volltextsuche inklusive
+    // Zutatenbeschreibung erhalten.
     if (normalizedQuery.length < 3) return false;
     return normalizeName(fullSearchText).includes(normalizedQuery);
   }

@@ -13,6 +13,11 @@ const RECIPE_COMPONENT_KINDS = Object.freeze({
   SMOOTH_PASTE: "smooth-paste",
 });
 
+const RECIPE_COMPONENT_FORMS = Object.freeze({
+  CANONICAL: "canonical",
+  PREPARED: "prepared",
+});
+
 function foodAllowsSmoothPasteComponent(foodRecord) {
   if (!foodRecord) return false;
   let category = String(foodRecord.category || "");
@@ -23,17 +28,56 @@ function foodAllowsSmoothPasteComponent(foodRecord) {
   return category === "Samen" && allergenGroup === "Sesam";
 }
 
-function foodHasRecipeComponentKind(foodRecord, kind) {
-  if (!foodRecord || !kind) return false;
-  if (kind === RECIPE_COMPONENT_KINDS.SMOOTH_PASTE) {
-    return foodAllowsSmoothPasteComponent(foodRecord);
-  }
-  return Array.isArray(foodRecord.recipeComponentKinds) && foodRecord.recipeComponentKinds.includes(kind);
+function foodSmoothPasteCanonicalId(foodRecord) {
+  if (!foodAllowsSmoothPasteComponent(foodRecord)) return "";
+  let category = String(foodRecord.category || "");
+  let family = String(foodRecord.foodFamily || foodRecord.allergenFamily || "");
+  if (category === "Nuss" && family.startsWith("nuss:")) return family.slice("nuss:".length);
+  if (category === "Samen" && family) return family;
+  return String(foodRecord.id || "");
 }
 
-function foodIsDedicatedSmoothPasteVariant(foodRecord) {
-  let id = String(foodRecord?.id || "");
-  return id === "tahin" || id.endsWith("mus");
+function foodRecipeComponentForm(foodRecord, kind = RECIPE_COMPONENT_KINDS.SMOOTH_PASTE) {
+  if (!foodRecord || kind !== RECIPE_COMPONENT_KINDS.SMOOTH_PASTE) {
+    return String(foodRecord?.recipeComponentForm || "");
+  }
+  if (!foodAllowsSmoothPasteComponent(foodRecord)) return "";
+  let canonicalId = foodSmoothPasteCanonicalId(foodRecord);
+  if (!canonicalId) return "";
+  return String(foodRecord.id || "") === canonicalId
+    ? RECIPE_COMPONENT_FORMS.CANONICAL
+    : RECIPE_COMPONENT_FORMS.PREPARED;
+}
+
+function foodRecipeComponentKinds(foodRecord) {
+  let kinds = new Set(Array.isArray(foodRecord?.recipeComponentKinds)
+    ? foodRecord.recipeComponentKinds.filter(Boolean)
+    : []);
+  if (foodAllowsSmoothPasteComponent(foodRecord)) kinds.add(RECIPE_COMPONENT_KINDS.SMOOTH_PASTE);
+  return [...kinds];
+}
+
+function foodHasRecipeComponentKind(foodRecord, kind) {
+  return !!foodRecord && !!kind && foodRecipeComponentKinds(foodRecord).includes(kind);
+}
+
+function installFoodRecipeComponentMetadata(foods = typeof FOOD_DB !== "undefined" ? FOOD_DB : null) {
+  if (!Array.isArray(foods)) return false;
+  let changed = false;
+  for (let item of foods) {
+    if (!foodAllowsSmoothPasteComponent(item)) continue;
+    let kinds = foodRecipeComponentKinds(item);
+    let form = foodRecipeComponentForm(item, RECIPE_COMPONENT_KINDS.SMOOTH_PASTE);
+    if (JSON.stringify(item.recipeComponentKinds || []) !== JSON.stringify(kinds)) {
+      item.recipeComponentKinds = kinds;
+      changed = true;
+    }
+    if (form && item.recipeComponentForm !== form) {
+      item.recipeComponentForm = form;
+      changed = true;
+    }
+  }
+  return changed;
 }
 
 function recipeComponentFoodNames(kind, foods = [], predicate = null) {
@@ -81,7 +125,7 @@ const RECIPE_V2_COMPONENT_OPTIONS = Object.freeze({
     oneOfFromFood: Object.freeze({
       kind: RECIPE_COMPONENT_KINDS.SMOOTH_PASTE,
       category: "Nuss",
-      canonicalFoodOnly: true,
+      componentForm: RECIPE_COMPONENT_FORMS.CANONICAL,
     }),
     editorComponents: Object.freeze({
       oneOf: Object.freeze({
@@ -97,6 +141,7 @@ function installRecipeV2ComponentOptions(
   foods = typeof FOOD_DB !== "undefined" ? FOOD_DB : null,
 ) {
   if (!Array.isArray(recipes)) return false;
+  if (Array.isArray(foods)) installFoodRecipeComponentMetadata(foods);
 
   let changed = false;
   for (let [recipeName, config] of Object.entries(RECIPE_V2_COMPONENT_OPTIONS)) {
@@ -110,13 +155,13 @@ function installRecipeV2ComponentOptions(
     }
 
     if (config.oneOfFromFood && Array.isArray(foods)) {
-      let { kind, category, canonicalFoodOnly } = config.oneOfFromFood;
+      let { kind, category, componentForm } = config.oneOfFromFood;
       let names = recipeComponentFoodNames(
         kind,
         foods,
         (item) =>
           (!category || String(item.category || "") === category) &&
-          (!canonicalFoodOnly || !foodIsDedicatedSmoothPasteVariant(item)),
+          (!componentForm || foodRecipeComponentForm(item, kind) === componentForm),
       );
       if (names.length) {
         recipe.oneOf = names;
@@ -136,21 +181,34 @@ function installRecipeV2ComponentOptions(
   return changed;
 }
 
-if (typeof RECIPES !== "undefined") {
-  installRecipeV2ComponentOptions(
-    RECIPES,
-    typeof FOOD_DB !== "undefined" ? FOOD_DB : null,
-  );
+function installRecipeV2ComponentRuntime() {
+  let foods = typeof FOOD_DB !== "undefined" ? FOOD_DB : null;
+  if (Array.isArray(foods)) installFoodRecipeComponentMetadata(foods);
+  if (typeof state !== "undefined" && Array.isArray(state?.foods)) installFoodRecipeComponentMetadata(state.foods);
+  if (typeof RECIPES !== "undefined") installRecipeV2ComponentOptions(RECIPES, foods);
+}
+
+if (typeof window !== "undefined" && typeof document !== "undefined") {
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", installRecipeV2ComponentRuntime, { once: true });
+  } else {
+    installRecipeV2ComponentRuntime();
+  }
 }
 
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     RECIPE_COMPONENT_KINDS,
+    RECIPE_COMPONENT_FORMS,
     RECIPE_V2_COMPONENT_OPTIONS,
     foodAllowsSmoothPasteComponent,
+    foodSmoothPasteCanonicalId,
+    foodRecipeComponentForm,
+    foodRecipeComponentKinds,
     foodHasRecipeComponentKind,
-    foodIsDedicatedSmoothPasteVariant,
+    installFoodRecipeComponentMetadata,
     recipeComponentFoodNames,
     installRecipeV2ComponentOptions,
+    installRecipeV2ComponentRuntime,
   };
 }

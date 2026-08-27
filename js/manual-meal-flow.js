@@ -35,7 +35,12 @@ function manualMealFlowLearningAdvisoryText(ids, nameForId = (id) => id) {
   return `Mehrere noch nicht probierte Lebensmittel sind gleichzeitig ausgewählt: ${names.join(", ")}. Du kannst sie so einplanen; einzeln eingeführt lassen sich Beobachtungen leichter zuordnen.`;
 }
 
-function manualMealFlowLearningValidation(validation, statusForId = () => "", nameForId = (id) => id) {
+function manualMealFlowLearningValidation(
+  validation,
+  statusForId = () => "",
+  nameForId = (id) => id,
+  postValidate = null,
+) {
   let source = validation || {};
   let newIds = [...new Set((source.samples || []).filter((id) => statusForId(id) === "Offen"))];
   let multipleNewIds = newIds.length > 1 ? newIds : [];
@@ -49,7 +54,7 @@ function manualMealFlowLearningValidation(validation, statusForId = () => "", na
     !(source.unsafeBaseIds || []).length &&
     !(source.unsafeComponentIds || []).length &&
     messages.length === 0;
-  return {
+  let adjusted = {
     ...source,
     ok,
     newIds,
@@ -60,6 +65,8 @@ function manualMealFlowLearningValidation(validation, statusForId = () => "", na
     message: messages.join(" "),
     advisory,
   };
+  if (typeof postValidate !== "function") return adjusted;
+  return postValidate(adjusted) || adjusted;
 }
 
 function manualMealFlowNormalizePreparationKeys(keys, foodIds) {
@@ -378,6 +385,18 @@ function installManualMealFlowRuntime() {
           return item && typeof status === "function" ? status(item) : "";
         },
         (id) => typeof food === "function" ? (food(id)?.name || id) : id,
+        (adjusted) => {
+          if (
+            typeof plannerManualComponentBaseViolation !== "function" ||
+            typeof state === "undefined"
+          ) return adjusted;
+          let plan = args[0] || {};
+          return plannerManualComponentBaseViolation(
+            adjusted,
+            state.foods || [],
+            plan.recipeName || "",
+          );
+        },
       );
     };
   }

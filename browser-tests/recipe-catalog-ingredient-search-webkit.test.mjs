@@ -10,8 +10,8 @@ const mimeTypes = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
   ".css": "text/css; charset=utf-8",
-  ".json": "application/json; charset=utf-8",
-  ".webmanifest": "application/manifest+json; charset=utf-8",
+  ".json": "application/json",
+  ".webmanifest": "application/manifest+json",
   ".svg": "image/svg+xml",
   ".png": "image/png",
   ".webp": "image/webp",
@@ -126,13 +126,13 @@ try {
     const maroni = FOOD_DB.find((item) => item.id === "maroni");
     const recipe = recipeByName("Joghurt-Nussmus-Miniportion");
     return {
-      pecanKinds: [...(pecan?.recipeComponentKinds || [])],
-      maroniKinds: [...(maroni?.recipeComponentKinds || [])],
+      pecanEligible: foodHasRecipeComponentKind(pecan, "smooth-paste"),
+      maroniEligible: foodHasRecipeComponentKind(maroni, "smooth-paste"),
       choices: [...(recipe?.oneOf || [])],
     };
   });
-  assert.ok(nutButterRuntime.pecanKinds.includes("smooth-paste"));
-  assert.equal(nutButterRuntime.maroniKinds.includes("smooth-paste"), false);
+  assert.equal(nutButterRuntime.pecanEligible, true);
+  assert.equal(nutButterRuntime.maroniEligible, false);
   assert.ok(nutButterRuntime.choices.includes("Pecannuss"));
   assert.equal(nutButterRuntime.choices.includes("Maroni"), false);
 

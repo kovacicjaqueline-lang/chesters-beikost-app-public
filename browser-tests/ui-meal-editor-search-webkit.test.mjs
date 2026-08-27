@@ -69,6 +69,16 @@ try {
 
   await page.evaluate(() => {
     window.__beikostTest.reset();
+    const next = window.__beikostTest.getState();
+    const statuses = new Map([
+      ["hafer", "Regelmäßig"],
+      ["hirse", "Probiert"],
+      ["reis", "Offen"],
+    ]);
+    next.foods.forEach((item) => {
+      if (statuses.has(item.id)) item.manualStatus = statuses.get(item.id);
+    });
+    window.__beikostTest.setState(next);
     window.__beikostTest.openManualMealSelector(window.__beikostTest.today(), "lunch");
   });
   await page.locator("#selectorFoods").click();
@@ -78,6 +88,27 @@ try {
   const originalInput = await search.elementHandle();
   assert.ok(originalInput, "Suchfeld muss vor der Eingabe existieren");
 
+  await page.keyboard.type("Re", { delay: 25 });
+  assert.equal(
+    await page.locator('.selector-results .selectFood:not([hidden])').first().locator("b").textContent(),
+    "Reis",
+    "Bei kurzer Präfixsuche muss Reis der erste sichtbare Treffer sein",
+  );
+
+  await page.keyboard.type("i", { delay: 25 });
+  assert.equal(await search.inputValue(), "Rei", "Die Suche muss das dritte Zeichen übernehmen");
+  assert.equal(
+    await page.locator('.selector-results .selectFood:not([hidden])').first().locator("b").textContent(),
+    "Reis",
+    "Zusätzliche Metadaten-Treffer dürfen einen direkten Namenspräfix nicht überholen",
+  );
+  assert.equal(
+    await page.locator('.selectFood[data-food="hafer"]').isVisible(),
+    true,
+    "Metadaten-Treffer dürfen bei längerer Suche weiterhin sichtbar bleiben",
+  );
+
+  await search.evaluate((element) => element.setSelectionRange(0, element.value.length));
   await page.keyboard.type("Karo", { delay: 25 });
 
   assert.equal(await search.inputValue(), "Karo", "Zeichenweise Eingabe muss vollständig erhalten bleiben");

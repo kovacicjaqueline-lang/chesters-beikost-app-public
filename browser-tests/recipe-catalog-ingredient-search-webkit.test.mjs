@@ -10,8 +10,8 @@ const mimeTypes = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
   ".css": "text/css; charset=utf-8",
-  ".json": "application/json",
-  ".webmanifest": "application/manifest+json",
+  ".json": "application/json; charset=utf-8",
+  ".webmanifest": "application/manifest+json; charset=utf-8",
   ".svg": "image/svg+xml",
   ".png": "image/png",
   ".webp": "image/webp",
@@ -123,18 +123,24 @@ try {
   );
   const nutButterRuntime = await page.evaluate(() => {
     const pecan = FOOD_DB.find((item) => item.id === "pecannuss");
+    const peanutButter = FOOD_DB.find((item) => item.id === "erdnussmus");
     const maroni = FOOD_DB.find((item) => item.id === "maroni");
     const recipe = recipeByName("Joghurt-Nussmus-Miniportion");
     return {
       pecanEligible: foodHasRecipeComponentKind(pecan, "smooth-paste"),
+      pecanForm: foodRecipeComponentForm(pecan, "smooth-paste"),
+      peanutButterForm: foodRecipeComponentForm(peanutButter, "smooth-paste"),
       maroniEligible: foodHasRecipeComponentKind(maroni, "smooth-paste"),
       choices: [...(recipe?.oneOf || [])],
     };
   });
   assert.equal(nutButterRuntime.pecanEligible, true);
+  assert.equal(nutButterRuntime.pecanForm, "canonical");
+  assert.equal(nutButterRuntime.peanutButterForm, "prepared");
   assert.equal(nutButterRuntime.maroniEligible, false);
   assert.ok(nutButterRuntime.choices.includes("Pecannuss"));
   assert.equal(nutButterRuntime.choices.includes("Maroni"), false);
+  assert.equal(nutButterRuntime.choices.includes("Erdnussmus"), false);
 
   assert.deepEqual(pageErrors, [], "Die Rezeptsuche darf keine JavaScript-Fehler auslösen");
 

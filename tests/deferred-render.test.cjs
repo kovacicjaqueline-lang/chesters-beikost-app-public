@@ -13,6 +13,7 @@ function createHarness({ withAnimationFrame = true } = {}) {
   const timers = [];
   const sandbox = {
     console,
+    Promise,
     renderAll: () => events.push("render"),
     setTimeout: (callback) => { timers.push(callback); return timers.length; },
   };
@@ -38,6 +39,24 @@ function createHarness({ withAnimationFrame = true } = {}) {
   h.timers.shift()();
   assert.deepEqual(h.events, ["render"], "Koaleszierte Anforderungen müssen genau einen Voll-Render auslösen");
   assert.deepEqual(callbacks, ["first", "second"], "After-Render-Callbacks müssen nach dem gemeinsamen Voll-Render laufen");
+}
+
+{
+  const h = createHarness();
+  const callbacks = [];
+  h.sandbox.runWithDeferredFullRender(() => {
+    h.events.push("action");
+    h.sandbox.renderAll();
+    h.sandbox.runWithDeferredFullRender(() => h.sandbox.renderAll());
+    h.events.push("visible-ui");
+  }, () => callbacks.push("after-render"));
+
+  assert.deepEqual(h.events, ["action", "visible-ui"], "Der Save-/Confirm-Task muss ohne synchronen Voll-Render fertig werden");
+  assert.equal(h.raf.length, 1, "Auch verschachtelte Render-Anforderungen müssen einen gemeinsamen Voll-Render planen");
+  h.raf.shift()();
+  h.timers.shift()();
+  assert.deepEqual(h.events, ["action", "visible-ui", "render"]);
+  assert.deepEqual(callbacks, ["after-render"]);
 }
 
 {

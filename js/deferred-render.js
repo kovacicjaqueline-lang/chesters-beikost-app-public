@@ -5,6 +5,9 @@
  * Nur renderAll() wird hinter die nächste Render-Gelegenheit verschoben.
  */
 
+let deferredRenderAllPending = false;
+let deferredRenderAllCallbacks = [];
+
 function afterNextPaint(callback) {
   if (typeof callback !== "function") return;
   let afterPaint = () => {
@@ -16,8 +19,14 @@ function afterNextPaint(callback) {
 }
 
 function renderAllAfterNextPaint(afterRender = null) {
+  if (typeof afterRender === "function") deferredRenderAllCallbacks.push(afterRender);
+  if (deferredRenderAllPending) return;
+  deferredRenderAllPending = true;
   afterNextPaint(() => {
+    deferredRenderAllPending = false;
+    let callbacks = deferredRenderAllCallbacks;
+    deferredRenderAllCallbacks = [];
     if (typeof renderAll === "function") renderAll();
-    if (typeof afterRender === "function") afterRender();
+    callbacks.forEach((callback) => callback());
   });
 }

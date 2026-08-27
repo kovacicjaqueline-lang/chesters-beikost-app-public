@@ -7,23 +7,6 @@
 
 let deferredRenderAllPending = false;
 let deferredRenderAllCallbacks = [];
-let immediateRenderDeferralDepth = 0;
-let immediateRenderAll = null;
-
-const DEFERRED_FULL_RENDER_ACTION_IDS = new Set([
-  "saveLog",
-  "saveConcreteProduct",
-  "deleteConcreteProduct",
-  "foodToggleActive",
-  "deactivateReplace",
-  "deactivateKeep",
-  "saveInv",
-  "saveSettings",
-  "confirmTextureStage",
-  "textureBack",
-  "saveCustom",
-  "useExistingCustom",
-]);
 
 function afterNextPaint(callback) {
   if (typeof callback !== "function") return;
@@ -47,40 +30,3 @@ function renderAllAfterNextPaint(afterRender = null) {
     callbacks.forEach((callback) => callback());
   });
 }
-
-function beginImmediateRenderDeferral() {
-  if (typeof renderAll !== "function") return false;
-  immediateRenderDeferralDepth++;
-  if (immediateRenderDeferralDepth > 1) return true;
-  immediateRenderAll = renderAll;
-  renderAll = function deferImmediateRenderAll() {
-    renderAllAfterNextPaint();
-  };
-  return true;
-}
-
-function endImmediateRenderDeferral() {
-  if (!immediateRenderDeferralDepth) return;
-  immediateRenderDeferralDepth--;
-  if (immediateRenderDeferralDepth) return;
-  if (typeof immediateRenderAll === "function") renderAll = immediateRenderAll;
-  immediateRenderAll = null;
-}
-
-function queueRenderDeferralEnd() {
-  let finish = () => endImmediateRenderDeferral();
-  if (typeof queueMicrotask === "function") queueMicrotask(finish);
-  else Promise.resolve().then(finish);
-}
-
-function installDeferredFullRenderActions() {
-  if (typeof document === "undefined") return;
-  document.addEventListener("click", (event) => {
-    let action = event.target?.closest?.("button");
-    if (!action || !DEFERRED_FULL_RENDER_ACTION_IDS.has(action.id)) return;
-    if (!beginImmediateRenderDeferral()) return;
-    queueRenderDeferralEnd();
-  }, true);
-}
-
-installDeferredFullRenderActions();

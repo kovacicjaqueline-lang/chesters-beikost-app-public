@@ -42,6 +42,182 @@ function plannerAutomaticComponentTitle(meal) {
   return "";
 }
 
+function plannerMealItems(meal) {
+  return [...new Set(meal?.foodIds || [])]
+    .map((id) => food(id))
+    .filter(Boolean);
+}
+
+function plannerDescriptiveFoodTitle(items) {
+  let all = (items || []).filter(Boolean);
+  if (!all.length) return "Mahlzeit";
+  if (all.length === 1) return all[0].name;
+  return `${all[0].name} mit ${naturalFoodList(all.slice(1).map((item) => item.name))}`;
+}
+
+function plannerCompoundFoodName(item) {
+  let replacements = {
+    banane: "Bananen",
+    birne: "Birnen",
+    nektarine: "Nektarinen",
+    pflaume: "Pflaumen",
+    aprikose: "Aprikosen",
+    kirsche: "Kirsch",
+    erdbeere: "Erdbeer",
+    heidelbeere: "Heidelbeer",
+    himbeere: "Himbeer",
+    brombeere: "Brombeer",
+    orange: "Orangen",
+    mandarine: "Mandarinen",
+    melone: "Melonen",
+    wassermelone: "Wassermelonen",
+  };
+  return replacements[item?.id] || item?.name || "";
+}
+
+function plannerRecipeConfiguredIds(recipe) {
+  if (!recipe || typeof foodByName !== "function") return new Set();
+  let names = [
+    ...(recipe.requires || []),
+    ...((recipe.alternatives || []).flat()),
+    ...(recipe.oneOf || []),
+    ...(recipe.milkChoices || []),
+  ];
+  return new Set(names.map((name) => foodByName(name, state.foods)?.id).filter(Boolean));
+}
+
+function plannerRecipeNameEncodesItem(recipeName, item) {
+  if (!recipeName || !item?.name || typeof normalizeName !== "function") return false;
+  let normalizedRecipeName = normalizeName(recipeName);
+  let normalizedItemName = normalizeName(item.name);
+  if (!normalizedRecipeName || !normalizedItemName) return false;
+  return ` ${normalizedRecipeName} `.includes(` ${normalizedItemName} `);
+}
+
+function plannerAppendRecipeExtras(title, meal, excludedIds = new Set()) {
+  let recipe = typeof recipeByName === "function" ? recipeByName(meal?.recipeName || "") : null;
+  let configuredIds = plannerRecipeConfiguredIds(recipe);
+  let extras = plannerMealItems(meal).filter((item) =>
+    !excludedIds.has(item.id) &&
+    !configuredIds.has(item.id) &&
+    !plannerRecipeNameEncodesItem(title, item)
+  );
+  return extras.length
+    ? `${title} mit ${naturalFoodList(extras.map((item) => item.name))}`
+    : title;
+}
+
+function plannerConcreteRecipeTitle(meal) {
+  let recipeName = String(meal?.recipeName || "");
+  if (!recipeName) return "";
+  let items = plannerMealItems(meal);
+
+  if (recipeName === "Milch-Getreide-Brei") {
+    let recipe = typeof recipeByName === "function" ? recipeByName(recipeName) : null;
+    let cerealIds = new Set(
+      (recipe?.oneOf || [])
+        .map((name) => typeof foodByName === "function" ? foodByName(name, state.foods)?.id : "")
+        .filter(Boolean),
+    );
+    let milkIds = new Set(
+      (recipe?.milkChoices || [])
+        .map((name) => typeof foodByName === "function" ? foodByName(name, state.foods)?.id : "")
+        .filter(Boolean),
+    );
+    let milk = items.find((item) => milkIds.has(item.id)) || items.find((item) =>
+      ["kuhmilch", "naturjoghurt", "buttermilch"].includes(item.id),
+    );
+    let cereal = items.find((item) => cerealIds.has(item.id)) || items.find((item) =>
+      item.category === "Getreide/Stärke" && item.id !== "haferdrink",
+    );
+    if (milk && cereal) {
+      let excluded = new Set([milk.id, cereal.id]);
+      let title = `${milk.name}-${cereal.name}-Brei`;
+      let extras = items.filter((item) => !excluded.has(item.id));
+      return extras.length
+        ? `${title} mit ${naturalFoodList(extras.map((item) => item.name))}`
+        : title;
+    }
+    return plannerAppendRecipeExtras(recipeName, meal);
+  }
+
+  if (/^Obst-/i.test(recipeName)) {
+    let fruits = items.filter((item) => String(item.category || "").startsWith("Obst"));
+    if (fruits.length) {
+      let fruitTitle = fruits.map(plannerCompoundFoodName).filter(Boolean).join("-");
+      let title = recipeName.replace(/^Obst-/i, `${fruitTitle}-`);
+      return plannerAppendRecipeExtras(title, meal, new Set(fruits.map((item) => item.id)));
+    }
+  }
+
+  return plannerAppendRecipeExtras(recipeName, meal);
+}
+
+function plannerMealDisplayTitle(meal) {
+  if (meal?.recipeName) return plannerConcreteRecipeTitle(meal);
+  let items = plannerMealItems(meal);
+  let title = plannerDescriptiveFoodTitle(items);
+  let componentTitle = plannerAutomaticComponentTitle(meal);
+  return componentTitle?.includes("· getrennte Komponenten")
+    ? `${title} · getrennte Komponenten`
+    : title;
+}
+
+function plannerLearningLabel(item, meal) {
+  let type = String(meal?.type || "");
+  if (type === "Allergen einführen") return "Allergen einführen";
+  if (type === "Allergen wiederholen") return "Allergen wiederholen";
+  if (["gezielt wiederholen", "nach Einführung"].includes(type)) return "Wiederholung";
+  if (type === "neu") return item?.allergenGroup ? "Allergen einführen" : "Neu";
+
+  let itemRank = typeof rank === "function" ? Number(rank(item)) : 0;
+  let itemStatus = typeof status === "function" ? status(item) : "";
+  if (itemStatus === "Pausiert") return "Pausiert";
+  if (itemRank === 1) return "Wiederholung";
+  if (itemRank <= 0) return item?.allergenGroup ? "Allergen einführen" : "Neu";
+  let fallback = typeof plannerLearningRoleLabel === "function"
+    ? plannerLearningRoleLabel(item, type)
+    : "";
+  return fallback === "Einführung" ? "Neu" : fallback;
+}
+
+function plannerLearningRoleGroups(meal) {
+  let groups = new Map();
+  let sampleIds = [...new Set(meal?.sampleFoodIds || [])].filter(Boolean);
+  for (let id of sampleIds) {
+    let item = food(id);
+    if (!item) continue;
+    let label = plannerLearningLabel(item, meal);
+    if (!label) continue;
+    if (!groups.has(label)) groups.set(label, []);
+    groups.get(label).push(item.name);
+  }
+
+  let maintenanceIds = [...new Set(meal?.allergenMaintenanceFoodIds || [])]
+    .filter((id) => !sampleIds.includes(id));
+  for (let id of maintenanceIds) {
+    let item = food(id);
+    if (!item) continue;
+    let label = "Allergen weiter anbieten";
+    if (!groups.has(label)) groups.set(label, []);
+    groups.get(label).push(item.name);
+  }
+
+  return [...groups.entries()].map(([label, names]) => ({
+    label,
+    names: [...new Set(names)],
+  }));
+}
+
+function plannerCompactLearningRolesHtml(meal) {
+  let groups = plannerLearningRoleGroups(meal);
+  if (!groups.length) return "";
+  let rows = groups.map((group) =>
+    `<div class="compact-role-row sample"><b>${esc(group.names.join(", "))}</b><span>${esc(group.label)}</span></div>`,
+  ).join("");
+  return `<div class="compact-role-list">${rows}</div>`;
+}
+
 function plannerCompletedLogOnlyDayState(data, core, date) {
   if (!core?.logsForDate || !core?.openPlanInstances) {
     return { canCollapse: false, count: 0, completedCount: 0, grams: 0 };
@@ -147,6 +323,22 @@ function installPlannerMealPresentationRuntime() {
     let componentTitle = plannerAutomaticComponentTitle(meal);
     return componentTitle || originalDishTitle(meal);
   };
+  if (typeof mealDisplayTitle === "function") {
+    mealDisplayTitle = function descriptiveMealDisplayTitle(meal) {
+      return plannerMealDisplayTitle(meal);
+    };
+  }
+  if (typeof compactMealRolesHtml === "function") {
+    compactMealRolesHtml = function learningOnlyMealRolesHtml(meal) {
+      return plannerCompactLearningRolesHtml(meal);
+    };
+  }
+  if (typeof mealStatusText === "function") {
+    let originalMealStatusText = mealStatusText;
+    mealStatusText = function learningAwareMealStatusText(meal) {
+      return plannerLearningRoleGroups(meal).length ? "" : originalMealStatusText(meal);
+    };
+  }
   if (typeof renderPlanCore === "function") {
     plannerInstallCompletedDayPresentationStyles();
     let originalRenderPlanCore = renderPlanCore;
@@ -225,6 +417,17 @@ if (typeof module !== "undefined" && module.exports) {
     plannerFoodPresentationRole,
     plannerNeutralBreakfastTitle,
     plannerAutomaticComponentTitle,
+    plannerMealItems,
+    plannerDescriptiveFoodTitle,
+    plannerCompoundFoodName,
+    plannerRecipeConfiguredIds,
+    plannerRecipeNameEncodesItem,
+    plannerAppendRecipeExtras,
+    plannerConcreteRecipeTitle,
+    plannerMealDisplayTitle,
+    plannerLearningLabel,
+    plannerLearningRoleGroups,
+    plannerCompactLearningRolesHtml,
     plannerCompletedLogOnlyDayState,
     plannerInstallCompletedDayPresentationStyles,
     plannerCollapseFinishedLogOnlyDays,

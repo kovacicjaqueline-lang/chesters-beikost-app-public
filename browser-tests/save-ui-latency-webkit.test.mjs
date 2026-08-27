@@ -155,6 +155,45 @@ try {
   assert.equal(productDeleteImmediate.count, 0);
   await waitForDeferredRender(page, productDeleteImmediate.before);
 
+  // Eigenes Lebensmittel: Persistenz und Dialogschluss passieren vor dem Voll-Render.
+  const foodsBeforeCustom = await page.evaluate(() => window.__beikostTest.getState().foods.length);
+  await page.evaluate(() => window.addCustomFoodForm());
+  await page.locator("#customName").fill("Latency-Test-Lebensmittel");
+  const customImmediate = await page.evaluate(() => {
+    const before = window.__saveUiLatencyProbe.renderCalls;
+    document.getElementById("saveCustom").click();
+    return {
+      before,
+      after: window.__saveUiLatencyProbe.renderCalls,
+      modalOpen: document.getElementById("genericModal").classList.contains("open"),
+      foodCount: window.__beikostTest.getState().foods.length,
+    };
+  });
+  assert.equal(customImmediate.after, customImmediate.before, "Custom-Food-Save darf nicht synchron voll rendern");
+  assert.equal(customImmediate.modalOpen, false);
+  assert.equal(customImmediate.foodCount, foodsBeforeCustom + 1);
+  await waitForDeferredRender(page, customImmediate.before);
+
+  // Vorrat speichern: der Batch ist bereits im State, während der Voll-Render noch aussteht.
+  const inventoryFoodId = await page.evaluate(() => window.__beikostTest.getState().foods.find((food) => food.active).id);
+  const inventoryBefore = await page.evaluate(() => window.__beikostTest.getState().inventory.length);
+  await page.evaluate((foodId) => window.addInventoryForm({ foodId, portions: 1 }), inventoryFoodId);
+  await page.waitForFunction(() => !!document.getElementById("saveInv") && !document.getElementById("saveInv").disabled);
+  const inventoryImmediate = await page.evaluate(() => {
+    const before = window.__saveUiLatencyProbe.renderCalls;
+    document.getElementById("saveInv").click();
+    return {
+      before,
+      after: window.__saveUiLatencyProbe.renderCalls,
+      modalOpen: document.getElementById("genericModal").classList.contains("open"),
+      inventoryCount: window.__beikostTest.getState().inventory.length,
+    };
+  });
+  assert.equal(inventoryImmediate.after, inventoryImmediate.before, "Vorrat-Save darf nicht synchron voll rendern");
+  assert.equal(inventoryImmediate.modalOpen, false);
+  assert.equal(inventoryImmediate.inventoryCount, inventoryBefore + 1);
+  await waitForDeferredRender(page, inventoryImmediate.before);
+
   // Protokoll speichern: Save-Semantik ist synchron, Modal-Close ebenfalls; Voll-Render ist koalesziert verzögert.
   await page.evaluate(() => window.openLog(null));
   await page.waitForFunction(() => !!document.querySelector(".addLogFoodResult"));
@@ -186,14 +225,14 @@ try {
   const settingsImmediate = await page.evaluate(() => {
     const input = document.getElementById("allergenDays");
     input.value = String(Math.max(3, Number(input.value || 3) + 1));
-    const expected = Number(input.value);
+    const expected = input.value;
     const before = window.__saveUiLatencyProbe.renderCalls;
     document.getElementById("saveSettings").click();
     return {
       before,
       after: window.__saveUiLatencyProbe.renderCalls,
       expected,
-      saved: window.__beikostTest.getState().settings.allergenRepeatDays,
+      saved: window.__beikostTest.getState().settings.allergenDays,
       toast: document.getElementById("toastText").textContent,
     };
   });
@@ -235,6 +274,7 @@ try {
       };
     };
 
+    const cloneJson = (value) => JSON.parse(JSON.stringify(value));
     const original = window.__beikostTest.getState();
     const baseline = measure("current-state");
     const template = original.logs[original.logs.length - 1] || {
@@ -251,9 +291,9 @@ try {
       textureKnown: true,
       textureStage: 2,
     };
-    const historyState = structuredClone(original);
+    const historyState = cloneJson(original);
     historyState.logs = Array.from({ length: 365 }, (_, index) => ({
-      ...structuredClone(template),
+      ...cloneJson(template),
       id: `latency-profile-${index}`,
       createdAt: new Date(Date.UTC(2026, 0, 1, 12, 0, index % 60)).toISOString(),
       updatedAt: new Date(Date.UTC(2026, 0, 1, 12, 0, index % 60)).toISOString(),

@@ -6,6 +6,13 @@ const path = require("node:path");
 const vm = require("node:vm");
 
 const source = fs.readFileSync(path.join(__dirname, "..", "js", "deferred-render.js"), "utf8");
+const serviceWorkerSource = fs.readFileSync(path.join(__dirname, "..", "sw.js"), "utf8");
+
+assert.match(
+  serviceWorkerSource,
+  /"\.\/js\/deferred-render\.js\?v=10\.1\.26"/,
+  "Die neue Deferred-Render-Runtime muss für den ersten Offline-Start precached sein",
+);
 
 function createHarness({ withAnimationFrame = true } = {}) {
   const events = [];

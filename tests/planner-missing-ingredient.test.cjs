@@ -88,13 +88,21 @@ test('MISSING-INGREDIENT-03: alle zukünftigen offenen gespeicherten Vorkommen w
       '2026-08-28|lunch': true,
       '2026-08-30|breakfast': true,
     },
+    backupMeta: {
+      plannerLinking: {
+        carriedPlans: {
+          'carry-open': { planId: 'carry-open', date: '2026-08-31', meal: 'lunch', focusId: 'banane', foodIds: ['banane'] },
+          'carry-done': { planId: 'carry-done', date: '2026-09-01', meal: 'lunch', focusId: 'banane', foodIds: ['banane'] },
+        },
+      },
+    },
   };
-  const completed = new Set(['2026-08-29|lunch']);
+  const completed = new Set(['2026-08-29|lunch', 'carry-done']);
   const result = feature.clearUnavailableFoodFromStoredPlans(
     state,
     'banane',
     '2026-08-27',
-    (date, meal) => completed.has(`${date}|${meal}`),
+    (date, meal, entry) => completed.has(entry?.planId || `${date}|${meal}`),
     (entry, slot) => slot.key === '2026-08-27|breakfast'
       ? { ...clone(entry), foodIds: ['hafer', 'apfel'] }
       : null,
@@ -103,6 +111,7 @@ test('MISSING-INGREDIENT-03: alle zukünftigen offenen gespeicherten Vorkommen w
   assert.deepEqual(result.adaptedKeys, ['2026-08-27|breakfast']);
   assert.ok(result.clearedKeys.includes('2026-08-28|lunch'));
   assert.ok(result.clearedKeys.includes('2026-08-30|breakfast'));
+  assert.ok(result.clearedKeys.includes('carried:carry-open'));
   assert.deepEqual(state.planLocks['2026-08-27|breakfast'].foodIds, ['hafer', 'apfel']);
   assert.equal(state.planLocks['2026-08-28|lunch'], undefined);
   assert.equal(state.manualMeals['2026-08-28|lunch'], undefined);
@@ -110,6 +119,8 @@ test('MISSING-INGREDIENT-03: alle zukünftigen offenen gespeicherten Vorkommen w
   assert.equal(state.autoLockExcluded['2026-08-28|lunch'], undefined);
   assert.ok(state.planLocks['2026-08-29|lunch'], 'bereits protokollierter Slot bleibt geschützt');
   assert.ok(state.planLocks['2026-08-26|breakfast'], 'Vergangenheit bleibt unverändert');
+  assert.equal(state.backupMeta.plannerLinking.carriedPlans['carry-open'], undefined);
+  assert.ok(state.backupMeta.plannerLinking.carriedPlans['carry-done'], 'erledigter carried Plan bleibt geschützt');
 });
 
 test('MISSING-INGREDIENT-04: Loader und Offline-Precache enthalten die neue Verfügbarkeitsschicht', () => {

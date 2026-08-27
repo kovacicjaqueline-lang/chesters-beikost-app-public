@@ -107,10 +107,15 @@
     for (const key of keys) {
       const [date, meal] = String(key || "").split("|");
       if (!date || date < todayValue) continue;
-      if (typeof isCompletedFn === "function" && isCompletedFn(date, meal)) continue;
 
       const lock = data.planLocks?.[key];
       const manual = data.manualMeals?.[key];
+      const completionEntry = manual || lock || null;
+      if (
+        typeof isCompletedFn === "function" &&
+        isCompletedFn(date, meal, completionEntry)
+      ) continue;
+
       const affected = [lock, manual].filter((entry) => mealContainsFood(entry, foodId));
       const overrideAffected = data.overrides?.[key] === foodId;
       if (!affected.length && !overrideAffected) continue;
@@ -119,7 +124,7 @@
       const replacements = new Map();
       if (canAdapt) {
         for (const entry of affected) {
-          const replacement = replacementFactory(entry, { key, date, meal });
+          const replacement = replacementFactory(entry, { key, date, meal, source: "primary" });
           if (!replacement || mealContainsFood(replacement, foodId)) {
             canAdapt = false;
             break;
@@ -140,6 +145,38 @@
       delete data.overrides[key];
       delete data.autoLockExcluded[key];
       clearedKeys.push(key);
+    }
+
+    const carriedPlans = data.backupMeta?.plannerLinking?.carriedPlans;
+    if (carriedPlans && typeof carriedPlans === "object" && !Array.isArray(carriedPlans)) {
+      for (const [planId, carried] of Object.entries(carriedPlans)) {
+        const date = String(carried?.date || "");
+        const meal = String(carried?.meal || "");
+        if (!date || date < todayValue || !mealContainsFood(carried, foodId)) continue;
+        if (
+          typeof isCompletedFn === "function" &&
+          isCompletedFn(date, meal, carried)
+        ) continue;
+
+        const label = `carried:${planId}`;
+        const replacement = typeof replacementFactory === "function"
+          ? replacementFactory(carried, { key: label, date, meal, source: "carried", planId })
+          : null;
+        if (replacement && !mealContainsFood(replacement, foodId)) {
+          carriedPlans[planId] = {
+            ...replacement,
+            planId: carried.planId || planId,
+            date,
+            meal,
+            source: carried.source || "carried",
+            carriedPlannerPlan: carried.carriedPlannerPlan !== false,
+          };
+          adaptedKeys.push(label);
+        } else {
+          delete carriedPlans[planId];
+          clearedKeys.push(label);
+        }
+      }
     }
 
     return { clearedKeys, adaptedKeys };
@@ -346,7 +383,13 @@
       state,
       foodId,
       typeof today === "function" ? today() : String(context.date || ""),
-      (date, meal) => typeof mealIsCompleted === "function" && mealIsCompleted(date, meal),
+      (date, meal, entry) => {
+        const core = globalScope.__plannerLogRolloverCore;
+        if (entry?.planId && core?.linkedCompletionLog) {
+          return !!core.linkedCompletionLog(state, entry.planId, date, meal);
+        }
+        return typeof mealIsCompleted === "function" && mealIsCompleted(date, meal);
+      },
       (entry, slot) => recipeReplacementForStoredMeal(entry, { ...slot, foodId }),
     );
 

@@ -63,6 +63,7 @@ try {
     window.__beikostTest.reset();
     const current = window.__beikostTest.today();
     const future = window.__beikostTest.addDays(current, 2);
+    const carriedDate = window.__beikostTest.addDays(current, 3);
     const state = window.__beikostTest.getState();
     state.logs = [];
     state.settings.phaseSelected = "aufbau";
@@ -74,6 +75,12 @@ try {
     state.autoLockExcluded = {};
     state.planLocks = {};
     state.manualMeals = {};
+    state.backupMeta ||= {};
+    state.backupMeta.plannerLinking = {
+      version: 1,
+      rolloverHandled: {},
+      carriedPlans: {},
+    };
     for (const id of ["hafer", "banane", "apfel", "birne"]) {
       const item = state.foods.find((food) => food.id === id);
       if (item) item.manualStatus = "Regelmäßig";
@@ -114,8 +121,25 @@ try {
     state.manualMeals[futureKey] = { ...futureMeal };
     state.planLocks[futureKey] = { ...futureMeal, mode: "manual" };
     state.overrides[futureKey] = "banane";
+
+    const carriedPlanId = "missing-ingredient-carried";
+    state.backupMeta.plannerLinking.carriedPlans[carriedPlanId] = {
+      planId: carriedPlanId,
+      date: carriedDate,
+      meal: "lunch",
+      active: true,
+      focusId: "banane",
+      foodIds: ["banane"],
+      baseFoodIds: [],
+      sampleFoodIds: ["banane"],
+      foodRoles: { banane: "sample" },
+      type: "neu",
+      source: "carried",
+      carriedPlannerPlan: true,
+    };
+
     window.__beikostTest.setState(state);
-    return { current, future, currentKey, futureKey };
+    return { current, future, currentKey, futureKey, carriedPlanId };
   });
 
   const actions = page.locator("#todayCard details.meal-plan-actions").filter({
@@ -143,7 +167,7 @@ try {
   await page.locator('.missingIngredientChoice[data-food="banane"]').click();
   await page.waitForFunction(() => !document.getElementById("genericModal")?.classList.contains("open"));
 
-  const after = await page.evaluate(({ currentKey, futureKey }) => {
+  const after = await page.evaluate(({ currentKey, futureKey, carriedPlanId }) => {
     const state = window.__beikostTest.getState();
     return {
       logs: state.logs,
@@ -154,6 +178,7 @@ try {
       futureManual: state.manualMeals?.[futureKey] || null,
       futureLock: state.planLocks?.[futureKey] || null,
       futureOverride: state.overrides?.[futureKey] || null,
+      carried: state.backupMeta?.plannerLinking?.carriedPlans?.[carriedPlanId] || null,
       unavailable: typeof window.isFoodUnavailable === "function" ? window.isFoodUnavailable("banane") : null,
     };
   }, setup);
@@ -172,6 +197,7 @@ try {
   assert.equal(after.futureManual, null, "zukünftiger offener manueller Banane-Slot wird freigegeben");
   assert.equal(after.futureLock, null, "zukünftiger offener Banane-Lock wird freigegeben");
   assert.equal(after.futureOverride, null, "zukünftiger Banane-Override wird entfernt");
+  assert.equal(after.carried, null, "auch ein verschobener offener Rollover-Plan mit Banane wird entfernt");
   assert.match(await page.locator("#toastText").innerText(), /Einkaufsliste.*Plan wurde angepasst/i);
 
   await page.locator('nav button[data-view="prep"]').click();

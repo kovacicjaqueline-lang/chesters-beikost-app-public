@@ -256,11 +256,33 @@ function manualMealFlowEnsureObserver() {
   manualMealFlowObserver.observe(body, { childList: true, subtree: true });
 }
 
+function manualMealFlowAfterNextPaint(callback) {
+  if (typeof callback !== "function") return;
+  let afterPaint = () => {
+    if (typeof setTimeout === "function") setTimeout(callback, 0);
+    else callback();
+  };
+  if (typeof requestAnimationFrame === "function") requestAnimationFrame(afterPaint);
+  else afterPaint();
+}
+
+function manualMealFlowWithDeferredRender(callback) {
+  let originalRenderAll = typeof renderAll === "function" ? renderAll : null;
+  if (!originalRenderAll) return callback();
+  let renderRequested = false;
+  renderAll = () => { renderRequested = true; };
+  try {
+    return callback();
+  } finally {
+    renderAll = originalRenderAll;
+    if (renderRequested) manualMealFlowAfterNextPaint(originalRenderAll);
+  }
+}
+
 function manualMealFlowRestorePlan(targetDate, meal) {
   manualMealFlowEnsureTargetVisible(targetDate);
   if (typeof save === "function") save();
   if (typeof closeGeneric === "function") closeGeneric();
-  if (typeof renderAll === "function") renderAll();
   if (typeof showView === "function") showView("plan");
   manualMealFlowContext = null;
   if (manualMealFlowObserver) {
@@ -268,6 +290,7 @@ function manualMealFlowRestorePlan(targetDate, meal) {
     manualMealFlowObserver = null;
   }
   let restore = () => {
+    if (typeof renderAll === "function") renderAll();
     manualMealFlowEnhanceCards();
     if (typeof document === "undefined") return;
     let target = document.querySelector(`.removeManualMeal[data-date="${targetDate}"][data-meal="${meal}"]`);
@@ -277,8 +300,7 @@ function manualMealFlowRestorePlan(targetDate, meal) {
       details.scrollIntoView?.({ behavior: "smooth", block: "center" });
     }
   };
-  if (typeof requestAnimationFrame === "function") requestAnimationFrame(restore);
-  else restore();
+  manualMealFlowAfterNextPaint(restore);
 }
 
 function installManualMealFlowRuntime() {
@@ -355,10 +377,12 @@ function installManualMealFlowRuntime() {
         context?.foodPreparationKeys || data?.foodPreparationKeys || {},
         foodIds,
       );
-      let result = originalSaveEditedPlanMeal.call(this, date, meal, {
-        ...data,
-        foodPreparationKeys: preparationKeys,
-      });
+      let result = manualMealFlowWithDeferredRender(() =>
+        originalSaveEditedPlanMeal.call(this, date, meal, {
+          ...data,
+          foodPreparationKeys: preparationKeys,
+        }),
+      );
       if (result?.ok) {
         manualMealFlowContext = null;
         if (manualMealFlowObserver) {

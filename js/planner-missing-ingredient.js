@@ -20,6 +20,10 @@
     return !!foodId && (meal?.foodIds || []).includes(foodId);
   }
 
+  function mealRequiresIngredientAvailability(meal, foodId) {
+    return mealContainsFood(meal, foodId) && !meal?.recipeInventoryId;
+  }
+
   function canMarkMissingIngredient(day, meal, todayValue = "", isCompletedFn = null) {
     if (
       !day?.date ||
@@ -144,6 +148,14 @@
   ) {
     const previous = previousFollowUp || {};
     const resume = followUpResumeRequest(previous, meal);
+    const preserveBase = !!(
+      previous.id &&
+      (
+        previous.resumeReason ||
+        previous.reason === "rejection" ||
+        (previous.reason === "not_offered" && previous.detail && previous.detail !== "unavailable")
+      )
+    );
     return {
       ...previous,
       id: previous.id || `${foodId}-${Date.now()}`,
@@ -155,10 +167,12 @@
       updatedAt: now,
       dueDate: "",
       meal: meal || resume.meal,
-      baseFoodId: "",
-      baseMode: "none",
-      alternativeBaseIds: [],
-      previousBaseIds: previousBaseIds || [],
+      baseFoodId: preserveBase ? previous.baseFoodId || "" : "",
+      baseMode: preserveBase ? previous.baseMode || "auto" : "none",
+      alternativeBaseIds: preserveBase ? [...(previous.alternativeBaseIds || [])] : [],
+      previousBaseIds: preserveBase
+        ? [...(previous.previousBaseIds || previousBaseIds || [])]
+        : [...(previousBaseIds || [])],
       preparationKey: previous.preparationKey || "standard",
       preparationText: preparationText || previous.preparationText || "",
       source: "plan",
@@ -200,7 +214,7 @@
         isCompletedFn(date, meal, completionEntry)
       ) continue;
 
-      const affected = [lock, manual].filter((entry) => mealContainsFood(entry, foodId));
+      const affected = [lock, manual].filter((entry) => mealRequiresIngredientAvailability(entry, foodId));
       const overrideAffected = data.overrides?.[key] === foodId;
       if (!affected.length && !overrideAffected) continue;
 
@@ -209,7 +223,7 @@
       if (canAdapt) {
         for (const entry of affected) {
           const replacement = replacementFactory(entry, { key, date, meal, source: "primary" });
-          if (!replacement || mealContainsFood(replacement, foodId)) {
+          if (!replacement || mealRequiresIngredientAvailability(replacement, foodId)) {
             canAdapt = false;
             break;
           }
@@ -236,7 +250,7 @@
       for (const [planId, carried] of Object.entries(carriedPlans)) {
         const date = String(carried?.date || "");
         const meal = String(carried?.meal || "");
-        if (!date || date < todayValue || !mealContainsFood(carried, foodId)) continue;
+        if (!date || date < todayValue || !mealRequiresIngredientAvailability(carried, foodId)) continue;
         if (
           typeof isCompletedFn === "function" &&
           isCompletedFn(date, meal, carried)
@@ -246,7 +260,7 @@
         const replacement = typeof replacementFactory === "function"
           ? replacementFactory(carried, { key: label, date, meal, source: "carried", planId })
           : null;
-        if (replacement && !mealContainsFood(replacement, foodId)) {
+        if (replacement && !mealRequiresIngredientAvailability(replacement, foodId)) {
           carriedPlans[planId] = {
             ...replacement,
             planId: carried.planId || planId,
@@ -269,6 +283,7 @@
   const API = {
     REPLACEABLE_RECIPE_FIELDS,
     mealContainsFood,
+    mealRequiresIngredientAvailability,
     canMarkMissingIngredient,
     replaceFoodIdInMeal,
     recipeComponentReplacementId,
@@ -314,6 +329,11 @@
 
   function availabilityAwareRecipeFoodIds(recipe, originalRecipeFoodIds) {
     if (!recipe || typeof originalRecipeFoodIds !== "function") return [];
+    if (
+      typeof recipeInventoryPortions === "function" &&
+      Number(recipeInventoryPortions(recipe.name) || 0) > 0
+    ) return originalRecipeFoodIds(recipe);
+
     const lookup = (name) => typeof foodByName === "function" ? foodByName(name, state?.foods || []) : null;
     const hasUnavailable = structuredRecipeNames(recipe).some((name) => {
       const item = lookup(name);

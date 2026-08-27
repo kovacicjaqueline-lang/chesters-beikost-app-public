@@ -69,13 +69,19 @@ test('MISSING-INGREDIENT-02: Fokus oder Kostprobe werden nicht still durch eine 
   );
 });
 
-test('MISSING-INGREDIENT-03: alle zukünftigen offenen gespeicherten Vorkommen werden angepasst oder zur Neuplanung freigegeben', () => {
+test('MISSING-INGREDIENT-03: alle zukünftigen offenen gespeicherten Frisch-Vorkommen werden angepasst oder zur Neuplanung freigegeben', () => {
   const state = {
     planLocks: {
       '2026-08-27|breakfast': { focusId: 'hafer', foodIds: ['hafer', 'banane'], recipeName: 'Obst-Haferbrei' },
       '2026-08-28|lunch': { focusId: 'banane', foodIds: ['banane'] },
       '2026-08-29|lunch': { focusId: 'banane', foodIds: ['banane'] },
       '2026-08-26|breakfast': { focusId: 'banane', foodIds: ['banane'] },
+      '2026-09-02|breakfast': {
+        focusId: 'banane',
+        foodIds: ['banane', 'hafer'],
+        recipeName: 'Baby-Bananenbrot',
+        recipeInventoryId: 'recipe-batch-1',
+      },
     },
     manualMeals: {
       '2026-08-28|lunch': { focusId: 'banane', foodIds: ['banane'], manualAdded: true },
@@ -119,6 +125,7 @@ test('MISSING-INGREDIENT-03: alle zukünftigen offenen gespeicherten Vorkommen w
   assert.equal(state.autoLockExcluded['2026-08-28|lunch'], undefined);
   assert.ok(state.planLocks['2026-08-29|lunch'], 'bereits protokollierter Slot bleibt geschützt');
   assert.ok(state.planLocks['2026-08-26|breakfast'], 'Vergangenheit bleibt unverändert');
+  assert.ok(state.planLocks['2026-09-02|breakfast'], 'fertiger Rezeptvorrat bleibt nutzbar');
   assert.equal(state.backupMeta.plannerLinking.carriedPlans['carry-open'], undefined);
   assert.ok(state.backupMeta.plannerLinking.carriedPlans['carry-done'], 'erledigter carried Plan bleibt geschützt');
 });
@@ -132,6 +139,7 @@ test('MISSING-INGREDIENT-04: Loader und Offline-Precache enthalten die neue Verf
   assert.match(source, /Welche Zutat fehlt\?/);
   assert.match(source, /steht auf der Einkaufsliste/);
   assert.match(source, /renderAllAfterNextPaint/);
+  assert.match(source, /recipeInventoryPortions/);
   assert.doesNotMatch(source, /state\.logs\.push/);
 });
 
@@ -150,6 +158,7 @@ test('MISSING-INGREDIENT-05: fertiger Rezeptvorrat wird weder angeboten noch als
     feature.canMarkMissingIngredient({ date: '2026-08-27' }, meal, '2026-08-27', () => false),
     false,
   );
+  assert.equal(feature.mealRequiresIngredientAvailability(meal, 'banane'), false);
   const byName = (name) => ({ Banane: { id: 'banane' }, Apfel: { id: 'apfel' } })[name] || null;
   assert.equal(
     feature.recipeComponentReplacementId(
@@ -164,7 +173,7 @@ test('MISSING-INGREDIENT-05: fertiger Rezeptvorrat wird weder angeboten noch als
   );
 });
 
-test('MISSING-INGREDIENT-06: Plan-Hinweis entfernt alte Log-Provenienz und konserviert eine Ablehnungs-Wiedervorlage', () => {
+test('MISSING-INGREDIENT-06: Plan-Hinweis entfernt alte Log-Provenienz und konserviert Ablehnungs-Wiedervorlage samt Basis', () => {
   const hint = feature.planShoppingHint(
     {
       foodId: 'banane',
@@ -190,12 +199,16 @@ test('MISSING-INGREDIENT-06: Plan-Hinweis entfernt alte Log-Provenienz und konse
       detail: 'refused',
       status: 'scheduled',
       meal: 'breakfast',
+      baseFoodId: 'hafer',
+      baseMode: 'manual',
+      alternativeBaseIds: ['hirse'],
+      previousBaseIds: ['hafer'],
       createdAt: '2026-08-26T10:00:00.000Z',
     },
     'banane',
     'breakfast',
     'sehr reif zerdrücken',
-    ['hafer'],
+    ['apfel'],
     '2026-08-27T20:00:00.000Z',
   );
   assert.equal(waiting.status, 'awaiting_stock');
@@ -203,6 +216,10 @@ test('MISSING-INGREDIENT-06: Plan-Hinweis entfernt alte Log-Provenienz und konse
   assert.equal(waiting.detail, 'unavailable');
   assert.equal(waiting.resumeReason, 'rejection');
   assert.equal(waiting.resumeDetail, 'refused');
+  assert.equal(waiting.baseMode, 'manual');
+  assert.equal(waiting.baseFoodId, 'hafer');
+  assert.deepEqual(waiting.alternativeBaseIds, ['hirse']);
+  assert.deepEqual(waiting.previousBaseIds, ['hafer']);
   assert.deepEqual(feature.followUpResumeRequest(waiting), {
     reason: 'rejection',
     detail: 'refused',

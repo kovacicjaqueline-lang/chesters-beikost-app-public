@@ -8,6 +8,9 @@ const vm = require("node:vm");
 
 const root = path.resolve(__dirname, "..");
 const policy = require("../js/planner-food-role-stability.js");
+const {
+  installFoodRecipeComponentMetadata,
+} = require("../js/recipe-v2-component-options.js");
 
 function makeFood(id, name, category, overrides = {}) {
   return {
@@ -18,6 +21,7 @@ function makeFood(id, name, category, overrides = {}) {
     active: true,
     meals: ["breakfast", "lunch", "dinner"],
     allergenGroup: "",
+    safeForm: "",
     ...overrides,
   };
 }
@@ -28,6 +32,7 @@ const FAMILY_FOODS = [
     foodFamily: "nuss:erdnuss",
     allergenFamily: "nuss:erdnuss",
     priority: 10,
+    safeForm: "Nur als glattes Mus oder sehr fein gemahlen und verdünnt; niemals ganze Nüsse.",
   }),
   makeFood("erdnussmus", "Erdnussmus", "Nuss", {
     allergenGroup: "Erdnuss",
@@ -40,6 +45,7 @@ const FAMILY_FOODS = [
     foodFamily: "sesam",
     allergenFamily: "sesam",
     priority: 12,
+    safeForm: "Sehr fein gemahlen oder als glattes Mus in kleiner Menge; keine harten ganzen Kerne.",
   }),
   makeFood("tahin", "Tahin", "Samen", {
     allergenGroup: "Sesam",
@@ -53,13 +59,16 @@ const FAMILY_FOODS = [
   makeFood("naturjoghurt", "Naturjoghurt", "Milchprodukt", { allergenGroup: "Milch", priority: 5 }),
 ];
 
-test("Nuss/Samen: Mus- und Pastenform wird nur innerhalb derselben Familie bevorzugt", () => {
+installFoodRecipeComponentMetadata(FAMILY_FOODS);
+
+test("Nuss/Samen: FOOD-Freigabe ersetzt die separate Mus-/Pasten-ID-Liste", () => {
   const peanut = FAMILY_FOODS.find((food) => food.id === "erdnuss");
   const sesame = FAMILY_FOODS.find((food) => food.id === "sesam");
-  assert.equal(policy.plannerNutSeedPreferredToppingForm(peanut, FAMILY_FOODS)?.id, "erdnussmus");
-  assert.equal(policy.plannerNutSeedPreferredToppingForm(sesame, FAMILY_FOODS)?.id, "tahin");
-  assert.equal(policy.plannerNutSeedToppingForm(peanut), false);
-  assert.equal(policy.plannerNutSeedToppingForm(FAMILY_FOODS.find((food) => food.id === "erdnussmus")), true);
+  assert.equal(policy.plannerNutSeedPreferredToppingForm(peanut, FAMILY_FOODS)?.id, "erdnuss");
+  assert.equal(policy.plannerNutSeedPreferredToppingForm(sesame, FAMILY_FOODS)?.id, "sesam");
+  assert.equal(policy.plannerNutSeedToppingForm(peanut), true);
+  assert.equal(policy.plannerNutSeedToppingForm(sesame), true);
+  assert.equal(policy.plannerNutSeedToppingForm(FAMILY_FOODS.find((food) => food.id === "erdnussmus")), false);
 });
 
 test("Nuss/Samen: frühe bekannte Wiederholung bleibt Sample statt normalem Fokus", () => {
@@ -67,7 +76,7 @@ test("Nuss/Samen: frühe bekannte Wiederholung bleibt Sample statt normalem Foku
     { f: FAMILY_FOODS.find((food) => food.id === "erdnuss"), type: "bekannt kombinieren" },
     FAMILY_FOODS,
   );
-  assert.equal(result.f.id, "erdnussmus");
+  assert.equal(result.f.id, "erdnuss");
   assert.equal(result.type, "gezielt wiederholen");
 });
 
@@ -86,8 +95,8 @@ test("Nussmus-Topping: nur Obst+Getreide-Porridge ist ein passender Rezeptkandid
 test("Nussmus-Topping: Rezeptzutaten müssen bekannt/auto-geeignet sein und das Sample bleibt außerhalb der Rezeptidentität", () => {
   const meal = {
     meal: "breakfast", active: true,
-    foodIds: ["hafer", "erdnussmus"], baseFoodIds: ["hafer"],
-    sampleFoodIds: ["erdnussmus"], type: "Allergen wiederholen",
+    foodIds: ["hafer", "erdnuss"], baseFoodIds: ["hafer"],
+    sampleFoodIds: ["erdnuss"], type: "Allergen wiederholen",
   };
   const recipes = [
     { name: "Obst-Getreide-Brei", category: "porridge", requires: ["Hafer", "Banane"] },
@@ -96,7 +105,7 @@ test("Nussmus-Topping: Rezeptzutaten müssen bekannt/auto-geeignet sein und das 
   global.plannerProactiveRecipeNameVariants = (recipe) => [recipe.requires || []];
   try {
     const candidates = policy.plannerNutSeedToppingRecipeCandidates(
-      meal, "erdnussmus", recipes, FAMILY_FOODS,
+      meal, "erdnuss", recipes, FAMILY_FOODS,
       () => true,
       (name) => name !== "Naturjoghurt",
       () => true,
@@ -106,7 +115,7 @@ test("Nussmus-Topping: Rezeptzutaten müssen bekannt/auto-geeignet sein und das 
     assert.equal(candidates.length, 1);
     assert.equal(candidates[0].recipe.name, "Obst-Getreide-Brei");
     assert.deepEqual(Array.from(candidates[0].ids), ["banane", "hafer"]);
-    assert.equal(candidates[0].ids.includes("erdnussmus"), false);
+    assert.equal(candidates[0].ids.includes("erdnuss"), false);
     assert.deepEqual(Array.from(candidates[0].addedIds), ["banane"]);
   } finally {
     delete global.plannerProactiveRecipeNameVariants;
@@ -115,7 +124,7 @@ test("Nussmus-Topping: Rezeptzutaten müssen bekannt/auto-geeignet sein und das 
 
 function runtimeHarness() {
   const source = fs.readFileSync(path.join(root, "js", "planner-food-role-stability.js"), "utf8");
-  const foods = FAMILY_FOODS.map((food) => ({ ...food }));
+  const foods = FAMILY_FOODS.map((food) => ({ ...food, recipeComponentKinds: [...(food.recipeComponentKinds || [])] }));
   const byId = (id) => foods.find((food) => food.id === id);
   const state = { foods, overrides: {}, planLocks: {} };
   const recipe = {
@@ -164,11 +173,11 @@ function runtimeHarness() {
       meals: [{
         meal: "breakfast",
         active: true,
-        focusId: "erdnussmus",
-        foodIds: ["hafer", "erdnussmus"],
+        focusId: "erdnuss",
+        foodIds: ["hafer", "erdnuss"],
         baseFoodIds: ["hafer"],
-        sampleFoodIds: ["erdnussmus"],
-        foodRoles: { hafer: "base", erdnussmus: "sample" },
+        sampleFoodIds: ["erdnuss"],
+        foodRoles: { hafer: "base", erdnuss: "sample" },
         optionalAddons: [],
         inventoryFoodIds: [],
         recipeName: "",
@@ -220,7 +229,7 @@ test("Runtime: Nuss/Samen werden nicht Basis oder normaler bekannter Fokus, Samp
   assert.equal(context.plannerFoodCanBeBase(context.food("sesam")), false);
   assert.equal(context.plannerFoodCanBeBase(context.food("hafer")), true);
   const intro = context.introductionCandidate("breakfast", "2026-08-19", { reserved: new Set() }, []);
-  assert.equal(intro.f.id, "erdnussmus");
+  assert.equal(intro.f.id, "erdnuss");
   assert.equal(intro.type, "Allergen einführen");
   assert.equal(context.knownCandidate("breakfast", "2026-08-19", {}, []).f.id, "apfel");
   assert.equal(context.chooseFocus("breakfast", "2026-08-19", [], "2026-08-19|breakfast").f.id, "apfel");
@@ -230,7 +239,7 @@ test("Runtime: bestehender manueller Override auf Nuss/Samen wird Sample statt H
   const context = runtimeHarness();
   context.state.overrides["2026-08-19|breakfast"] = "erdnuss";
   const result = context.knownCandidate("breakfast", "2026-08-19", {}, []);
-  assert.equal(result.f.id, "erdnussmus");
+  assert.equal(result.f.id, "erdnuss");
   assert.equal(result.type, "manuell");
 });
 
@@ -241,20 +250,20 @@ test("Runtime: alte automatische Nuss-/Samen-Hauptfokusse werden ungültig, echt
     baseFoodIds: ["hafer"], sampleFoodIds: [], type: "bekannt",
   }, context.state.foods), true);
   assert.equal(context.plannerAutomaticLockRoleViolation({
-    mode: "auto", focusId: "erdnussmus", foodIds: ["hafer", "erdnussmus"],
-    baseFoodIds: ["hafer"], sampleFoodIds: ["erdnussmus"], type: "Allergen wiederholen",
+    mode: "auto", focusId: "erdnuss", foodIds: ["hafer", "erdnuss"],
+    baseFoodIds: ["hafer"], sampleFoodIds: ["erdnuss"], type: "Allergen wiederholen",
   }, context.state.foods), false);
 });
 
-test("Runtime: Erdnussmus-Sample wird als Topping auf eindeutigen Obst-Getreide-Brei übernommen und bleibt protokollierbares Sample", () => {
+test("Runtime: FOOD-freigegebenes Erdnuss-Sample wird als Topping auf eindeutigen Obst-Getreide-Brei übernommen", () => {
   const context = runtimeHarness();
   const meal = context.buildDay("2026-08-19", 0, { recipePlannedUse: new Map() }).meals[0];
   assert.equal(meal.recipeName, "Obst-Getreide-Brei");
-  assert.deepEqual(Array.from(meal.foodIds).sort(), ["banane", "erdnussmus", "hafer"]);
+  assert.deepEqual(Array.from(meal.foodIds).sort(), ["banane", "erdnuss", "hafer"]);
   assert.deepEqual(Array.from(meal.baseFoodIds).sort(), ["banane", "hafer"]);
-  assert.deepEqual(Array.from(meal.sampleFoodIds), ["erdnussmus"]);
-  assert.equal(meal.foodRoles.erdnussmus, "sample");
+  assert.deepEqual(Array.from(meal.sampleFoodIds), ["erdnuss"]);
+  assert.equal(meal.foodRoles.erdnuss, "sample");
   assert.equal(meal.type, "Allergen wiederholen");
   assert.equal(meal.__amountsReapplied, true);
-  assert.match(meal.note, /Erdnussmus als Kostproben-Topping zum Obst-Getreide-Brei/);
+  assert.match(meal.note, /Erdnuss als Kostproben-Topping zum Obst-Getreide-Brei/);
 });

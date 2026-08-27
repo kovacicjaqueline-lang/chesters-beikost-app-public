@@ -34,7 +34,7 @@
     ].filter(Boolean);
   }
 
-  function recipeCatalogSearchMatches(recipe, query) {
+  function recipeCatalogSearchMatches(recipe, query, fullSearchText = "") {
     const normalizedQuery = normalizeName(query || "");
     if (!normalizedQuery) return true;
 
@@ -53,7 +53,7 @@
     // (z. B. „Ei“ in „Brei“, „Reis“ oder „Weizen“). Ab drei Zeichen bleibt die
     // bisherige flexible Volltextsuche inklusive Zutatenbeschreibung erhalten.
     if (normalizedQuery.length < 3) return false;
-    return normalizeName(recipeSearchText(recipe)).includes(normalizedQuery);
+    return normalizeName(fullSearchText).includes(normalizedQuery);
   }
 
   function installIngredientAwareRecipeSearch() {
@@ -64,8 +64,10 @@
       if (!normalizeName(currentQuery)) return baseRenderPrep.apply(this, args);
 
       const baseRecipeSearchText = recipeSearchText;
-      recipeSearchText = (recipe) =>
-        recipeCatalogSearchMatches(recipe, currentQuery) ? baseRecipeSearchText(recipe) : "";
+      recipeSearchText = (recipe) => {
+        const fullSearchText = baseRecipeSearchText(recipe);
+        return recipeCatalogSearchMatches(recipe, currentQuery, fullSearchText) ? fullSearchText : "";
+      };
       try {
         return baseRenderPrep.apply(this, args);
       } finally {

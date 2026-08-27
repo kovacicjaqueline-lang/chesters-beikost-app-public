@@ -29,7 +29,7 @@ test("Milch-Getreide-Brei definiert alle Milchoptionen zentral", () => {
   assert.deepEqual(recipe.milkChoices, [...RECIPE_V2_COMPONENT_OPTIONS["Milch-Getreide-Brei"].milkChoices]);
 });
 
-test("FOOD-Metadaten kennzeichnen sichere Mus-/Pastenkomponenten ohne Nuss-ID-Liste", () => {
+test("FOOD-Metadaten kennzeichnen sichere Nuss-/Sesampasten ohne allgemeine Samenfreigabe", () => {
   const foods = actualFoods();
   assert.equal(installFoodRecipeComponentMetadata(foods), true);
 
@@ -43,9 +43,19 @@ test("FOOD-Metadaten kennzeichnen sichere Mus-/Pastenkomponenten ohne Nuss-ID-Li
     );
   }
 
-  const maroni = foods.find((food) => food.id === "maroni");
-  assert.ok(maroni);
-  assert.equal(foodHasRecipeComponentKind(maroni, RECIPE_COMPONENT_KINDS.SMOOTH_PASTE), false);
+  const sesam = foods.find((food) => food.id === "sesam");
+  assert.ok(sesam);
+  assert.equal(foodHasRecipeComponentKind(sesam, RECIPE_COMPONENT_KINDS.SMOOTH_PASTE), true);
+
+  for (const id of ["maroni", "leinsamen"]) {
+    const item = foods.find((food) => food.id === id);
+    assert.ok(item, id);
+    assert.equal(
+      foodHasRecipeComponentKind(item, RECIPE_COMPONENT_KINDS.SMOOTH_PASTE),
+      false,
+      id,
+    );
+  }
 });
 
 test("Joghurt-Nussmus bezieht alle geeigneten aktiven Nüsse aus FOOD", () => {

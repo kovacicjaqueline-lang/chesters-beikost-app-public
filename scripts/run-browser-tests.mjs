@@ -6,6 +6,8 @@ import { fileURLToPath } from "node:url";
 const scriptPath = fileURLToPath(import.meta.url);
 const defaultRoot = path.resolve(path.dirname(scriptPath), "..");
 
+export const DEFAULT_BROWSER_TEST_CONCURRENCY = 2;
+
 const preferredOrder = [
   "meal-editor-recipe-variants-webkit.test.mjs",
   "ui-meal-editor-webkit.test.mjs",
@@ -31,6 +33,52 @@ export function discoverBrowserTests(rootDir = defaultRoot) {
   const orderedSet = new Set(ordered);
   return [...ordered, ...discovered.filter((name) => !orderedSet.has(name))]
     .map((name) => path.join(browserTestDir, name));
+}
+
+export function resolveBrowserTestConcurrency(value) {
+  if (value === undefined || value === null || value === "") return DEFAULT_BROWSER_TEST_CONCURRENCY;
+  const parsed = Number.parseInt(String(value), 10);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : DEFAULT_BROWSER_TEST_CONCURRENCY;
+}
+
+export function resolveBrowserTestShard(value) {
+  if (value === undefined || value === null || String(value).trim() === "") return null;
+  const match = /^(\d+)\/(\d+)$/.exec(String(value).trim());
+  if (!match) throw new Error(`Invalid BROWSER_TEST_SHARD: ${value}. Expected <index>/<total>.`);
+
+  const index = Number.parseInt(match[1], 10);
+  const total = Number.parseInt(match[2], 10);
+  if (total < 1 || index < 1 || index > total) {
+    throw new Error(`Invalid BROWSER_TEST_SHARD: ${value}. Expected 1 <= index <= total.`);
+  }
+  return { index, total };
+}
+
+export function selectBrowserTestShard(items, shard) {
+  const source = [...items];
+  if (!shard) return source;
+  return source.filter((_, index) => index % shard.total === shard.index - 1);
+}
+
+export async function runWithConcurrency(items, worker, concurrency = DEFAULT_BROWSER_TEST_CONCURRENCY) {
+  const source = [...items];
+  if (!source.length) return [];
+
+  const limit = Math.min(source.length, resolveBrowserTestConcurrency(concurrency));
+  const results = new Array(source.length);
+  let nextIndex = 0;
+
+  async function workLoop() {
+    while (true) {
+      const index = nextIndex;
+      if (index >= source.length) return;
+      nextIndex += 1;
+      results[index] = await worker(source[index], index);
+    }
+  }
+
+  await Promise.all(Array.from({ length: limit }, () => workLoop()));
+  return results;
 }
 
 function safeName(filePath) {
@@ -119,26 +167,44 @@ export async function runBrowserTests({
   artifactDir = path.join(rootDir, "artifacts", "browser-tests"),
   childEnv = process.env,
   forwardOutput = true,
+  concurrency = resolveBrowserTestConcurrency(childEnv.BROWSER_TEST_CONCURRENCY),
+  shard = resolveBrowserTestShard(childEnv.BROWSER_TEST_SHARD),
+  runTest = runOne,
 } = {}) {
-  if (testFiles.length === 0) throw new Error("No browser regression scripts found.");
+  const selectedTestFiles = selectBrowserTestShard(testFiles, shard);
+  if (selectedTestFiles.length === 0) {
+    const suffix = shard ? ` for shard ${shard.index}/${shard.total}` : "";
+    throw new Error(`No browser regression scripts found${suffix}.`);
+  }
   fs.rmSync(artifactDir, { recursive: true, force: true });
   fs.mkdirSync(artifactDir, { recursive: true });
 
-  const results = [];
-  for (const testFile of testFiles) {
-    const resolvedTestFile = path.isAbsolute(testFile) ? testFile : path.resolve(rootDir, testFile);
-    const name = path.basename(resolvedTestFile);
-    if (childEnv.GITHUB_ACTIONS) console.log(`::group::Browser regression: ${name}`);
-    else console.log(`\n=== Browser regression: ${name} ===`);
-
-    const result = await runOne(resolvedTestFile, { rootDir, artifactDir, childEnv, forwardOutput });
-    results.push(result);
-
-    if (childEnv.GITHUB_ACTIONS) console.log("::endgroup::");
-    if (result.status === "failed") {
-      console.error(`Browser regression failed: ${name} (${result.signal || `exit ${result.exitCode ?? "n/a"}`})`);
-    }
+  if (shard) {
+    console.log(`Browser regression shard: ${shard.index}/${shard.total} (${selectedTestFiles.length}/${testFiles.length} tests)`);
   }
+  const resolvedConcurrency = Math.min(selectedTestFiles.length, resolveBrowserTestConcurrency(concurrency));
+  console.log(`Browser regression concurrency: ${resolvedConcurrency}`);
+
+  const results = await runWithConcurrency(
+    selectedTestFiles,
+    async (testFile) => {
+      const resolvedTestFile = path.isAbsolute(testFile) ? testFile : path.resolve(rootDir, testFile);
+      const name = path.basename(resolvedTestFile);
+      const useGroup = childEnv.GITHUB_ACTIONS && resolvedConcurrency === 1;
+      if (useGroup) console.log(`::group::Browser regression: ${name}`);
+      else console.log(`\n=== Browser regression start: ${name} ===`);
+
+      const result = await runTest(resolvedTestFile, { rootDir, artifactDir, childEnv, forwardOutput });
+
+      if (useGroup) console.log("::endgroup::");
+      else console.log(`=== Browser regression ${result.status}: ${name} ===`);
+      if (result.status === "failed") {
+        console.error(`Browser regression failed: ${name} (${result.signal || `exit ${result.exitCode ?? "n/a"}`})`);
+      }
+      return result;
+    },
+    resolvedConcurrency,
+  );
 
   const summary = writeSummary(artifactDir, results);
   if (summary.failed > 0) {

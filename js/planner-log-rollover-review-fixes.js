@@ -313,11 +313,26 @@
     });
   }
 
+  function patchTodayDayHeading() {
+    let container = document.getElementById("blockPlan");
+    if (!container) return;
+    let from = visiblePlanStart();
+    let current = today();
+    [...container.children].forEach((dayNode, index) => {
+      if (!dayNode.classList?.contains("day-card")) return;
+      let date = addDays(from, index);
+      if (date !== current) return;
+      let heading = dayNode.querySelector(".day-date");
+      if (heading) heading.textContent = `${nice(date, true)} · Heute`;
+    });
+  }
+
   let originalRenderPlanCore = renderPlanCore;
   renderPlanCore = function plannerReviewFixedRenderPlanCore() {
     let result = originalRenderPlanCore();
     bindNormalMoveActions();
     patchCompletedDaySummaries();
+    patchTodayDayHeading();
     return result;
   };
 

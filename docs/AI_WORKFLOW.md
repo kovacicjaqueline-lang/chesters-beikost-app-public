@@ -73,11 +73,18 @@ Vor jedem Push mit Code-, Test-, Workflow- oder Konfigurationsänderungen:
 3. einen verfügbaren lokalen Zieltest nicht mit „CI wird es prüfen“ überspringen,
 4. wenn die lokale Ausführung technisch nicht möglich ist, das ausdrücklich dokumentieren und den dadurch erstmals ausführenden CI-Lauf direkt nach dem Push tatsächlich prüfen.
 
-Vor finalem Review bzw. vor einer Merge-Freigabe:
+Den beim Start geprüften `main`-HEAD als **BASE_SHA** des Arbeitsstrangs festhalten. Während der normalen Umsetzung ist kein wiederholtes Aktualisieren gegen einen zwischenzeitlich fortgeschrittenen `main` erforderlich.
 
-1. den tatsächlichen aktuellen `main` erneut ermitteln,
-2. den Arbeitsbranch gegen diesen Stand vergleichen,
-3. wenn seit dem Branch-Ausgangspunkt relevante Änderungen an denselben Komponenten, Verträgen oder Regressionen in `main` gelandet sind, den Arbeitsbranch auf den aktuellen Integrationsstand bringen und den laut Testmatrix erforderlichen Gate auf diesem Stand erneut prüfen.
+Vor finalem Review bzw. vor einer Merge-Freigabe genau einmal den aktuellen Integrationsstand prüfen:
+
+1. den tatsächlichen aktuellen `main` ermitteln,
+2. die Änderungen zwischen `BASE_SHA` und aktuellem `main` auf **Relevanz für den Arbeitsbranch** prüfen,
+3. **keine relevante Überschneidung:** den Arbeitsbranch nicht allein wegen eines fortgeschrittenen `main` aktualisieren und bereits bestandene Gates nicht allein deshalb erneut ausführen; ein konfliktfrei mergebarer Branch kann auf seinem geprüften Stand bleiben,
+4. **relevante Überschneidung oder Merge-Konflikt:** den Arbeitsbranch auf den notwendigen aktuellen Integrationsstand bringen und danach nur die durch diese Integration betroffenen Tests bzw. die laut Testmatrix erforderlichen Gates erneut ausführen.
+
+Als relevante Überschneidung gelten insbesondere Änderungen an denselben Dateien oder Funktionen, denselben fachlichen Verträgen, gemeinsam verwendeten zentralen Utilities oder der für den Branch relevanten Test-/Runner-Infrastruktur. Ein Full-Gate wird durch einen fortgeschrittenen `main` nicht automatisch erforderlich; dafür gilt weiterhin ausschließlich die Testmatrix.
+
+**Ein fortgeschrittener `main` allein ist kein Grund für Branch-Update, Rebase/Merge oder Wiederholung bereits bestandener Tests.**
 
 Für Browserregressionen gilt zusätzlich:
 

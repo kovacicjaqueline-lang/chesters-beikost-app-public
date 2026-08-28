@@ -123,12 +123,17 @@ function editLogEntry(id) {
 
 function logFoodCandidates(query) {
   let q = normalizeName(query);
-  let pool = state.foods.filter((f) => f.active && !selectedLogFoods.has(f.id));
+  let pool = state.foods.filter((f) => f.active);
   if (q)
     return pool
       .filter((f) => foodSearchMatches(f, q))
-      .sort((a, b) => foodSearchScore(a, q) - foodSearchScore(b, q) || a.name.localeCompare(b.name, "de"))
+      .sort((a, b) =>
+        Number(selectedLogFoods.has(b.id)) - Number(selectedLogFoods.has(a.id)) ||
+        foodSearchScore(a, q) - foodSearchScore(b, q) ||
+        a.name.localeCompare(b.name, "de"),
+      )
       .slice(0, 10);
+  let selected = [...selectedLogFoods].map(food).filter((f) => f && f.active);
   let upcomingIds = prepDemand().map((item) => item.foodId);
   let recentIds = state.logs
     .slice()
@@ -138,9 +143,9 @@ function logFoodCandidates(query) {
     .map(food)
     .filter((f) => f && f.active && !selectedLogFoods.has(f.id));
   let remainder = pool
-    .filter((f) => !ranked.some((item) => item.id === f.id))
+    .filter((f) => !selectedLogFoods.has(f.id) && !ranked.some((item) => item.id === f.id))
     .sort((a, b) => Number(inventoryPortions(b.id) > 0) - Number(inventoryPortions(a.id) > 0) || a.priority - b.priority);
-  return [...ranked, ...remainder].slice(0, 6);
+  return [...selected, ...ranked, ...remainder].slice(0, Math.max(6, selected.length));
 }
 
 function logRecipeSearchScore(recipe, query) {
@@ -321,8 +326,9 @@ function updateConditionalQuestions() {
 function logFoodResultsHtml() {
   return logFoodCandidates(logFoodQuery).map((f) => {
     let stock = inventoryPortions(f.id);
+    let selected = selectedLogFoods.has(f.id);
     let meta = `${foodCategoryLabel(f.category)} · ${displayStatus(f)}${stock ? ` · ${stock} im Vorrat` : ""}`;
-    return `<button class="live-result addLogFoodResult log-food-result" data-food="${f.id}" aria-label="${esc(f.name)} hinzufügen, ${esc(meta)}"><span class="log-result-emoji" aria-hidden="true">${foodEmoji(f)}</span><span class="grow log-result-copy"><b class="log-result-name">${esc(f.name)}</b><span class="small log-result-meta">${esc(meta)}</span></span><span class="log-result-add" aria-hidden="true">＋</span></button>`;
+    return `<button class="live-result addLogFoodResult log-food-result ${selected ? "selected" : ""}" data-food="${f.id}" aria-label="${esc(f.name)} ${selected ? "entfernen" : "hinzufügen"}, ${esc(meta)}"><span class="log-result-emoji" aria-hidden="true">${foodEmoji(f)}</span><span class="grow log-result-copy"><b class="log-result-name">${esc(f.name)}</b><span class="small log-result-meta">${esc(meta)}</span></span><span class="log-result-add" aria-hidden="true">${selected ? "✓" : "＋"}</span></button>`;
   }).join("");
 }
 function logRecipeResultsHtml(query = pendingLog?.__recipeQuery || "") {
@@ -332,9 +338,23 @@ function logRecipeResultsHtml(query = pendingLog?.__recipeQuery || "") {
   return recipes.map((recipe) => `<button type="button" class="live-result selectLogRecipeResult" data-recipe="${esc(recipe.name)}" aria-label="${esc(recipe.name)} auswählen"><span class="grow log-result-copy"><b class="log-result-name">${esc(recipe.name)}</b><span class="small log-result-meta">Rezept und tatsächliche Zutaten übernehmen</span></span><span class="log-result-add" aria-hidden="true">＋</span></button>`).join("");
 }
 
+function removeLogFoodSelection(id) {
+  let p = pendingLog;
+  selectedLogFoods.delete(id);
+  selectedInventoryFoods.delete(id);
+  p.sampleFoodIds = (p.sampleFoodIds || []).filter((foodId) => foodId !== id);
+  p.baseFoodIds = (p.baseFoodIds || []).filter((foodId) => foodId !== id);
+  delete p.foodOutcomes[id];
+  if (p.focusId === id) p.focusId = [...selectedLogFoods][0] || "";
+}
 function addLogFoodFromResult(id) {
   captureLogDraft();
   let p = pendingLog;
+  if (selectedLogFoods.has(id)) {
+    removeLogFoodSelection(id);
+    renderLogForm();
+    return;
+  }
   let item = food(id);
   selectedLogFoods.add(id);
   let learning = !item || rank(item) < 2;
@@ -496,7 +516,7 @@ function renderLogForm() {
   document.getElementById("editLogContext")?.addEventListener("click", () => { p.__contextEditing = !p.__contextEditing; renderLogForm(); });
   document.getElementById("logMeal")?.addEventListener("change", (event) => { captureLogDraft(); p.meal = event.target.value; p.__contextEditing = true; renderLogForm(); });
   document.getElementById("toggleIndividualRatings")?.addEventListener("click", () => { captureLogDraft(); p.individualRatings = !p.individualRatings; renderLogForm(); });
-  document.querySelectorAll("[data-remove-log-food]").forEach((button) => button.onclick = () => { captureLogDraft(); let id = button.dataset.removeLogFood; selectedLogFoods.delete(id); selectedInventoryFoods.delete(id); p.sampleFoodIds = (p.sampleFoodIds || []).filter((x) => x !== id); p.baseFoodIds = (p.baseFoodIds || []).filter((x) => x !== id); delete p.foodOutcomes[id]; renderLogForm(); });
+  document.querySelectorAll("[data-remove-log-food]").forEach((button) => button.onclick = () => { captureLogDraft(); removeLogFoodSelection(button.dataset.removeLogFood); renderLogForm(); });
   document.getElementById("logRecipeSearch")?.addEventListener("input", renderLogRecipeResults);
   document.getElementById("clearLogRecipe")?.addEventListener("click", () => { captureLogDraft(); p.recipeName = ""; p.__recipeQuery = ""; p.__recipeChoice = null; selectedRecipeInventoryId = ""; renderLogForm(); });
   document.getElementById("logFoodSearch").oninput = (event) => {

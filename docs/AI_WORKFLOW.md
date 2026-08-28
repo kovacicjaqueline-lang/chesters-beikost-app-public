@@ -62,6 +62,8 @@ Die verbindlichen Details stehen in `AGENTS.md`, `docs/FOOD_HANDLING_ORAL_PROCES
 
 `npm run verify` ist bewusst kein Standard nach jeder kleinen Änderung. Es ist der vollständige Gate, wenn der Scope mehrere Bereiche berührt oder ein Abschluss-/Releasecheck gebraucht wird.
 
+Der GitHub-App-Workflow spiegelt diese Matrix konservativ: nur eine explizite Fast-only-Allowlist aus reinen Planner-, Daten-, Persistenz-, Utility- und Node-Testpfaden darf auf `npm run verify:fast` enden. Sobald irgendein app-relevanter geänderter Pfad nicht eindeutig auf dieser Allowlist steht, läuft weiterhin `npm run verify:app`. Die Klassifikation liegt in `scripts/ci-app-scope.mjs` und ist absichtlich fail-closed; neue, gemischte oder UI-nahe Dateien werden nie allein anhand eines Namensmusters automatisch als fast-only eingestuft.
+
 ## CI rot vermeiden: Pre-Push- und Integrationscheck
 
 CI soll möglichst die bereits geprüfte Änderung bestätigen und nicht der erste Ort sein, an dem ein deterministischer Featurefehler entdeckt wird.
@@ -73,38 +75,65 @@ Vor jedem Push mit Code-, Test-, Workflow- oder Konfigurationsänderungen:
 3. einen verfügbaren lokalen Zieltest nicht mit „CI wird es prüfen“ überspringen,
 4. wenn die lokale Ausführung technisch nicht möglich ist, das ausdrücklich dokumentieren und den dadurch erstmals ausführenden CI-Lauf direkt nach dem Push tatsächlich prüfen.
 
-Vor finalem Review bzw. vor einer Merge-Freigabe:
+Den beim Start geprüften `main`-HEAD als **BASE_SHA** des Arbeitsstrangs festhalten. Während der normalen Umsetzung ist kein wiederholtes Aktualisieren gegen einen zwischenzeitlich fortgeschrittenen `main` erforderlich.
 
-1. den tatsächlichen aktuellen `main` erneut ermitteln,
-2. den Arbeitsbranch gegen diesen Stand vergleichen,
-3. wenn seit dem Branch-Ausgangspunkt relevante Änderungen an denselben Komponenten, Verträgen oder Regressionen in `main` gelandet sind, den Arbeitsbranch auf den aktuellen Integrationsstand bringen und den laut Testmatrix erforderlichen Gate auf diesem Stand erneut prüfen.
+Vor finalem Review bzw. vor einer Merge-Freigabe genau einmal den aktuellen Integrationsstand prüfen:
+
+1. den tatsächlichen aktuellen `main` ermitteln,
+2. die Änderungen zwischen `BASE_SHA` und aktuellem `main` auf **Relevanz für den Arbeitsbranch** prüfen,
+3. **keine relevante Überschneidung:** den Arbeitsbranch nicht allein wegen eines fortgeschrittenen `main` aktualisieren und bereits bestandene Gates nicht allein deshalb erneut ausführen; ein konfliktfrei mergebarer Branch kann auf seinem geprüften Stand bleiben,
+4. **relevante Überschneidung oder Merge-Konflikt:** den Arbeitsbranch auf den notwendigen aktuellen Integrationsstand bringen und danach nur die durch diese Integration betroffenen Tests bzw. die laut Testmatrix erforderlichen Gates erneut ausführen.
+
+Als relevante Überschneidung gelten insbesondere Änderungen an denselben Dateien oder Funktionen, denselben fachlichen Verträgen, gemeinsam verwendeten zentralen Utilities oder der für den Branch relevanten Test-/Runner-Infrastruktur. Ein Full-Gate wird durch einen fortgeschrittenen `main` nicht automatisch erforderlich; dafür gilt weiterhin ausschließlich die Testmatrix.
+
+**Ein fortgeschrittener `main` allein ist kein Grund für Branch-Update, Rebase/Merge oder Wiederholung bereits bestandener Tests.**
 
 Für Browserregressionen gilt zusätzlich:
 
 - den direkt betroffenen Browserfall bei Bedarf gezielt mit `node browser-tests/<datei>-webkit.test.mjs` ausführen,
 - feste Zeit-Waits wie `waitForTimeout(...)` nicht als Standard-Stabilisierung verwenden; auf einen fachlich/technisch beobachtbaren Zustand, Locator oder Event warten,
 - `npm run test:browser` führt bewusst **alle** WebKit-Regressionsskripte aus, sammelt mehrere Fehler in einem Lauf und liefert erst am Ende einen Fehlerstatus,
+- der Browser-Runner führt standardmäßig höchstens **zwei** Regressionsskripte gleichzeitig aus; für Diagnose oder knappe Laufzeitressourcen kann mit `BROWSER_TEST_CONCURRENCY=1 npm run test:browser` explizit seriell ausgeführt werden,
 - der Browser-Runner schreibt `artifacts/browser-tests/summary.json`, `summary.md` und pro Test ein `output.log`; bei einem roten App-Workflow werden diese Diagnoseartefakte aus CI hochgeladen.
 
 ## CI rot: Diagnose- und Reparaturweg
 
-Wenn ein GitHub-Actions-Lauf rot wird, nicht pauschal rerunnen und nicht aus der letzten Warnung im Log auf die Ursache schließen.
+Sobald ein für den Auftrag relevanter lokaler Test oder GitHub-Actions-Lauf rot ist, gilt **Diagnosemodus**. Grundregel: **Evidence first, fix second. Bis die Fehler-Evidenz gesichert ist, keine Codeänderung.**
 
-Standardweg:
+Vor dem ersten Fix immer:
 
-1. den tatsächlich fehlgeschlagenen Workflow und Job bestimmen,
-2. das vollständige Log dieses Jobs lesen,
-3. den **ersten tatsächlichen Fehler** identifizieren und von bloßen Warnungen trennen,
-4. den Fehler klassifizieren:
-   - **Test-/Produktfehler** wie Assertion, Locator-Timeout, Exception oder reproduzierbarer Testabbruch: gezielt Code, Test oder Fixture beheben; ein bloßer Rerun ist keine Reparatur,
-   - **Infrastrukturfehler** vor oder unabhängig von der Testausführung, z. B. Runner-/Checkout-/GitHub-5xx-/transienter Netzwerkfehler: ein Rerun des betroffenen Jobs bzw. Laufs kann sinnvoll sein,
-5. nur den zum Fehler passenden minimalen Fix innerhalb des beauftragten Scopes umsetzen,
-6. nach Push den **neuen tatsächlichen CI-Lauf** prüfen,
-7. bleibt CI rot, wieder beim neu fehlgeschlagenen Job und dessen aktuellem ersten Fehler beginnen.
+1. fehlgeschlagenen Test bzw. Workflow-Run und Job eindeutig bestimmen,
+2. bei CI das **vollständige Joblog** holen,
+3. den **ersten tatsächlichen Fehler** identifizieren und Warnungen bzw. Folgefehler davon trennen,
+4. ein kompaktes **Failure Packet** festhalten,
+5. die Ursache zunächst mit dem kleinstmöglichen passenden Test oder Prüfschritt reproduzieren bzw. eingrenzen.
+
+Failure Packet:
+
+```text
+SHA: <Commit/Head>
+Run/Job/Test: <eindeutige Identifikation>
+Erster echter Fehler: <Fehlersignatur>
+Log-Evidenz: <kleinster aussagekräftiger Ausschnitt>
+Ursachenklasse: <Produkt/Test | Infrastruktur/Umgebung | unbekannt>
+Hypothese: <eine konkrete Hypothese>
+Nächster Prüfschritt: <kleinstmöglicher evidenzbildender Schritt>
+```
+
+Danach gilt:
+
+1. nur den durch die aktuelle Evidenz gestützten **kleinstmöglichen Fix** innerhalb des beauftragten Scopes umsetzen,
+2. zuerst den direkt betroffenen Test bzw. den kleinsten passenden Gate ausführen; weitere Gates nur gemäß Testmatrix,
+3. **kein zweiter spekulativer Fix ohne neue Evidenz**,
+4. schlägt der nächste Test oder CI-Lauf erneut fehl, zuerst dessen Fehlersignatur mit dem vorherigen Failure Packet vergleichen:
+   - **gleiche Signatur:** bisherige Hypothese und Fixwirkung neu bewerten,
+   - **andere Signatur:** neues Failure Packet erstellen und den neuen ersten Fehler analysieren,
+5. ein bloßer Rerun ist nur bei begründetem Infrastruktur-/Transientfehler eine Reparaturmaßnahme,
+6. bei knappen Zeit-, Tool- oder Kontextressourcen hat die **Sicherung von Run/Job, vollständigem Log und Failure Packet Vorrang vor einem weiteren Fixversuch**.
 
 Für die Diagnose bevorzugt den GitHub-Connector/API-Weg verwenden: Workflow-Run -> Jobs -> fehlgeschlagener Job -> vollständiges Joblog. `gh` ist dafür nicht erforderlich.
 
-Wichtig: Ein grüner schneller Teiltest oder eine große Zahl bereits grüner Node-Tests ersetzt den laut Testmatrix erforderlichen Browser-/App-/Deploy-Gate nicht. Ebenso darf ein Fix nicht als erfolgreich gelten, solange der danach ausgelöste relevante CI-Lauf nicht tatsächlich grün geprüft wurde.
+Wichtig: Ein grüner schneller Teiltest oder eine große Zahl bereits grüner Node-Tests ersetzt den laut Testmatrix erforderlichen Browser-/App-/Deploy-Gate nicht. Ein Fix gilt erst als bestätigt, wenn der danach laut Testmatrix erforderliche Test bzw. CI-Lauf tatsächlich geprüft wurde.
 
 ## Bündelung gleichartiger Aufgaben
 

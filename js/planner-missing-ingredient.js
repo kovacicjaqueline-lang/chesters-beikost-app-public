@@ -386,16 +386,28 @@
 
   function withPlanMissingFoodsAvailable(callback) {
     if (typeof callback !== "function") return null;
+    state.pantry ||= {};
     const masked = [];
     for (const [foodId, hint] of Object.entries(state?.shoppingHints || {})) {
       if (hint?.source !== "plan" || hint.status !== "needed" || !unavailable(foodId)) continue;
-      masked.push({ hint, status: hint.status });
+      masked.push({
+        foodId,
+        hint,
+        status: hint.status,
+        pantryValue: state.pantry[foodId],
+        hadPantryValue: Object.prototype.hasOwnProperty.call(state.pantry, foodId),
+      });
       hint.status = "available";
+      state.pantry[foodId] = true;
     }
     try {
       return callback();
     } finally {
-      for (const entry of masked) entry.hint.status = entry.status;
+      for (const entry of masked) {
+        entry.hint.status = entry.status;
+        if (entry.hadPantryValue) state.pantry[entry.foodId] = entry.pantryValue;
+        else delete state.pantry[entry.foodId];
+      }
     }
   }
 

@@ -34,3 +34,15 @@
  .readiness-choice{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
  .readiness-choice .btn{min-width:0;padding-left:8px;padding-right:8px}
 }
+
+/* Meal-Lock: Der offene Zustand muss auch auf dem kleinen Karten-Icon sofort
+ * vom geschlossenen Schloss unterscheidbar bleiben. Die Meal-Card-Runtime setzt
+ * ihre neutrale Grundfarbe selbst mit !important; dieser gezielte Zustands-Override
+ * hält deshalb die bestehende Ocker-Semantik für "nicht geschützt" fest. */
+body .mealbox .meal-lock.unlocked{
+ color:var(--ochre)!important;
+}
+body .mealbox .meal-lock.unlocked .lock-svg-open path:first-of-type{
+ transform:translate(2px,-1px) rotate(-8deg);
+ transform-origin:8px 10px;
+}

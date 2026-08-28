@@ -256,7 +256,7 @@ try {
     window.__beikostTest.setState(state);
     window.__plannerMissingIngredient.installAvailabilityPolicies();
     const ctx = window.freshPlanContext();
-    const candidate = window.recipeStockCandidate("breakfast", current, ctx);
+    const candidate = window.recipeStockCandidate("lunch", current, ctx);
     const preparedIds = candidate ? window.recipeFoodIds(candidate) : [];
     const freshRecipe = window.recipeByName("Ube-Bananen-Pancakes");
     const freshIds = freshRecipe ? window.recipeFoodIds(freshRecipe) : [];

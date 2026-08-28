@@ -94,6 +94,7 @@ Für Browserregressionen gilt zusätzlich:
 - feste Zeit-Waits wie `waitForTimeout(...)` nicht als Standard-Stabilisierung verwenden; auf einen fachlich/technisch beobachtbaren Zustand, Locator oder Event warten,
 - `npm run test:browser` führt lokal bewusst **alle** WebKit-Regressionsskripte aus, sammelt mehrere Fehler in einem Lauf und liefert erst am Ende einen Fehlerstatus,
 - im GitHub-App-Workflow wird dieselbe geordnete Browserliste deterministisch auf zwei Shards verteilt; zusammen müssen beide Shards die vollständige Liste abdecken,
+- innerhalb eines Runner-/Shard-Laufs wird standardmäßig ein gemeinsamer WebKit-Browserprozess über Playwright `launchServer()`/`connect()` wiederverwendet; jeder Test behält seinen eigenen HTTP-Server und Browser-Context. Explizite `webkit.launch(...)`-Optionen fallen auf einen dedizierten Browserstart zurück,
 - der Browser-Runner führt standardmäßig höchstens **zwei** Regressionsskripte gleichzeitig aus; für Diagnose oder knappe Laufzeitressourcen kann mit `BROWSER_TEST_CONCURRENCY=1 npm run test:browser` explizit seriell ausgeführt werden,
 - der Browser-Runner schreibt `artifacts/browser-tests/summary.json`, `summary.md` und pro Test ein `output.log`; bei einem roten App-Workflow werden diese Diagnoseartefakte aus CI hochgeladen.
 

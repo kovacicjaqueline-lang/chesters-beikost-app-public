@@ -2,9 +2,10 @@
 
 /*
  * Kleiner Loader, damit zuerst die AP3-Vertragserweiterung, danach die zentrale
- * Solution-Preservation und erst anschließend die sichtbare Plan-Checks-UI installiert
- * werden. So bewertet die Preservation den vollständigen strukturierten Report inklusive
- * laufender Allergen-Einführungen. Die Dateien bleiben separat precachebar.
+ * Solution-Preservation, die kooperative Suche und anschließend die Lösungsvorbereitung
+ * installiert werden. Die Vorbereitung fängt den ersten Core-Render einmal ab; dadurch
+ * kann die sichtbare Plan-Checks-UI nie vor der Lösungsprüfung einen irreführenden CTA
+ * zeichnen. Die Dateien bleiben separat precachebar.
  */
 (function loadPlanChecksUi() {
   if (typeof document === "undefined" || globalThis.__planChecksUiLoaderStarted) return;
@@ -16,6 +17,8 @@
   const files = [
     `plan-checks-contract-extension.js${version}`,
     `plan-checks-solution-preservation.js${version}`,
+    `plan-checks-cooperative-search.js${version}`,
+    `plan-checks-solution-precompute.js${version}`,
     `plan-checks-ui-core.js${version}`,
   ];
 

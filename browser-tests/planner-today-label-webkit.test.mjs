@@ -47,7 +47,9 @@ function startStaticServer() {
 async function waitForApp(page) {
   await page.waitForFunction(() =>
     !!window.__beikostTest &&
-    window.__plannerMealPresentationRuntimeInstalled === true &&
+    !!window.__mealCardUnification &&
+    !!window.__plannerRolloverReviewFixes &&
+    window.__plannerPoliciesReady === true &&
     window.__beikostTest.getState()?.backupMeta?.storagePersisted !== "unknown",
   );
 }

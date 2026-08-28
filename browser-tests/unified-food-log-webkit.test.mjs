@@ -54,6 +54,10 @@ async function waitForApp(page) {
 
 async function selectFood(page, name) {
   const search = page.locator("#logFoodSearch");
+  if (!(await search.isVisible())) {
+    const foodTab = page.locator('[data-flow-log-selector="foods"]');
+    if (await foodTab.count()) await foodTab.click();
+  }
   await search.fill(name);
   const result = page.locator(".addLogFoodResult").filter({ hasText: name }).first();
   await result.waitFor();

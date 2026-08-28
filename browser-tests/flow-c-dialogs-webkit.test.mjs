@@ -128,7 +128,7 @@ try {
   await page.locator("#selectorFoods").click();
   await page.waitForFunction(() => document.getElementById("genericTitle")?.textContent === "Mahlzeit hinzufügen");
   assert.equal(await page.locator("#mealSelectorSearch").evaluate((node) => getComputedStyle(node).fontSize), "16px");
-  assert.equal(await page.locator(".selector-results").evaluate((node) => getComputedStyle(node).overflowY), "visible");
+  assert.equal(await page.locator("#genericBody .selector-results").evaluate((node) => getComputedStyle(node).overflowY), "visible");
   await page.locator("#cancelManualMeal").click();
   assert.equal(await page.locator("#genericModal").evaluate((node) => node.classList.contains("open")), false);
 

@@ -392,7 +392,17 @@
   logModal.addEventListener("click", (event) => {
     const button = event.target.closest?.("[data-flow-log-selector]");
     if (!button || !logBody.contains(button)) return;
-    logSelectorMode = button.dataset.flowLogSelector === "recipes" ? "recipes" : "foods";
+    const nextMode = button.dataset.flowLogSelector === "recipes" ? "recipes" : "foods";
+    if (nextMode === "recipes") {
+      const foodPicker = logBody.querySelector(".log-food-picker");
+      const foodError = logBody.querySelector("#logFoodError");
+      foodPicker?.classList.remove("field-error");
+      if (foodError) {
+        foodError.textContent = "";
+        foodError.style.display = "none";
+      }
+    }
+    logSelectorMode = nextMode;
     ensureLogSelector();
     const input = logSelectorMode === "recipes"
       ? logBody.querySelector("#logRecipeSearch")

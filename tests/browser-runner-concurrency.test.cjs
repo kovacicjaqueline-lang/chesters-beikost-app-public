@@ -8,9 +8,22 @@ const test = require('node:test');
 const runnerModule = import(
   pathToFileURL(path.resolve(__dirname, '../scripts/run-browser-tests.mjs')).href
 );
+const sharedRuntimeModule = import(
+  pathToFileURL(path.resolve(__dirname, '../scripts/browser-test-shared-runtime.mjs')).href
+);
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function createFakeSharedRuntimeFactory(events = []) {
+  return async () => {
+    events.push('start');
+    return {
+      wsEndpoint: 'ws://shared-webkit.test/runtime',
+      close: async () => events.push('close'),
+    };
+  };
 }
 
 test('browser runner defaults to concurrency two and accepts a serial override', async () => {
@@ -56,6 +69,73 @@ test('bounded worker pool never exceeds the configured concurrency and preserves
   assert.deepEqual(results, ['result-0', 'result-1', 'result-2', 'result-3']);
 });
 
+test('shared browser facade closes only contexts owned by one child connection', async () => {
+  const { createSharedBrowserFacade } = await sharedRuntimeModule;
+  let underlyingBrowserCloseCalls = 0;
+  let contextCloseCalls = 0;
+  const fakeBrowser = {
+    async newContext() {
+      return {
+        async close() {
+          contextCloseCalls += 1;
+        },
+      };
+    },
+    async close() {
+      underlyingBrowserCloseCalls += 1;
+    },
+    marker() {
+      return 'bound';
+    },
+  };
+
+  const browser = createSharedBrowserFacade(fakeBrowser);
+  await browser.newContext();
+  assert.equal(browser.marker(), 'bound');
+  await browser.close();
+
+  assert.equal(contextCloseCalls, 1);
+  assert.equal(underlyingBrowserCloseCalls, 0, 'ein Kindprozess darf den gemeinsamen WebKit-Prozess nicht schließen');
+});
+
+test('shared WebKit client reuses the endpoint only for default launches', async () => {
+  const { installSharedWebKitClient } = await sharedRuntimeModule;
+  let launchCalls = 0;
+  let connectCalls = 0;
+  const connectedBrowser = {
+    async newContext() {
+      return { close: async () => {} };
+    },
+    async close() {
+      throw new Error('shared browser close must be intercepted');
+    },
+  };
+  const dedicatedBrowser = { dedicated: true };
+  const browserType = {
+    async launch(options) {
+      launchCalls += 1;
+      assert.deepEqual(options, { headless: false });
+      return dedicatedBrowser;
+    },
+    async connect(endpoint) {
+      connectCalls += 1;
+      assert.equal(endpoint, 'ws://shared-webkit.test/runtime');
+      return connectedBrowser;
+    },
+  };
+
+  assert.equal(installSharedWebKitClient(browserType, 'ws://shared-webkit.test/runtime'), true);
+  const sharedBrowser = await browserType.launch();
+  await sharedBrowser.newContext();
+  await sharedBrowser.close();
+  assert.equal(connectCalls, 1);
+  assert.equal(launchCalls, 0);
+
+  const dedicated = await browserType.launch({ headless: false });
+  assert.equal(dedicated, dedicatedBrowser);
+  assert.equal(launchCalls, 1, 'Sonderoptionen müssen weiterhin einen dedizierten Browser starten');
+});
+
 test('runBrowserTests writes deterministic summaries while two fake regressions run in parallel', async () => {
   const { runBrowserTests } = await runnerModule;
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), 'beikost-browser-runner-'));
@@ -67,6 +147,8 @@ test('runBrowserTests writes deterministic summaries while two fake regressions 
   ];
   let active = 0;
   let maxActive = 0;
+  const runtimeEvents = [];
+  const endpoints = [];
 
   try {
     const summary = await runBrowserTests({
@@ -76,8 +158,10 @@ test('runBrowserTests writes deterministic summaries while two fake regressions 
       childEnv: {},
       forwardOutput: false,
       concurrency: 2,
-      runTest: async (testFile) => {
+      sharedRuntimeFactory: createFakeSharedRuntimeFactory(runtimeEvents),
+      runTest: async (testFile, options) => {
         const name = path.basename(testFile);
+        endpoints.push(options.childEnv.BROWSER_TEST_SHARED_WS_ENDPOINT);
         active += 1;
         maxActive = Math.max(maxActive, active);
         await delay(name.startsWith('a-') ? 30 : 5);
@@ -100,6 +184,8 @@ test('runBrowserTests writes deterministic summaries while two fake regressions 
       'b-webkit.test.mjs',
       'c-webkit.test.mjs',
     ]);
+    assert.deepEqual(runtimeEvents, ['start', 'close'], 'gemeinsame Runtime muss genau einmal pro Runner-Lauf leben');
+    assert.deepEqual(new Set(endpoints), new Set(['ws://shared-webkit.test/runtime']));
     assert.equal(fs.existsSync(path.join(artifactDir, 'summary.json')), true);
     assert.equal(fs.existsSync(path.join(artifactDir, 'summary.md')), true);
   } finally {
@@ -128,6 +214,7 @@ test('runBrowserTests executes only the selected shard', async () => {
       forwardOutput: false,
       concurrency: 2,
       shard: { index: 2, total: 2 },
+      sharedRuntimeFactory: createFakeSharedRuntimeFactory(),
       runTest: async (testFile) => {
         const name = path.basename(testFile);
         executed.push(name);

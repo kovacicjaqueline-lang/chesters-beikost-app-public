@@ -2,12 +2,12 @@
 import { execFileSync } from 'node:child_process';
 
 function usage() {
-  console.log(`Usage: node scripts/pre-push-sanity.mjs --base <BASE_SHA> [options]\n\nOptions:\n  --base <ref>           Fixed branch base (or set BASE_SHA)\n  --allow <path>         Allow one exact changed path; repeatable\n  --allow-prefix <path>  Allow changed paths below a directory/prefix; repeatable\n  --allow-empty <path>   Explicitly allow one zero-byte changed file; repeatable\n  --help                 Show this help\n`);
+  console.log(`Usage: node scripts/pre-push-sanity.mjs [options]\n\nOptions:\n  --base-ref <ref>       PR base ref for scope diff (default: PREPUSH_BASE_REF or origin/main)\n  --allow <path>         Allow one exact changed path; repeatable\n  --allow-prefix <path>  Allow changed paths below a directory/prefix; repeatable\n  --allow-empty <path>   Explicitly allow one zero-byte changed file; repeatable\n  --help                 Show this help\n`);
 }
 
 function parseArgs(argv) {
   const options = {
-    base: process.env.BASE_SHA || '',
+    baseRef: process.env.PREPUSH_BASE_REF || 'origin/main',
     allowedPaths: [],
     allowedPrefixes: [],
     allowedEmptyPaths: [],
@@ -21,12 +21,12 @@ function parseArgs(argv) {
     }
 
     const next = argv[index + 1];
-    if (['--base', '--allow', '--allow-prefix', '--allow-empty'].includes(arg)) {
+    if (['--base-ref', '--allow', '--allow-prefix', '--allow-empty'].includes(arg)) {
       if (!next || next.startsWith('--')) {
         throw new Error(`${arg} benötigt einen Wert.`);
       }
       index += 1;
-      if (arg === '--base') options.base = next;
+      if (arg === '--base-ref') options.baseRef = next;
       if (arg === '--allow') options.allowedPaths.push(next);
       if (arg === '--allow-prefix') options.allowedPrefixes.push(next.replace(/\\/g, '/'));
       if (arg === '--allow-empty') options.allowedEmptyPaths.push(next);
@@ -47,15 +47,15 @@ function git(args, { encoding = 'utf8' } = {}) {
   });
 }
 
-function verifyBase(base) {
-  if (!base) {
-    throw new Error('BASE_SHA fehlt. Übergib --base <BASE_SHA> oder setze BASE_SHA.');
+function verifyBaseRef(baseRef) {
+  if (!baseRef) {
+    throw new Error('PR-Basis fehlt. Übergib --base-ref <ref> oder setze PREPUSH_BASE_REF.');
   }
-  git(['rev-parse', '--verify', `${base}^{commit}`]);
+  git(['rev-parse', '--verify', `${baseRef}^{commit}`]);
 }
 
-function changedPaths(base) {
-  const output = git(['diff', '--name-only', '-z', `${base}...HEAD`], { encoding: 'buffer' });
+function changedPaths(baseRef) {
+  const output = git(['diff', '--name-only', '-z', `${baseRef}...HEAD`], { encoding: 'buffer' });
   return output.toString('utf8').split('\0').filter(Boolean);
 }
 
@@ -81,7 +81,7 @@ function headBlobSize(path) {
 }
 
 function run(options) {
-  verifyBase(options.base);
+  verifyBaseRef(options.baseRef);
 
   const dirty = worktreeChanges();
   if (dirty.length > 0) {
@@ -90,7 +90,7 @@ function run(options) {
     return 1;
   }
 
-  const changed = changedPaths(options.base);
+  const changed = changedPaths(options.baseRef);
   const unexpected = changed.filter((path) => !isPathAllowed(path, options));
   const empty = changed.filter((path) => {
     if (options.allowedEmptyPaths.includes(path)) return false;
@@ -100,7 +100,7 @@ function run(options) {
   if (unexpected.length > 0 || empty.length > 0) {
     console.error('Pre-Push-Sanity fehlgeschlagen.');
     if (unexpected.length > 0) {
-      console.error('Unerwartete Dateien im Branch-Diff:');
+      console.error('Unerwartete Dateien im PR-Diff:');
       for (const path of unexpected) console.error(`  ${path}`);
     }
     if (empty.length > 0) {
@@ -110,7 +110,7 @@ function run(options) {
     return 1;
   }
 
-  console.log(`Pre-Push-Sanity OK: ${changed.length} geänderte Datei(en) gegen ${options.base}.`);
+  console.log(`Pre-Push-Sanity OK: ${changed.length} geänderte Datei(en) gegen PR-Basis ${options.baseRef}.`);
   return 0;
 }
 

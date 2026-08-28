@@ -586,11 +586,6 @@ function requestLogTextureSelection() {
       return;
     } catch {}
   }
-  let coarsePointer = typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches;
-  if (coarsePointer) {
-    select.blur();
-    return;
-  }
   try {
     select.focus({ preventScroll: true });
   } catch {

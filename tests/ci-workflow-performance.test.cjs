@@ -43,25 +43,31 @@ test('app workflow classifies scope before choosing the gate', () => {
   assert.ok(appWorkflow.includes('browser_required: ${{ steps.classify.outputs.browser_required }}'));
   assert.ok(appWorkflow.includes('node scripts/ci-app-scope.mjs'));
   assert.ok(
-    appWorkflow.includes("test-fast:\n    needs: scope\n    if: ${{ needs.scope.result == 'success' }}"),
+    appWorkflow.includes("test-fast:\n    needs: scope\n    if: ${{ needs.scope.outputs.browser_required == 'false' }}"),
   );
-  assert.equal(occurrences(appWorkflow, 'run: npm run verify:fast'), 1);
   assert.ok(
     appWorkflow.includes("test:\n    needs: scope\n    if: ${{ needs.scope.outputs.browser_required == 'true' }}"),
   );
   assert.ok(appWorkflow.includes('image: mcr.microsoft.com/playwright:v1.62.1-noble'));
+  assert.equal(occurrences(appWorkflow, 'run: npm run verify:fast'), 2);
   assert.equal(occurrences(appWorkflow, 'run: npm run test:browser'), 1);
   assert.equal(occurrences(appWorkflow, 'run: npm run verify:app'), 0);
 });
 
-test('full app workflow runs fast and browser gates independently', () => {
-  assert.ok(!appWorkflow.includes('test:\n    needs: [scope, test-fast]'));
-  assert.ok(!appWorkflow.includes('test:\n    needs:\n      - scope\n      - test-fast'));
+test('full app workflow runs the fast gate in exactly one browser shard', () => {
   assert.match(
     appWorkflow,
-    /strategy:\n      fail-fast: false\n      matrix:\n        shard: \[1, 2\]/,
+    /strategy:\n      fail-fast: false\n      matrix:\n        include:\n          - shard: 1\n            run_fast: false\n          - shard: 2\n            run_fast: true/,
   );
+  assert.equal(occurrences(appWorkflow, 'run_fast: true'), 1);
+  assert.equal(occurrences(appWorkflow, 'run_fast: false'), 1);
   assert.ok(appWorkflow.includes('BROWSER_TEST_SHARD: ${{ matrix.shard }}/2'));
+  assert.ok(
+    appWorkflow.includes('- name: Run fast verification gate\n        if: ${{ matrix.run_fast }}\n        run: npm run verify:fast'),
+  );
+  assert.ok(
+    appWorkflow.includes('- name: Run browser regression shard\n        if: ${{ !cancelled() }}\n        run: npm run test:browser'),
+  );
   assert.ok(appWorkflow.includes('browser-regression-diagnostics-${{ github.run_id }}-shard-${{ matrix.shard }}'));
   assert.ok(appWorkflow.includes('plan-checks-ux-screenshots-${{ github.run_id }}-shard-${{ matrix.shard }}'));
 });

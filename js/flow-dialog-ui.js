@@ -147,7 +147,6 @@
     }
     return subtitle;
   }
-
   function logContextNode() {
     return logBody.querySelector(".log-date-grid") ||
       logBody.querySelector("#editLogContext")?.closest(".field") ||
@@ -277,16 +276,6 @@
       queueMicrotask(() => {
         if (!foodPicker.hidden) foodInput.focus();
       });
-    }
-  }
-
-  function focusLogTextureFallback() {
-    const select = logBody.querySelector("#logTexture");
-    if (!select || !logBody.querySelector(".unified-texture-error")) return;
-    try {
-      select.focus({ preventScroll: true });
-    } catch {
-      select.focus();
     }
   }
 
@@ -478,8 +467,6 @@
       queueMicrotask(syncLog);
       return;
     }
-
-    if (event.target.closest?.("#saveLog")) focusLogTextureFallback();
   });
 
   syncGeneric();

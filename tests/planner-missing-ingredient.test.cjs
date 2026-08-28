@@ -140,7 +140,7 @@ test('MISSING-INGREDIENT-04: Loader und Offline-Precache enthalten die neue Verf
   assert.match(source, /steht auf der Einkaufsliste/);
   assert.match(source, /renderAllAfterNextPaint/);
   assert.match(source, /PREPARED_STOCK_FLAG/);
-  assert.match(source, /withBaseRecipeAvailability/);
+  assert.match(source, /withPlanMissingFoodsAvailable/);
   assert.doesNotMatch(source, /state\.logs\.push/);
 });
 

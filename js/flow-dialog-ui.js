@@ -256,7 +256,6 @@
     );
     body.querySelector(".sticky-form-actions")?.classList.add("flow-dialog-actions");
   }
-
   function decorate(modal, body, subtitle) {
     modal.classList.add("flow-dialog");
     modal.querySelector(".sheet")?.classList.add("flow-dialog-sheet");
@@ -360,6 +359,10 @@
     genericOpen = open;
     if (open) mealSelectorQuery = "";
     syncGeneric();
+    if (open && genericModal.dataset.flowDialogContext) {
+      const sheet = genericModal.querySelector(".sheet");
+      if (sheet) sheet.scrollTop = 0;
+    }
   });
   genericStateObserver.observe(genericModal, {
     attributes: true,

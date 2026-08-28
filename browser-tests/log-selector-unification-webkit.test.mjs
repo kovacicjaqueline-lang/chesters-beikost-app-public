@@ -106,6 +106,10 @@ try {
   await page.waitForFunction(() => document.querySelector("#logForm .flow-log-selector"));
   assert.equal(await page.locator('[data-flow-log-selector="foods"]').getAttribute("aria-pressed"), "true", "Tabwahl muss nach Log-Neurendering erhalten bleiben");
   assert.equal(await page.locator("#logFoodSearch").isVisible(), true);
+  const selectedFoodResult = page.locator('.addLogFoodResult.selector-row.selectFood.selected[data-food="karotte"]');
+  await selectedFoodResult.waitFor();
+  assert.equal(await selectedFoodResult.locator(".log-result-add").textContent(), "✓");
+  assert.match(await selectedFoodResult.getAttribute("aria-label"), /entfernen/);
   assert.equal(
     await page.evaluate(() => {
       const selectorNode = document.querySelector("#logForm .flow-log-selector");
@@ -117,19 +121,26 @@ try {
     true,
     "Auswahl muss vor den protokollspezifischen Bewertungsfeldern stehen",
   );
-  await page.evaluate(() => window.closeLog());
 
-  // Validierung aus dem Rezept-Tab muss den Lebensmittel-Tab sichtbar machen.
-  await reset(page);
-  await page.evaluate(() => window.openLog(null));
-  await page.locator("#logForm .flow-log-selector").waitFor();
-  assert.equal(await page.locator('[data-flow-log-selector="recipes"]').getAttribute("aria-pressed"), "true");
+  // Ausgewählte FOODs bleiben wie im Mahlzeiteneditor sichtbar und lassen sich wieder abwählen.
+  await selectedFoodResult.click();
+  await page.waitForFunction(() => !document.querySelector('.addLogFoodResult.selected[data-food="karotte"]'));
+  await page.locator('[data-flow-log-selector="recipes"]').click();
+  assert.equal(await page.locator("#logRecipeSearch").isVisible(), true);
+
+  // Validierung aus dem Rezept-Tab muss zu FOOD führen, darf den Rezept-Tab danach aber nicht sperren.
   await page.locator("#saveLog").click();
   await page.locator(".log-food-picker.field-error").waitFor();
   await page.waitForFunction(() => document.querySelector('[data-flow-log-selector="foods"]')?.getAttribute("aria-pressed") === "true");
   assert.equal(await page.locator("#logFoodSearch").isVisible(), true);
   assert.equal(await page.locator("#logFoodError").isVisible(), true);
   assert.match(await page.locator("#logFoodError").textContent(), /mindestens ein tatsächlich enthaltenes Lebensmittel/);
+
+  await page.locator('[data-flow-log-selector="recipes"]').click();
+  await page.waitForFunction(() => document.querySelector('[data-flow-log-selector="recipes"]')?.getAttribute("aria-pressed") === "true");
+  assert.equal(await page.locator("#logRecipeSearch").isVisible(), true, "Nach FOOD-Validierung muss Rezeptwahl wieder erreichbar sein");
+  assert.equal(await page.locator("#logFoodError").isVisible(), false, "Der erledigte FOOD-Fehler darf den Rezept-Tab nicht blockieren");
+  assert.equal(await page.locator(".log-food-picker.field-error").count(), 0);
   await page.evaluate(() => window.closeLog());
 
   // Geplanter Kontext bleibt fachlich enger: keine freie Rezeptumschaltung ergänzen.

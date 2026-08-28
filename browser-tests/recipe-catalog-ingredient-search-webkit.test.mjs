@@ -123,24 +123,24 @@ try {
   );
   const nutButterRuntime = await page.evaluate(() => {
     const pecan = FOOD_DB.find((item) => item.id === "pecannuss");
-    const peanutButter = FOOD_DB.find((item) => item.id === "erdnussmus");
+    const tahin = FOOD_DB.find((item) => item.id === "tahin");
     const maroni = FOOD_DB.find((item) => item.id === "maroni");
     const recipe = recipeByName("Joghurt-Nussmus-Miniportion");
     return {
       pecanEligible: foodHasRecipeComponentKind(pecan, "smooth-paste"),
       pecanForm: foodRecipeComponentForm(pecan, "smooth-paste"),
-      peanutButterForm: foodRecipeComponentForm(peanutButter, "smooth-paste"),
+      tahinForm: foodRecipeComponentForm(tahin, "smooth-paste"),
       maroniEligible: foodHasRecipeComponentKind(maroni, "smooth-paste"),
       choices: [...(recipe?.oneOf || [])],
     };
   });
   assert.equal(nutButterRuntime.pecanEligible, true);
   assert.equal(nutButterRuntime.pecanForm, "canonical");
-  assert.equal(nutButterRuntime.peanutButterForm, "prepared");
+  assert.equal(nutButterRuntime.tahinForm, "prepared");
   assert.equal(nutButterRuntime.maroniEligible, false);
   assert.ok(nutButterRuntime.choices.includes("Pecannuss"));
   assert.equal(nutButterRuntime.choices.includes("Maroni"), false);
-  assert.equal(nutButterRuntime.choices.includes("Erdnussmus"), false);
+  assert.equal(nutButterRuntime.choices.includes("Tahin"), false);
 
   assert.deepEqual(pageErrors, [], "Die Rezeptsuche darf keine JavaScript-Fehler auslösen");
 

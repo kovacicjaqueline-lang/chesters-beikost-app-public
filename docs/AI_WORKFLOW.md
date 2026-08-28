@@ -93,6 +93,7 @@ Für Browserregressionen gilt zusätzlich:
 - den direkt betroffenen Browserfall bei Bedarf gezielt mit `node browser-tests/<datei>-webkit.test.mjs` ausführen,
 - feste Zeit-Waits wie `waitForTimeout(...)` nicht als Standard-Stabilisierung verwenden; auf einen fachlich/technisch beobachtbaren Zustand, Locator oder Event warten,
 - `npm run test:browser` führt bewusst **alle** WebKit-Regressionsskripte aus, sammelt mehrere Fehler in einem Lauf und liefert erst am Ende einen Fehlerstatus,
+- der Browser-Runner führt standardmäßig höchstens **zwei** Regressionsskripte gleichzeitig aus; für Diagnose oder knappe Laufzeitressourcen kann mit `BROWSER_TEST_CONCURRENCY=1 npm run test:browser` explizit seriell ausgeführt werden,
 - der Browser-Runner schreibt `artifacts/browser-tests/summary.json`, `summary.md` und pro Test ein `output.log`; bei einem roten App-Workflow werden diese Diagnoseartefakte aus CI hochgeladen.
 
 ## CI rot: Diagnose- und Reparaturweg

@@ -53,6 +53,16 @@ test('app workflow classifies scope before choosing the gate', () => {
   assert.ok(appWorkflow.includes('run: npm run verify:app'));
 });
 
+test('full app workflow shards browser regressions across two runners', () => {
+  assert.match(
+    appWorkflow,
+    /strategy:\n      fail-fast: false\n      matrix:\n        shard: \[1, 2\]/,
+  );
+  assert.ok(appWorkflow.includes('BROWSER_TEST_SHARD: ${{ matrix.shard }}/2'));
+  assert.ok(appWorkflow.includes('browser-regression-diagnostics-${{ github.run_id }}-shard-${{ matrix.shard }}'));
+  assert.ok(appWorkflow.includes('plan-checks-ux-screenshots-${{ github.run_id }}-shard-${{ matrix.shard }}'));
+});
+
 test('green app runs do not upload plan-check screenshots', () => {
   assert.match(
     appWorkflow,

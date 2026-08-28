@@ -62,7 +62,7 @@ Die verbindlichen Details stehen in `AGENTS.md`, `docs/FOOD_HANDLING_ORAL_PROCES
 
 `npm run verify` ist bewusst kein Standard nach jeder kleinen Änderung. Es ist der vollständige Gate, wenn der Scope mehrere Bereiche berührt oder ein Abschluss-/Releasecheck gebraucht wird.
 
-Der GitHub-App-Workflow spiegelt diese Matrix konservativ: nur eine explizite Fast-only-Allowlist aus reinen Planner-, Daten-, Persistenz-, Utility- und Node-Testpfaden darf auf `npm run verify:fast` enden. Sobald irgendein app-relevanter geänderter Pfad nicht eindeutig auf dieser Allowlist steht, läuft weiterhin `npm run verify:app`. Die Klassifikation liegt in `scripts/ci-app-scope.mjs` und ist absichtlich fail-closed; neue, gemischte oder UI-nahe Dateien werden nie allein anhand eines Namensmusters automatisch als fast-only eingestuft.
+Der GitHub-App-Workflow spiegelt diese Matrix konservativ: nur eine explizite Fast-only-Allowlist aus reinen Planner-, Daten-, Persistenz-, Utility- und Node-Testpfaden darf ohne Browserregressionen enden. Sobald irgendein app-relevanter geänderter Pfad nicht eindeutig auf dieser Allowlist steht, wird weiterhin die vollständige Abdeckung von `npm run verify:app` verlangt. In GitHub Actions ist diese Abdeckung aus Performancegründen zerlegt: bei Fast-only-Scope läuft `npm run verify:fast` im eigenen Node-Job; bei Browser-Scope läuft `npm run verify:fast` genau einmal in einem der zwei Browser-Shards und `npm run test:browser` in beiden deterministischen Shards. Der Browserteil läuft auch dann weiter, wenn der einmalige Fast-Gate fehlschlägt, damit die Diagnoseabdeckung erhalten bleibt. Damit wird `verify:fast` nicht doppelt ausgeführt und kein zusätzlicher Runner nur für den Full-App-Fast-Gate gestartet. Die Klassifikation liegt in `scripts/ci-app-scope.mjs` und ist absichtlich fail-closed; neue, gemischte oder UI-nahe Dateien werden nie allein anhand eines Namensmusters automatisch als fast-only eingestuft.
 
 ## CI rot vermeiden: Pre-Push- und Integrationscheck
 
@@ -122,7 +122,8 @@ Für Browserregressionen gilt zusätzlich:
 
 - den direkt betroffenen Browserfall bei Bedarf gezielt mit `node browser-tests/<datei>-webkit.test.mjs` ausführen,
 - feste Zeit-Waits wie `waitForTimeout(...)` nicht als Standard-Stabilisierung verwenden; auf einen fachlich/technisch beobachtbaren Zustand, Locator oder Event warten,
-- `npm run test:browser` führt bewusst **alle** WebKit-Regressionsskripte aus, sammelt mehrere Fehler in einem Lauf und liefert erst am Ende einen Fehlerstatus,
+- `npm run test:browser` führt lokal bewusst **alle** WebKit-Regressionsskripte aus, sammelt mehrere Fehler in einem Lauf und liefert erst am Ende einen Fehlerstatus,
+- im GitHub-App-Workflow wird dieselbe geordnete Browserliste deterministisch auf zwei Shards verteilt; zusammen müssen beide Shards die vollständige Liste abdecken,
 - der Browser-Runner führt standardmäßig höchstens **zwei** Regressionsskripte gleichzeitig aus; für Diagnose oder knappe Laufzeitressourcen kann mit `BROWSER_TEST_CONCURRENCY=1 npm run test:browser` explizit seriell ausgeführt werden,
 - der Browser-Runner schreibt `artifacts/browser-tests/summary.json`, `summary.md` und pro Test ein `output.log`; bei einem roten App-Workflow werden diese Diagnoseartefakte aus CI hochgeladen.
 

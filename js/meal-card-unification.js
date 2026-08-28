@@ -385,8 +385,17 @@
       deleteConcretePlan(date, meal, planId, manualAdded);
   }
 
+  function ensureActiveLockPayload(container) {
+    if (!container?.querySelectorAll) return;
+    container.querySelectorAll(".meal-lock").forEach((button) => {
+      let payload = JSON.parse(decodeURIComponent(button.dataset.lockPayload || "%7B%7D"));
+      button.dataset.lockPayload = encodeURIComponent(JSON.stringify({ ...payload, active: true }));
+    });
+  }
+
   function simplifyMealCards(container) {
     if (!container?.querySelectorAll) return;
+    ensureActiveLockPayload(container);
     flattenCompletedDetails(container);
     container.querySelectorAll(".removeManualMeal").forEach((button) => {
       button.textContent = "Mahlzeit löschen";

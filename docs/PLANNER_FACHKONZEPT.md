@@ -1,7 +1,7 @@
 # Chesters Beikost-App – kanonisches Planner-Fachkonzept
 
-Stand: 25.08.2026  
-Dokumentationsbasis: aktueller Planner-Stand auf Basis von `main` bis `15d72f06de747cbac08de7c42b379d7b90bf2b36`, einschließlich gemergter Handling-/BLW-Schicht, dokumentiertem Oral-Processing-Contract, gemergtem Nuss-/Samen-/Topping-Block, vollständiger österreichischer `seasonMonths`-Matrix, aktuellem FOOD-COUNT-Identitätsstand und der fachlich freigegebenen täglichen Lebensmittel-Einführung; historischer Phasenmodell-v2-Stand `f9f886c82af2ce267c10571e5e89df787037c6b0`. PHASE-TRANSITION ist zusätzlich auf dem Arbeitsbranch `feat/phase-readiness-core` gegen `main` `3aa9cf3db78c2cbcdcde61ac8b2d2fd86391b4f6` konkretisiert.
+Stand: 28.08.2026  
+Dokumentationsbasis: aktueller Planner-Stand auf Basis von `main` bis `15d72f06de747cbac08de7c42b379d7b90bf2b36`, einschließlich gemergter Handling-/BLW-Schicht, dokumentiertem Oral-Processing-Contract, gemergtem Nuss-/Samen-/Topping-Block, vollständiger österreichischer `seasonMonths`-Matrix, aktuellem FOOD-COUNT-Identitätsstand und der fachlich freigegebenen täglichen Lebensmittel-Einführung; historischer Phasenmodell-v2-Stand `f9f886c82af2ce267c10571e5e89df787037c6b0`. PHASE-TRANSITION ist inzwischen über PR #83 auf `main` integriert; die strukturierte Planner-Einbindung und sichtbare Phase-Readiness-UX wurden anschließend über PR #89, #94 und #95 auf `main` ergänzt. Aktueller `main` für diesen PHASE-TRANSITION-Statusabgleich: `d7de972bd32f0a510b19c9fead7d6537ba3e20c6`.
 
 Dieses Dokument führt die bisher über Phasenmodell, PLAN-07, PLAN-08, MILK-01, TODO3-Regressionen und spätere Fachentscheidungen verteilte Planner-Semantik an einer Stelle zusammen.
 
@@ -50,7 +50,7 @@ Zusätzlich gilt:
 - Die Texturentwicklung bleibt separat dokumentiert.
 - Historische Texturinformationen dürfen durch spätere Planner-Erweiterungen nicht stillschweigend umgedeutet werden.
 
-## 1.3 PHASE-TRANSITION – entwicklungsorientierte Empfehlung 🟡 Branch/Integrations-PR
+## 1.3 PHASE-TRANSITION – entwicklungsorientierte Empfehlung ✅ main
 
 Der Readiness-Core beantwortet **ausschließlich**, ob der Übergang in die nächste Beikostphase empfohlen werden kann. Er verändert `phaseSelected` nicht, ruft keinen Phasenwechsel auf und bleibt vollständig getrennt von der bestehenden bewussten Nutzerbestätigung.
 
@@ -586,9 +586,9 @@ Aktuell nicht als erledigt behandeln:
 
 Die vollständige österreichische `seasonMonths`-Matrix und die Nuss-/Samen-Rollen- und Toppingregel sind auf `main` integriert und nicht mehr als offene Planner-Blöcke zu behandeln. Die allgemeine Handling-/BLW-Schicht ist **keine offene Fachfrage mehr**. Der Oral-Processing-Contract ist fachlich auf `main` dokumentiert; Review, Einzelmigrationen und eine spätere technische Runtime-Abbildung bleiben ein separater Handling-/Oral-Arbeitsstrang und sind nicht Teil dieses Planner-Statusabgleichs.
 
-## 17.2 Fachlich beschlossen, aber noch nicht vollständig auf main nachgewiesen
+## 17.2 PHASE-TRANSITION ✅ main
 
-1. 🟡 **PHASE-TRANSITION:** Die eigenständige read-only Readiness-/Recommendation-Logik ist auf `feat/phase-readiness-core` umgesetzt. Sie verlangt für jeden Übergang das akzeptierte aktuelle Mahlzeitenmuster, ein konkretes Signal für die zusätzliche Essensgelegenheit und die Passung in den Tages-/Familienrhythmus. Alter, Grammwerte, Loganzahl, Phasendauer und Textur werden nicht als Readiness-Schwellen verwendet. Bis zum Merge bleibt dieser Stand Branch/Integrations-PR und nicht `main`.
+Für PHASE-TRANSITION besteht kein offener Soll/Ist-Gap mehr. Der read-only Readiness-Core, seine strukturierte Planner-Einbindung und die sichtbare Phase-Readiness-UX sind auf `main` integriert. Die bestehende bewusste Nutzerbestätigung bleibt der einzige Weg zum tatsächlichen Phasenwechsel; Alter, Grammwerte, Loganzahl, Phasendauer und Textur sind weiterhin keine Readiness-Schwellen.
 
 Weitere offene FOOD-Datenfragen werden separat im FOOD-Fachregel-Track geklärt und dürfen nicht als implizite Planner-Regel erfunden werden.
 

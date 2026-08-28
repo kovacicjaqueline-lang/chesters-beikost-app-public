@@ -43,17 +43,20 @@ test('app workflow classifies scope before choosing the gate', () => {
   assert.ok(appWorkflow.includes('browser_required: ${{ steps.classify.outputs.browser_required }}'));
   assert.ok(appWorkflow.includes('node scripts/ci-app-scope.mjs'));
   assert.ok(
-    appWorkflow.includes("test-fast:\n    needs: scope\n    if: ${{ needs.scope.outputs.browser_required == 'false' }}"),
+    appWorkflow.includes("test-fast:\n    needs: scope\n    if: ${{ needs.scope.result == 'success' }}"),
   );
-  assert.ok(appWorkflow.includes('run: npm run verify:fast'));
+  assert.equal(occurrences(appWorkflow, 'run: npm run verify:fast'), 1);
   assert.ok(
     appWorkflow.includes("test:\n    needs: scope\n    if: ${{ needs.scope.outputs.browser_required == 'true' }}"),
   );
   assert.ok(appWorkflow.includes('image: mcr.microsoft.com/playwright:v1.62.1-noble'));
-  assert.ok(appWorkflow.includes('run: npm run verify:app'));
+  assert.equal(occurrences(appWorkflow, 'run: npm run test:browser'), 1);
+  assert.equal(occurrences(appWorkflow, 'run: npm run verify:app'), 0);
 });
 
-test('full app workflow shards browser regressions across two runners', () => {
+test('full app workflow runs fast and browser gates independently', () => {
+  assert.ok(!appWorkflow.includes('test:\n    needs: [scope, test-fast]'));
+  assert.ok(!appWorkflow.includes('test:\n    needs:\n      - scope\n      - test-fast'));
   assert.match(
     appWorkflow,
     /strategy:\n      fail-fast: false\n      matrix:\n        shard: \[1, 2\]/,

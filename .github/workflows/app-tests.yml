@@ -125,7 +125,7 @@ jobs:
 
   test-fast:
     needs: scope
-    if: ${{ needs.scope.result == 'success' }}
+    if: ${{ needs.scope.outputs.browser_required == 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -155,7 +155,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        include:
+          - shard: 1
+            run_fast: false
+          - shard: 2
+            run_fast: true
     env:
       BROWSER_TEST_SHARD: ${{ matrix.shard }}/2
     steps:
@@ -172,7 +176,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Run fast verification gate
+        if: ${{ matrix.run_fast }}
+        run: npm run verify:fast
+
       - name: Run browser regression shard
+        if: ${{ !cancelled() }}
         run: npm run test:browser
 
       - name: Upload plan checks UX screenshots

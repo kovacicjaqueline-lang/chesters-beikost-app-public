@@ -125,7 +125,7 @@ jobs:
 
   test-fast:
     needs: scope
-    if: ${{ needs.scope.outputs.browser_required == 'false' }}
+    if: ${{ needs.scope.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -172,8 +172,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run app verification gate
-        run: npm run verify:app
+      - name: Run browser regression shard
+        run: npm run test:browser
 
       - name: Upload plan checks UX screenshots
         if: ${{ failure() }}

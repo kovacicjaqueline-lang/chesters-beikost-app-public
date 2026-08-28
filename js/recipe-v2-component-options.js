@@ -9,7 +9,7 @@
  * Zubereitungsformen (z. B. Mandelmilch) bleiben reine UI-Metadaten.
  */
 
-const RECIPE_COMPONENT_KINDS = Object.freeze({
+const RECIPE_V2_COMPONENT_KINDS_INTERNAL = Object.freeze({
   SMOOTH_PASTE: "smooth-paste",
 });
 
@@ -39,8 +39,8 @@ function foodSmoothPasteCanonicalId(foodRecord) {
   return String(foodRecord.id || "");
 }
 
-function foodRecipeComponentForm(foodRecord, kind = RECIPE_COMPONENT_KINDS.SMOOTH_PASTE) {
-  if (!foodRecord || kind !== RECIPE_COMPONENT_KINDS.SMOOTH_PASTE) {
+function foodRecipeComponentForm(foodRecord, kind = RECIPE_V2_COMPONENT_KINDS_INTERNAL.SMOOTH_PASTE) {
+  if (!foodRecord || kind !== RECIPE_V2_COMPONENT_KINDS_INTERNAL.SMOOTH_PASTE) {
     return String(foodRecord?.recipeComponentForm || "");
   }
   if (!foodAllowsSmoothPasteComponent(foodRecord)) return "";
@@ -55,7 +55,7 @@ function foodRecipeComponentKinds(foodRecord) {
   let kinds = new Set(Array.isArray(foodRecord?.recipeComponentKinds)
     ? foodRecord.recipeComponentKinds.filter(Boolean)
     : []);
-  if (foodAllowsSmoothPasteComponent(foodRecord)) kinds.add(RECIPE_COMPONENT_KINDS.SMOOTH_PASTE);
+  if (foodAllowsSmoothPasteComponent(foodRecord)) kinds.add(RECIPE_V2_COMPONENT_KINDS_INTERNAL.SMOOTH_PASTE);
   return [...kinds];
 }
 
@@ -69,7 +69,7 @@ function installFoodRecipeComponentMetadata(foods = typeof FOOD_DB !== "undefine
   for (let item of foods) {
     if (!foodAllowsSmoothPasteComponent(item)) continue;
     let kinds = foodRecipeComponentKinds(item);
-    let form = foodRecipeComponentForm(item, RECIPE_COMPONENT_KINDS.SMOOTH_PASTE);
+    let form = foodRecipeComponentForm(item, RECIPE_V2_COMPONENT_KINDS_INTERNAL.SMOOTH_PASTE);
     if (JSON.stringify(item.recipeComponentKinds || []) !== JSON.stringify(kinds)) {
       item.recipeComponentKinds = kinds;
       changed = true;
@@ -125,7 +125,7 @@ const RECIPE_V2_COMPONENT_OPTIONS = Object.freeze({
   }),
   "Joghurt-Nussmus-Miniportion": Object.freeze({
     oneOfFromFood: Object.freeze({
-      kind: RECIPE_COMPONENT_KINDS.SMOOTH_PASTE,
+      kind: RECIPE_V2_COMPONENT_KINDS_INTERNAL.SMOOTH_PASTE,
       category: "Nuss",
       componentForm: RECIPE_COMPONENT_FORMS.CANONICAL,
     }),
@@ -210,7 +210,7 @@ if (typeof window !== "undefined" && typeof document !== "undefined") {
 
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
-    RECIPE_COMPONENT_KINDS,
+    RECIPE_COMPONENT_KINDS: RECIPE_V2_COMPONENT_KINDS_INTERNAL,
     RECIPE_COMPONENT_FORMS,
     RECIPE_V2_COMPONENT_OPTIONS,
     foodAllowsSmoothPasteComponent,

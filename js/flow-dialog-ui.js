@@ -24,6 +24,7 @@
   let logOpen = logModal.classList.contains("open");
   let mealSelectorQuery = "";
   let logSelectorMode = "recipes";
+  let logSearchActive = false;
 
   function setText(node, value) {
     if (node && node.textContent !== value) node.textContent = value;
@@ -162,6 +163,36 @@
     );
   }
 
+  function ensureLogSearchToggle(panel, kind, input) {
+    if (!panel || !input) return null;
+    let toggle = panel.querySelector(":scope > .flow-log-search-toggle");
+    if (!toggle) {
+      toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.className = "btn secondary smallbtn flow-log-search-toggle";
+      toggle.dataset.flowLogSearchToggle = kind;
+      toggle.setAttribute("aria-controls", input.id);
+      const label = panel.querySelector(":scope > label");
+      panel.insertBefore(toggle, label || panel.firstChild);
+    }
+    return toggle;
+  }
+
+  function syncLogSearchPanel(panel, kind, input, results, mode) {
+    if (!panel || !input) return;
+    const label = panel.querySelector(":scope > label");
+    const resultsLabel = panel.querySelector(kind === "recipes" ? ".log-recipe-results-label" : ".log-food-results-label");
+    const toggle = ensureLogSearchToggle(panel, kind, input);
+    const active = mode === kind && logSearchActive;
+    const hasQuery = !!String(input.value || "").trim();
+
+    setText(toggle, active ? "Suche schließen" : (kind === "recipes" ? "Rezept suchen" : "Lebensmittel suchen"));
+    toggle?.setAttribute("aria-expanded", active ? "true" : "false");
+    setHidden(label, !active);
+    setHidden(results, !active);
+    setHidden(resultsLabel, !active || (kind === "recipes" && !hasQuery));
+  }
+
   function ensureLogSelector() {
     const foodPicker = logBody.querySelector(".log-food-picker");
     const recipePicker = logBody.querySelector(".log-recipe-picker");
@@ -223,7 +254,10 @@
       logSelectorMode = "foods";
     }
 
-    if (foodPicker.classList.contains("field-error")) logSelectorMode = "foods";
+    if (foodPicker.classList.contains("field-error")) {
+      logSelectorMode = "foods";
+      logSearchActive = true;
+    }
     const mode = recipePicker && logSelectorMode === "recipes" ? "recipes" : "foods";
     logSelectorMode = mode;
 
@@ -236,11 +270,23 @@
     }
     setHidden(recipePicker, mode !== "recipes");
     setHidden(foodPicker, mode !== "foods");
+    syncLogSearchPanel(recipePicker, "recipes", recipeInput, recipeResults, mode);
+    syncLogSearchPanel(foodPicker, "foods", foodInput, foodResults, mode);
 
     if (foodPicker.classList.contains("field-error") && foodInput) {
       queueMicrotask(() => {
         if (!foodPicker.hidden) foodInput.focus();
       });
+    }
+  }
+
+  function focusLogTextureFallback() {
+    const select = logBody.querySelector("#logTexture");
+    if (!select || !logBody.querySelector(".unified-texture-error")) return;
+    try {
+      select.focus({ preventScroll: true });
+    } catch {
+      select.focus();
     }
   }
 
@@ -373,7 +419,10 @@
     const open = logModal.classList.contains("open");
     if (open === logOpen) return;
     logOpen = open;
-    if (open) logSelectorMode = "recipes";
+    if (open) {
+      logSelectorMode = "recipes";
+      logSearchActive = false;
+    }
     syncLog();
   });
   logStateObserver.observe(logModal, {
@@ -393,24 +442,44 @@
   });
 
   logModal.addEventListener("click", (event) => {
-    const button = event.target.closest?.("[data-flow-log-selector]");
-    if (!button || !logBody.contains(button)) return;
-    const nextMode = button.dataset.flowLogSelector === "recipes" ? "recipes" : "foods";
-    if (nextMode === "recipes") {
-      const foodPicker = logBody.querySelector(".log-food-picker");
-      const foodError = logBody.querySelector("#logFoodError");
-      foodPicker?.classList.remove("field-error");
-      if (foodError) {
-        foodError.textContent = "";
-        foodError.style.display = "none";
-      }
+    const searchToggle = event.target.closest?.("[data-flow-log-search-toggle]");
+    if (searchToggle && logBody.contains(searchToggle)) {
+      logSelectorMode = searchToggle.dataset.flowLogSearchToggle === "recipes" ? "recipes" : "foods";
+      logSearchActive = !logSearchActive;
+      ensureLogSelector();
+      const input = logSelectorMode === "recipes"
+        ? logBody.querySelector("#logRecipeSearch")
+        : logBody.querySelector("#logFoodSearch");
+      if (logSearchActive) input?.focus();
+      else input?.blur();
+      return;
     }
-    logSelectorMode = nextMode;
-    ensureLogSelector();
-    const input = logSelectorMode === "recipes"
-      ? logBody.querySelector("#logRecipeSearch")
-      : logBody.querySelector("#logFoodSearch");
-    input?.focus();
+
+    const button = event.target.closest?.("[data-flow-log-selector]");
+    if (button && logBody.contains(button)) {
+      const nextMode = button.dataset.flowLogSelector === "recipes" ? "recipes" : "foods";
+      if (nextMode === "recipes") {
+        const foodPicker = logBody.querySelector(".log-food-picker");
+        const foodError = logBody.querySelector("#logFoodError");
+        foodPicker?.classList.remove("field-error");
+        if (foodError) {
+          foodError.textContent = "";
+          foodError.style.display = "none";
+        }
+      }
+      logSelectorMode = nextMode;
+      logSearchActive = false;
+      ensureLogSelector();
+      return;
+    }
+
+    if (event.target.closest?.(".selectLogRecipeResult")) {
+      logSearchActive = false;
+      queueMicrotask(syncLog);
+      return;
+    }
+
+    if (event.target.closest?.("#saveLog")) focusLogTextureFallback();
   });
 
   syncGeneric();

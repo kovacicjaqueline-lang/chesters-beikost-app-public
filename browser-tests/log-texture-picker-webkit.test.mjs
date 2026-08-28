@@ -68,6 +68,10 @@ async function selectFood(page, name) {
     const foodTab = page.locator('[data-flow-log-selector="foods"]');
     if (await foodTab.count()) await foodTab.click();
   }
+  if (!(await search.isVisible())) {
+    const searchToggle = page.locator('[data-flow-log-search-toggle="foods"]');
+    if (await searchToggle.count()) await searchToggle.click();
+  }
   await search.fill(name);
   const result = page.locator(".addLogFoodResult").filter({ hasText: name }).first();
   await result.waitFor();
@@ -90,7 +94,7 @@ try {
   await waitForApp(page);
 
   // Bei einem direkten Save-Tap soll die Validierung den nativen Picker noch innerhalb
-  // derselben User-Aktivierung anfordern, statt das <select> nur programmgesteuert zu fokussieren.
+  // derselben User-Aktivierung anfordern.
   await reset(page);
   await page.evaluate(() => window.openLog(null));
   await selectFood(page, "Karotte");
@@ -124,9 +128,9 @@ try {
   assert.equal(saved.textureKnown, true);
   assert.equal(saved.textureStage, 2);
 
-  // Falls WebKit showPicker nicht unterstützt oder blockiert, darf ein Touch-Gerät nicht
-  // in einem programmgesteuerten Select-Fokus hängen bleiben. Der nächste echte Tap bleibt
-  // dadurch eine normale native Picker-Interaktion.
+  // Falls iOS/WebKit showPicker nicht unterstützt oder blockiert, muss der Dialog das
+  // Select fokussiert lassen. iOS koppelt den nativen Picker an den Select-Fokus; so ist
+  // das Feld nach dem automatischen Sprung unmittelbar bedienbar statt wieder zu blurren.
   await reset(page);
   await page.evaluate(() => window.openLog(null));
   await selectFood(page, "Karotte");
@@ -145,10 +149,10 @@ try {
 
   await page.locator("#saveLog").click();
   assert.equal(await page.locator(".unified-texture-error").count(), 1);
-  assert.notEqual(
+  assert.equal(
     await page.evaluate(() => document.activeElement?.id || ""),
     "logTexture",
-    "Touch-Fallback darf das native Select nicht programmgesteuert fokussiert festhalten",
+    "Touch-Fallback muss die Konsistenzauswahl nach dem automatischen Sprung fokussiert und direkt bedienbar lassen",
   );
   assert.equal(await page.locator("#logModal").evaluate((node) => node.classList.contains("open")), true);
 } finally {

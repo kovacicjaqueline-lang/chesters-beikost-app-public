@@ -62,6 +62,8 @@ Die verbindlichen Details stehen in `AGENTS.md`, `docs/FOOD_HANDLING_ORAL_PROCES
 
 `npm run verify` ist bewusst kein Standard nach jeder kleinen Änderung. Es ist der vollständige Gate, wenn der Scope mehrere Bereiche berührt oder ein Abschluss-/Releasecheck gebraucht wird.
 
+Der GitHub-App-Workflow spiegelt diese Matrix konservativ: nur eine explizite Fast-only-Allowlist aus reinen Planner-, Daten-, Persistenz-, Utility- und Node-Testpfaden darf auf `npm run verify:fast` enden. Sobald irgendein app-relevanter geänderter Pfad nicht eindeutig auf dieser Allowlist steht, läuft weiterhin `npm run verify:app`. Die Klassifikation liegt in `scripts/ci-app-scope.mjs` und ist absichtlich fail-closed; neue, gemischte oder UI-nahe Dateien werden nie allein anhand eines Namensmusters automatisch als fast-only eingestuft.
+
 ## CI rot vermeiden: Pre-Push- und Integrationscheck
 
 CI soll möglichst die bereits geprüfte Änderung bestätigen und nicht der erste Ort sein, an dem ein deterministischer Featurefehler entdeckt wird.

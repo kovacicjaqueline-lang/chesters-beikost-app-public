@@ -22,10 +22,12 @@ function foodAllowsSmoothPasteComponent(foodRecord) {
   if (!foodRecord) return false;
   let category = String(foodRecord.category || "");
   let allergenGroup = String(foodRecord.allergenGroup || "");
+  let family = String(foodRecord.foodFamily || foodRecord.allergenFamily || "");
   if (category === "Nuss") {
+    if (family.startsWith("nuss:")) return family !== "nuss:maroni";
     return allergenGroup === "Erdnuss" || allergenGroup === "Schalenfrüchte";
   }
-  return category === "Samen" && allergenGroup === "Sesam";
+  return category === "Samen" && (allergenGroup === "Sesam" || family === "sesam");
 }
 
 function foodSmoothPasteCanonicalId(foodRecord) {

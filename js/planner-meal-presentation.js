@@ -290,6 +290,33 @@ function plannerCollapseFinishedLogOnlyDays() {
   return changed;
 }
 
+function plannerMarkTodayDayHeading() {
+  if (typeof document === "undefined") return 0;
+  let container = document.getElementById("blockPlan");
+  if (
+    !container ||
+    typeof visiblePlanStart !== "function" ||
+    typeof today !== "function" ||
+    typeof addDays !== "function" ||
+    typeof nice !== "function"
+  ) return 0;
+  let from = visiblePlanStart();
+  let current = today();
+  let changed = 0;
+  [...container.children].forEach((dayNode, index) => {
+    if (!dayNode.classList?.contains("day-card")) return;
+    let date = addDays(from, index);
+    if (date !== current) return;
+    let heading = dayNode.querySelector?.(".day-date");
+    if (!heading) return;
+    let label = `${nice(date, true)} · Heute`;
+    if (heading.textContent === label) return;
+    heading.textContent = label;
+    changed += 1;
+  });
+  return changed;
+}
+
 function plannerCenterCompletedEditActions() {
   if (typeof document === "undefined") return 0;
   let container = document.getElementById("blockPlan");
@@ -345,6 +372,7 @@ function installPlannerMealPresentationRuntime() {
     renderPlanCore = function plan08CompletedDayPresentationRenderPlanCore() {
       let result = originalRenderPlanCore();
       plannerCollapseFinishedLogOnlyDays();
+      plannerMarkTodayDayHeading();
       plannerCenterCompletedEditActions();
       return result;
     };
@@ -431,6 +459,7 @@ if (typeof module !== "undefined" && module.exports) {
     plannerCompletedLogOnlyDayState,
     plannerInstallCompletedDayPresentationStyles,
     plannerCollapseFinishedLogOnlyDays,
+    plannerMarkTodayDayHeading,
     plannerCenterCompletedEditActions,
     installPlannerMealPresentationRuntime,
     loadMealEditorRecipeVariantsRuntime,

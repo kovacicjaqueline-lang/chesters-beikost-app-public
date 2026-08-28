@@ -152,6 +152,12 @@ jobs:
     container:
       image: mcr.microsoft.com/playwright:v1.62.1-noble
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    env:
+      BROWSER_TEST_SHARD: ${{ matrix.shard }}/2
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -173,7 +179,7 @@ jobs:
         if: ${{ failure() }}
         uses: actions/upload-artifact@v4
         with:
-          name: plan-checks-ux-screenshots-${{ github.run_id }}
+          name: plan-checks-ux-screenshots-${{ github.run_id }}-shard-${{ matrix.shard }}
           path: artifacts/browser-tests/plan-checks-ux-webkit/*.png
           if-no-files-found: ignore
           retention-days: 7
@@ -182,7 +188,7 @@ jobs:
         if: ${{ failure() }}
         uses: actions/upload-artifact@v4
         with:
-          name: browser-regression-diagnostics-${{ github.run_id }}
+          name: browser-regression-diagnostics-${{ github.run_id }}-shard-${{ matrix.shard }}
           path: artifacts/browser-tests/
           if-no-files-found: ignore
           retention-days: 7

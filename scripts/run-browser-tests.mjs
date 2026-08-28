@@ -2,9 +2,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { startSharedWebKitServer } from "./browser-test-shared-runtime.mjs";
 
 const scriptPath = fileURLToPath(import.meta.url);
 const defaultRoot = path.resolve(path.dirname(scriptPath), "..");
+const browserTestPreloadPath = path.resolve(path.dirname(scriptPath), "browser-test-preload.mjs");
 
 export const DEFAULT_BROWSER_TEST_CONCURRENCY = 2;
 
@@ -94,7 +96,7 @@ function runOne(testFile, { rootDir, artifactDir, childEnv, forwardOutput }) {
     const logPath = path.join(perTestArtifactDir, "output.log");
     const logStream = fs.createWriteStream(logPath, { flags: "w" });
 
-    const child = spawn(process.execPath, [testFile], {
+    const child = spawn(process.execPath, ["--import", browserTestPreloadPath, testFile], {
       cwd: rootDir,
       stdio: ["ignore", "pipe", "pipe"],
       env: {
@@ -161,6 +163,11 @@ function writeSummary(artifactDir, results) {
   return summary;
 }
 
+export async function startSharedBrowserRuntime() {
+  const { webkit } = await import("playwright");
+  return startSharedWebKitServer(webkit);
+}
+
 export async function runBrowserTests({
   rootDir = defaultRoot,
   testFiles = discoverBrowserTests(rootDir),
@@ -170,6 +177,7 @@ export async function runBrowserTests({
   concurrency = resolveBrowserTestConcurrency(childEnv.BROWSER_TEST_CONCURRENCY),
   shard = resolveBrowserTestShard(childEnv.BROWSER_TEST_SHARD),
   runTest = runOne,
+  sharedRuntimeFactory = startSharedBrowserRuntime,
 } = {}) {
   const selectedTestFiles = selectBrowserTestShard(testFiles, shard);
   if (selectedTestFiles.length === 0) {
@@ -185,26 +193,43 @@ export async function runBrowserTests({
   const resolvedConcurrency = Math.min(selectedTestFiles.length, resolveBrowserTestConcurrency(concurrency));
   console.log(`Browser regression concurrency: ${resolvedConcurrency}`);
 
-  const results = await runWithConcurrency(
-    selectedTestFiles,
-    async (testFile) => {
-      const resolvedTestFile = path.isAbsolute(testFile) ? testFile : path.resolve(rootDir, testFile);
-      const name = path.basename(resolvedTestFile);
-      const useGroup = childEnv.GITHUB_ACTIONS && resolvedConcurrency === 1;
-      if (useGroup) console.log(`::group::Browser regression: ${name}`);
-      else console.log(`\n=== Browser regression start: ${name} ===`);
+  const sharedRuntime = await sharedRuntimeFactory();
+  const runtimeChildEnv = {
+    ...childEnv,
+    BROWSER_TEST_SHARED_WS_ENDPOINT: sharedRuntime.wsEndpoint,
+  };
+  console.log("Browser regression WebKit runtime: shared");
 
-      const result = await runTest(resolvedTestFile, { rootDir, artifactDir, childEnv, forwardOutput });
+  let results;
+  try {
+    results = await runWithConcurrency(
+      selectedTestFiles,
+      async (testFile) => {
+        const resolvedTestFile = path.isAbsolute(testFile) ? testFile : path.resolve(rootDir, testFile);
+        const name = path.basename(resolvedTestFile);
+        const useGroup = childEnv.GITHUB_ACTIONS && resolvedConcurrency === 1;
+        if (useGroup) console.log(`::group::Browser regression: ${name}`);
+        else console.log(`\n=== Browser regression start: ${name} ===`);
 
-      if (useGroup) console.log("::endgroup::");
-      else console.log(`=== Browser regression ${result.status}: ${name} ===`);
-      if (result.status === "failed") {
-        console.error(`Browser regression failed: ${name} (${result.signal || `exit ${result.exitCode ?? "n/a"}`})`);
-      }
-      return result;
-    },
-    resolvedConcurrency,
-  );
+        const result = await runTest(resolvedTestFile, {
+          rootDir,
+          artifactDir,
+          childEnv: runtimeChildEnv,
+          forwardOutput,
+        });
+
+        if (useGroup) console.log("::endgroup::");
+        else console.log(`=== Browser regression ${result.status}: ${name} ===`);
+        if (result.status === "failed") {
+          console.error(`Browser regression failed: ${name} (${result.signal || `exit ${result.exitCode ?? "n/a"}`})`);
+        }
+        return result;
+      },
+      resolvedConcurrency,
+    );
+  } finally {
+    await sharedRuntime.close();
+  }
 
   const summary = writeSummary(artifactDir, results);
   if (summary.failed > 0) {

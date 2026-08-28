@@ -2,11 +2,12 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { startSharedWebKitServer } from "./browser-test-shared-runtime.mjs";
+import sharedRuntime from "./browser-test-shared-runtime.cjs";
 
+const { startSharedWebKitServer } = sharedRuntime;
 const scriptPath = fileURLToPath(import.meta.url);
 const defaultRoot = path.resolve(path.dirname(scriptPath), "..");
-const browserTestPreloadPath = path.resolve(path.dirname(scriptPath), "browser-test-preload.mjs");
+const browserTestPreloadPath = path.resolve(path.dirname(scriptPath), "browser-test-preload.cjs");
 
 export const DEFAULT_BROWSER_TEST_CONCURRENCY = 2;
 
@@ -96,7 +97,7 @@ function runOne(testFile, { rootDir, artifactDir, childEnv, forwardOutput }) {
     const logPath = path.join(perTestArtifactDir, "output.log");
     const logStream = fs.createWriteStream(logPath, { flags: "w" });
 
-    const child = spawn(process.execPath, ["--import", browserTestPreloadPath, testFile], {
+    const child = spawn(process.execPath, ["--require", browserTestPreloadPath, testFile], {
       cwd: rootDir,
       stdio: ["ignore", "pipe", "pipe"],
       env: {

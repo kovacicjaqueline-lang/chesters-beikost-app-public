@@ -69,45 +69,14 @@ test('bounded worker pool never exceeds the configured concurrency and preserves
   assert.deepEqual(results, ['result-0', 'result-1', 'result-2', 'result-3']);
 });
 
-test('shared browser facade closes only contexts owned by one child connection', async () => {
-  const { createSharedBrowserFacade } = await sharedRuntimeModule;
-  let underlyingBrowserCloseCalls = 0;
-  let contextCloseCalls = 0;
-  const fakeBrowser = {
-    async newContext() {
-      return {
-        async close() {
-          contextCloseCalls += 1;
-        },
-      };
-    },
-    async close() {
-      underlyingBrowserCloseCalls += 1;
-    },
-    marker() {
-      return 'bound';
-    },
-  };
-
-  const browser = createSharedBrowserFacade(fakeBrowser);
-  await browser.newContext();
-  assert.equal(browser.marker(), 'bound');
-  await browser.close();
-
-  assert.equal(contextCloseCalls, 1);
-  assert.equal(underlyingBrowserCloseCalls, 0, 'ein Kindprozess darf den gemeinsamen WebKit-Prozess nicht schließen');
-});
-
 test('shared WebKit client reuses the endpoint only for default launches', async () => {
   const { installSharedWebKitClient } = await sharedRuntimeModule;
   let launchCalls = 0;
   let connectCalls = 0;
+  let connectedCloseCalls = 0;
   const connectedBrowser = {
-    async newContext() {
-      return { close: async () => {} };
-    },
     async close() {
-      throw new Error('shared browser close must be intercepted');
+      connectedCloseCalls += 1;
     },
   };
   const dedicatedBrowser = { dedicated: true };
@@ -126,9 +95,10 @@ test('shared WebKit client reuses the endpoint only for default launches', async
 
   assert.equal(installSharedWebKitClient(browserType, 'ws://shared-webkit.test/runtime'), true);
   const sharedBrowser = await browserType.launch();
-  await sharedBrowser.newContext();
+  assert.equal(sharedBrowser, connectedBrowser);
   await sharedBrowser.close();
   assert.equal(connectCalls, 1);
+  assert.equal(connectedCloseCalls, 1, 'verbundener Browser muss seine Client-Verbindung normal schließen');
   assert.equal(launchCalls, 0);
 
   const dedicated = await browserType.launch({ headless: false });

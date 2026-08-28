@@ -54,12 +54,24 @@ test("Nuss-/Sesampasten werden nur aus strukturierten FOOD-Eigenschaften abgelei
     assert.equal(foodRecipeComponentForm(item), RECIPE_COMPONENT_FORMS.CANONICAL, id);
   }
 
-  for (const id of ["erdnussmus", "pistazienmus", "tahin"]) {
-    const item = foods.find((food) => food.id === id);
-    assert.ok(item, id);
-    assert.equal(foodHasRecipeComponentKind(item, RECIPE_COMPONENT_KINDS.SMOOTH_PASTE), true, id);
-    assert.equal(foodRecipeComponentForm(item), RECIPE_COMPONENT_FORMS.PREPARED, id);
-  }
+  const tahin = foods.find((food) => food.id === "tahin");
+  assert.ok(tahin, "tahin");
+  assert.equal(foodHasRecipeComponentKind(tahin, RECIPE_COMPONENT_KINDS.SMOOTH_PASTE), true, "tahin");
+  assert.equal(foodRecipeComponentForm(tahin), RECIPE_COMPONENT_FORMS.PREPARED, "tahin");
+
+  const legacyPrepared = {
+    id: "erdnussmus",
+    name: "Erdnussmus",
+    category: "Nuss",
+    foodFamily: "nuss:erdnuss",
+    allergenFamily: "nuss:erdnuss",
+  };
+  assert.equal(
+    foodHasRecipeComponentKind(legacyPrepared, RECIPE_COMPONENT_KINDS.SMOOTH_PASTE),
+    true,
+    "familienverknüpfte Alt-/Custom-Musform",
+  );
+  assert.equal(foodRecipeComponentForm(legacyPrepared), RECIPE_COMPONENT_FORMS.PREPARED);
 
   for (const id of ["maroni", "leinsamen"]) {
     const item = foods.find((food) => food.id === id);
@@ -113,7 +125,16 @@ test("Joghurt-Nussmus bezieht geeignete kanonische Nüsse zentral aus FOOD", () 
 test("Runtime installiert FOOD-Komponenten vor dem ersten echten renderAll", () => {
   const foods = policyFoods();
   const recipes = [{ name: "Joghurt-Nussmus-Miniportion", oneOf: ["Erdnuss"] }];
-  const stateFoods = foods.map((item) => ({ ...item }));
+  const stateFoods = [
+    ...foods.map((item) => ({ ...item })),
+    {
+      id: "erdnussmus",
+      name: "Erdnussmus",
+      category: "Nuss",
+      foodFamily: "nuss:erdnuss",
+      allergenFamily: "nuss:erdnuss",
+    },
+  ];
   const renderSnapshots = [];
   const context = {
     FOOD_DB: foods,

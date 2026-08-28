@@ -87,10 +87,10 @@ Repository-Inhalt und PR-Metadaten sind getrennte Arbeitsphasen.
 
 ### Pre-Push-Sanity für lokale Git-Arbeit
 
-Vor einem tatsächlichen Push aus einer lokalen Git-Arbeitskopie den Branch-Diff gegen den beim Start festgehaltenen `BASE_SHA` technisch prüfen:
+Vor einem tatsächlichen Push aus einer lokalen Git-Arbeitskopie den **PR-Diff gegen den aktuellen PR-Basis-Ref** technisch prüfen. Der beim Arbeitsstart eingefrorene `BASE_SHA` bleibt davon getrennt und dient ausschließlich der späteren Integrationsentscheidung.
 
 ```bash
-npm run check:prepush -- --base "$BASE_SHA" \
+npm run check:prepush -- --base-ref origin/main \
   --allow docs/AI_WORKFLOW.md \
   --allow scripts/pre-push-sanity.mjs
 ```
@@ -100,6 +100,8 @@ Der Check blockiert standardmäßig:
 - einen nicht sauberen Arbeitsbaum inklusive untracked Dateien,
 - geänderte Dateien außerhalb einer mit `--allow <pfad>` bzw. `--allow-prefix <präfix>` angegebenen erwarteten Scope-Menge,
 - geänderte 0-Byte-Dateien, sofern sie nicht ausnahmsweise mit `--allow-empty <pfad>` ausdrücklich erlaubt wurden.
+
+`--base-ref` muss den Ref oder SHA der Basis repräsentieren, gegen die der PR inhaltlich geprüft werden soll; normalerweise ist das `origin/main`. Wurde wegen einer relevanten Überschneidung ein neuerer `main` integriert, muss der Ref diesen integrierten `main`-Stand repräsentieren, z. B. das aktualisierte `origin/main` oder dessen konkrete SHA. **Nicht den ursprünglichen `BASE_SHA` als Pre-Push-Diffbasis verwenden.** Der Triple-Dot-Diff `<base-ref>...HEAD` entspricht damit dem PR-Scope und nimmt reine, in den Branch integrierte `main`-Änderungen nicht als eigene Scope-Dateien auf.
 
 Wenn der erwartete Dateisatz bereits klar bestimmbar ist, `--allow`/`--allow-prefix` verwenden. Ohne Allow-Angaben prüft das Skript weiterhin Arbeitsbaum und 0-Byte-Dateien, kann aber naturgemäß keine fachlich unerwarteten Diff-Dateien erkennen. `--allow-empty` ist nur für absichtlich leere Dateien vorgesehen und darf nicht pauschal gesetzt werden.
 

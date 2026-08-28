@@ -17,11 +17,11 @@ function delay(ms) {
 }
 
 function createFakeSharedRuntimeFactory(events = []) {
-  return async () => {
-    events.push('start');
+  return async (workerIndex = 0) => {
+    events.push(`start-${workerIndex}`);
     return {
-      wsEndpoint: 'ws://shared-webkit.test/runtime',
-      close: async () => events.push('close'),
+      wsEndpoint: `ws://shared-webkit.test/worker-${workerIndex}`,
+      close: async () => events.push(`close-${workerIndex}`),
     };
   };
 }
@@ -52,12 +52,14 @@ test('browser runner splits ordered tests deterministically across shards', asyn
   assert.throws(() => resolveBrowserTestShard('broken'), /Invalid BROWSER_TEST_SHARD/);
 });
 
-test('bounded worker pool never exceeds the configured concurrency and preserves result order', async () => {
+test('bounded worker pool never exceeds concurrency, preserves order, and keeps stable worker ids', async () => {
   const { runWithConcurrency } = await runnerModule;
   let active = 0;
   let maxActive = 0;
+  const workerIds = [];
 
-  const results = await runWithConcurrency([30, 5, 20, 10], async (duration, index) => {
+  const results = await runWithConcurrency([30, 5, 20, 10], async (duration, index, workerIndex) => {
+    workerIds[index] = workerIndex;
     active += 1;
     maxActive = Math.max(maxActive, active);
     await delay(duration);
@@ -67,6 +69,28 @@ test('bounded worker pool never exceeds the configured concurrency and preserves
 
   assert.equal(maxActive, 2);
   assert.deepEqual(results, ['result-0', 'result-1', 'result-2', 'result-3']);
+  assert.equal(workerIds[0], 0);
+  assert.equal(workerIds[1], 1);
+  assert.equal(workerIds.every((workerIndex) => workerIndex === 0 || workerIndex === 1), true);
+});
+
+test('shared runtime startup cleans up workers already started before a failure', async () => {
+  const { startSharedBrowserRuntimes } = await runnerModule;
+  const events = [];
+
+  await assert.rejects(
+    startSharedBrowserRuntimes(2, async (workerIndex) => {
+      events.push(`start-${workerIndex}`);
+      if (workerIndex === 1) throw new Error('startup failed');
+      return {
+        wsEndpoint: `ws://shared-webkit.test/worker-${workerIndex}`,
+        close: async () => events.push(`close-${workerIndex}`),
+      };
+    }),
+    /startup failed/,
+  );
+
+  assert.deepEqual(events, ['start-0', 'start-1', 'close-0']);
 });
 
 test('shared WebKit client reuses the endpoint only for default launches', async () => {
@@ -106,7 +130,7 @@ test('shared WebKit client reuses the endpoint only for default launches', async
   assert.equal(launchCalls, 1, 'Sonderoptionen müssen weiterhin einen dedizierten Browser starten');
 });
 
-test('runBrowserTests writes deterministic summaries while two fake regressions run in parallel', async () => {
+test('runBrowserTests keeps one shared WebKit runtime per worker while preserving deterministic summaries', async () => {
   const { runBrowserTests } = await runnerModule;
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), 'beikost-browser-runner-'));
   const artifactDir = path.join(rootDir, 'artifacts', 'browser-tests');
@@ -118,7 +142,7 @@ test('runBrowserTests writes deterministic summaries while two fake regressions 
   let active = 0;
   let maxActive = 0;
   const runtimeEvents = [];
-  const endpoints = [];
+  const endpointsByTest = new Map();
 
   try {
     const summary = await runBrowserTests({
@@ -131,7 +155,7 @@ test('runBrowserTests writes deterministic summaries while two fake regressions 
       sharedRuntimeFactory: createFakeSharedRuntimeFactory(runtimeEvents),
       runTest: async (testFile, options) => {
         const name = path.basename(testFile);
-        endpoints.push(options.childEnv.BROWSER_TEST_SHARED_WS_ENDPOINT);
+        endpointsByTest.set(name, options.childEnv.BROWSER_TEST_SHARED_WS_ENDPOINT);
         active += 1;
         maxActive = Math.max(maxActive, active);
         await delay(name.startsWith('a-') ? 30 : 5);
@@ -154,8 +178,10 @@ test('runBrowserTests writes deterministic summaries while two fake regressions 
       'b-webkit.test.mjs',
       'c-webkit.test.mjs',
     ]);
-    assert.deepEqual(runtimeEvents, ['start', 'close'], 'gemeinsame Runtime muss genau einmal pro Runner-Lauf leben');
-    assert.deepEqual(new Set(endpoints), new Set(['ws://shared-webkit.test/runtime']));
+    assert.deepEqual(runtimeEvents, ['start-0', 'start-1', 'close-0', 'close-1']);
+    assert.equal(endpointsByTest.get('a-webkit.test.mjs'), 'ws://shared-webkit.test/worker-0');
+    assert.equal(endpointsByTest.get('b-webkit.test.mjs'), 'ws://shared-webkit.test/worker-1');
+    assert.equal(endpointsByTest.get('c-webkit.test.mjs'), 'ws://shared-webkit.test/worker-1');
     assert.equal(fs.existsSync(path.join(artifactDir, 'summary.json')), true);
     assert.equal(fs.existsSync(path.join(artifactDir, 'summary.md')), true);
   } finally {

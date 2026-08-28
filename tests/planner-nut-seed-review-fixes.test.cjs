@@ -9,6 +9,7 @@ const vm = require("node:vm");
 const root = path.resolve(__dirname, "..");
 const policy = require("../js/planner-food-role-stability.js");
 const proactive = require("../js/planner-proactive-recipe.js");
+const recipeComponents = require("../js/recipe-v2-component-options.js");
 
 function makeFood(id, category, extra = {}) {
   return {
@@ -81,6 +82,8 @@ test("Review: Recipe-first-Topping-Promotion behält die Mus-Reservierung", () =
     },
     food: byId,
     esc: String,
+    foodHasRecipeComponentKind: recipeComponents.foodHasRecipeComponentKind,
+    foodRecipeComponentForm: recipeComponents.foodRecipeComponentForm,
     plannerFoodCanBeBase: () => true,
     plannerFoodCanBeAutomaticFocus: () => true,
     plannerAutomaticLockRoleViolation: () => false,

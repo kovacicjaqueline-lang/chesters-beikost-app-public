@@ -208,6 +208,10 @@
     return true;
   }
 
+  if (typeof window !== "undefined" && typeof document !== "undefined") {
+    installRecipeV2ComponentBeforeFirstRender();
+  }
+
   const api = {
     RECIPE_COMPONENT_KINDS: RECIPE_V2_COMPONENT_KINDS_INTERNAL,
     RECIPE_COMPONENT_FORMS,

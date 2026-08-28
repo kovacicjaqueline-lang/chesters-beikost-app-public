@@ -71,16 +71,16 @@ export async function runWithConcurrency(items, worker, concurrency = DEFAULT_BR
   const results = new Array(source.length);
   let nextIndex = 0;
 
-  async function workLoop() {
+  async function workLoop(workerIndex) {
     while (true) {
       const index = nextIndex;
       if (index >= source.length) return;
       nextIndex += 1;
-      results[index] = await worker(source[index], index);
+      results[index] = await worker(source[index], index, workerIndex);
     }
   }
 
-  await Promise.all(Array.from({ length: limit }, () => workLoop()));
+  await Promise.all(Array.from({ length: limit }, (_, workerIndex) => workLoop(workerIndex)));
   return results;
 }
 
@@ -169,6 +169,19 @@ export async function startSharedBrowserRuntime() {
   return startSharedWebKitServer(webkit);
 }
 
+export async function startSharedBrowserRuntimes(count, runtimeFactory = startSharedBrowserRuntime) {
+  const runtimes = [];
+  try {
+    for (let workerIndex = 0; workerIndex < count; workerIndex += 1) {
+      runtimes.push(await runtimeFactory(workerIndex));
+    }
+    return runtimes;
+  } catch (error) {
+    await Promise.allSettled(runtimes.map((runtime) => runtime.close()));
+    throw error;
+  }
+}
+
 export async function runBrowserTests({
   rootDir = defaultRoot,
   testFiles = discoverBrowserTests(rootDir),
@@ -194,18 +207,14 @@ export async function runBrowserTests({
   const resolvedConcurrency = Math.min(selectedTestFiles.length, resolveBrowserTestConcurrency(concurrency));
   console.log(`Browser regression concurrency: ${resolvedConcurrency}`);
 
-  const sharedRuntime = await sharedRuntimeFactory();
-  const runtimeChildEnv = {
-    ...childEnv,
-    BROWSER_TEST_SHARED_WS_ENDPOINT: sharedRuntime.wsEndpoint,
-  };
-  console.log("Browser regression WebKit runtime: shared");
+  const sharedRuntimes = await startSharedBrowserRuntimes(resolvedConcurrency, sharedRuntimeFactory);
+  console.log(`Browser regression WebKit runtimes: ${sharedRuntimes.length} shared worker-local`);
 
   let results;
   try {
     results = await runWithConcurrency(
       selectedTestFiles,
-      async (testFile) => {
+      async (testFile, _index, workerIndex) => {
         const resolvedTestFile = path.isAbsolute(testFile) ? testFile : path.resolve(rootDir, testFile);
         const name = path.basename(resolvedTestFile);
         const useGroup = childEnv.GITHUB_ACTIONS && resolvedConcurrency === 1;
@@ -215,7 +224,10 @@ export async function runBrowserTests({
         const result = await runTest(resolvedTestFile, {
           rootDir,
           artifactDir,
-          childEnv: runtimeChildEnv,
+          childEnv: {
+            ...childEnv,
+            BROWSER_TEST_SHARED_WS_ENDPOINT: sharedRuntimes[workerIndex].wsEndpoint,
+          },
           forwardOutput,
         });
 
@@ -229,7 +241,7 @@ export async function runBrowserTests({
       resolvedConcurrency,
     );
   } finally {
-    await sharedRuntime.close();
+    await Promise.all(sharedRuntimes.map((runtime) => runtime.close()));
   }
 
   const summary = writeSummary(artifactDir, results);

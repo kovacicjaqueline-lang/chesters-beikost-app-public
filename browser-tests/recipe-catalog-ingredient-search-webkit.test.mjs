@@ -114,6 +114,34 @@ try {
     afterLongSearch.includes("Obst-Hafer-Pancakes"),
     "Längere Suchbegriffe müssen weiterhin in der Zutatenbeschreibung gefunden werden",
   );
+
+  await search.fill("Pecannuss");
+  const afterPecanSearch = await recipeNames();
+  assert.ok(
+    afterPecanSearch.includes("Joghurt-Nussmus-Miniportion"),
+    "Eine neuere geeignete Nuss aus FOOD muss automatisch das generische Nussmus-Rezept erreichen",
+  );
+  const nutButterRuntime = await page.evaluate(() => {
+    const pecan = FOOD_DB.find((item) => item.id === "pecannuss");
+    const tahin = FOOD_DB.find((item) => item.id === "tahin");
+    const maroni = FOOD_DB.find((item) => item.id === "maroni");
+    const recipe = recipeByName("Joghurt-Nussmus-Miniportion");
+    return {
+      pecanEligible: foodHasRecipeComponentKind(pecan, "smooth-paste"),
+      pecanForm: foodRecipeComponentForm(pecan, "smooth-paste"),
+      tahinForm: foodRecipeComponentForm(tahin, "smooth-paste"),
+      maroniEligible: foodHasRecipeComponentKind(maroni, "smooth-paste"),
+      choices: [...(recipe?.oneOf || [])],
+    };
+  });
+  assert.equal(nutButterRuntime.pecanEligible, true);
+  assert.equal(nutButterRuntime.pecanForm, "canonical");
+  assert.equal(nutButterRuntime.tahinForm, "prepared");
+  assert.equal(nutButterRuntime.maroniEligible, false);
+  assert.ok(nutButterRuntime.choices.includes("Pecannuss"));
+  assert.equal(nutButterRuntime.choices.includes("Maroni"), false);
+  assert.equal(nutButterRuntime.choices.includes("Tahin"), false);
+
   assert.deepEqual(pageErrors, [], "Die Rezeptsuche darf keine JavaScript-Fehler auslösen");
 
   await context.close();

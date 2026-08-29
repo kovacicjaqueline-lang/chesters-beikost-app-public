@@ -388,7 +388,7 @@
     if (typeof callback !== "function") return null;
     const masked = [];
     for (const [foodId, hint] of Object.entries(state?.shoppingHints || {})) {
-      if (hint?.source !== "plan" || hint.status !== "needed" || !unavailable(foodId)) continue;
+      if (hint?.status !== "needed" || !unavailable(foodId)) continue;
       masked.push({ hint, status: hint.status });
       hint.status = "available";
     }
@@ -458,6 +458,17 @@
       wrapped.__missingIngredientAware = true;
       plannerProactiveRuntimeFoodEligible = wrapped;
     }
+  }
+
+  function installAvailabilityPoliciesBeforeStateLoad() {
+    if (typeof load !== "function" || load.__missingIngredientAware) return;
+    const original = load;
+    const wrapped = function missingIngredientAwareLoad(...args) {
+      installAvailabilityPolicies();
+      return original(...args);
+    };
+    wrapped.__missingIngredientAware = true;
+    load = wrapped;
   }
 
   function recipeReplacementForStoredMeal(entry, context) {
@@ -642,6 +653,7 @@
   }
 
   installAvailabilityPolicies();
+  installAvailabilityPoliciesBeforeStateLoad();
 
   if (typeof renderMealCore === "function") {
     const originalRenderMealCore = renderMealCore;

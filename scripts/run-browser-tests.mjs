@@ -41,6 +41,25 @@ export function resolveBrowserTestConcurrency(value) {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : DEFAULT_BROWSER_TEST_CONCURRENCY;
 }
 
+export function resolveBrowserTestShard(value) {
+  if (value === undefined || value === null || String(value).trim() === "") return null;
+  const match = /^(\d+)\/(\d+)$/.exec(String(value).trim());
+  if (!match) throw new Error(`Invalid BROWSER_TEST_SHARD: ${value}. Expected <index>/<total>.`);
+
+  const index = Number.parseInt(match[1], 10);
+  const total = Number.parseInt(match[2], 10);
+  if (total < 1 || index < 1 || index > total) {
+    throw new Error(`Invalid BROWSER_TEST_SHARD: ${value}. Expected 1 <= index <= total.`);
+  }
+  return { index, total };
+}
+
+export function selectBrowserTestShard(items, shard) {
+  const source = [...items];
+  if (!shard) return source;
+  return source.filter((_, index) => index % shard.total === shard.index - 1);
+}
+
 export async function runWithConcurrency(items, worker, concurrency = DEFAULT_BROWSER_TEST_CONCURRENCY) {
   const source = [...items];
   if (!source.length) return [];
@@ -149,17 +168,25 @@ export async function runBrowserTests({
   childEnv = process.env,
   forwardOutput = true,
   concurrency = resolveBrowserTestConcurrency(childEnv.BROWSER_TEST_CONCURRENCY),
+  shard = resolveBrowserTestShard(childEnv.BROWSER_TEST_SHARD),
   runTest = runOne,
 } = {}) {
-  if (testFiles.length === 0) throw new Error("No browser regression scripts found.");
+  const selectedTestFiles = selectBrowserTestShard(testFiles, shard);
+  if (selectedTestFiles.length === 0) {
+    const suffix = shard ? ` for shard ${shard.index}/${shard.total}` : "";
+    throw new Error(`No browser regression scripts found${suffix}.`);
+  }
   fs.rmSync(artifactDir, { recursive: true, force: true });
   fs.mkdirSync(artifactDir, { recursive: true });
 
-  const resolvedConcurrency = Math.min(testFiles.length, resolveBrowserTestConcurrency(concurrency));
+  if (shard) {
+    console.log(`Browser regression shard: ${shard.index}/${shard.total} (${selectedTestFiles.length}/${testFiles.length} tests)`);
+  }
+  const resolvedConcurrency = Math.min(selectedTestFiles.length, resolveBrowserTestConcurrency(concurrency));
   console.log(`Browser regression concurrency: ${resolvedConcurrency}`);
 
   const results = await runWithConcurrency(
-    testFiles,
+    selectedTestFiles,
     async (testFile) => {
       const resolvedTestFile = path.isAbsolute(testFile) ? testFile : path.resolve(rootDir, testFile);
       const name = path.basename(resolvedTestFile);

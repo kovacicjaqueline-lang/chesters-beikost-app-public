@@ -133,6 +133,22 @@ try {
     "Der letzte Listeneintrag darf am Scrollende nicht unter der sticky Aktionsleiste verdeckt sein",
   );
 
+  await cancel.click();
+  await page.waitForFunction(() => !document.getElementById("genericModal")?.classList.contains("open"));
+  await page.evaluate(() => {
+    window.__beikostTest.openManualMealSelector(window.__beikostTest.today(), "lunch");
+  });
+  await page.waitForFunction(() => document.getElementById("genericModal")?.classList.contains("open"));
+  await page.waitForFunction(() => {
+    const element = document.querySelector("#genericModal .sheet");
+    return !!element && element.scrollTop === 0;
+  });
+  assert.equal(
+    await sheet.evaluate((element) => element.scrollTop),
+    0,
+    "Der Mahlzeiteneditor muss bei jedem neuen Öffnen oben starten",
+  );
+
   await context.close();
 } finally {
   await browser.close();

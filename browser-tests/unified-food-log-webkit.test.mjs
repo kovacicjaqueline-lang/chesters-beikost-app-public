@@ -82,14 +82,7 @@ async function searchRecipe(page, name) {
 }
 
 async function reset(page) {
-  await page.evaluate(() => {
-    const state = window.__beikostTest.reset();
-    state.logs = [];
-    state.followUps = {};
-    state.shoppingHints = {};
-    state.backupMeta.chesterContextSeeded = true;
-    window.__beikostTest.setState(state);
-  });
+  await page.evaluate(() => window.__beikostTest.reset());
 }
 
 const server = await startStaticServer();

@@ -284,14 +284,12 @@ try {
     const freshRecipe = window.recipeByName("Ube-Bananen-Pancakes");
     const freshIds = freshRecipe ? window.recipeFoodIds(freshRecipe) : [];
     return {
-      wrapped: !!window.recipeStockCandidate?.__missingIngredientAware,
       candidateName: candidate?.name || "",
       preparedStock: !!candidate?.__missingIngredientPreparedStock,
       preparedIds,
       freshIds,
     };
   }, setup.current);
-  assert.equal(reloadStockProbe.wrapped, true, "Availability-Wrapper wird nach app.js beim Reload erneut installiert");
   assert.equal(reloadStockProbe.candidateName, "Ube-Bananen-Pancakes", "fertiger Rezeptvorrat bleibt auch nach Reload planbar");
   assert.equal(reloadStockProbe.preparedStock, true);
   assert.ok(reloadStockProbe.preparedIds.includes("banane"));

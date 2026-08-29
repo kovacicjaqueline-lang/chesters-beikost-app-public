@@ -58,10 +58,27 @@ async function selectFood(page, name) {
     const foodTab = page.locator('[data-flow-log-selector="foods"]');
     if (await foodTab.count()) await foodTab.click();
   }
+  if (!(await search.isVisible())) {
+    const searchToggle = page.locator('[data-flow-log-search-toggle="foods"]');
+    if (await searchToggle.count()) await searchToggle.click();
+  }
   await search.fill(name);
   const result = page.locator(".addLogFoodResult").filter({ hasText: name }).first();
   await result.waitFor();
   await result.click();
+}
+
+async function searchRecipe(page, name) {
+  const search = page.locator("#logRecipeSearch");
+  if (!(await search.isVisible())) {
+    const recipeTab = page.locator('[data-flow-log-selector="recipes"]');
+    if (await recipeTab.count()) await recipeTab.click();
+  }
+  if (!(await search.isVisible())) {
+    const searchToggle = page.locator('[data-flow-log-search-toggle="recipes"]');
+    if (await searchToggle.count()) await searchToggle.click();
+  }
+  await search.fill(name);
 }
 
 async function reset(page) {
@@ -140,7 +157,7 @@ try {
   const retrospectiveDate = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
   await page.locator("#logDate").fill(retrospectiveDate);
   await page.locator("#logDate").dispatchEvent("change");
-  await page.locator("#logRecipeSearch").fill("Birne-Hirse-Pancakes");
+  await searchRecipe(page, "Birne-Hirse-Pancakes");
   const recipeResult = page.locator(".selectLogRecipeResult").filter({ hasText: "Birne-Hirse-Pancakes" }).first();
   await recipeResult.waitFor();
   const recipeResultLayout = await recipeResult.evaluate((element) => {
@@ -174,7 +191,7 @@ try {
   // 3. Rezeptfamilien speichern nur die ausdrücklich bestätigten tatsächlichen Zutaten.
   await reset(page);
   await page.evaluate(() => window.openLog(null));
-  await page.locator("#logRecipeSearch").fill("Obst-Hafer-Pancakes");
+  await searchRecipe(page, "Obst-Hafer-Pancakes");
   const familyRecipeResult = page.locator(".selectLogRecipeResult").filter({ hasText: "Obst-Hafer-Pancakes" }).first();
   await familyRecipeResult.waitFor();
   await familyRecipeResult.click();

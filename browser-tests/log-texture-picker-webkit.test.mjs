@@ -68,6 +68,10 @@ async function selectFood(page, name) {
     const foodTab = page.locator('[data-flow-log-selector="foods"]');
     if (await foodTab.count()) await foodTab.click();
   }
+  if (!(await search.isVisible())) {
+    const searchToggle = page.locator('[data-flow-log-search-toggle="foods"]');
+    if (await searchToggle.count()) await searchToggle.click();
+  }
   await search.fill(name);
   const result = page.locator(".addLogFoodResult").filter({ hasText: name }).first();
   await result.waitFor();
@@ -90,7 +94,7 @@ try {
   await waitForApp(page);
 
   // Bei einem direkten Save-Tap soll die Validierung den nativen Picker noch innerhalb
-  // derselben User-Aktivierung anfordern, statt das <select> nur programmgesteuert zu fokussieren.
+  // derselben User-Aktivierung anfordern.
   await reset(page);
   await page.evaluate(() => window.openLog(null));
   await selectFood(page, "Karotte");
@@ -124,17 +128,30 @@ try {
   assert.equal(saved.textureKnown, true);
   assert.equal(saved.textureStage, 2);
 
-  // Falls WebKit showPicker nicht unterstützt oder blockiert, darf ein Touch-Gerät nicht
-  // in einem programmgesteuerten Select-Fokus hängen bleiben. Der nächste echte Tap bleibt
-  // dadurch eine normale native Picker-Interaktion.
+  // iOS/WebKit stellt HTMLSelectElement.showPicker nicht bereit. Dieser Pfad muss deshalb
+  // direkt in der Protokoll-Validierung genau einmal fokussieren und darf nie blur() aufrufen.
   await reset(page);
   await page.evaluate(() => window.openLog(null));
   await selectFood(page, "Karotte");
   await page.locator("#logTexture").evaluate((select) => {
+    const nativeFocus = select.focus.bind(select);
+    const nativeBlur = select.blur.bind(select);
     Object.defineProperty(select, "showPicker", {
       configurable: true,
+      value: undefined,
+    });
+    Object.defineProperty(select, "focus", {
+      configurable: true,
+      value(options) {
+        select.dataset.focusRequested = String((Number(select.dataset.focusRequested) || 0) + 1);
+        return nativeFocus(options);
+      },
+    });
+    Object.defineProperty(select, "blur", {
+      configurable: true,
       value() {
-        throw new DOMException("Picker blocked", "NotAllowedError");
+        select.dataset.blurRequested = String((Number(select.dataset.blurRequested) || 0) + 1);
+        return nativeBlur();
       },
     });
     const originalMatchMedia = window.matchMedia.bind(window);
@@ -145,10 +162,20 @@ try {
 
   await page.locator("#saveLog").click();
   assert.equal(await page.locator(".unified-texture-error").count(), 1);
-  assert.notEqual(
+  assert.equal(
+    await page.locator("#logTexture").getAttribute("data-focus-requested"),
+    "1",
+    "Der iOS-Fallback muss genau einmal zentral fokussieren",
+  );
+  assert.equal(
+    await page.locator("#logTexture").getAttribute("data-blur-requested"),
+    null,
+    "Der iOS-Fallback darf die Konsistenzauswahl nicht mehr aktiv blurren",
+  );
+  assert.equal(
     await page.evaluate(() => document.activeElement?.id || ""),
     "logTexture",
-    "Touch-Fallback darf das native Select nicht programmgesteuert fokussiert festhalten",
+    "Die Konsistenzauswahl muss nach dem automatischen Sprung fokussiert und direkt bedienbar bleiben",
   );
   assert.equal(await page.locator("#logModal").evaluate((node) => node.classList.contains("open")), true);
 } finally {

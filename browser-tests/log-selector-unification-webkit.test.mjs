@@ -68,7 +68,7 @@ try {
   await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => !!window.__beikostTest?.getState && window.__flowDialogUiInstalled === true);
 
-  // Freier Eintrag: dieselbe sichtbare Auswahlstruktur wie im Mahlzeiteneditor.
+  // Freier Eintrag: Auswahl bleibt kompakt, Suche wird bewusst geöffnet.
   await reset(page);
   await page.evaluate(() => window.openLog(null));
   const selector = page.locator("#logForm .flow-log-selector");
@@ -78,12 +78,16 @@ try {
   assert.equal(await tabs.count(), 2, "Freier Eintrag muss Rezept-/Lebensmittel-Umschalter anbieten");
   assert.deepEqual(await tabs.allTextContents(), ["Rezepte", "Lebensmittel"]);
   assert.equal(await selector.locator('[data-flow-log-selector="recipes"]').getAttribute("aria-pressed"), "true");
-  assert.equal(await page.locator("#logRecipeSearch").isVisible(), true);
-  assert.equal(await page.locator("#logFoodSearch").isVisible(), false);
+  assert.equal(await page.locator("#logRecipeSearch").isVisible(), false, "Rezeptsuche soll den Editor standardmäßig nicht beherrschen");
+  assert.equal(await page.locator('[data-flow-log-search-toggle="recipes"]').isVisible(), true);
+  assert.equal(await page.locator('[data-flow-log-search-toggle="recipes"]').textContent(), "Rezept suchen");
   assert.equal(await page.locator("#logRecipeSearch").getAttribute("placeholder"), "Rezept suchen");
-  assert.equal(await page.locator(".log-recipe-picker > label").textContent(), "Suchen");
   assert.equal(await page.locator(".log-recipe-results-label").isVisible(), false, "Doppelter leerer Rezept-Hinweis darf nicht sichtbar sein");
 
+  await page.locator('[data-flow-log-search-toggle="recipes"]').click();
+  assert.equal(await page.locator("#logRecipeSearch").isVisible(), true);
+  assert.equal(await page.evaluate(() => document.activeElement?.id), "logRecipeSearch");
+  assert.equal(await page.locator('[data-flow-log-search-toggle="recipes"]').getAttribute("aria-expanded"), "true");
   await page.locator("#logRecipeSearch").fill("Birne-Hirse-Pancakes");
   const recipeResult = page.locator(".selectLogRecipeResult.selector-row.selectRecipe").filter({ hasText: "Birne-Hirse-Pancakes" }).first();
   await recipeResult.waitFor();
@@ -92,10 +96,13 @@ try {
   await selector.locator('[data-flow-log-selector="foods"]').click();
   assert.equal(await selector.locator('[data-flow-log-selector="foods"]').getAttribute("aria-pressed"), "true");
   assert.equal(await page.locator("#logRecipeSearch").isVisible(), false);
-  assert.equal(await page.locator("#logFoodSearch").isVisible(), true);
+  assert.equal(await page.locator("#logFoodSearch").isVisible(), false, "Tabwechsel darf die Suche nicht ungefragt öffnen");
+  assert.equal(await page.locator('[data-flow-log-search-toggle="foods"]').textContent(), "Lebensmittel suchen");
   assert.equal(await page.locator("#logFoodSearch").getAttribute("placeholder"), "Lebensmittel suchen");
-  assert.equal(await page.locator(".log-food-picker > label").textContent(), "Suchen");
-  assert.equal(await page.locator("#addCustomLogFood").isVisible(), true, "Eigenes Lebensmittel gehört nur in den Lebensmittel-Tab");
+  assert.equal(await page.locator("#addCustomLogFood").isVisible(), true, "Eigenes Lebensmittel gehört auch bei geschlossener Suche in den Lebensmittel-Tab");
+
+  await page.locator('[data-flow-log-search-toggle="foods"]').click();
+  assert.equal(await page.locator("#logFoodSearch").isVisible(), true);
   assert.equal(await page.locator(".log-food-results-label").textContent(), "Vorschläge aus Plan und Verlauf");
   assert.equal(await page.evaluate(() => document.activeElement?.id), "logFoodSearch");
 
@@ -105,7 +112,7 @@ try {
   await foodResult.click();
   await page.waitForFunction(() => document.querySelector("#logForm .flow-log-selector"));
   assert.equal(await page.locator('[data-flow-log-selector="foods"]').getAttribute("aria-pressed"), "true", "Tabwahl muss nach Log-Neurendering erhalten bleiben");
-  assert.equal(await page.locator("#logFoodSearch").isVisible(), true);
+  assert.equal(await page.locator("#logFoodSearch").isVisible(), true, "Mehrfachauswahl darf einen laufenden Suchmodus nicht schließen");
   const selectedFoodResult = page.locator('.addLogFoodResult.selector-row.selectFood.selected[data-food="karotte"]');
   await selectedFoodResult.waitFor();
   assert.equal(await selectedFoodResult.locator(".log-result-add").textContent(), "✓");
@@ -126,24 +133,27 @@ try {
   await selectedFoodResult.click();
   await page.waitForFunction(() => !document.querySelector('.addLogFoodResult.selected[data-food="karotte"]'));
   await page.locator('[data-flow-log-selector="recipes"]').click();
-  assert.equal(await page.locator("#logRecipeSearch").isVisible(), true);
+  assert.equal(await page.locator("#logRecipeSearch").isVisible(), false);
+  assert.equal(await page.locator('[data-flow-log-search-toggle="recipes"]').isVisible(), true);
 
-  // Validierung aus dem Rezept-Tab muss zu FOOD führen, darf den Rezept-Tab danach aber nicht sperren.
+  // Validierung aus dem Rezept-Tab führt zu FOOD und öffnet dort gezielt die Suche.
   await page.locator("#saveLog").click();
   await page.locator(".log-food-picker.field-error").waitFor();
   await page.waitForFunction(() => document.querySelector('[data-flow-log-selector="foods"]')?.getAttribute("aria-pressed") === "true");
-  assert.equal(await page.locator("#logFoodSearch").isVisible(), true);
+  assert.equal(await page.locator("#logFoodSearch").isVisible(), true, "Fehlerkorrektur muss den benötigten Suchmodus direkt öffnen");
+  assert.equal(await page.evaluate(() => document.activeElement?.id), "logFoodSearch");
   assert.equal(await page.locator("#logFoodError").isVisible(), true);
   assert.match(await page.locator("#logFoodError").textContent(), /mindestens ein tatsächlich enthaltenes Lebensmittel/);
 
   await page.locator('[data-flow-log-selector="recipes"]').click();
   await page.waitForFunction(() => document.querySelector('[data-flow-log-selector="recipes"]')?.getAttribute("aria-pressed") === "true");
-  assert.equal(await page.locator("#logRecipeSearch").isVisible(), true, "Nach FOOD-Validierung muss Rezeptwahl wieder erreichbar sein");
+  assert.equal(await page.locator("#logRecipeSearch").isVisible(), false, "Tabwechsel soll wieder im kompakten Zustand landen");
+  assert.equal(await page.locator('[data-flow-log-search-toggle="recipes"]').isVisible(), true, "Nach FOOD-Validierung muss Rezeptsuche weiter erreichbar sein");
   assert.equal(await page.locator("#logFoodError").isVisible(), false, "Der erledigte FOOD-Fehler darf den Rezept-Tab nicht blockieren");
   assert.equal(await page.locator(".log-food-picker.field-error").count(), 0);
   await page.evaluate(() => window.closeLog());
 
-  // Geplanter Kontext bleibt fachlich enger: keine freie Rezeptumschaltung ergänzen.
+  // Geplanter Kontext bleibt fachlich enger und ebenfalls kompakt.
   await reset(page);
   await page.evaluate(() => window.openLog({
     date: window.__beikostTest.today(),
@@ -157,7 +167,8 @@ try {
   }));
   await page.locator("#logForm .flow-log-selector").waitFor();
   assert.equal(await page.locator("#logForm .flow-log-selector-tabs").count(), 0, "Geplanter Log darf keine freie Rezeptwahl erfinden");
-  assert.equal(await page.locator("#logFoodSearch").isVisible(), true);
+  assert.equal(await page.locator("#logFoodSearch").isVisible(), false);
+  assert.equal(await page.locator('[data-flow-log-search-toggle="foods"]').isVisible(), true);
   assert.equal(await page.locator("#logRecipeSearch").count(), 0);
   assert.ok(
     await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1),

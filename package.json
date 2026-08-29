@@ -6,6 +6,7 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "check:deploy": "wrangler deploy --dry-run",
+    "check:prepush": "node scripts/pre-push-sanity.mjs",
     "test": "node --test tests/*.test.js tests/*.test.cjs",
     "test:browser": "node scripts/run-browser-tests.mjs",
     "verify:icons": "node --test tests/*icon*.test.cjs tests/legacy-recipe-assets-cleanup.test.cjs",

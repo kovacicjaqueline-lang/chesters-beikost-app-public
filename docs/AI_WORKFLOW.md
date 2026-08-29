@@ -75,6 +75,38 @@ Vor jedem Push mit Code-, Test-, Workflow- oder Konfigurationsänderungen:
 3. einen verfügbaren lokalen Zieltest nicht mit „CI wird es prüfen“ überspringen,
 4. wenn die lokale Ausführung technisch nicht möglich ist, das ausdrücklich dokumentieren und den dadurch erstmals ausführenden CI-Lauf direkt nach dem Push tatsächlich prüfen.
 
+### Repository-Schreibschutz ab Finalisierung
+
+Repository-Inhalt und PR-Metadaten sind getrennte Arbeitsphasen.
+
+- **Implementierungs-/Reparaturphase:** Datei-, Commit- und Branch-Schreibzugriffe sind nur für den ausdrücklich beauftragten Scope erlaubt.
+- **Finalisierungsphase:** Sobald der finale inhaltliche Commit steht und nur noch Diff-/CI-Prüfung, `Draft -> Ready`, Labels, Reviewstatus oder Merge-Vorbereitung anstehen, gilt ein **Repository-Write-Lock**.
+- In dieser Finalisierungsphase dürfen keine Datei-/Blob-/Tree-/Commit-/Branch-Ref-Schreibaktionen ausgelöst werden. Insbesondere darf eine reine PR-Metadatenaktion niemals über `create_file`, `update_file`, `delete_file`, Blob-/Tree-/Commit-Erzeugung oder Ref-Änderungen umgesetzt werden.
+- Wird nach Beginn der Finalisierungsphase ein echter inhaltlicher Fix notwendig, die Finalisierungsphase ausdrücklich verlassen, den Fix als neue Implementierungs-/Reparaturphase behandeln, gezielt testen und erst danach wieder finalisieren.
+- Ein fortgeschrittener `main`, ein Wechsel von Draft auf Ready oder das erneute Prüfen eines CI-Status ist **für sich allein niemals ein Grund für einen Repository-Schreibzugriff oder einen neuen CI-Lauf**.
+
+### Pre-Push-Sanity für lokale Git-Arbeit
+
+Vor einem tatsächlichen Push aus einer lokalen Git-Arbeitskopie den **PR-Diff gegen den aktuellen PR-Basis-Ref** technisch prüfen. Der beim Arbeitsstart eingefrorene `BASE_SHA` bleibt davon getrennt und dient ausschließlich der späteren Integrationsentscheidung.
+
+```bash
+npm run check:prepush -- --base-ref origin/main \
+  --allow docs/AI_WORKFLOW.md \
+  --allow scripts/pre-push-sanity.mjs
+```
+
+Der Check blockiert standardmäßig:
+
+- einen nicht sauberen Arbeitsbaum inklusive untracked Dateien,
+- geänderte Dateien außerhalb einer mit `--allow <pfad>` bzw. `--allow-prefix <präfix>` angegebenen erwarteten Scope-Menge,
+- geänderte 0-Byte-Dateien, sofern sie nicht ausnahmsweise mit `--allow-empty <pfad>` ausdrücklich erlaubt wurden.
+
+`--base-ref` muss den Ref oder SHA der Basis repräsentieren, gegen die der PR inhaltlich geprüft werden soll; normalerweise ist das `origin/main`. Wurde wegen einer relevanten Überschneidung ein neuerer `main` integriert, muss der Ref diesen integrierten `main`-Stand repräsentieren, z. B. das aktualisierte `origin/main` oder dessen konkrete SHA. **Nicht den ursprünglichen `BASE_SHA` als Pre-Push-Diffbasis verwenden.** Der Triple-Dot-Diff `<base-ref>...HEAD` entspricht damit dem PR-Scope und nimmt reine, in den Branch integrierte `main`-Änderungen nicht als eigene Scope-Dateien auf.
+
+Wenn der erwartete Dateisatz bereits klar bestimmbar ist, `--allow`/`--allow-prefix` verwenden. Ohne Allow-Angaben prüft das Skript weiterhin Arbeitsbaum und 0-Byte-Dateien, kann aber naturgemäß keine fachlich unerwarteten Diff-Dateien erkennen. `--allow-empty` ist nur für absichtlich leere Dateien vorgesehen und darf nicht pauschal gesetzt werden.
+
+Der lokale Sanity-Check ist **kein Ersatz** für die Phasentrennung bei Connector-/API-Arbeit: Ein direkter GitHub-Dateischreibzugriff passiert bereits remote und kann deshalb nicht nachträglich von einem lokalen Pre-Push-Hook verhindert werden. Vor jedem Connector-/API-Content-Write muss daher feststehen, dass sich der Auftrag noch in der Implementierungs-/Reparaturphase befindet und der Zielpfad zum erwarteten Scope gehört.
+
 Den beim Start geprüften `main`-HEAD als **BASE_SHA** des Arbeitsstrangs festhalten. Während der normalen Umsetzung ist kein wiederholtes Aktualisieren gegen einen zwischenzeitlich fortgeschrittenen `main` erforderlich.
 
 Vor finalem Review bzw. vor einer Merge-Freigabe genau einmal den aktuellen Integrationsstand prüfen:
@@ -94,7 +126,6 @@ Für Browserregressionen gilt zusätzlich:
 - feste Zeit-Waits wie `waitForTimeout(...)` nicht als Standard-Stabilisierung verwenden; auf einen fachlich/technisch beobachtbaren Zustand, Locator oder Event warten,
 - `npm run test:browser` führt lokal bewusst **alle** WebKit-Regressionsskripte aus, sammelt mehrere Fehler in einem Lauf und liefert erst am Ende einen Fehlerstatus,
 - im GitHub-App-Workflow wird dieselbe geordnete Browserliste deterministisch auf zwei Shards verteilt; zusammen müssen beide Shards die vollständige Liste abdecken,
-- innerhalb eines Runner-/Shard-Laufs wird standardmäßig ein gemeinsamer WebKit-Browserprozess über Playwright `launchServer()`/`connect()` wiederverwendet; jeder Test behält seinen eigenen HTTP-Server und Browser-Context. Explizite `webkit.launch(...)`-Optionen fallen auf einen dedizierten Browserstart zurück,
 - der Browser-Runner führt standardmäßig höchstens **zwei** Regressionsskripte gleichzeitig aus; für Diagnose oder knappe Laufzeitressourcen kann mit `BROWSER_TEST_CONCURRENCY=1 npm run test:browser` explizit seriell ausgeführt werden,
 - der Browser-Runner schreibt `artifacts/browser-tests/summary.json`, `summary.md` und pro Test ein `output.log`; bei einem roten App-Workflow werden diese Diagnoseartefakte aus CI hochgeladen.
 

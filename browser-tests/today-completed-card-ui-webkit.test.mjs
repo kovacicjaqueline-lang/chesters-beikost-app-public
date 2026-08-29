@@ -182,9 +182,8 @@ try {
   assert.ok(editStyle.height >= 38, "Essen bearbeiten bleibt direkt und ausreichend gut antippbar");
   assert.equal(editStyle.backgroundColor, "rgba(0, 0, 0, 0)", "Essen bearbeiten bleibt eine ruhige Sekundäraktion");
 
-  await page.locator('nav button[data-view="plan"]').click();
   const planMeal = page.locator("#blockPlan .mealbox.completed").filter({ hasText: "Milch-Getreide-Brei" }).first();
-  await planMeal.waitFor();
+  assert.equal(await planMeal.count(), 1, "Die erledigte Mahlzeit bleibt im Wochenplan vorhanden");
   assert.equal(
     await planMeal.locator(".log-outcome-item").count(),
     3,

@@ -136,4 +136,15 @@
     script.async = false;
     document.head.appendChild(script);
   }
+
+  // app.js und nachgelagerte Planner-Schichten ersetzen einzelne Planner-Funktionen
+  // noch während des Parserlaufs. Nach Abschluss aller synchronen Skripte werden
+  // deshalb die Availability-Wrapper genau einmal auf die endgültige Runtime gelegt.
+  const finalizeMissingIngredientPolicies = () =>
+    globalScope.__plannerMissingIngredient?.installAvailabilityPolicies?.();
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", finalizeMissingIngredientPolicies, { once: true });
+  } else {
+    setTimeout(finalizeMissingIngredientPolicies, 0);
+  }
 })(typeof globalThis !== "undefined" ? globalThis : this);

@@ -275,6 +275,28 @@ try {
   assert.equal(stockProbe.freshIds.length, 0, "frisch zuzubereitendes Rezept bleibt bei fehlender Banane gesperrt");
   assert.equal(stockProbe.freshUnlocked, false, "Rezeptkatalog darf die frische Variante nicht freischalten");
 
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.waitForFunction(() => !!window.__beikostTest?.getState && !!window.__plannerMissingIngredient);
+  const reloadStockProbe = await page.evaluate((current) => {
+    const ctx = window.freshPlanContext();
+    const candidate = window.recipeStockCandidate("lunch", current, ctx);
+    const preparedIds = candidate ? window.recipeFoodIds(candidate) : [];
+    const freshRecipe = window.recipeByName("Ube-Bananen-Pancakes");
+    const freshIds = freshRecipe ? window.recipeFoodIds(freshRecipe) : [];
+    return {
+      wrapped: !!window.recipeStockCandidate?.__missingIngredientAware,
+      candidateName: candidate?.name || "",
+      preparedStock: !!candidate?.__missingIngredientPreparedStock,
+      preparedIds,
+      freshIds,
+    };
+  }, setup.current);
+  assert.equal(reloadStockProbe.wrapped, true, "Availability-Wrapper wird nach app.js beim Reload erneut installiert");
+  assert.equal(reloadStockProbe.candidateName, "Ube-Bananen-Pancakes", "fertiger Rezeptvorrat bleibt auch nach Reload planbar");
+  assert.equal(reloadStockProbe.preparedStock, true);
+  assert.ok(reloadStockProbe.preparedIds.includes("banane"));
+  assert.equal(reloadStockProbe.freshIds.length, 0, "frische Rezeptvariante bleibt auch nach Reload gesperrt");
+
   await page.locator('nav button[data-view="prep"]').click();
   const shoppingRow = page.locator('.shopping-row[data-shopping-hint], .shopping-row').filter({ hasText: "Banane" }).first();
   await shoppingRow.waitFor();
@@ -296,6 +318,53 @@ try {
   assert.equal(purchased.hint, "available");
   assert.equal(purchased.unavailable, false);
   assert.equal(purchased.followUp, "scheduled", "nach Einkauf wird die Zutat gezielt wieder eingeplant");
+
+  const logUnavailableStockProbe = await page.evaluate((current) => {
+    const state = window.__beikostTest.getState();
+    state.pantry ||= {};
+    state.pantry.banane = false;
+    state.logs = [
+      ...(state.logs || []).filter((log) => log.id !== "missing-ingredient-log-unavailable"),
+      {
+        id: "missing-ingredient-log-unavailable",
+        date: current,
+        meal: "lunch",
+        focusId: "banane",
+        foodIds: ["banane"],
+        baseFoodIds: [],
+        sampleFoodIds: ["banane"],
+        foodRoles: { banane: "sample" },
+        foodOutcomes: { banane: "not_offered" },
+        outcome: "not_offered",
+        notOfferedReason: "unavailable",
+        createdAt: `${current}T23:59:00.000Z`,
+      },
+    ];
+    window.__beikostTest.setState(state);
+    window.rebuildFoodConsequences("banane");
+    const currentState = window.__beikostTest.getState();
+    const ctx = window.freshPlanContext();
+    const candidate = window.recipeStockCandidate("lunch", current, ctx);
+    const preparedIds = candidate ? window.recipeFoodIds(candidate) : [];
+    const freshRecipe = window.recipeByName("Ube-Bananen-Pancakes");
+    const freshIds = freshRecipe ? window.recipeFoodIds(freshRecipe) : [];
+    return {
+      sourceLogId: currentState.shoppingHints?.banane?.sourceLogId || "",
+      source: currentState.shoppingHints?.banane?.source || "",
+      unavailable: typeof window.isFoodUnavailable === "function" ? window.isFoodUnavailable("banane") : null,
+      candidateName: candidate?.name || "",
+      preparedStock: !!candidate?.__missingIngredientPreparedStock,
+      preparedIds,
+      freshIds,
+    };
+  }, setup.current);
+  assert.equal(logUnavailableStockProbe.sourceLogId, "missing-ingredient-log-unavailable", "bestehender Log-Pfad erzeugt den Availability-Hinweis");
+  assert.equal(logUnavailableStockProbe.source, "", "Log-Hinweis ist kein planbasierter Missing-Ingredient-Hinweis");
+  assert.equal(logUnavailableStockProbe.unavailable, true);
+  assert.equal(logUnavailableStockProbe.candidateName, "Ube-Bananen-Pancakes", "fertiger Rezeptvorrat bleibt auch bei Log-basierter Nichtverfügbarkeit planbar");
+  assert.equal(logUnavailableStockProbe.preparedStock, true);
+  assert.ok(logUnavailableStockProbe.preparedIds.includes("banane"));
+  assert.equal(logUnavailableStockProbe.freshIds.length, 0, "frisch zuzubereitendes Rezept bleibt auch beim Log-Pfad gesperrt");
 
   await context.close();
 } finally {

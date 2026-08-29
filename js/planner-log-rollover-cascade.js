@@ -136,26 +136,4 @@
     script.async = false;
     document.head.appendChild(script);
   }
-
-  // Weitere Planner-Runtimes dürfen nach app.js noch äußere Wrapper installieren.
-  // Nach den Browser-Lifecycle-Events wird die Availability-Schicht deshalb
-  // idempotent erneut ganz außen aufgelegt. Die Microtask läuft nach allen
-  // Handlern desselben Events; der load()-Hook im Feature schützt separat schon
-  // den ersten Render vor diesen späteren Runtime-Erweiterungen.
-  const reinstallMissingIngredientPolicies = () => {
-    globalScope.__plannerMissingIngredient?.installAvailabilityPolicies?.();
-  };
-  const reinstallAfterLifecycleEvent = () => {
-    if (typeof queueMicrotask === "function") queueMicrotask(reinstallMissingIngredientPolicies);
-    else Promise.resolve().then(reinstallMissingIngredientPolicies);
-  };
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", reinstallAfterLifecycleEvent, { once: true });
-    globalScope.addEventListener("load", reinstallAfterLifecycleEvent, { once: true });
-  } else {
-    reinstallAfterLifecycleEvent();
-    if (document.readyState !== "complete") {
-      globalScope.addEventListener("load", reinstallAfterLifecycleEvent, { once: true });
-    }
-  }
 })(typeof globalThis !== "undefined" ? globalThis : this);

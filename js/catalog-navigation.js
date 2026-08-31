@@ -145,7 +145,11 @@
 
   const switcher = document.getElementById("catalogSwitch");
   switcher?.querySelectorAll("[data-catalog-mode]").forEach((button) => {
-    button.addEventListener("click", () => setCatalogMode(button.dataset.catalogMode));
+    button.addEventListener("click", () => {
+      const mode = button.dataset.catalogMode;
+      setCatalogMode(mode);
+      if (mode === MODE_RECIPES && typeof renderPrep === "function") renderPrep();
+    });
   });
 
   const recipesDetails = document.getElementById("recipesDetails");
@@ -181,6 +185,7 @@
   const observer = new MutationObserver(() => fixLegacyNavigationCopy());
   observer.observe(document.body, { childList: true, subtree: true });
 
+  if (typeof installStartupLazyRendering === "function") installStartupLazyRendering();
   setCatalogMode(MODE_FOODS);
   fixLegacyNavigationCopy();
 })();

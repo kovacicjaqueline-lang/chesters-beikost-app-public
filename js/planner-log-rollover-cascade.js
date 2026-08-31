@@ -16,7 +16,7 @@
         if (!wanted.has(meal?.meal) || !meal.active || meal.empty || !meal.focusId) continue;
         let key = `${day.date}|${meal.meal}`;
         if (data.planLocks[key] || data.manualMeals[key]) continue;
-        let snapshot = snapshotFactory(day.date, meal.meal, meal, "auto");
+        let snapshot = snapshotFactory(day.date, meal.meal, meal);
         if (!snapshot?.focusId) continue;
         data.planLocks[key] = snapshot;
         added.push(snapshot);
@@ -137,24 +137,11 @@
     document.head.appendChild(script);
   }
 
-  // app.js ersetzt einzelne Planner-Funktionen beim Start nochmals. Der erste
-  // Voll-Render ist der früheste stabile Punkt danach und muss bereits mit der
-  // finalen Availability-Schicht laufen, damit Reloads keinen falschen Auto-Plan
-  // materialisieren oder anzeigen.
+  // app.js und nachgelagerte Planner-Schichten ersetzen einzelne Planner-Funktionen
+  // noch während des Parserlaufs. Nach Abschluss aller synchronen Skripte werden
+  // deshalb die Availability-Wrapper genau einmal auf die endgültige Runtime gelegt.
   const finalizeMissingIngredientPolicies = () =>
     globalScope.__plannerMissingIngredient?.installAvailabilityPolicies?.();
-  if (typeof renderAll === "function" && !renderAll.__missingIngredientPolicyFinalizer) {
-    const baseRenderAll = renderAll;
-    const wrappedRenderAll = function missingIngredientPolicyFinalizingRenderAll(...args) {
-      finalizeMissingIngredientPolicies();
-      return baseRenderAll(...args);
-    };
-    wrappedRenderAll.__missingIngredientPolicyFinalizer = true;
-    renderAll = wrappedRenderAll;
-  }
-
-  // Sicherheitsnetz für spätere oder dynamische Skriptinstallation: Nach Abschluss
-  // des Parserlaufs werden die Wrapper nochmals idempotent auf die Runtime gelegt.
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", finalizeMissingIngredientPolicies, { once: true });
   } else {

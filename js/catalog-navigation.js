@@ -185,7 +185,6 @@
   const observer = new MutationObserver(() => fixLegacyNavigationCopy());
   observer.observe(document.body, { childList: true, subtree: true });
 
-  if (typeof installStartupLazyRendering === "function") installStartupLazyRendering();
   setCatalogMode(MODE_FOODS);
   fixLegacyNavigationCopy();
 })();

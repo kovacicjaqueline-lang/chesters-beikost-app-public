@@ -12,97 +12,84 @@ let deferredRenderScopeBase = null;
 let deferredRenderScopeRequested = false;
 let deferredRenderScopeCallbacks = [];
 const deferredRenderClickTargets = new WeakSet();
+let startupLazyRenderingInstalled = false;
 let startupLazyRenderActive = false;
+const startupLazyRenderedViews = new Set();
+const APP_VIEW_IDS = Object.freeze(["home", "plan", "prep", "foods", "more"]);
 
 function currentAppViewId() {
   if (typeof document === "undefined") return "home";
   return document.querySelector(".view.active")?.id || "home";
 }
 
+function markAllAppViewsRendered() {
+  APP_VIEW_IDS.forEach((id) => startupLazyRenderedViews.add(id));
+}
+
 function renderCurrentAppView(id = currentAppViewId()) {
   if (id === "home") {
     if (typeof renderHome === "function") renderHome();
-    return;
-  }
-  if (id === "plan") {
+  } else if (id === "plan") {
     if (typeof renderPlan === "function") renderPlan();
-    return;
-  }
-  if (id === "prep") {
+  } else if (id === "prep") {
     if (typeof renderPrep === "function") renderPrep();
-    return;
-  }
-  if (id === "foods") {
+  } else if (id === "foods") {
     if (typeof renderFoods === "function") renderFoods();
-    return;
-  }
-  if (id === "more") {
+  } else if (id === "more") {
     if (typeof renderLogs === "function") renderLogs();
     if (typeof renderStatistics === "function") renderStatistics();
     if (typeof renderAllergenModule === "function") renderAllergenModule();
     if (typeof renderSettings === "function") renderSettings();
     if (typeof renderAudit === "function" && document.getElementById("auditList")) renderAudit();
     if (typeof renderStorageStatus === "function") renderStorageStatus();
+  } else {
+    return;
   }
-}
-
-function interceptFirstGlobalFunction(name, wrapFirst) {
-  if (typeof globalThis === "undefined" || typeof wrapFirst !== "function") return false;
-  let descriptor = Object.getOwnPropertyDescriptor(globalThis, name);
-  if (descriptor && descriptor.configurable === false) return false;
-  let current = descriptor && typeof descriptor.value === "function" ? wrapFirst(descriptor.value) : undefined;
-  let intercepted = typeof current === "function";
-  Object.defineProperty(globalThis, name, {
-    configurable: true,
-    enumerable: descriptor?.enumerable ?? true,
-    get() {
-      return current;
-    },
-    set(value) {
-      if (!intercepted && typeof value === "function") {
-        intercepted = true;
-        current = wrapFirst(value);
-        return;
-      }
-      current = value;
-    },
-  });
-  return true;
+  startupLazyRenderedViews.add(id);
 }
 
 function installStartupLazyRendering() {
+  if (startupLazyRenderingInstalled) return true;
   if (typeof window === "undefined" || typeof document === "undefined") return false;
+  if (
+    typeof renderAll !== "function" ||
+    typeof renderPlan !== "function" ||
+    typeof showView !== "function" ||
+    typeof bootstrapStorage !== "function"
+  ) return false;
+
+  startupLazyRenderingInstalled = true;
   startupLazyRenderActive = true;
 
-  interceptFirstGlobalFunction("renderAll", (baseRenderAll) =>
-    function startupAwareRenderAll(...args) {
-      if (startupLazyRenderActive) return renderCurrentAppView();
-      return baseRenderAll.apply(this, args);
-    });
+  let baseRenderAll = renderAll;
+  renderAll = function startupAwareRenderAll(...args) {
+    if (startupLazyRenderActive) return renderCurrentAppView();
+    let result = baseRenderAll.apply(this, args);
+    markAllAppViewsRendered();
+    return result;
+  };
 
-  interceptFirstGlobalFunction("renderPlan", (baseRenderPlan) =>
-    function startupAwareRenderPlan(...args) {
-      if (startupLazyRenderActive && currentAppViewId() !== "plan") return;
-      return baseRenderPlan.apply(this, args);
-    });
+  let baseRenderPlan = renderPlan;
+  renderPlan = function startupAwareRenderPlan(...args) {
+    if (startupLazyRenderActive && currentAppViewId() !== "plan") return;
+    return baseRenderPlan.apply(this, args);
+  };
 
-  interceptFirstGlobalFunction("showView", (baseShowView) =>
-    function lazyNavigationShowView(id, ...args) {
-      let result = baseShowView.call(this, id, ...args);
-      renderCurrentAppView(id);
-      return result;
-    });
+  let baseShowView = showView;
+  showView = function lazyNavigationShowView(id, ...args) {
+    let result = baseShowView.call(this, id, ...args);
+    if (startupLazyRenderActive || !startupLazyRenderedViews.has(id)) renderCurrentAppView(id);
+    return result;
+  };
 
-  interceptFirstGlobalFunction("bootstrapStorage", (baseBootstrapStorage) =>
-    async function startupAwareBootstrapStorage(...args) {
-      try {
-        return await baseBootstrapStorage.apply(this, args);
-      } finally {
-        let finish = () => { startupLazyRenderActive = false; };
-        if (typeof setTimeout === "function") setTimeout(finish, 0);
-        else finish();
-      }
-    });
+  let baseBootstrapStorage = bootstrapStorage;
+  bootstrapStorage = async function startupAwareBootstrapStorage(...args) {
+    try {
+      return await baseBootstrapStorage.apply(this, args);
+    } finally {
+      startupLazyRenderActive = false;
+    }
+  };
 
   return true;
 }
@@ -204,16 +191,6 @@ function installSaveUiLatencyFlows() {
     }, true);
   }
 
-  document.addEventListener("click", (event) => {
-    let button = event.target?.closest?.('[data-catalog-mode="recipes"]');
-    if (!button) return;
-    let renderRecipes = () => {
-      if (document.getElementById("foods")?.classList.contains("active") && typeof renderPrep === "function") renderPrep();
-    };
-    if (typeof queueMicrotask === "function") queueMicrotask(renderRecipes);
-    else Promise.resolve().then(renderRecipes);
-  }, true);
-
   deferFullRenderForClick(document.getElementById("saveSettings"));
 
   if (typeof setTextureStage === "function") {
@@ -253,7 +230,6 @@ function installSaveUiLatencyFlows() {
 }
 
 if (typeof document !== "undefined") {
-  installStartupLazyRendering();
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", installSaveUiLatencyFlows, { once: true });
   else installSaveUiLatencyFlows();
 }

@@ -220,6 +220,24 @@
     header.innerHTML = `<div class="app-bar-copy"><span class="app-bar-brand">Beikost</span><h1 id="appBarTitle">Heute</h1></div>`;
   }
 
+  function installMobileCompatibilityStyles() {
+    if (document.querySelector('style[data-mobile-foundation-compat="v1"]')) return;
+    const style = document.createElement("style");
+    style.dataset.mobileFoundationCompat = "v1";
+    style.textContent = `
+body.mobile-foundation nav button {
+  min-height: 44px;
+}
+body.mobile-foundation #todayCard .mealbox {
+  border: 0 !important;
+  border-radius: 16px !important;
+  background: var(--accent2) !important;
+  box-shadow: none !important;
+}
+`;
+    document.head.appendChild(style);
+  }
+
   function updateAppBar(viewId = "") {
     const title = document.getElementById("appBarTitle");
     if (!title) return;
@@ -228,6 +246,7 @@
   }
 
   installCompactAppBar();
+  installMobileCompatibilityStyles();
   updateAppBar("home");
 
   const baseShowView = showView;
@@ -260,6 +279,22 @@
     });
     if (typeof bindInactiveMealActions === "function") bindInactiveMealActions();
     root.__mealCardUnification?.simplifyMealCards?.(container);
+  }
+
+  function renderedTodayMealHtml(card, date, meal) {
+    if (!card || !date || !meal) return "";
+    for (const button of card.querySelectorAll(".logMeal[data-plan], .homeLog[data-plan]")) {
+      let payload = null;
+      try {
+        payload = JSON.parse(decodeURIComponent(button.dataset.plan || ""));
+      } catch (_) {
+        continue;
+      }
+      if (payload?.date !== date || payload?.meal !== meal.meal) continue;
+      const mealNode = button.closest(".mealbox, .manual-meal");
+      if (mealNode) return mealNode.outerHTML;
+    }
+    return "";
   }
 
   function openTextureSettings() {
@@ -333,6 +368,7 @@
     const active = day.meals.filter((meal) => meal.active && meal.focusId);
     const openMeals = active.filter((meal) => !mealIsCompleted(on, meal.meal));
     const focusMeal = openMeals[0] || null;
+    const renderedFocusHtml = focusMeal ? renderedTodayMealHtml(card, on, focusMeal) : "";
     let nextPlanned = null;
 
     if (!active.length) {
@@ -356,13 +392,14 @@
     const heading = focusMeal ? "Als Nächstes" : "Heute erledigt";
     const mealHeading = focusMeal ? mealName(focusMeal.meal) : "Alles eingetragen";
     const focusHtml = focusMeal
-      ? `<div class="today-focus-meal">${renderMeal(day, focusMeal)}</div>`
+      ? `<div class="today-focus-meal">${renderedFocusHtml || renderMeal(day, focusMeal)}</div>`
       : '<div class="today-done-summary"><b>Alle geplanten Mahlzeiten sind eingetragen.</b><span class="small">Der Tagesüberblick bleibt unten sichtbar.</span></div>';
     const timeline = active.map((meal) => timelineRow(day, meal, focusMeal)).join("");
 
     card.innerHTML = `<div class="row today-focus-head"><div class="grow"><span class="today-section-kicker">${heading}</span><h2>${esc(mealHeading)}</h2><div class="small">${nice(on, true)} · ${age} Monate</div></div></div>${focusHtml}<div class="today-timeline" aria-label="Tages-Timeline"><div class="today-timeline-heading"><b>Heute</b><span class="small">${active.length} ${active.length === 1 ? "Mahlzeit" : "Mahlzeiten"}</span></div>${timeline}</div><div class="add-meal-row"><button class="btn secondary smallbtn" id="homeAddEntry">Weiteres Essen eintragen</button></div>`;
 
     bindRenderedMealActions(card);
+    root.__plannedRecipeDetails?.decorateHomeRecipeTitles?.();
     card.querySelectorAll(".timeline-edit").forEach((button) => {
       button.onclick = () => editLogEntry(button.dataset.log);
     });

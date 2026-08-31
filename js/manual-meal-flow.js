@@ -8,11 +8,13 @@
  * - deterministische Rückkehr in den Plan nach dem Speichern,
  * - vorhandene FOOD-Zubereitungs-/Handlingoptionen je Lebensmittel,
  * - bestehende dishTitle()-Benennung für manuelle Karten,
- * - Durchreichen der expliziten Zubereitungsauswahl in Lock, Verschieben und Log.
+ * - Durchreichen der expliziten Zubereitungsauswahl in Lock, Verschieben und Log,
+ * - Lernhinweise blockieren die Planung nicht; Wiederholungen zählen nicht als neue Einführung.
  *
- * Es werden ausdrücklich keine neuen Mahlzeiteneignungs-, Safety-, Phasen- oder
- * Konsistenzregeln definiert. Die Auswahl stammt aus followUpPreparationOptions(),
- * das nach Handling-Readiness bereits die strukturierte Handling-Policy einbindet.
+ * Es werden keine neuen Mahlzeiteneignungs-, Phasen- oder Konsistenzregeln definiert.
+ * Die Lernhinweis-Korrektur ändert nur die Validierung des manuellen Editors. Die
+ * Zubereitungsauswahl stammt aus followUpPreparationOptions(), das nach Handling-
+ * Readiness bereits die strukturierte Handling-Policy einbindet.
  */
 
 let manualMealFlowContext = null;
@@ -24,6 +26,47 @@ function manualMealFlowKey(date, meal) {
 
 function manualMealFlowClone(value) {
   return value == null ? value : JSON.parse(JSON.stringify(value));
+}
+
+function manualMealFlowLearningAdvisoryText(ids, nameForId = (id) => id) {
+  let newIds = [...new Set((ids || []).filter(Boolean))];
+  if (newIds.length < 2) return "";
+  let names = newIds.map((id) => nameForId(id) || id);
+  return `Mehrere noch nicht probierte Lebensmittel sind gleichzeitig ausgewählt: ${names.join(", ")}. Du kannst sie so einplanen; einzeln eingeführt lassen sich Beobachtungen leichter zuordnen.`;
+}
+
+function manualMealFlowLearningValidation(
+  validation,
+  statusForId = () => "",
+  nameForId = (id) => id,
+  postValidate = null,
+) {
+  let source = validation || {};
+  let newIds = [...new Set((source.samples || []).filter((id) => statusForId(id) === "Offen"))];
+  let multipleNewIds = newIds.length > 1 ? newIds : [];
+  let obsoleteMessagePrefix = "Nur eine neue oder unsichere Einführung gleichzeitig:";
+  let messages = (source.messages || []).filter((message) =>
+    !String(message).startsWith(obsoleteMessagePrefix),
+  );
+  let advisory = manualMealFlowLearningAdvisoryText(multipleNewIds, nameForId);
+  let ok = !!(source.ids || []).length &&
+    !(source.excludedIds || []).length &&
+    !(source.unsafeBaseIds || []).length &&
+    !(source.unsafeComponentIds || []).length &&
+    messages.length === 0;
+  let adjusted = {
+    ...source,
+    ok,
+    newIds,
+    multipleNewIds,
+    multipleUnsafeIds: [],
+    messages,
+    advisories: advisory ? [advisory] : [],
+    message: messages.join(" "),
+    advisory,
+  };
+  if (typeof postValidate !== "function") return adjusted;
+  return postValidate(adjusted) || adjusted;
 }
 
 function manualMealFlowNormalizePreparationKeys(keys, foodIds) {
@@ -222,6 +265,21 @@ function manualMealFlowPreparationSelect(foodId) {
   return wrapper;
 }
 
+function manualMealFlowEnhanceLearningNotice(body) {
+  let notice = body?.querySelector?.(".manual-role-ok");
+  if (!notice || typeof food !== "function" || typeof status !== "function") return;
+  let newIds = [...body.querySelectorAll(".manual-role-group.sample .removeManualSelected[data-food]")]
+    .map((button) => button.dataset.food)
+    .filter((id) => {
+      let item = food(id);
+      return item && status(item) === "Offen";
+    });
+  let text = manualMealFlowLearningAdvisoryText(newIds, (id) => food(id)?.name || id);
+  if (!text) return;
+  notice.className = "notice olive manual-role-advisory";
+  notice.innerHTML = `<b>Hinweis zur Einführung</b><div>${manualMealFlowEsc(text)}</div>`;
+}
+
 function manualMealFlowEnhanceEditor() {
   if (typeof document === "undefined" || !manualMealFlowContext) return;
   let body = document.getElementById("genericBody");
@@ -244,6 +302,7 @@ function manualMealFlowEnhanceEditor() {
     if (control) item.appendChild(control);
   });
 
+  manualMealFlowEnhanceLearningNotice(body);
   manualMealFlowUpdateDateState();
 }
 
@@ -256,11 +315,33 @@ function manualMealFlowEnsureObserver() {
   manualMealFlowObserver.observe(body, { childList: true, subtree: true });
 }
 
+function manualMealFlowAfterNextPaint(callback) {
+  if (typeof callback !== "function") return;
+  let afterPaint = () => {
+    if (typeof setTimeout === "function") setTimeout(callback, 0);
+    else callback();
+  };
+  if (typeof requestAnimationFrame === "function") requestAnimationFrame(afterPaint);
+  else afterPaint();
+}
+
+function manualMealFlowWithDeferredRender(callback) {
+  let originalRenderAll = typeof renderAll === "function" ? renderAll : null;
+  if (!originalRenderAll) return callback();
+  let renderRequested = false;
+  renderAll = () => { renderRequested = true; };
+  try {
+    return callback();
+  } finally {
+    renderAll = originalRenderAll;
+    if (renderRequested) manualMealFlowAfterNextPaint(originalRenderAll);
+  }
+}
+
 function manualMealFlowRestorePlan(targetDate, meal) {
   manualMealFlowEnsureTargetVisible(targetDate);
   if (typeof save === "function") save();
   if (typeof closeGeneric === "function") closeGeneric();
-  if (typeof renderAll === "function") renderAll();
   if (typeof showView === "function") showView("plan");
   manualMealFlowContext = null;
   if (manualMealFlowObserver) {
@@ -268,6 +349,7 @@ function manualMealFlowRestorePlan(targetDate, meal) {
     manualMealFlowObserver = null;
   }
   let restore = () => {
+    if (typeof renderAll === "function") renderAll();
     manualMealFlowEnhanceCards();
     if (typeof document === "undefined") return;
     let target = document.querySelector(`.removeManualMeal[data-date="${targetDate}"][data-meal="${meal}"]`);
@@ -277,8 +359,7 @@ function manualMealFlowRestorePlan(targetDate, meal) {
       details.scrollIntoView?.({ behavior: "smooth", block: "center" });
     }
   };
-  if (typeof requestAnimationFrame === "function") requestAnimationFrame(restore);
-  else restore();
+  manualMealFlowAfterNextPaint(restore);
 }
 
 function installManualMealFlowRuntime() {
@@ -292,6 +373,33 @@ function installManualMealFlowRuntime() {
   ) return false;
 
   globalThis.__manualMealFlowRuntimeInstalled = true;
+
+  if (typeof manualMealValidation === "function") {
+    let originalManualMealValidation = manualMealValidation;
+    manualMealValidation = function manualFlowManualMealValidation(...args) {
+      let result = originalManualMealValidation.apply(this, args);
+      return manualMealFlowLearningValidation(
+        result,
+        (id) => {
+          let item = typeof food === "function" ? food(id) : null;
+          return item && typeof status === "function" ? status(item) : "";
+        },
+        (id) => typeof food === "function" ? (food(id)?.name || id) : id,
+        (adjusted) => {
+          if (
+            typeof plannerManualComponentBaseViolation !== "function" ||
+            typeof state === "undefined"
+          ) return adjusted;
+          let plan = args[0] || {};
+          return plannerManualComponentBaseViolation(
+            adjusted,
+            state.foods || [],
+            plan.recipeName || "",
+          );
+        },
+      );
+    };
+  }
 
   let originalOpenManualMealSelector = openManualMealSelector;
   openManualMealSelector = function manualFlowOpenManualMealSelector(date, meal, initialMeal = null) {
@@ -355,10 +463,12 @@ function installManualMealFlowRuntime() {
         context?.foodPreparationKeys || data?.foodPreparationKeys || {},
         foodIds,
       );
-      let result = originalSaveEditedPlanMeal.call(this, date, meal, {
-        ...data,
-        foodPreparationKeys: preparationKeys,
-      });
+      let result = manualMealFlowWithDeferredRender(() =>
+        originalSaveEditedPlanMeal.call(this, date, meal, {
+          ...data,
+          foodPreparationKeys: preparationKeys,
+        }),
+      );
       if (result?.ok) {
         manualMealFlowContext = null;
         if (manualMealFlowObserver) {
@@ -463,6 +573,8 @@ if (typeof window !== "undefined" && typeof document !== "undefined") {
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     manualMealFlowKey,
+    manualMealFlowLearningAdvisoryText,
+    manualMealFlowLearningValidation,
     manualMealFlowNormalizePreparationKeys,
     manualMealFlowStoredConflict,
     manualMealFlowRemoveSource,

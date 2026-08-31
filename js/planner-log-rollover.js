@@ -573,11 +573,12 @@
     let actualDate = document.getElementById("logDate")?.value || current?.date || "";
     let actualMeal = document.getElementById("logMeal")?.value || current?.meal || "";
     let beforeIds = new Set((state.logs || []).map((log) => log.id));
+    let beforeEditedLog = editId ? state.logs.find((log) => log.id === editId) : null;
     let result = baseSaveLog();
     let saved = editId
       ? state.logs.find((log) => log.id === editId)
       : state.logs.find((log) => !beforeIds.has(log.id));
-    if (!saved) return result;
+    if (!saved || (editId && saved === beforeEditedLog)) return result;
     let changed = false;
     if (plannedMealId && actualDate === plannedDate && actualMeal === plannedMeal) {
       if (saved.plannedMealId !== plannedMealId) { saved.plannedMealId = plannedMealId; changed = true; }

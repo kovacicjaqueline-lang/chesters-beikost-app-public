@@ -140,9 +140,11 @@ try {
   assert.match(await completedDay.locator(":scope > summary").innerText(), /erledigt/i);
   assert.match(await completedDay.locator(":scope > summary").innerText(), /2 Protokolleinträge/);
   assert.match(await completedDay.locator(":scope > summary").innerText(), /20 g protokolliert/);
+  const pastLabel = await page.evaluate((date) => window.nice(date, true), pastDate);
+  const openDayLabels = await page.locator("#blockPlan > .day-card .day-date").allTextContents();
   assert.equal(
-    await page.locator("#blockPlan > .day-card").filter({ hasText: pastDate.slice(8) }).count(),
-    0,
+    openDayLabels.includes(pastLabel),
+    false,
     "Der vergangene abgeschlossene Tag bleibt keine offene Tageskarte",
   );
 

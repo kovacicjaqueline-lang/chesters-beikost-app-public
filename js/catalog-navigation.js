@@ -9,6 +9,94 @@
   const MODE_FOODS = "foods";
   const MODE_RECIPES = "recipes";
 
+  function recipeCatalogStructuredLabels(recipe) {
+    return [
+      ...(recipe?.requires || []),
+      ...((recipe?.alternatives || []).flat()),
+      ...(recipe?.oneOf || []),
+      ...(recipe?.milkChoices || []),
+    ];
+  }
+
+  function recipeCatalogExactFood(query) {
+    if (typeof FOOD_DB === "undefined" || typeof foodByName !== "function") return null;
+    return foodByName(query, FOOD_DB);
+  }
+
+  function recipeCatalogContainsFood(recipe, targetFood) {
+    if (!targetFood || typeof FOOD_DB === "undefined" || typeof recipeFoodFromStructuredLabel !== "function") return false;
+    return recipeCatalogStructuredLabels(recipe).some((label) =>
+      recipeFoodFromStructuredLabel(label, FOOD_DB)?.id === targetFood.id,
+    );
+  }
+
+  function recipeCatalogSearchTerms(recipe) {
+    const aliases = typeof recipeAliasValues === "function" ? recipeAliasValues(recipe) : [];
+    const structuredTerms = recipeCatalogStructuredLabels(recipe).flatMap((label) => {
+      if (
+        typeof recipeFoodFromStructuredLabel !== "function" ||
+        typeof FOOD_DB === "undefined" ||
+        typeof foodAliasTerms !== "function"
+      ) return [label];
+      const item = recipeFoodFromStructuredLabel(label, FOOD_DB);
+      return item ? [item.name, ...foodAliasTerms(item)] : [label];
+    });
+    return [
+      recipe?.name || "",
+      ...aliases,
+      ...(recipe?.variantLabels || []),
+      ...structuredTerms,
+    ].filter(Boolean);
+  }
+
+  function recipeCatalogSearchMatches(recipe, query, fullSearchText = "") {
+    const normalizedQuery = normalizeName(query || "");
+    if (!normalizedQuery) return true;
+
+    // Ist die Eingabe exakt ein bekanntes Lebensmittel (z. B. „Ei“), zählt
+    // ausschließlich die strukturierte Rezept-Zutatenbeziehung. So kann ein
+    // zufälliger Titeltext niemals einen Zutaten-Treffer vortäuschen.
+    const exactFood = recipeCatalogExactFood(query);
+    if (exactFood) return recipeCatalogContainsFood(recipe, exactFood);
+
+    const exactOrPrefixMatch = recipeCatalogSearchTerms(recipe).some((term) => {
+      const normalizedTerm = normalizeName(term || "");
+      if (!normalizedTerm) return false;
+      if (normalizedTerm === normalizedQuery || normalizedTerm.startsWith(normalizedQuery)) return true;
+      return normalizedTerm
+        .split(" ")
+        .filter(Boolean)
+        .some((word) => word === normalizedQuery || word.startsWith(normalizedQuery));
+    });
+    if (exactOrPrefixMatch) return true;
+
+    // Sehr kurze Suchbegriffe dürfen nicht irgendwo mitten in einem Wort treffen.
+    // Ab drei Zeichen bleibt die bisherige flexible Volltextsuche inklusive
+    // Zutatenbeschreibung erhalten.
+    if (normalizedQuery.length < 3) return false;
+    return normalizeName(fullSearchText).includes(normalizedQuery);
+  }
+
+  function installIngredientAwareRecipeSearch() {
+    if (typeof renderPrep !== "function" || typeof recipeSearchText !== "function") return;
+    const baseRenderPrep = renderPrep;
+    renderPrep = function renderPrepWithIngredientAwareRecipeSearch(...args) {
+      const currentQuery = typeof recipeQuery !== "undefined" ? recipeQuery : "";
+      if (!normalizeName(currentQuery)) return baseRenderPrep.apply(this, args);
+
+      const baseRecipeSearchText = recipeSearchText;
+      recipeSearchText = (recipe) => {
+        const fullSearchText = baseRecipeSearchText(recipe);
+        return recipeCatalogSearchMatches(recipe, currentQuery, fullSearchText) ? fullSearchText : "";
+      };
+      try {
+        return baseRenderPrep.apply(this, args);
+      } finally {
+        recipeSearchText = baseRecipeSearchText;
+      }
+    };
+  }
+
   function setCatalogMode(mode) {
     const foodsSection = document.getElementById("foodsCatalogSection");
     const recipesSection = document.getElementById("recipesSection");
@@ -52,6 +140,8 @@
       !document.querySelector("#more #recipesDetails");
     auditRow.innerHTML = `<span class="statusdot ${ok ? "good" : "warn"}"></span><div><b>${ok ? "Geprüft" : "Prüfen"}:</b> Protokoll liegt unter Mehr; Rezepte liegen im gemeinsamen Lebensmittel-Tab</div>`;
   }
+
+  installIngredientAwareRecipeSearch();
 
   const switcher = document.getElementById("catalogSwitch");
   switcher?.querySelectorAll("[data-catalog-mode]").forEach((button) => {

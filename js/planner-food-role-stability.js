@@ -9,8 +9,8 @@
  * Ergänzung Nuss/Samen:
  * - Nuss-/Samen-FOODs sind keine automatische Hauptbasis und kein normaler bekannter Fokus.
  * - Einführung, gezielte frühe Wiederholung und Allergen-Wiederholung bleiben Sample-Pfade.
- * - Für bereits verknüpfte Familien darf eine explizit freigegebene Mus-/Pastenform als
- *   sichere Sample-Form bevorzugt werden.
+ * - Eine strukturell geeignete Nuss-/Sesam-Identität kann in sicherer Mus-/Pastenform genutzt werden.
+ * - Bereits vorhandene explizite Mus-/Pasten-FOODs derselben Familie werden dafür bevorzugt.
  * - Ein solches Sample kann nach der normalen Planner-Auswahl als Kostproben-Topping
  *   auf einen eindeutigen Obst-Getreide-Brei gesetzt werden. Das Topping bleibt Sample
  *   und verändert die Rezeptidentität nicht.
@@ -24,22 +24,38 @@ const PLANNER_NUT_SEED_SAMPLE_TYPES = new Set([
   "Allergen wiederholen",
   "manuell",
 ]);
-const PLANNER_NUT_SEED_TOPPING_IDS = new Set([
-  "erdnussmus",
-  "mandelmus",
-  "haselnussmus",
-  "cashewmus",
-  "walnussmus",
-  "pistazienmus",
-  "tahin",
-]);
+const PLANNER_NUT_SEED_TOPPING_KIND = "smooth-paste";
 
 function plannerNutSeedComponentFood(foodRecord) {
   return !!foodRecord && PLANNER_NUT_SEED_CATEGORIES.has(String(foodRecord.category || ""));
 }
 
 function plannerNutSeedToppingForm(foodRecord) {
-  return plannerNutSeedComponentFood(foodRecord) && PLANNER_NUT_SEED_TOPPING_IDS.has(String(foodRecord.id || ""));
+  if (!plannerNutSeedComponentFood(foodRecord)) return false;
+  if (typeof foodHasRecipeComponentKind === "function") {
+    return foodHasRecipeComponentKind(foodRecord, PLANNER_NUT_SEED_TOPPING_KIND);
+  }
+  let category = String(foodRecord.category || "");
+  let allergenGroup = String(foodRecord.allergenGroup || "");
+  if (category === "Nuss") return allergenGroup === "Erdnuss" || allergenGroup === "Schalenfrüchte";
+  return category === "Samen" && allergenGroup === "Sesam";
+}
+
+function plannerNutSeedComponentForm(foodRecord) {
+  if (!plannerNutSeedToppingForm(foodRecord)) return "";
+  if (typeof foodRecipeComponentForm === "function") {
+    return foodRecipeComponentForm(foodRecord, PLANNER_NUT_SEED_TOPPING_KIND);
+  }
+  let category = String(foodRecord.category || "");
+  let family = String(foodRecord.foodFamily || foodRecord.allergenFamily || "");
+  let canonicalId = String(foodRecord.id || "");
+  if (category === "Nuss" && family.startsWith("nuss:")) canonicalId = family.slice("nuss:".length);
+  else if (category === "Samen" && family) canonicalId = family;
+  return String(foodRecord.id || "") === canonicalId ? "canonical" : "prepared";
+}
+
+function plannerNutSeedPreparedToppingForm(foodRecord) {
+  return plannerNutSeedComponentForm(foodRecord) === "prepared";
 }
 
 function plannerNutSeedRelatedIds(foodRecord, foods = []) {
@@ -61,16 +77,18 @@ function plannerNutSeedRelatedIds(foodRecord, foods = []) {
 
 function plannerNutSeedPreferredToppingForm(foodRecord, foods = [], eligibleFn = null) {
   if (!plannerNutSeedComponentFood(foodRecord)) return foodRecord || null;
-  if (plannerNutSeedToppingForm(foodRecord)) return foodRecord;
   let related = new Set(plannerNutSeedRelatedIds(foodRecord, foods));
   let eligible = typeof eligibleFn === "function" ? eligibleFn : () => true;
-  return (foods || [])
+  let prepared = (foods || [])
     .filter((candidate) =>
+      candidate?.id !== foodRecord.id &&
       related.has(candidate.id) &&
-      plannerNutSeedToppingForm(candidate) &&
+      plannerNutSeedPreparedToppingForm(candidate) &&
       eligible(candidate),
     )
-    .sort((a, b) => (Number(a.priority) || 9999) - (Number(b.priority) || 9999))[0] || foodRecord;
+    .sort((a, b) => (Number(a.priority) || 9999) - (Number(b.priority) || 9999))[0];
+  if (prepared) return prepared;
+  return foodRecord;
 }
 
 function plannerNutSeedNormalizeIntroductionResult(result, foods = [], eligibleFn = null) {
@@ -514,9 +532,11 @@ if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     PLANNER_NUT_SEED_CATEGORIES,
     PLANNER_NUT_SEED_SAMPLE_TYPES,
-    PLANNER_NUT_SEED_TOPPING_IDS,
+    PLANNER_NUT_SEED_TOPPING_KIND,
     plannerNutSeedComponentFood,
     plannerNutSeedToppingForm,
+    plannerNutSeedComponentForm,
+    plannerNutSeedPreparedToppingForm,
     plannerNutSeedRelatedIds,
     plannerNutSeedPreferredToppingForm,
     plannerNutSeedNormalizeIntroductionResult,

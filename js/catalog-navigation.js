@@ -53,6 +53,9 @@
     const normalizedQuery = normalizeName(query || "");
     if (!normalizedQuery) return true;
 
+    // Ist die Eingabe exakt ein bekanntes Lebensmittel (z. B. „Ei“), zählt
+    // ausschließlich die strukturierte Rezept-Zutatenbeziehung. So kann ein
+    // zufälliger Titeltext niemals einen Zutaten-Treffer vortäuschen.
     const exactFood = recipeCatalogExactFood(query);
     if (exactFood) return recipeCatalogContainsFood(recipe, exactFood);
 
@@ -66,6 +69,10 @@
         .some((word) => word === normalizedQuery || word.startsWith(normalizedQuery));
     });
     if (exactOrPrefixMatch) return true;
+
+    // Sehr kurze Suchbegriffe dürfen nicht irgendwo mitten in einem Wort treffen.
+    // Ab drei Zeichen bleibt die bisherige flexible Volltextsuche inklusive
+    // Zutatenbeschreibung erhalten.
     if (normalizedQuery.length < 3) return false;
     return normalizeName(fullSearchText).includes(normalizedQuery);
   }
@@ -341,9 +348,8 @@
 
     card.className = "card today-card today-focus-card";
     if (!active.length) {
-      card.innerHTML = `<div class="row"><div class="grow"><span class="today-section-kicker">Heute</span><h2>Nichts geplant</h2><div class="small">${nice(on, true)} · ${age} Monate</div></div></div><div class="today-focus-empty"><p>Für heute ist keine Mahlzeit geplant.</p>${nextPlanned ? `<div class="small">Nächster geplanter Tag: ${nice(nextPlanned, true)}</div>` : ""}</div><button class="btn full" id="homeFreeLog">Essen eintragen</button><div class="add-meal-row"><button class="btn secondary smallbtn" id="homeAddEntry">Weiteres Essen eintragen</button></div>`;
+      card.innerHTML = `<div class="row"><div class="grow"><span class="today-section-kicker">Heute</span><h2>Nichts geplant</h2><div class="small">${nice(on, true)} · ${age} Monate</div></div></div><div class="today-focus-empty"><p>Für heute ist keine Mahlzeit geplant.</p>${nextPlanned ? `<div class="small">Nächster geplanter Tag: ${nice(nextPlanned, true)}</div>` : ""}</div><button class="btn full" id="homeFreeLog">Essen eintragen</button>`;
       document.getElementById("homeFreeLog")?.addEventListener("click", () => openLog(null));
-      document.getElementById("homeAddEntry")?.addEventListener("click", () => openLog(null));
       return { focusMeal, active };
     }
 
@@ -411,6 +417,7 @@
 
   function recipeMatchesFocus(recipe, focusMeal) {
     if (!recipe || !focusMeal?.foodIds?.length || typeof recipeFoodIds !== "function") return false;
+    if (typeof recipeSuitableForMeal === "function" && !recipeSuitableForMeal(recipe, focusMeal.meal)) return false;
     const focusIds = new Set(focusMeal.foodIds);
     try {
       return recipeFoodIds(recipe).some((id) => focusIds.has(id));

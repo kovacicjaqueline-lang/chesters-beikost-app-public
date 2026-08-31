@@ -132,6 +132,7 @@ try {
     }];
 
     window.__beikostTest.setState(state);
+    window.renderAll();
     return true;
   });
   assert.equal(seeded, true, "Testzutaten müssen im aktuellen FOOD-Stamm vorhanden sein");

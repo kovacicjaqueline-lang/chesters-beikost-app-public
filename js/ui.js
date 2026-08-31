@@ -36,6 +36,23 @@ function renderAll() {
   if (document.getElementById("auditList")) renderAudit();
   renderStorageStatus();
 }
+function renderView(id) {
+  if (id === "home") renderHome();
+  else if (id === "plan") renderPlan();
+  else if (id === "prep") renderPrep();
+  else if (id === "foods") renderFoods();
+  else if (id === "more") {
+    renderLogs();
+    renderStatistics();
+    renderAllergenModule();
+    renderSettings();
+    if (document.getElementById("auditList")) renderAudit();
+    renderStorageStatus();
+  }
+}
+function renderCurrentView() {
+  renderView(document.querySelector(".view.active")?.id || "home");
+}
 function textureSuccessCount(stage = Number(state.settings.textureStage)) {
   return new Set(
     state.logs
@@ -221,7 +238,7 @@ function renderHomeCore() {
     if (!next || !PHASES[next]) return;
     openGeneric(
       `Zu „${PHASES[next].label}“ wechseln?`,
-      `<p>Vorgesehene Mahlzeiten: <b>${phaseMealKeys(next).map(mealName).join(", ")}</b>.</p><div class="notice olive">Die App leitet die Phase nicht aus Alter oder Grammwerten ab. Der Wechsel erfolgt erst mit deiner Bestätigung.</div><div class="sticky-form-actions ds-actionbar"><button class="btn secondary" id="cancelPhaseChange" type="button">Abbrechen</button><button class="btn" id="confirmPhaseChange" type="button">Phase verwenden</button></div>`,
+      `<p>Vorgesehene Mahlzeiten: <b>${PHASES[next].label}</b>.</p>`,
     );
     document.getElementById("cancelPhaseChange").onclick = closeGeneric;
     document.getElementById("confirmPhaseChange").onclick = () => { closeGeneric(); setPhase(next); };
@@ -802,7 +819,6 @@ function openManualMealSelector(date, meal, initialMeal = null) {
     sampleFoodIds.delete(id);
     if (info.role === "base") baseFoodIds.add(id);
     else if (info.role === "sample") sampleFoodIds.add(id);
-    // Bekannte Komponenten bleiben bewusst außerhalb von Hauptbasis und Lernrolle.
   }
   function setRole(id, role) {
     if (!selectedFoods.has(id)) return;
@@ -871,36 +887,7 @@ function openManualMealSelector(date, meal, initialMeal = null) {
       ${selectedRolesHtml(validation)}
       ${warning}
       <div class="field"><label>Suchen</label><input id="mealSelectorSearch" value="${esc(query)}" placeholder="${tab === "recipes" ? "Rezept suchen" : "Lebensmittel suchen"}"></div>
-      <div class="selector-results">
-        ${
-          tab === "recipes"
-            ? recipeRows.length
-              ? recipeRows.map((r) => {
-                let recipeIds = recipeFoodIds(r), recipeRoleInfos = Object.fromEntries(recipeIds.map((id) => [id, manualMealRoleInfo(id, meal, date, { recipeName: r.name })]));
-                let recipeBases = recipeIds.filter((id) => recipeRoleInfos[id].role === "base"), recipeSamples = recipeIds.filter((id) => recipeRoleInfos[id].role === "sample");
-                let preview = manualMealValidation({ recipeName: r.name, foodIds: recipeIds, baseFoodIds: recipeBases, sampleFoodIds: recipeSamples, foodRoles: foodRolesFor(recipeIds, recipeBases, recipeSamples) }, meal, date);
-                let roleHint = preview.multipleUnsafeIds.length ? ` · nicht speicherbar: ${preview.multipleUnsafeIds.map((id) => food(id)?.name || id).join(", ")}` : preview.samples.length ? ` · ${preview.samples.map((id) => `${manualLearningRoleText(id)}: ${food(id)?.name || id}`).join(", ")}` : "";
-                return `<button class="selector-row selectRecipe ${selectedRecipe === r.name ? "selected" : ""}" data-recipe="${encodeURIComponent(r.name)}">${recipeIconSvg(r)}<span class="grow"><b>${esc(r.name)}</b><span class="small" style="display:block">${r.unlocked ? "Jetzt passend" : `Fast passend · ${esc(recipeMissingSummary(r))}`}${recipeInventoryPortions(r.name) ? ` · ${recipeInventoryPortions(r.name)} im Vorrat` : ""}${esc(roleHint)}</span></span><span class="selector-check" aria-hidden="true">${selectedRecipe === r.name ? "✓" : ""}</span></button>`;
-              }).join("")
-              : '<div class="empty">Kein passendes Rezept gefunden.</div>'
-            : foodRows.length
-              ? foodRows.map((f) => {
-                let selected = selectedFoods.has(f.id), role = sampleFoodIds.has(f.id) ? "sample" : baseFoodIds.has(f.id) ? "base" : selected ? "component" : "";
-                let roleInfo = manualMealRoleInfo(f, meal, date), pausedManual = roleInfo.reason === "paused_manual";
-                let learningLabel = manualLearningRoleText(f, existing?.type || "");
-                let roleLabel = pausedManual
-                  ? "Pausiert · manuell"
-                  : role === "sample" ? learningLabel
-                    : role === "base" ? "Hauptbasis"
-                      : role === "component" ? "Bekannte Komponente"
-                        : roleInfo.role === "sample" ? `wird ${learningLabel}`
-                          : roleInfo.role === "component" ? "wird bekannte Komponente"
-                            : "wird Hauptbasis";
-                return `<button class="selector-row selectFood ${selected ? "selected" : ""} ${pausedManual ? "manual-paused-food" : ""}" data-food="${f.id}">${foodIconSvg(f)}<span class="grow"><b>${esc(f.name)}</b><span class="small" style="display:block">${esc(status(f))}${pausedManual ? " · nur manuell" : ""}${!f.active ? " · deaktiviert" : ""}${inventoryPortions(f.id) ? ` · ${inventoryPortions(f.id)} Portionen im Vorrat` : ""}</span></span><span class="manual-role-type ${role || roleInfo.role} ${pausedManual ? "paused" : ""}">${esc(roleLabel)}</span><span class="selector-check" aria-hidden="true">${selected ? "✓" : ""}</span></button>`;
-              }).join("")
-              : '<div class="empty">Kein Lebensmittel gefunden.</div>'
-        }
-      </div>
+      <div class="selector-results"></div>
       <div class="sticky-form-actions ds-actionbar"><button class="btn secondary" id="cancelManualMeal" type="button">Abbrechen</button><button class="btn" id="confirmManualMeal" ${((tab === "recipes" && !selectedRecipe) || !validation.ok) ? "disabled" : ""}>${isNewManualSlot ? "Mahlzeit hinzufügen" : "Änderungen speichern"}</button></div>`;
     openGeneric(isNewManualSlot ? `Mahlzeit hinzufügen · ${mealName(meal)}` : `Mahlzeit bearbeiten · ${mealName(meal)}`, body);
     document.getElementById("cancelManualMeal")?.addEventListener("click", closeGeneric);
@@ -915,21 +902,6 @@ function openManualMealSelector(date, meal, initialMeal = null) {
         field?.setSelectionRange(field.value.length, field.value.length);
       });
     };
-    document.querySelectorAll(".selectRecipe").forEach((button) => button.onclick = () => {
-      selectedRecipe = decodeURIComponent(button.dataset.recipe);
-      selectedFoods.clear(); baseFoodIds.clear(); sampleFoodIds.clear();
-      for (let id of recipeFoodIds(recipeByName(selectedRecipe))) { selectedFoods.add(id); assignAutomaticRole(id, true); }
-      renderSelector();
-    });
-    document.querySelectorAll(".selectFood").forEach((button) => button.onclick = () => {
-      selectedRecipe = "";
-      let id = button.dataset.food;
-      if (selectedFoods.has(id)) removeSelectedFood(id);
-      else { selectedFoods.add(id); assignAutomaticRole(id); }
-      renderSelector();
-    });
-    document.querySelectorAll(".setManualRole").forEach((button) => button.onclick = () => { setRole(button.dataset.food, button.dataset.role); renderSelector(); });
-    document.querySelectorAll(".removeManualSelected").forEach((button) => button.onclick = () => { selectedRecipe = ""; removeSelectedFood(button.dataset.food); renderSelector(); });
     let confirm = document.getElementById("confirmManualMeal");
     if (confirm) confirm.onclick = () => {
       let current = currentRoleData();
@@ -1167,6 +1139,7 @@ function showView(id) {
   document
     .querySelectorAll("nav button")
     .forEach((b) => b.classList.toggle("active", b.dataset.view === id));
+  renderView(id);
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 function existingFoodWithName(name) {

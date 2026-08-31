@@ -57,7 +57,11 @@ try {
   });
   const page = await context.newPage();
   await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "domcontentloaded" });
-  await page.waitForFunction(() => !!window.__beikostTest?.getState && !!window.__plannerMissingIngredient);
+  await page.waitForFunction(() =>
+    !!window.__beikostTest?.getState &&
+    !!window.__plannerMissingIngredient &&
+    window.__beikostTest.getState()?.backupMeta?.storagePersisted !== "unknown",
+  );
 
   const setup = await page.evaluate(() => {
     window.__beikostTest.reset();
@@ -220,7 +224,7 @@ try {
   assert.equal(after.carried, null, "auch ein verschobener offener Rollover-Plan mit Banane wird entfernt");
   assert.match(await page.locator("#toastText").innerText(), /Einkaufsliste.*Plan wurde angepasst/i);
 
-  const stockProbe = await page.evaluate((current) => {
+  const stockProbe = await page.evaluate(async (current) => {
     const state = window.__beikostTest.getState();
     state.settings.preferInventoryInPlan = true;
     state.settings.textureStage = 3;
@@ -254,6 +258,7 @@ try {
       },
     ];
     window.__beikostTest.setState(state);
+    await window.save();
     window.__plannerMissingIngredient.installAvailabilityPolicies();
     const ctx = window.freshPlanContext();
     const candidate = window.recipeStockCandidate("lunch", current, ctx);

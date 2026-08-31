@@ -221,11 +221,12 @@
   }
 
   function installMobileCompatibilityStyles() {
-    if (document.querySelector('style[data-mobile-foundation-compat="v3"]')) return;
+    if (document.querySelector('style[data-mobile-foundation-compat="v4"]')) return;
     document.querySelector('style[data-mobile-foundation-compat="v1"]')?.remove();
     document.querySelector('style[data-mobile-foundation-compat="v2"]')?.remove();
+    document.querySelector('style[data-mobile-foundation-compat="v3"]')?.remove();
     const style = document.createElement("style");
-    style.dataset.mobileFoundationCompat = "v3";
+    style.dataset.mobileFoundationCompat = "v4";
     style.textContent = `
 body.mobile-foundation nav button {
   min-height: 44px;
@@ -250,6 +251,17 @@ body.mobile-foundation #todayCard .today-timeline-completed > .mealbox.completed
 body.mobile-foundation #todayCard .today-timeline-completed .completed-body-direct {
   margin: 4px 0 0 !important;
 }
+body.mobile-foundation #todayCard .today-timeline-row.completed .editCompletedLog.timeline-edit {
+  min-height: 44px !important;
+}
+body.mobile-foundation #todayCard .today-timeline-actions {
+  grid-column: 2 / -1;
+  min-width: 0;
+  width: 100%;
+}
+body.mobile-foundation #todayCard .today-timeline-actions .meal-plan-actions {
+  margin-top: 0;
+}
 body.mobile-foundation .today-recommendation.today-texture-coach {
   display: block !important;
 }
@@ -267,34 +279,67 @@ body.mobile-foundation #genericModal .sheet {
     if (document.documentElement.dataset.mobileMealEditorScrollGuard === "true") return;
     document.documentElement.dataset.mobileMealEditorScrollGuard = "true";
     let snapshot = null;
+    let releaseTimer = 0;
+
+    function captureSnapshot(field) {
+      if (field?.id !== "mealSelectorSearch") return null;
+      const sheet = field.closest(".sheet");
+      if (!sheet) return null;
+      if (!snapshot || snapshot.field !== field || snapshot.sheet !== sheet) {
+        snapshot = { field, sheet, scrollTop: sheet.scrollTop };
+      }
+      return snapshot;
+    }
+
+    function restoreSnapshot() {
+      if (!snapshot) return;
+      const { field, sheet, scrollTop } = snapshot;
+      if (!field.isConnected || !sheet.isConnected || field.closest(".sheet") !== sheet) {
+        snapshot = null;
+        return;
+      }
+      if (sheet.scrollTop !== scrollTop) sheet.scrollTop = scrollTop;
+    }
+
+    function holdSnapshot(field) {
+      if (!captureSnapshot(field)) return;
+      restoreSnapshot();
+      queueMicrotask(restoreSnapshot);
+      setTimeout(restoreSnapshot, 0);
+      requestAnimationFrame(restoreSnapshot);
+      clearTimeout(releaseTimer);
+      releaseTimer = setTimeout(() => {
+        restoreSnapshot();
+        snapshot = null;
+      }, 120);
+    }
 
     document.addEventListener("keydown", (event) => {
-      const field = event.target;
-      if (field?.id !== "mealSelectorSearch") return;
-      const sheet = field.closest(".sheet");
-      if (!sheet) return;
-      snapshot = { field, sheet, scrollTop: sheet.scrollTop };
+      captureSnapshot(event.target);
+    }, true);
+
+    document.addEventListener("beforeinput", (event) => {
+      captureSnapshot(event.target);
     }, true);
 
     document.addEventListener("input", (event) => {
-      const field = event.target;
-      if (field?.id !== "mealSelectorSearch") return;
-      const sheet = field.closest(".sheet");
-      if (!sheet) return;
-      const scrollTop = snapshot?.field === field && snapshot?.sheet === sheet
-        ? snapshot.scrollTop
-        : sheet.scrollTop;
-      queueMicrotask(() => {
-        if (field.isConnected && field.closest(".sheet") === sheet) sheet.scrollTop = scrollTop;
-      });
+      holdSnapshot(event.target);
     }, true);
 
     document.addEventListener("keyup", (event) => {
-      const field = event.target;
-      if (field?.id !== "mealSelectorSearch" || snapshot?.field !== field) return;
-      if (snapshot.sheet?.isConnected) snapshot.sheet.scrollTop = snapshot.scrollTop;
+      if (event.target?.id === "mealSelectorSearch") holdSnapshot(event.target);
+    }, true);
+
+    document.addEventListener("scroll", (event) => {
+      if (!snapshot || event.target !== snapshot.sheet || document.activeElement !== snapshot.field) return;
+      restoreSnapshot();
+    }, true);
+
+    document.addEventListener("focusout", (event) => {
+      if (event.target?.id !== "mealSelectorSearch" || snapshot?.field !== event.target) return;
+      clearTimeout(releaseTimer);
       snapshot = null;
-    });
+    }, true);
   }
 
   function updateAppBar(viewId = "") {
@@ -341,11 +386,11 @@ body.mobile-foundation #genericModal .sheet {
     root.__mealCardUnification?.simplifyMealCards?.(container);
   }
 
-  function ensureTodayRandomSwapAction(card, date, meal) {
-    if (!root.__plannerRandomSwap?.randomizePlannedMeal || !card || !date || !meal) return;
+  function ensureRenderedRandomSwapAction(container, date, meal) {
+    if (!root.__plannerRandomSwap?.randomizePlannedMeal || !container || !date || !meal) return;
     if (meal.manualAdded || mealIsCompleted(date, meal.meal)) return;
     if (state.planLocks?.[`${date}|${meal.meal}`]?.followUpFoodId) return;
-    const box = card.querySelector(".today-focus-meal > .mealbox");
+    const box = container.matches?.(".mealbox") ? container : container.querySelector?.(".mealbox");
     if (!box || box.querySelector(".randomizeMeal")) return;
     const actions = box.querySelector("details.meal-plan-actions .meal-plan-secondary-actions .actionbar") ||
       box.querySelector("details.meal-plan-actions .actionbar");
@@ -357,6 +402,25 @@ body.mobile-foundation #genericModal .sheet {
     button.dataset.randomMeal = meal.meal;
     button.textContent = "↻ Tauschen";
     actions.prepend(button);
+  }
+
+  function timelineMealCompatibility(day, meal) {
+    const host = document.createElement("div");
+    host.innerHTML = renderMeal(day, meal);
+    ensureRenderedRandomSwapAction(host, day.date, meal);
+
+    const details = host.querySelector("details.meal-plan-actions");
+    const logButton = host.querySelector(".logMeal[data-plan]");
+    if (logButton) {
+      logButton.hidden = true;
+      logButton.tabIndex = -1;
+      logButton.setAttribute("aria-hidden", "true");
+      logButton.style.display = "none";
+    }
+    return {
+      actionsHtml: details?.outerHTML || "",
+      logAnchorHtml: logButton?.outerHTML || "",
+    };
   }
 
   function openTextureSettings() {
@@ -411,7 +475,11 @@ body.mobile-foundation #genericModal .sheet {
     const marker = isNext ? "●" : "○";
     const statusText = isNext ? "Als Nächstes" : "Später";
     const title = mealDisplayTitle(meal);
-    return `<div class="today-timeline-row ${stateClass}"><span class="timeline-marker" aria-hidden="true">${marker}</span><div class="today-timeline-copy"><b>${esc(mealName(meal.meal))}</b><span>${esc(title)}</span></div><div class="today-timeline-state"><span>${statusText}</span></div></div>`;
+    const compatibility = isNext ? { actionsHtml: "", logAnchorHtml: "" } : timelineMealCompatibility(day, meal);
+    const actions = compatibility.actionsHtml
+      ? `<div class="today-timeline-actions">${compatibility.actionsHtml}</div>`
+      : "";
+    return `<div class="today-timeline-row ${stateClass}"><span class="timeline-marker" aria-hidden="true">${marker}</span><div class="today-timeline-copy"><b>${esc(mealName(meal.meal))}</b><span>${esc(title)}</span></div><div class="today-timeline-state"><span>${statusText}</span></div>${compatibility.logAnchorHtml}${actions}</div>`;
   }
 
   function renderTodayFocus() {
@@ -454,7 +522,7 @@ body.mobile-foundation #genericModal .sheet {
     card.innerHTML = `<div class="row today-focus-head"><div class="grow"><span class="today-section-kicker">${heading}</span><h2>${esc(mealHeading)}</h2><div class="small">${nice(on, true)} · ${age} Monate</div></div></div>${focusHtml}<div class="today-timeline" aria-label="Tages-Timeline"><div class="today-timeline-heading"><b>Heute</b><span class="small">${active.length} ${active.length === 1 ? "Mahlzeit" : "Mahlzeiten"}</span></div>${timeline}</div><div class="add-meal-row"><button class="btn secondary smallbtn" id="homeAddEntry">Weiteres Essen eintragen</button></div>`;
 
     bindRenderedMealActions(card);
-    ensureTodayRandomSwapAction(card, on, focusMeal);
+    ensureRenderedRandomSwapAction(card.querySelector(".today-focus-meal"), on, focusMeal);
     root.__plannedRecipeDetails?.decorateHomeRecipeTitles?.();
     card.querySelectorAll(".today-timeline-row.completed .editCompletedLog").forEach((button) => {
       button.classList.add("timeline-edit");

@@ -53,9 +53,6 @@
     const normalizedQuery = normalizeName(query || "");
     if (!normalizedQuery) return true;
 
-    // Ist die Eingabe exakt ein bekanntes Lebensmittel (z. B. „Ei“), zählt
-    // ausschließlich die strukturierte Rezept-Zutatenbeziehung. So kann ein
-    // zufälliger Titeltext niemals einen Zutaten-Treffer vortäuschen.
     const exactFood = recipeCatalogExactFood(query);
     if (exactFood) return recipeCatalogContainsFood(recipe, exactFood);
 
@@ -69,10 +66,6 @@
         .some((word) => word === normalizedQuery || word.startsWith(normalizedQuery));
     });
     if (exactOrPrefixMatch) return true;
-
-    // Sehr kurze Suchbegriffe dürfen nicht irgendwo mitten in einem Wort treffen.
-    // Ab drei Zeichen bleibt die bisherige flexible Volltextsuche inklusive
-    // Zutatenbeschreibung erhalten.
     if (normalizedQuery.length < 3) return false;
     return normalizeName(fullSearchText).includes(normalizedQuery);
   }
@@ -184,3 +177,288 @@
   setCatalogMode(MODE_FOODS);
   fixLegacyNavigationCopy();
 })();
+
+/* MOBILE-A/B: gemeinsame Mobile-First-Shell und fokussierte Heute-Ansicht.
+ * Fachliche Planung, Vorrat, Rezepte und Persistenz bleiben in den bestehenden Modulen.
+ */
+(function mobileFoundationModule(root) {
+  if (typeof document === "undefined") return;
+  if (root.__mobileFoundationInstalled) return;
+  if (typeof renderHome !== "function" || typeof showView !== "function") return;
+
+  root.__mobileFoundationInstalled = true;
+  document.body.classList.add("mobile-foundation");
+
+  const VIEW_TITLES = Object.freeze({
+    home: "Heute",
+    plan: "Plan",
+    prep: "Prep",
+    foods: "Beikost",
+    more: "Mehr",
+  });
+
+  function friendlyTextureLabel(stage) {
+    return ({
+      1: "glatt oder fein",
+      2: "fein zerdrückt",
+      3: "weich mit kleinen Stückchen",
+      4: "weiche Familienkost",
+    })[Number(stage)] || "glatt oder fein";
+  }
+
+  function installCompactAppBar() {
+    const header = document.querySelector(".app-header");
+    if (!header || header.dataset.mobileFoundation === "true") return;
+    header.dataset.mobileFoundation = "true";
+    header.innerHTML = `<div class="app-bar-copy"><span class="app-bar-brand">Beikost</span><h1 id="appBarTitle">Heute</h1></div>`;
+  }
+
+  function updateAppBar(viewId = "") {
+    const title = document.getElementById("appBarTitle");
+    if (!title) return;
+    const active = viewId || document.querySelector(".view.active")?.id || "home";
+    title.textContent = VIEW_TITLES[active] || "Beikost";
+  }
+
+  installCompactAppBar();
+  updateAppBar("home");
+
+  const baseShowView = showView;
+  showView = function mobileFoundationShowView(id) {
+    const result = baseShowView.apply(this, arguments);
+    updateAppBar(id);
+    return result;
+  };
+
+  function bindRenderedMealActions(container) {
+    if (!container?.querySelectorAll) return;
+    container.querySelectorAll(".logMeal").forEach((button) => {
+      button.onclick = () => openLog(JSON.parse(decodeURIComponent(button.dataset.plan)));
+    });
+    container.querySelectorAll(".replaceMeal").forEach((button) => {
+      button.onclick = () => chooseReplacement(button.dataset.date, button.dataset.meal, button.dataset.focus);
+    });
+    container.querySelectorAll(".moveMeal").forEach((button) => {
+      button.onclick = () => moveMealTomorrow(JSON.parse(decodeURIComponent(button.dataset.movePayload)));
+    });
+    container.querySelectorAll(".editCompletedLog").forEach((button) => {
+      button.onclick = () => editLogEntry(button.dataset.log);
+    });
+    container.querySelectorAll(".meal-lock").forEach((button) => {
+      button.onclick = () => toggleMealLock(
+        button.dataset.lockDate,
+        button.dataset.lockMeal,
+        JSON.parse(decodeURIComponent(button.dataset.lockPayload)),
+      );
+    });
+    if (typeof bindInactiveMealActions === "function") bindInactiveMealActions();
+    root.__mealCardUnification?.simplifyMealCards?.(container);
+  }
+
+  function openTextureSettings() {
+    const stage = Number(state.settings.textureStage) || 1;
+    const successes = textureSuccessCount(stage);
+    const previous = stage > 1
+      ? `<button class="btn secondary" id="todayTextureBack" type="button">Zurück zu Stufe ${stage - 1}</button>`
+      : "";
+    const next = stage < 4
+      ? `<button class="btn" id="todayTextureNext" type="button">Stufe ${stage + 1} testen</button>`
+      : "";
+    openGeneric(
+      "Konsistenz anpassen",
+      `<div class="notice olive"><b>${esc(friendlyTextureLabel(stage))}</b><div class="small">Aktuelle Stufe ${stage} von 4 · ${successes} positive Texturerfahrung${successes === 1 ? "" : "en"}</div></div><p class="small">Die Konsistenz bleibt unabhängig von Beikostphase und gegessener Menge.</p><div class="sticky-form-actions ds-actionbar">${previous}${next}</div>`,
+    );
+    document.getElementById("todayTextureBack")?.addEventListener("click", () => setTextureStage(stage - 1));
+    document.getElementById("todayTextureNext")?.addEventListener("click", () => openTextureAdvance(stage + 1));
+  }
+
+  function renderDayContext() {
+    const card = document.getElementById("phaseCard");
+    const details = card?.querySelector("details.home-control-details");
+    const summary = details?.querySelector(":scope > summary");
+    const label = summary?.querySelector("b");
+    const eyebrow = summary?.querySelector("small");
+    const body = details?.querySelector(".home-control-body");
+    if (!card || !details || !summary || !label || !body) return;
+
+    const phase = currentPhase();
+    const stage = Number(state.settings.textureStage) || 1;
+    card.className = "today-context";
+    details.classList.add("today-context-details");
+    eyebrow.textContent = "Tageskontext";
+    label.textContent = `${PHASES[phase].label} · Konsistenz: ${friendlyTextureLabel(stage)}`;
+    summary.querySelector(".pill")?.remove();
+
+    body.querySelector(".today-texture-control")?.remove();
+    const textureControl = document.createElement("div");
+    textureControl.className = "today-texture-control";
+    textureControl.innerHTML = `<div><span class="small">Konsistenz</span><b>${esc(friendlyTextureLabel(stage))}</b></div><button class="btn secondary smallbtn" id="todayTextureSettings" type="button">Ändern</button>`;
+    body.appendChild(textureControl);
+    textureControl.querySelector("#todayTextureSettings")?.addEventListener("click", openTextureSettings);
+  }
+
+  function timelineCompletedTitle(log, meal) {
+    if (log?.recipeName) return log.recipeName;
+    const names = (log?.foodIds || []).map((id) => food(id)?.name).filter(Boolean);
+    return names.length ? naturalFoodList(names) : mealDisplayTitle(meal);
+  }
+
+  function timelineRow(day, meal, focusMeal) {
+    const done = completedLog(day.date, meal.meal);
+    const isNext = !done && focusMeal?.meal === meal.meal;
+    const stateClass = done ? "completed" : isNext ? "next" : "later";
+    const marker = done ? "✓" : isNext ? "●" : "○";
+    const statusText = done ? "Erledigt" : isNext ? "Als Nächstes" : "Später";
+    const title = done ? timelineCompletedTitle(done, meal) : mealDisplayTitle(meal);
+    const edit = done
+      ? `<button class="timeline-edit editCompletedLog" type="button" data-log="${esc(done.id || "")}">Bearbeiten</button>`
+      : "";
+    return `<div class="today-timeline-row ${stateClass}"><span class="timeline-marker" aria-hidden="true">${marker}</span><div class="today-timeline-copy"><b>${esc(mealName(meal.meal))}</b><span>${esc(title)}</span></div><div class="today-timeline-state"><span>${statusText}</span>${edit}</div></div>`;
+  }
+
+  function renderTodayFocus() {
+    const card = document.getElementById("todayCard");
+    if (!card) return { focusMeal: null, active: [] };
+
+    const on = today();
+    const age = monthsOld(on);
+    const day = buildDays(on, 1)[0];
+    const active = day.meals.filter((meal) => meal.active && meal.focusId);
+    const openMeals = active.filter((meal) => !mealIsCompleted(on, meal.meal));
+    const focusMeal = openMeals[0] || null;
+    let nextPlanned = null;
+
+    if (!active.length) {
+      for (let offset = 1; offset <= 45; offset++) {
+        const candidateDate = addDays(on, offset);
+        const candidateDay = buildDays(candidateDate, 1, false)[0];
+        if (candidateDay.meals.some((meal) => meal.active && meal.focusId)) {
+          nextPlanned = candidateDate;
+          break;
+        }
+      }
+    }
+
+    card.className = "card today-card today-focus-card";
+    if (!active.length) {
+      card.innerHTML = `<div class="row"><div class="grow"><span class="today-section-kicker">Heute</span><h2>Nichts geplant</h2><div class="small">${nice(on, true)} · ${age} Monate</div></div></div><div class="today-focus-empty"><p>Für heute ist keine Mahlzeit geplant.</p>${nextPlanned ? `<div class="small">Nächster geplanter Tag: ${nice(nextPlanned, true)}</div>` : ""}</div><button class="btn full" id="homeFreeLog">Essen eintragen</button><div class="add-meal-row"><button class="btn secondary smallbtn" id="homeAddEntry">Weiteres Essen eintragen</button></div>`;
+      document.getElementById("homeFreeLog")?.addEventListener("click", () => openLog(null));
+      document.getElementById("homeAddEntry")?.addEventListener("click", () => openLog(null));
+      return { focusMeal, active };
+    }
+
+    const heading = focusMeal ? "Als Nächstes" : "Heute erledigt";
+    const mealHeading = focusMeal ? mealName(focusMeal.meal) : "Alles eingetragen";
+    const focusHtml = focusMeal
+      ? `<div class="today-focus-meal">${renderMeal(day, focusMeal)}</div>`
+      : '<div class="today-done-summary"><b>Alle geplanten Mahlzeiten sind eingetragen.</b><span class="small">Der Tagesüberblick bleibt unten sichtbar.</span></div>';
+    const timeline = active.map((meal) => timelineRow(day, meal, focusMeal)).join("");
+
+    card.innerHTML = `<div class="row today-focus-head"><div class="grow"><span class="today-section-kicker">${heading}</span><h2>${esc(mealHeading)}</h2><div class="small">${nice(on, true)} · ${age} Monate</div></div></div>${focusHtml}<div class="today-timeline" aria-label="Tages-Timeline"><div class="today-timeline-heading"><b>Heute</b><span class="small">${active.length} ${active.length === 1 ? "Mahlzeit" : "Mahlzeiten"}</span></div>${timeline}</div><div class="add-meal-row"><button class="btn secondary smallbtn" id="homeAddEntry">Weiteres Essen eintragen</button></div>`;
+
+    bindRenderedMealActions(card);
+    card.querySelectorAll(".timeline-edit").forEach((button) => {
+      button.onclick = () => editLogEntry(button.dataset.log);
+    });
+    document.getElementById("homeAddEntry")?.addEventListener("click", () => openLog(null));
+    return { focusMeal, active };
+  }
+
+  function renderContextRecommendation() {
+    const card = document.getElementById("textureCoachCard");
+    if (!card) return;
+    const on = today();
+    const due = state.foods.filter((item) => dueAllergen(item, on));
+    const stage = Number(state.settings.textureStage) || 1;
+    const textureReady = stage < 4 && textureSuccessCount(stage) >= 4;
+
+    card.className = "today-recommendation";
+    card.style.display = "none";
+    card.innerHTML = "";
+
+    if (due.length) {
+      const target = due[0];
+      card.innerHTML = `<div class="today-recommendation-copy"><span class="today-section-kicker">Empfehlung</span><h3>${esc(target.name)} wiederholen</h3><p class="small">Dieses Allergen ist wieder fällig. Im Plan kannst du die nächste passende Mahlzeit prüfen.</p></div><button class="btn secondary smallbtn" id="todayRecommendationPlan" type="button">Im Plan ansehen</button>`;
+      card.style.display = "flex";
+      document.getElementById("todayRecommendationPlan")?.addEventListener("click", () => showView("plan"));
+      return;
+    }
+
+    if (textureReady) {
+      card.innerHTML = `<div class="today-recommendation-copy"><span class="today-section-kicker">Empfehlung</span><h3>Konsistenz weiterentwickeln</h3><p class="small">Die aktuelle Struktur wurde mehrfach positiv dokumentiert. Die nächste Stufe kann vorsichtig getestet werden.</p></div><button class="btn secondary smallbtn" id="todayRecommendationTexture" type="button">Stufe ${stage + 1} ansehen</button>`;
+      card.style.display = "flex";
+      document.getElementById("todayRecommendationTexture")?.addEventListener("click", () => openTextureAdvance(stage + 1));
+    }
+  }
+
+  function renderCompactProgress() {
+    const card = document.getElementById("progressCard");
+    if (!card) return;
+    const tried = typeof learnedCountIdentities === "function" ? learnedCountIdentities().length : learnedFoods().length;
+    const target = Number(state.settings.targetFoods) || 100;
+    const pct = Math.min(100, tried / target * 100);
+    const tolerated = state.foods.filter((item) => status(item) === "Verträgliche Basis").length;
+    const regular = state.foods.filter((item) => status(item) === "Regelmäßig").length;
+    const due = state.foods.filter((item) => dueAllergen(item, today())).length;
+    const facts = [];
+    if (regular) facts.push(`${regular} regelmäßig`);
+    else if (tolerated) facts.push(`${tolerated} sichere Basis`);
+    if (due) facts.push(`${due} Allergene fällig`);
+
+    card.className = "compact-progress today-progress";
+    card.innerHTML = `<div class="today-progress-head"><div><span class="today-section-kicker">Fortschritt</span><h3>${tried} von ${target} kennengelernt</h3></div><b class="progress-percent">${Math.round(pct)} %</b></div><div class="progress"><span style="width:${pct}%"></span></div>${facts.length ? `<div class="small progress-facts">${facts.slice(0, 2).join(" · ")}</div>` : ""}`;
+  }
+
+  function recipeMatchesFocus(recipe, focusMeal) {
+    if (!recipe || !focusMeal?.foodIds?.length || typeof recipeFoodIds !== "function") return false;
+    const focusIds = new Set(focusMeal.foodIds);
+    try {
+      return recipeFoodIds(recipe).some((id) => focusIds.has(id));
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function renderContextRecipe(focusMeal) {
+    const card = document.getElementById("recipePreviewCard");
+    if (!card) return;
+    const all = recipeStates();
+    const recipe = focusMeal ? all.find((item) => item.unlocked && recipeMatchesFocus(item, focusMeal)) : null;
+    card.className = "today-recipe-card";
+    card.style.display = recipe ? "block" : "none";
+    if (!recipe) {
+      card.innerHTML = '<div id="recipePreview"></div>';
+      return;
+    }
+
+    card.innerHTML = `<div class="today-recipe-head"><div><span class="today-section-kicker">Rezeptidee</span><h3>Passt zu eurem Plan</h3></div><button class="btn secondary smallbtn" id="openRecipes" type="button">Rezepte</button></div><div id="recipePreview"><div class="today-recipe-row">${recipeIconSvg(recipe)}<div><b>${esc(recipe.name)}</b><div class="small">Passt zu Zutaten aus der nächsten Mahlzeit.</div></div></div></div>`;
+  }
+
+  function arrangeTodaySections() {
+    const home = document.getElementById("home");
+    const phase = document.getElementById("phaseCard");
+    const today = document.getElementById("todayCard");
+    const recommendation = document.getElementById("textureCoachCard");
+    const progress = document.getElementById("progressCard");
+    const recipe = document.getElementById("recipePreviewCard");
+    if (!home || !phase || !today || !recommendation || !progress || !recipe) return;
+    [phase, today, recommendation, progress, recipe].forEach((node) => home.appendChild(node));
+  }
+
+  function renderMobileToday() {
+    renderDayContext();
+    const { focusMeal } = renderTodayFocus();
+    renderContextRecommendation();
+    renderCompactProgress();
+    renderContextRecipe(focusMeal);
+    arrangeTodaySections();
+  }
+
+  const baseRenderHome = renderHome;
+  renderHome = function mobileFoundationRenderHome() {
+    const result = baseRenderHome.apply(this, arguments);
+    renderMobileToday();
+    return result;
+  };
+
+})(typeof globalThis !== "undefined" ? globalThis : window);

@@ -221,21 +221,62 @@
   }
 
   function installMobileCompatibilityStyles() {
-    if (document.querySelector('style[data-mobile-foundation-compat="v1"]')) return;
+    if (document.querySelector('style[data-mobile-foundation-compat="v2"]')) return;
+    document.querySelector('style[data-mobile-foundation-compat="v1"]')?.remove();
     const style = document.createElement("style");
-    style.dataset.mobileFoundationCompat = "v1";
+    style.dataset.mobileFoundationCompat = "v2";
     style.textContent = `
 body.mobile-foundation nav button {
   min-height: 44px;
 }
-body.mobile-foundation #todayCard .mealbox {
-  border: 0 !important;
-  border-radius: 16px !important;
-  background: var(--accent2) !important;
+body.mobile-foundation #todayCard .today-focus-meal > .mealbox {
+  border: 1px solid var(--line) !important;
+  border-radius: 15px !important;
+  background: var(--surface-soft, #fffaf3) !important;
   box-shadow: none !important;
+}
+body.mobile-foundation #todayCard .today-timeline-row.mealbox {
+  display: grid !important;
+  grid-template-columns: 26px minmax(0, 1fr) auto !important;
+  gap: 9px !important;
+  align-items: center !important;
+  margin: 0 !important;
+  padding: 8px 0 !important;
+  border: 0 !important;
+  border-top: 1px solid rgba(221, 213, 197, .72) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+body.mobile-foundation #todayCard .today-timeline-heading + .today-timeline-row.mealbox {
+  border-top: 0 !important;
+}
+body.mobile-foundation .today-recommendation.today-texture-coach {
+  display: block !important;
+}
+body.mobile-foundation .today-recommendation.today-texture-coach > details {
+  width: 100%;
+}
+body.mobile-foundation #genericModal .sheet {
+  overflow-anchor: none;
 }
 `;
     document.head.appendChild(style);
+  }
+
+  function installMealEditorSearchScrollGuard() {
+    if (document.documentElement.dataset.mobileMealEditorScrollGuard === "true") return;
+    document.documentElement.dataset.mobileMealEditorScrollGuard = "true";
+    document.addEventListener("input", (event) => {
+      const field = event.target;
+      if (field?.id !== "mealSelectorSearch") return;
+      const sheet = field.closest(".sheet");
+      if (!sheet) return;
+      const scrollTop = sheet.scrollTop;
+      queueMicrotask(() => {
+        if (field.isConnected && field.closest(".sheet") === sheet) sheet.scrollTop = scrollTop;
+      });
+    }, true);
   }
 
   function updateAppBar(viewId = "") {
@@ -247,6 +288,7 @@ body.mobile-foundation #todayCard .mealbox {
 
   installCompactAppBar();
   installMobileCompatibilityStyles();
+  installMealEditorSearchScrollGuard();
   updateAppBar("home");
 
   const baseShowView = showView;
@@ -279,22 +321,6 @@ body.mobile-foundation #todayCard .mealbox {
     });
     if (typeof bindInactiveMealActions === "function") bindInactiveMealActions();
     root.__mealCardUnification?.simplifyMealCards?.(container);
-  }
-
-  function renderedTodayMealHtml(card, date, meal) {
-    if (!card || !date || !meal) return "";
-    for (const button of card.querySelectorAll(".logMeal[data-plan], .homeLog[data-plan]")) {
-      let payload = null;
-      try {
-        payload = JSON.parse(decodeURIComponent(button.dataset.plan || ""));
-      } catch (_) {
-        continue;
-      }
-      if (payload?.date !== date || payload?.meal !== meal.meal) continue;
-      const mealNode = button.closest(".mealbox, .manual-meal");
-      if (mealNode) return mealNode.outerHTML;
-    }
-    return "";
   }
 
   function openTextureSettings() {
@@ -355,7 +381,9 @@ body.mobile-foundation #todayCard .mealbox {
     const edit = done
       ? `<button class="timeline-edit editCompletedLog" type="button" data-log="${esc(done.id || "")}">Bearbeiten</button>`
       : "";
-    return `<div class="today-timeline-row ${stateClass}"><span class="timeline-marker" aria-hidden="true">${marker}</span><div class="today-timeline-copy"><b>${esc(mealName(meal.meal))}</b><span>${esc(title)}</span></div><div class="today-timeline-state"><span>${statusText}</span>${edit}</div></div>`;
+    const rowClass = `today-timeline-row ${stateClass}${done ? " mealbox" : ""}`;
+    const titleClass = done ? ' class="completed-title"' : "";
+    return `<div class="${rowClass}"><span class="timeline-marker" aria-hidden="true">${marker}</span><div class="today-timeline-copy"><b>${esc(mealName(meal.meal))}</b><span${titleClass}>${esc(title)}</span></div><div class="today-timeline-state"><span>${statusText}</span>${edit}</div></div>`;
   }
 
   function renderTodayFocus() {
@@ -368,7 +396,6 @@ body.mobile-foundation #todayCard .mealbox {
     const active = day.meals.filter((meal) => meal.active && meal.focusId);
     const openMeals = active.filter((meal) => !mealIsCompleted(on, meal.meal));
     const focusMeal = openMeals[0] || null;
-    const renderedFocusHtml = focusMeal ? renderedTodayMealHtml(card, on, focusMeal) : "";
     let nextPlanned = null;
 
     if (!active.length) {
@@ -392,7 +419,7 @@ body.mobile-foundation #todayCard .mealbox {
     const heading = focusMeal ? "Als Nächstes" : "Heute erledigt";
     const mealHeading = focusMeal ? mealName(focusMeal.meal) : "Alles eingetragen";
     const focusHtml = focusMeal
-      ? `<div class="today-focus-meal">${renderedFocusHtml || renderMeal(day, focusMeal)}</div>`
+      ? `<div class="today-focus-meal">${renderMeal(day, focusMeal)}</div>`
       : '<div class="today-done-summary"><b>Alle geplanten Mahlzeiten sind eingetragen.</b><span class="small">Der Tagesüberblick bleibt unten sichtbar.</span></div>';
     const timeline = active.map((meal) => timelineRow(day, meal, focusMeal)).join("");
 
@@ -416,8 +443,7 @@ body.mobile-foundation #todayCard .mealbox {
     const textureReady = stage < 4 && textureSuccessCount(stage) >= 4;
 
     card.className = "today-recommendation";
-    card.style.display = "none";
-    card.innerHTML = "";
+    card.style.display = "block";
 
     if (due.length) {
       const target = due[0];
@@ -431,7 +457,10 @@ body.mobile-foundation #todayCard .mealbox {
       card.innerHTML = `<div class="today-recommendation-copy"><span class="today-section-kicker">Empfehlung</span><h3>Konsistenz weiterentwickeln</h3><p class="small">Die aktuelle Struktur wurde mehrfach positiv dokumentiert. Die nächste Stufe kann vorsichtig getestet werden.</p></div><button class="btn secondary smallbtn" id="todayRecommendationTexture" type="button">Stufe ${stage + 1} ansehen</button>`;
       card.style.display = "flex";
       document.getElementById("todayRecommendationTexture")?.addEventListener("click", () => openTextureAdvance(stage + 1));
+      return;
     }
+
+    card.classList.add("today-texture-coach");
   }
 
   function renderCompactProgress() {

@@ -51,6 +51,7 @@ async function waitForApp(page) {
     !!window.__plannerRolloverReviewFixes &&
     !!window.__plannerRandomSwap &&
     window.__plannerPoliciesReady === true &&
+    window.__mobileFoundationInstalled === true &&
     window.__beikostTest.getState()?.backupMeta?.storagePersisted !== "unknown",
   );
 }
@@ -79,41 +80,43 @@ try {
     const ids = ["hirse", "kuhmilch", "pfirsich"];
     if (!ids.every((id) => state.foods.some((food) => food.id === id))) return false;
 
-    state.settings.phaseSelected = "aufbau";
+    state.settings.phaseSelected = "drei";
+    state.settings.textureStage = 2;
     state.settings.planFrom = today;
-    state.autoLockExcluded ||= {};
     state.planLocks ||= {};
     state.manualMeals ||= {};
-    for (const meal of ["lunch", "snack", "dinner"]) {
-      state.autoLockExcluded[`${today}|${meal}`] = "meal-removed";
-      delete state.planLocks[`${today}|${meal}`];
+    state.autoLockExcluded ||= {};
+
+    for (const meal of ["breakfast", "lunch", "dinner"]) {
+      state.planLocks[`${today}|${meal}`] = {
+        date: today,
+        meal,
+        focusId: "hirse",
+        foodIds: ids,
+        baseFoodIds: ids,
+        sampleFoodIds: [],
+        optionalAddons: [],
+        inventoryFoodIds: [],
+        recipeName: meal === "breakfast" ? "Milch-Getreide-Brei" : "",
+        recipeInventoryId: "",
+        type: "bekannt kombinieren",
+        note: "",
+        manualAdded: false,
+        active: true,
+        mode: "manual",
+        planId: `ui-mobile-today-${meal}`,
+        createdAt: new Date().toISOString(),
+      };
+      delete state.autoLockExcluded[`${today}|${meal}`];
       delete state.manualMeals[`${today}|${meal}`];
     }
-    state.planLocks[`${today}|breakfast`] = {
-      date: today,
-      meal: "breakfast",
-      focusId: "hirse",
-      foodIds: ids,
-      baseFoodIds: ids,
-      sampleFoodIds: [],
-      optionalAddons: [],
-      inventoryFoodIds: [],
-      recipeName: "Milch-Getreide-Brei",
-      recipeInventoryId: "",
-      type: "bekannt kombinieren",
-      note: "",
-      manualAdded: false,
-      active: true,
-      mode: "auto",
-      planId: "ui-today-completed-breakfast",
-      createdAt: new Date().toISOString(),
-    };
+
     state.logs = [{
-      id: "ui-today-completed-breakfast-log",
+      id: "ui-mobile-today-breakfast-log",
       date: today,
       meal: "breakfast",
       entryType: "meal",
-      plannedMealId: "ui-today-completed-breakfast",
+      plannedMealId: "ui-mobile-today-breakfast",
       focusId: "hirse",
       foodIds: ids,
       baseFoodIds: ids,
@@ -129,69 +132,61 @@ try {
     }];
 
     window.__beikostTest.setState(state);
-    window.renderAll();
     return true;
   });
   assert.equal(seeded, true, "Testzutaten müssen im aktuellen FOOD-Stamm vorhanden sein");
 
+  assert.equal(await page.locator("#appBarTitle").innerText(), "Heute");
+  assert.equal(await page.locator(".app-header .brand-orb").count(), 0, "Der große Marken-Orb entfällt im App-Alltag");
+  const headerHeight = await page.locator(".app-header").evaluate((node) => node.getBoundingClientRect().height);
+  assert.ok(headerHeight < 90, "Die App-Bar bleibt mobil kompakt");
+
+  const phaseCard = page.locator("#phaseCard");
+  assert.equal(await phaseCard.evaluate((node) => node.classList.contains("card")), false, "Tageskontext ist keine eigene Dashboard-Card mehr");
+  assert.match(
+    (await phaseCard.locator("summary b").innerText()).replace(/\s+/g, " "),
+    /Drei Hauptmahlzeiten · Konsistenz: fein zerdrückt/,
+  );
+
   const todayCard = page.locator("#todayCard");
-  assert.equal(await todayCard.locator(":scope > .row h2").innerText(), "Heute erledigt");
-  assert.equal(
-    await todayCard.locator(":scope > .row > .pill.ok").count(),
-    0,
-    "Der Tagesabschluss braucht neben 'Heute erledigt' kein zusätzliches Vollständig-Badge",
-  );
+  assert.equal(await todayCard.locator(":scope > .row h2").innerText(), "Mittagessen");
+  assert.equal(await todayCard.locator(".today-section-kicker").first().innerText(), "ALS NÄCHSTES");
+  const primaryAction = todayCard.locator(".today-focus-meal .logMeal").first();
+  await primaryAction.waitFor();
+  assert.equal((await primaryAction.innerText()).trim(), "Essen eintragen");
+  assert.ok(await primaryAction.evaluate((node) => node.getBoundingClientRect().height) >= 44, "Primäraktion bleibt gut antippbar");
 
-  const meal = todayCard.locator(".mealbox.completed").filter({ hasText: "Milch-Getreide-Brei" }).first();
-  await meal.waitFor();
-  const title = (await meal.locator(".completed-title").innerText()).replace(/\s+/g, " ").trim();
-  assert.match(title, /^Frühstück · Milch-Getreide-Brei/);
+  const timeline = todayCard.locator(".today-timeline-row");
+  assert.equal(await timeline.count(), 3, "Alle geplanten Mahlzeiten des Tages bleiben sichtbar");
+  assert.match((await timeline.nth(0).innerText()).replace(/\s+/g, " "), /Frühstück .* Erledigt/);
+  assert.match((await timeline.nth(1).innerText()).replace(/\s+/g, " "), /Mittagessen .* Als Nächstes/);
+  assert.match((await timeline.nth(2).innerText()).replace(/\s+/g, " "), /Abendessen .* Später/);
+  assert.equal(await timeline.nth(0).locator(".timeline-marker").innerText(), "✓");
 
-  assert.deepEqual(
-    await meal.locator(".log-outcome-item").evaluateAll((nodes) =>
-      nodes.map((node) => node.innerText.replace(/\s+/g, " ").trim()),
-    ),
-    ["Hirse Probiert", "Kuhmilch, Pfirsich Gegessen"],
-    "Gleiche Ergebnisse werden in der Heute-Karte kompakt zusammengefasst",
-  );
-
-  const completedColumns = await meal.locator(".completed-main").evaluate((node) =>
-    getComputedStyle(node).gridTemplateColumns.split(/\s+/).filter(Boolean).length,
-  );
-  assert.equal(completedColumns, 2, "Erledigte Heute-Karte reserviert keine leere Check-Spalte");
-
-  const statusPresentation = await meal.locator(".completed-main").evaluate((node) => {
-    const status = [...node.children].find((child) => child.matches("span.pill.ok"));
-    return {
-      text: status?.textContent?.trim() || "",
-      opacity: status ? Number(getComputedStyle(status).opacity) : -1,
-    };
-  });
-  assert.equal(statusPresentation.text, "Erledigt");
-  assert.ok(
-    statusPresentation.opacity >= 0 && statusPresentation.opacity < 1,
-    "Der Mahlzeitenstatus bleibt sichtbar, wird aber visuell zurückgenommen",
-  );
-
-  const edit = meal.locator(".completed-body-direct .editCompletedLog");
+  const edit = timeline.nth(0).locator(".timeline-edit");
   await edit.waitFor();
-  const editStyle = await edit.evaluate((node) => {
-    const style = getComputedStyle(node);
-    return { height: node.getBoundingClientRect().height, backgroundColor: style.backgroundColor };
-  });
-  assert.ok(editStyle.height >= 38, "Essen bearbeiten bleibt direkt und ausreichend gut antippbar");
-  assert.equal(editStyle.backgroundColor, "rgba(0, 0, 0, 0)", "Essen bearbeiten bleibt eine ruhige Sekundäraktion");
+  assert.ok(await edit.evaluate((node) => node.getBoundingClientRect().height) >= 44, "Erledigte Mahlzeiten bleiben direkt bearbeitbar");
 
-  const planMeal = page.locator("#blockPlan .mealbox.completed").filter({ hasText: "Milch-Getreide-Brei" }).first();
-  assert.equal(await planMeal.count(), 1, "Die erledigte Mahlzeit bleibt im Wochenplan vorhanden");
-  assert.equal(
-    await planMeal.locator(".log-outcome-item").count(),
-    3,
-    "Die Outcome-Gruppierung bleibt auf die Heute-Karte begrenzt",
-  );
+  assert.match(await page.locator("#progressCard").innerText(), /von 100 kennengelernt/);
+  assert.ok(await page.locator("#textureCoachCard.today-recommendation:visible").count() <= 1, "Maximal eine Empfehlung ist sichtbar");
+  assert.ok(await page.locator("#recipePreviewCard .today-recipe-row").count() <= 1, "Heute zeigt maximal eine kontextuelle Rezeptidee");
 
-  assert.deepEqual(pageErrors, [], "Der UI-Fluss darf keine Page-Errors erzeugen");
+  const navLabels = await page.locator("nav button").evaluateAll((nodes) => nodes.map((node) => node.textContent.trim()));
+  assert.deepEqual(navLabels, ["Heute", "Plan", "Prep", "Beikost", "Mehr"]);
+  await page.locator('nav button[data-view="plan"]').click();
+  assert.equal(await page.locator("#appBarTitle").innerText(), "Plan");
+  await page.locator('nav button[data-view="home"]').click();
+  assert.equal(await page.locator("#appBarTitle").innerText(), "Heute");
+
+  const mainOverflow = await page.locator("main").evaluate((node) => ({
+    scrollWidth: node.scrollWidth,
+    clientWidth: node.clientWidth,
+  }));
+  assert.ok(mainOverflow.scrollWidth <= mainOverflow.clientWidth + 1, "Heute darf mobil nicht horizontal überlaufen");
+
+  assert.deepEqual(pageErrors, [], "Der Mobile-Foundation-/Heute-Fluss darf keine Page-Errors erzeugen");
   await context.close();
+  console.log("today-completed-card-ui-webkit: ok");
 } finally {
   await browser.close();
   await new Promise((resolve) => server.close(resolve));

@@ -150,7 +150,7 @@ try {
   );
 
   const todayCard = page.locator("#todayCard");
-  assert.equal(await todayCard.locator(":scope > .row h2").innerText(), "Mittagessen");
+  assert.equal(await todayCard.locator(":scope > .row h2").innerText(), "Mittag");
   assert.equal(await todayCard.locator(".today-section-kicker").first().innerText(), "ALS NÄCHSTES");
   const primaryAction = todayCard.locator(".today-focus-meal .logMeal").first();
   await primaryAction.waitFor();
@@ -160,7 +160,7 @@ try {
   const timeline = todayCard.locator(".today-timeline-row");
   assert.equal(await timeline.count(), 3, "Alle geplanten Mahlzeiten des Tages bleiben sichtbar");
   assert.match((await timeline.nth(0).innerText()).replace(/\s+/g, " "), /Frühstück .* Erledigt/);
-  assert.match((await timeline.nth(1).innerText()).replace(/\s+/g, " "), /Mittagessen .* Als Nächstes/);
+  assert.match((await timeline.nth(1).innerText()).replace(/\s+/g, " "), /Mittag .* Als Nächstes/);
   assert.match((await timeline.nth(2).innerText()).replace(/\s+/g, " "), /Abendessen .* Später/);
   assert.equal(await timeline.nth(0).locator(".timeline-marker").innerText(), "✓");
 

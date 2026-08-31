@@ -221,10 +221,11 @@
   }
 
   function installMobileCompatibilityStyles() {
-    if (document.querySelector('style[data-mobile-foundation-compat="v2"]')) return;
+    if (document.querySelector('style[data-mobile-foundation-compat="v3"]')) return;
     document.querySelector('style[data-mobile-foundation-compat="v1"]')?.remove();
+    document.querySelector('style[data-mobile-foundation-compat="v2"]')?.remove();
     const style = document.createElement("style");
-    style.dataset.mobileFoundationCompat = "v2";
+    style.dataset.mobileFoundationCompat = "v3";
     style.textContent = `
 body.mobile-foundation nav button {
   min-height: 44px;
@@ -235,21 +236,19 @@ body.mobile-foundation #todayCard .today-focus-meal > .mealbox {
   background: var(--surface-soft, #fffaf3) !important;
   box-shadow: none !important;
 }
-body.mobile-foundation #todayCard .today-timeline-row.mealbox {
-  display: grid !important;
-  grid-template-columns: 26px minmax(0, 1fr) auto !important;
-  gap: 9px !important;
-  align-items: center !important;
+body.mobile-foundation #todayCard .today-timeline-completed {
+  min-width: 0;
+}
+body.mobile-foundation #todayCard .today-timeline-completed > .mealbox.completed {
   margin: 0 !important;
-  padding: 8px 0 !important;
+  padding: 0 !important;
   border: 0 !important;
-  border-top: 1px solid rgba(221, 213, 197, .72) !important;
   border-radius: 0 !important;
   background: transparent !important;
   box-shadow: none !important;
 }
-body.mobile-foundation #todayCard .today-timeline-heading + .today-timeline-row.mealbox {
-  border-top: 0 !important;
+body.mobile-foundation #todayCard .today-timeline-completed .completed-body-direct {
+  margin: 4px 0 0 !important;
 }
 body.mobile-foundation .today-recommendation.today-texture-coach {
   display: block !important;
@@ -267,16 +266,35 @@ body.mobile-foundation #genericModal .sheet {
   function installMealEditorSearchScrollGuard() {
     if (document.documentElement.dataset.mobileMealEditorScrollGuard === "true") return;
     document.documentElement.dataset.mobileMealEditorScrollGuard = "true";
+    let snapshot = null;
+
+    document.addEventListener("keydown", (event) => {
+      const field = event.target;
+      if (field?.id !== "mealSelectorSearch") return;
+      const sheet = field.closest(".sheet");
+      if (!sheet) return;
+      snapshot = { field, sheet, scrollTop: sheet.scrollTop };
+    }, true);
+
     document.addEventListener("input", (event) => {
       const field = event.target;
       if (field?.id !== "mealSelectorSearch") return;
       const sheet = field.closest(".sheet");
       if (!sheet) return;
-      const scrollTop = sheet.scrollTop;
+      const scrollTop = snapshot?.field === field && snapshot?.sheet === sheet
+        ? snapshot.scrollTop
+        : sheet.scrollTop;
       queueMicrotask(() => {
         if (field.isConnected && field.closest(".sheet") === sheet) sheet.scrollTop = scrollTop;
       });
     }, true);
+
+    document.addEventListener("keyup", (event) => {
+      const field = event.target;
+      if (field?.id !== "mealSelectorSearch" || snapshot?.field !== field) return;
+      if (snapshot.sheet?.isConnected) snapshot.sheet.scrollTop = snapshot.scrollTop;
+      snapshot = null;
+    });
   }
 
   function updateAppBar(viewId = "") {
@@ -323,6 +341,24 @@ body.mobile-foundation #genericModal .sheet {
     root.__mealCardUnification?.simplifyMealCards?.(container);
   }
 
+  function ensureTodayRandomSwapAction(card, date, meal) {
+    if (!root.__plannerRandomSwap?.randomizePlannedMeal || !card || !date || !meal) return;
+    if (meal.manualAdded || mealIsCompleted(date, meal.meal)) return;
+    if (state.planLocks?.[`${date}|${meal.meal}`]?.followUpFoodId) return;
+    const box = card.querySelector(".today-focus-meal > .mealbox");
+    if (!box || box.querySelector(".randomizeMeal")) return;
+    const actions = box.querySelector("details.meal-plan-actions .meal-plan-secondary-actions .actionbar") ||
+      box.querySelector("details.meal-plan-actions .actionbar");
+    if (!actions) return;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "btn secondary randomizeMeal";
+    button.dataset.randomDate = date;
+    button.dataset.randomMeal = meal.meal;
+    button.textContent = "↻ Tauschen";
+    actions.prepend(button);
+  }
+
   function openTextureSettings() {
     const stage = Number(state.settings.textureStage) || 1;
     const successes = textureSuccessCount(stage);
@@ -365,25 +401,17 @@ body.mobile-foundation #genericModal .sheet {
     textureControl.querySelector("#todayTextureSettings")?.addEventListener("click", openTextureSettings);
   }
 
-  function timelineCompletedTitle(log, meal) {
-    if (log?.recipeName) return log.recipeName;
-    const names = (log?.foodIds || []).map((id) => food(id)?.name).filter(Boolean);
-    return names.length ? naturalFoodList(names) : mealDisplayTitle(meal);
-  }
-
   function timelineRow(day, meal, focusMeal) {
     const done = completedLog(day.date, meal.meal);
     const isNext = !done && focusMeal?.meal === meal.meal;
-    const stateClass = done ? "completed" : isNext ? "next" : "later";
-    const marker = done ? "✓" : isNext ? "●" : "○";
-    const statusText = done ? "Erledigt" : isNext ? "Als Nächstes" : "Später";
-    const title = done ? timelineCompletedTitle(done, meal) : mealDisplayTitle(meal);
-    const edit = done
-      ? `<button class="timeline-edit editCompletedLog" type="button" data-log="${esc(done.id || "")}">Bearbeiten</button>`
-      : "";
-    const rowClass = `today-timeline-row ${stateClass}${done ? " mealbox" : ""}`;
-    const titleClass = done ? ' class="completed-title"' : "";
-    return `<div class="${rowClass}"><span class="timeline-marker" aria-hidden="true">${marker}</span><div class="today-timeline-copy"><b>${esc(mealName(meal.meal))}</b><span${titleClass}>${esc(title)}</span></div><div class="today-timeline-state"><span>${statusText}</span>${edit}</div></div>`;
+    if (done) {
+      return `<div class="today-timeline-row completed"><span class="timeline-marker" aria-hidden="true">✓</span><div class="today-timeline-completed">${renderMeal(day, meal)}</div><div class="today-timeline-state"><span>Erledigt</span></div></div>`;
+    }
+    const stateClass = isNext ? "next" : "later";
+    const marker = isNext ? "●" : "○";
+    const statusText = isNext ? "Als Nächstes" : "Später";
+    const title = mealDisplayTitle(meal);
+    return `<div class="today-timeline-row ${stateClass}"><span class="timeline-marker" aria-hidden="true">${marker}</span><div class="today-timeline-copy"><b>${esc(mealName(meal.meal))}</b><span>${esc(title)}</span></div><div class="today-timeline-state"><span>${statusText}</span></div></div>`;
   }
 
   function renderTodayFocus() {
@@ -426,8 +454,10 @@ body.mobile-foundation #genericModal .sheet {
     card.innerHTML = `<div class="row today-focus-head"><div class="grow"><span class="today-section-kicker">${heading}</span><h2>${esc(mealHeading)}</h2><div class="small">${nice(on, true)} · ${age} Monate</div></div></div>${focusHtml}<div class="today-timeline" aria-label="Tages-Timeline"><div class="today-timeline-heading"><b>Heute</b><span class="small">${active.length} ${active.length === 1 ? "Mahlzeit" : "Mahlzeiten"}</span></div>${timeline}</div><div class="add-meal-row"><button class="btn secondary smallbtn" id="homeAddEntry">Weiteres Essen eintragen</button></div>`;
 
     bindRenderedMealActions(card);
+    ensureTodayRandomSwapAction(card, on, focusMeal);
     root.__plannedRecipeDetails?.decorateHomeRecipeTitles?.();
-    card.querySelectorAll(".timeline-edit").forEach((button) => {
+    card.querySelectorAll(".today-timeline-row.completed .editCompletedLog").forEach((button) => {
+      button.classList.add("timeline-edit");
       button.onclick = () => editLogEntry(button.dataset.log);
     });
     document.getElementById("homeAddEntry")?.addEventListener("click", () => openLog(null));
@@ -497,10 +527,10 @@ body.mobile-foundation #genericModal .sheet {
     if (!card) return;
     const all = recipeStates();
     const recipe = focusMeal ? all.find((item) => item.unlocked && recipeMatchesFocus(item, focusMeal)) : null;
-    card.className = "today-recipe-card";
-    card.style.display = recipe ? "block" : "none";
+    card.className = `today-recipe-card${recipe ? "" : " today-recipe-empty"}`;
+    card.style.display = "block";
     if (!recipe) {
-      card.innerHTML = '<div class="today-recipe-head" hidden><button class="btn secondary smallbtn" id="openRecipes" type="button">Rezepte</button></div><div id="recipePreview"></div>';
+      card.innerHTML = '<div class="today-recipe-head"><div><span class="today-section-kicker">Rezepte</span><h3>Rezeptideen</h3></div><button class="btn secondary smallbtn" id="openRecipes" type="button">Rezepte</button></div><div id="recipePreview"></div>';
       return;
     }
 

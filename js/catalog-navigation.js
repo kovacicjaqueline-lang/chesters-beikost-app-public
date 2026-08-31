@@ -434,7 +434,7 @@
     card.className = "today-recipe-card";
     card.style.display = recipe ? "block" : "none";
     if (!recipe) {
-      card.innerHTML = '<div id="recipePreview"></div>';
+      card.innerHTML = '<div class="today-recipe-head" hidden><button class="btn secondary smallbtn" id="openRecipes" type="button">Rezepte</button></div><div id="recipePreview"></div>';
       return;
     }
 

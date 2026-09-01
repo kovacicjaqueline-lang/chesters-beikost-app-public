@@ -5,7 +5,7 @@
  * Solution-Preservation, die kooperative Suche und anschließend die Lösungsvorbereitung
  * installiert werden. Die Vorbereitung fängt den ersten Core-Render einmal ab; dadurch
  * kann die sichtbare Plan-Checks-UI nie vor der Lösungsprüfung einen irreführenden CTA
- * zeichnen. Die Dateien bleiben separat precachebar.
+ * zeichnen. Mobile-Plan wird zuletzt geladen und verdichtet ausschließlich die Darstellung.
  */
 (function loadPlanChecksUi() {
   if (typeof document === "undefined" || globalThis.__planChecksUiLoaderStarted) return;
@@ -20,6 +20,7 @@
     `plan-checks-cooperative-search.js${version}`,
     `plan-checks-solution-precompute.js${version}`,
     `plan-checks-ui-core.js${version}`,
+    `plan-mobile-ui.js${version}`,
   ];
 
   function loadNext(index) {

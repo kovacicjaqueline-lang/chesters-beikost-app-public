@@ -12,6 +12,11 @@
   root.__mobilePrepInstalled = true;
   let activePanel = "prepare";
 
+  function hasNeededShoppingHint() {
+    return typeof state !== "undefined" &&
+      Object.values(state.shoppingHints || {}).some((hint) => hint?.status === "needed");
+  }
+
   function installPrepMarkup() {
     const prep = document.getElementById("prep");
     if (!prep || prep.dataset.mobilePrep === "true") return;
@@ -133,6 +138,9 @@
         document.getElementById("prep")?.scrollIntoView({ block: "start" });
       };
     });
+    document.querySelector('nav button[data-view="prep"]')?.addEventListener("click", () => {
+      if (hasNeededShoppingHint()) activePanel = "shopping";
+    });
     applyPanelState();
   }
 
@@ -216,10 +224,7 @@
     const followups = list.querySelector(":scope > .shopping-followups");
     const empty = list.querySelector(":scope > .empty");
     const fragment = document.createDocumentFragment();
-    if (followups) {
-      followups.querySelector(".shopping-followup-title")?.replaceChildren("Priorität");
-      fragment.appendChild(followups);
-    }
+    if (followups) fragment.appendChild(followups);
     groups.forEach((groupRows, category) => {
       const section = document.createElement("section");
       section.className = "prep-shopping-category";

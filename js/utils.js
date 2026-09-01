@@ -139,7 +139,7 @@ if (typeof window !== "undefined" && typeof document !== "undefined") {
     if (plannerPoliciesFinished) return;
     plannerPoliciesFinished = true;
     window.__plannerPoliciesReady = true;
-    if (typeof renderAll === "function") renderAll();
+    if (typeof renderCurrentView === "function") renderCurrentView();
     if (plannerPolicyBody) plannerPolicyBody.style.visibility = "";
   };
 

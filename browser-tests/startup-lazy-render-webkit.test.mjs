@@ -59,29 +59,6 @@ try {
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(String(error?.message || error)));
 
-  await page.addInitScript(() => {
-    const descriptor = Object.getOwnPropertyDescriptor(Element.prototype, "innerHTML");
-    if (!descriptor?.get || !descriptor?.set) return;
-    Object.defineProperty(Element.prototype, "innerHTML", {
-      configurable: descriptor.configurable,
-      enumerable: descriptor.enumerable,
-      get: descriptor.get,
-      set(value) {
-        if (
-          this.id === "foodList" &&
-          !globalThis.__startupFoodListFirstWrite &&
-          String(value || "").trim()
-        ) {
-          globalThis.__startupFoodListFirstWrite = {
-            valueLength: String(value).length,
-            stack: new Error("foodList first populated").stack || "",
-          };
-        }
-        return descriptor.set.call(this, value);
-      },
-    });
-  });
-
   await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "load" });
   await page.waitForFunction(() => !!window.__beikostTest?.getState);
   await page.waitForFunction(() => {
@@ -94,15 +71,10 @@ try {
     foodsChildren: document.getElementById("foodList")?.childElementCount || 0,
     prepChildren: document.getElementById("prepNow")?.childElementCount || 0,
     logChildren: document.getElementById("logList")?.childElementCount || 0,
-    foodListFirstWrite: globalThis.__startupFoodListFirstWrite || null,
   }));
 
   assert.ok(startup.homeText.length > 0, "Die sichtbare Heute-Ansicht muss beim ersten Start sofort gerendert werden");
-  assert.equal(
-    startup.foodsChildren,
-    0,
-    `Der unsichtbare Lebensmittel-Tab darf beim Start noch nicht vollständig gerendert werden${startup.foodListFirstWrite?.stack ? `\nErster #foodList-Schreibstack:\n${startup.foodListFirstWrite.stack}` : "\nKein #foodList-Schreibstack erfasst."}`,
-  );
+  assert.equal(startup.foodsChildren, 0, "Der unsichtbare Lebensmittel-Tab darf beim Start noch nicht vollständig gerendert werden");
   assert.equal(startup.prepChildren, 0, "Der unsichtbare Prep-Tab darf beim Start noch nicht vollständig gerendert werden");
   assert.equal(startup.logChildren, 0, "Der unsichtbare Mehr-/Protokoll-Tab darf beim Start noch nicht vollständig gerendert werden");
 
@@ -118,6 +90,7 @@ try {
   await page.locator('nav button[data-view="more"]').click();
   await page.waitForFunction(() => (document.getElementById("statisticsBody")?.childElementCount || 0) > 0);
   assert.ok(await page.locator("#more.view.active").count(), "Mehr muss nach Navigation aktiv und gerendert sein");
+  assert.ok(await page.locator("#productAllergenCard").count(), "Mehr muss die Produktkennzeichnung beim ersten Lazy-Render mit aufbauen");
 
   assert.deepEqual(pageErrors, [], `Beim Start und Lazy-Render dürfen keine JavaScript-Fehler auftreten: ${pageErrors.join(" | ")}`);
 

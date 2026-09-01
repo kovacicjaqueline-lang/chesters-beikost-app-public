@@ -14,6 +14,7 @@ on:
       - 'assets/illustrations-v2/**'
       - 'tests/**'
       - 'browser-tests/**'
+      - 'scripts/**'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/app-tests.yml'
@@ -29,9 +30,14 @@ on:
       - 'assets/illustrations-v2/**'
       - 'tests/**'
       - 'browser-tests/**'
+      - 'scripts/**'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/app-tests.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -66,6 +72,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -73,12 +81,53 @@ jobs:
       - name: Run icon verification gate
         run: npm run verify:icons
 
-  test:
+  scope:
     if: ${{ github.event_name == 'push' || !startsWith(github.head_ref, 'icons/') }}
     runs-on: ubuntu-latest
-    container:
-      image: mcr.microsoft.com/playwright:v1.62.1-noble
-    timeout-minutes: 20
+    timeout-minutes: 5
+    outputs:
+      browser_required: ${{ steps.classify.outputs.browser_required }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Classify app test scope
+        id: classify
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PUSH_BASE_SHA: ${{ github.event.before }}
+          PUSH_HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            base="$PR_BASE_SHA"
+            head="$PR_HEAD_SHA"
+          else
+            base="$PUSH_BASE_SHA"
+            head="$PUSH_HEAD_SHA"
+          fi
+
+          zero_sha="0000000000000000000000000000000000000000"
+          if [ -z "${base:-}" ] || [ "$base" = "$zero_sha" ]; then
+            echo "No usable base SHA; keeping full app gate."
+            echo "browser_required=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          changed="$(git diff --name-only "$base" "$head")"
+          printf '%s\n' "$changed"
+          printf '%s\n' "$changed" | node scripts/ci-app-scope.mjs >> "$GITHUB_OUTPUT"
+
+  test-fast:
+    needs: scope
+    if: ${{ needs.scope.outputs.browser_required == 'false' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -87,9 +136,68 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Run app verification gate
-        run: npm run verify:app
+      - name: Run fast verification gate
+        run: npm run verify:fast
+
+  test:
+    needs: scope
+    if: ${{ needs.scope.outputs.browser_required == 'true' }}
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - shard: 1
+            run_fast: false
+          - shard: 2
+            run_fast: true
+    env:
+      BROWSER_TEST_SHARD: ${{ matrix.shard }}/2
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run fast verification gate
+        if: ${{ matrix.run_fast }}
+        run: npm run verify:fast
+
+      - name: Run browser regression shard
+        if: ${{ !cancelled() }}
+        run: npm run test:browser
+
+      - name: Upload plan checks UX screenshots
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: plan-checks-ux-screenshots-${{ github.run_id }}-shard-${{ matrix.shard }}
+          path: artifacts/browser-tests/plan-checks-ux-webkit/*.png
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Upload browser regression diagnostics
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-regression-diagnostics-${{ github.run_id }}-shard-${{ matrix.shard }}
+          path: artifacts/browser-tests/
+          if-no-files-found: ignore
+          retention-days: 7

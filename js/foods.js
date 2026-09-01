@@ -59,8 +59,8 @@ function setFoodActiveWithPlanCheck(f, nextActive) {
     delete state.inactivePlanKept?.[f.id];
     save();
     closeGeneric();
-    renderAll();
     showToast(`${f.name} ist wieder aktiv.`);
+    renderAllAfterNextPaint();
     return;
   }
   let refs = futurePlanReferences(f.id);
@@ -69,8 +69,8 @@ function setFoodActiveWithPlanCheck(f, nextActive) {
     delete state.inactivePlanKept?.[f.id];
     save();
     closeGeneric();
-    renderAll();
     showToast(`${f.name} bleibt unter „Deaktiviert“ abrufbar.`);
+    renderAllAfterNextPaint();
     return;
   }
   openGeneric(
@@ -88,8 +88,8 @@ function setFoodActiveWithPlanCheck(f, nextActive) {
     cleanFoodFromFuturePlan(f.id);
     save();
     closeGeneric();
-    renderAll();
     showToast(`${f.name} deaktiviert; zukünftige Planungen wurden bereinigt.`);
+    renderAllAfterNextPaint();
   };
   document.getElementById("deactivateKeep").onclick = () => {
     f.active = false;
@@ -97,8 +97,8 @@ function setFoodActiveWithPlanCheck(f, nextActive) {
     state.inactivePlanKept[f.id] = true;
     save();
     closeGeneric();
-    renderAll();
     showToast(`${f.name} deaktiviert; bestehende Planungen bleiben sichtbar.`);
+    renderAllAfterNextPaint();
   };
   document.getElementById("deactivateCancel").onclick = closeGeneric;
 }

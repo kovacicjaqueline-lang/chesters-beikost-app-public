@@ -94,6 +94,8 @@ const PLAN08_PRECACHE = [
   "./js/planner-proactive-recipe.js",
   "./js/planner-food-role-stability.js",
   "./js/planner-quality-rotation.js",
+  "./js/planner-introduction-policy.js",
+  "./js/planner-allergen-maintenance.js",
 ];
 
 // Handling-Readiness wird nach der PLAN-08-Kette ebenfalls dynamisch geladen.
@@ -108,6 +110,25 @@ const UNIFIED_LOG_PRECACHE = [
   "./js/log-core.js",
 ];
 
+// Die Phase-Readiness ist ein eigenständiger read-only Core und muss für den ersten
+// Offline-Start zusammen mit dem übrigen App-Core verfügbar sein.
+const PHASE_READINESS_PRECACHE = [
+  "./js/phase-readiness.js?v=10.1.26",
+];
+
+// Die strukturierte Planprüfung und ihre zentrale Lösungsschicht müssen vor dem
+// nächsten Offline-Render gemeinsam verfügbar sein.
+const PLAN_CHECK_PRECACHE = [
+  "./js/plan-checks.js?v=10.1.26",
+  "./js/planner-plan-check-solutions.js?v=10.1.26",
+  "./js/plan-checks-solution-preservation.js?v=10.1.26",
+  "./js/plan-checks-cooperative-search.js?v=10.1.26",
+  "./js/plan-checks-ui.js?v=10.1.26",
+  "./js/plan-checks-contract-extension.js?v=10.1.26",
+  "./js/plan-checks-solution-precompute.js?v=10.1.26",
+  "./js/plan-checks-ui-core.js?v=10.1.26",
+];
+
 // Zusätzliche UI-/Flow-Dateien, die nicht im statischen FILES-Stamm von sw-core.js liegen.
 // Dateien, die index.html mit ?v=10.1.26 lädt, werden unter exakt derselben URL precached.
 // Dadurch überschreibt ein Service-Worker-Update auch einen bereits vorhandenen direkten
@@ -116,7 +137,11 @@ const UI_PRECACHE = [
   "./ui-meal-editor-footer.css?v=10.1.26",
   "./flow-dialog-ui.css?v=10.1.26",
   "./catalog-navigation.css",
+  "./plan-checks-ui.css?v=10.1.26",
+  "./js/deferred-render.js?v=10.1.26",
   "./js/manual-meal-flow.js",
+  "./js/recipe-v2-component-options.js",
+  "./js/meal-editor-recipe-variants.js",
   "./js/flow-dialog-ui.js",
   "./js/planned-recipe-details.js?v=10.1.26",
   "./js/meal-card-unification.js?v=10.1.26",
@@ -125,6 +150,7 @@ const UI_PRECACHE = [
   "./js/planner-log-rollover-cascade.js",
   "./js/planner-log-rollover-review-fixes.js",
   "./js/planner-random-swap.js",
+  "./js/planner-missing-ingredient.js",
   "./js/product-allergens.js",
   "./js/product-allergens-guards.js",
   "./js/catalog-navigation.js",
@@ -139,6 +165,8 @@ self.addEventListener("install", (event) => {
         ...HANDLING_PRECACHE,
         ...UNIFIED_LOG_PRECACHE,
         ...UI_PRECACHE,
+        ...PHASE_READINESS_PRECACHE,
+        ...PLAN_CHECK_PRECACHE,
       ]),
     ];
     const cache = await caches.open(CACHE);

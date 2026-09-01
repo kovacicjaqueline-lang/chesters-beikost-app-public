@@ -1,7 +1,7 @@
 # Chesters Beikost-App – kanonisches Planner-Fachkonzept
 
-Stand: 20.08.2026  
-Dokumentationsbasis: Statusabgleich gegen `main` bis `8106621cc9bc130b2907cc0bad563cb6eff7311e`, einschließlich gemergter Handling-/BLW-Schicht, dokumentiertem Oral-Processing-Contract, gemergtem Nuss-/Samen-/Topping-Block, vollständiger österreichischer `seasonMonths`-Matrix und aktuellem FOOD-COUNT-Identitätsstand; historischer Phasenmodell-v2-Stand `f9f886c82af2ce267c10571e5e89df787037c6b0`.
+Stand: 28.08.2026  
+Dokumentationsbasis: aktueller Planner-Stand auf Basis von `main` bis `15d72f06de747cbac08de7c42b379d7b90bf2b36`, einschließlich gemergter Handling-/BLW-Schicht, dokumentiertem Oral-Processing-Contract, gemergtem Nuss-/Samen-/Topping-Block, vollständiger österreichischer `seasonMonths`-Matrix, aktuellem FOOD-COUNT-Identitätsstand und der fachlich freigegebenen täglichen Lebensmittel-Einführung; historischer Phasenmodell-v2-Stand `f9f886c82af2ce267c10571e5e89df787037c6b0`. PHASE-TRANSITION ist inzwischen über PR #83 auf `main` integriert; die strukturierte Planner-Einbindung und sichtbare Phase-Readiness-UX wurden anschließend über PR #89, #94 und #95 auf `main` ergänzt. Aktueller `main` für diesen PHASE-TRANSITION-Statusabgleich: `d7de972bd32f0a510b19c9fead7d6537ba3e20c6`.
 
 Dieses Dokument führt die bisher über Phasenmodell, PLAN-07, PLAN-08, MILK-01, TODO3-Regressionen und spätere Fachentscheidungen verteilte Planner-Semantik an einer Stelle zusammen.
 
@@ -50,26 +50,57 @@ Zusätzlich gilt:
 - Die Texturentwicklung bleibt separat dokumentiert.
 - Historische Texturinformationen dürfen durch spätere Planner-Erweiterungen nicht stillschweigend umgedeutet werden.
 
-## 1.3 PHASE-TRANSITION – entwicklungsorientierte Empfehlung ⚠️ Soll/Ist-Gap
+## 1.3 PHASE-TRANSITION – entwicklungsorientierte Empfehlung ✅ main
 
-Fachlich beschlossen ist:
+Der Readiness-Core beantwortet **ausschließlich**, ob der Übergang in die nächste Beikostphase empfohlen werden kann. Er verändert `phaseSelected` nicht, ruft keinen Phasenwechsel auf und bleibt vollständig getrennt von der bestehenden bewussten Nutzerbestätigung.
 
-1. Die App **empfiehlt** den Übergang in die nächste Beikostphase entwicklungsorientiert.
-2. Alter oder gegessene Grammwerte dürfen den Phasenwechsel nicht automatisch auslösen.
-3. Die Empfehlung ist kein Zwang und kein automatischer Wechsel.
-4. Die Nutzerin bestätigt den empfohlenen Wechsel bewusst/einmalig.
-5. Bestehende Logs, Vorräte, manuelle Mahlzeiten und Locks bleiben durch den Wechsel in ihrer bisherigen Semantik erhalten.
+Die Kriterien folgen der fachlich freigegebenen, aus offiziellen Beikostempfehlungen abgeleiteten qualitativen Logik: Mahlzeitenrhythmus wird schrittweise, ohne Druck und nach den individuellen Signalen des Kindes an den Familienrhythmus angepasst. Daraus werden **keine** starren Alters-, Mengen- oder Zeitgrenzen für den individuellen Phasenwechsel abgeleitet.
 
-Historisch nachgewiesenes Ist des Phasenmodell-v2:
+Verbindlich sind für jeden Übergang genau drei qualitative Signale:
 
-- Die Oberfläche erklärt korrekt, dass sich die Phase nach Entwicklung und Tagesablauf richtet.
-- `Zurück`/`Weiter` erlaubt den Wechsel zwischen den Phasen.
-- Vor dem Wechsel erscheint eine bewusste Bestätigung.
-- Alter und Grammwerte lösen den Wechsel nicht automatisch aus.
+1. `currentPatternAccepted`: Die in der aktuellen Phase vorgesehenen Beikostmahlzeiten werden grundsätzlich angenommen bzw. sind im Alltag etabliert.
+2. `additionalMealCue`: Das Kind zeigt an der konkret neu hinzukommenden Essensgelegenheit Hunger, Interesse oder einen tatsächlichen zusätzlichen Essbedarf.
+3. `routineCompatible`: Die zusätzliche regelmäßige Mahlzeit passt sinnvoll in den Tages-/Familienrhythmus.
 
-**Noch nicht nachgewiesen ist eine eigenständige Entwicklungs-Empfehlungslogik**, die aus geeigneten Entwicklungsmerkmalen ableitet, dass nun der nächste Phasenwechsel empfohlen werden sollte.
+Alle drei Signale werden ausdrücklich als `yes`, `no` oder `unknown` behandelt. `unknown` ist keine negative Bewertung, sondern eine fehlende Voraussetzung für eine Empfehlung.
 
-Damit ist PHASE-TRANSITION **keine offene Fachfrage**, sondern eine noch offene Soll-/Ist-Lücke. Vor einer Implementierung müssen die konkreten fachlichen Entwicklungsindikatoren separat festgelegt bzw. aus der ursprünglichen Freigabe eindeutig rekonstruiert werden. Es dürfen dafür keine neuen Schwellen aus Alter, Grammwerten oder technischen Bestandswerten erfunden werden.
+Die Übergänge verwenden dieselbe Kernregel:
+
+| Aktuelle Phase | Nächste Phase | Neuer Auto-Slot | Spezifische Bedeutung von `additionalMealCue` |
+|---|---|---|---|
+| Kennenlernen | Mahlzeitenaufbau | Frühstück | Hunger/Interesse an einer zusätzlichen regelmäßigen Frühstücks-Essensgelegenheit |
+| Mahlzeitenaufbau | Drei Hauptmahlzeiten | Abendessen | Hunger/Interesse an einer zusätzlichen regelmäßigen Abend-Essensgelegenheit |
+| Drei Hauptmahlzeiten | Familienkost | Snack | tatsächlicher regelmäßiger Zusatzbedarf zwischen den drei Hauptmahlzeiten |
+| Familienkost | – | – | terminale Phase; keine weitere Empfehlung |
+
+Entscheidung:
+
+- nur `currentPatternAccepted = yes` **und** `additionalMealCue = yes` **und** `routineCompatible = yes` → `recommended`;
+- sobald ein Signal `no` ist → `notYet`;
+- solange mindestens ein benötigtes Signal `unknown` ist → `notYet` mit explizit ausgewiesener fehlender Voraussetzung.
+
+Insbesondere gilt:
+
+- Alter ist **kein** PHASE-TRANSITION-Gate und verändert `recommended` nicht;
+- Grammwerte, Anzahl der Logs, Zahl erfolgreicher Tage oder Dauer in der Phase sind keine Readiness-Schwellen;
+- Texturstufe, BLW-/Handling-Fähigkeit, Allergenstatus, Milchmenge, Vorrat, manuelle Mahlzeiten und Locks sind keine PHASE-TRANSITION-Readiness-Signale;
+- bei 3→4 reicht „drei Mahlzeiten funktionieren“ allein nicht: Für den automatischen Snack muss ein tatsächlicher zusätzlicher Essbedarf vorliegen;
+- ein tatsächlicher Phasenwechsel erfolgt weiterhin ausschließlich über die bestehende bewusste Nutzeraktion; Logs, Vorräte, manuelle Mahlzeiten und Locks behalten ihre Semantik.
+
+### 1.3.1 Technischer Readiness-Vertrag
+
+Der zentrale Readiness-Zustand liefert mindestens:
+
+- `currentPhase`;
+- `nextPhase`;
+- den neu hinzukommenden Mahlzeitenslot;
+- `recommendation`;
+- `recommendable`;
+- die drei qualitativen `signals`;
+- `reasons`;
+- `missingPrerequisites`.
+
+Die Berechnung ist read-only und leitet die qualitativen Signale nicht stillschweigend aus Alter, Grammwerten, Logs oder Textur ab. Die bestehende Funktion zum tatsächlichen Phasenwechsel bleibt davon unberührt.
 
 ---
 
@@ -79,7 +110,7 @@ Für jeden aktiven Mahlzeitenslot gilt fachlich folgende Reihenfolge:
 
 1. **bestehende manuelle/feste Planung respektieren**;
 2. **harte Auto-Eignung prüfen**;
-3. **gegebenenfalls genau eine Einführung/Wiederholung des Tages zuweisen**;
+3. in Frühstück, Mittagessen und Abendessen bei geeigneten offenen Nicht-Allergenen **pro Mahlzeit höchstens eine Kostprobe/Einführung** vor einer rein bekannten Planung bevorzugen; eine Allergen-Einführung oder gezielte Allergen-Wiederholung bleibt dagegen die einzige Lernaufgabe des Tages;
 4. ansonsten vorhandenen geeigneten Rezeptvorrat bzw. bekannte Planung verwenden;
 5. FOOD-Begleiter nur innerhalb der bestehenden Gates auswählen;
 6. Recipe-first darf eine fachlich passende Rezeptdarstellung herstellen;
@@ -112,6 +143,7 @@ Diese Auto-Eignung gilt nicht nur für den Fokus, sondern auch für:
 - Begleiter;
 - Rezeptzutaten;
 - automatische Snackrezepte;
+- automatisch ausgewähltes bekanntes Obst als Snack;
 - automatische Add-ons;
 - automatische Follow-ups.
 
@@ -126,6 +158,8 @@ Custom-FOODs erhalten keine pauschale Frühstück/Mittag/Abend-Eignung, sondern 
 Referenzfall:
 
 - Banane + Pferdefleisch zum Frühstück war ein Mahlzeiteneignungsfehler, kein Anlass für eine allgemeine Pair-Blacklist.
+
+Für Snacks wird weiterhin **kein allgemeines neues `FOOD.meals = snack`-Modell** eingeführt. Der ausdrücklich freigegebene FOOD-Snackpfad ist eng auf bereits bekanntes Obst begrenzt; alle anderen FOOD-Kategorien werden daraus nicht automatisch als Einzel-Snack abgeleitet.
 
 ---
 
@@ -146,6 +180,7 @@ Das Bestandsmodell leitet automatische Statuswerte aus protokollierten Gaben ab 
 Wichtig für den Planner:
 
 - ein bereits erfolgreich probiertes FOOD kann als bekannte Komponente kombinierbar sein;
+- ein bloß erfolgreich probiertes FOOD ist **keine Pflicht-Wiederholung** und blockiert keine geeignete neue Nicht-Allergen-Einführung;
 - eine **Hauptbasis** benötigt die strengere bestehende Basis-Eignung;
 - `Pausiert` bleibt ein harter Ausschluss im automatischen Pfad.
 
@@ -183,13 +218,20 @@ Die bestehende strenge Editor-Validierung wird nicht gelockert. Der Planner muss
 
 # 5. Einführung neuer Lebensmittel und Wiederholungen
 
-## 5.1 Höchstens eine Einführung pro automatischem Planungstag ✅ main
+## 5.1 Tägliche Einführung pro Hauptmahlzeit ✅ main
 
-Der Tagesplan führt nicht in mehreren Mahlzeiten unabhängig voneinander neue FOODs ein.
+Für **Nicht-Allergene** gilt:
 
-Der Planner besitzt dafür einen Tageszustand (`introAssigned`). Sobald die geplante Einführung/Wiederholung des Tages zugewiesen ist, werden weitere normale Slots mit bekannten Lebensmitteln geplant.
+- an jedem Planungstag dürfen geeignete offene FOODs eingeführt werden;
+- Frühstück, Mittagessen und Abendessen dürfen jeweils **höchstens ein** neues bzw. als Kostprobe behandeltes FOOD enthalten;
+- wenn für einen freien automatischen Hauptmahlzeitenslot ein geeignetes offenes Nicht-Allergen vorhanden ist, wird dieses gegenüber einer rein bekannten Mahlzeit bevorzugt;
+- ein bereits erfolgreich probiertes FOOD darf bekannt kombiniert werden, blockiert aber keine neue Einführung und wird nicht allein wegen `Probiert` zur Pflicht-Wiederholung;
+- eine echte Ablehnung (`not_accepted`), ein bewusstes Follow-up oder ein expliziter Override darf weiterhin eine gezielte Wiederholung auslösen;
+- manuelle Mahlzeiten, Locks, protokollierte Mahlzeiten, Overrides und bestehende harte Gates bleiben geschützt.
 
-Ein bewusst gesetzter Override für ein noch nicht ausreichend bekanntes FOOD kann den Einführungsslot bestimmen.
+Pro Mahlzeit bleibt damit höchstens **ein unbekanntes FOOD** zulässig. Recipe-first darf diesen einen Sample-Pfad darstellen oder mit bekannten geeigneten Zutaten ergänzen, aber kein zweites unbekanntes FOOD hinzufügen.
+
+Für **Allergene** gilt die strengere Tagesregel aus Abschnitt 6: Eine Allergen-Einführung oder gezielte Allergen-Wiederholung ist die einzige automatische Lernaufgabe dieses Tages. Bekannte Mahlzeiten und bekannter Snack bleiben daneben möglich.
 
 ## 5.2 Einführungsarten ✅ main
 
@@ -205,11 +247,15 @@ Der Planner unterscheidet aktuell insbesondere:
 
 Eine neue Kostprobe bleibt als `sampleFoodId` erkennbar und wird nicht durch Recipe-first oder Darstellung in eine bekannte Hauptbasis umgedeutet.
 
-## 5.3 Einführungsrhythmus 🟠 Bestandsverhalten
+`bekannt kombinieren` ist dabei ausdrücklich **keine neue Einführung**. Es darf deshalb keinen weiteren freien Hauptmahlzeitenslot desselben Tages als angeblich verbrauchten Lernslot blockieren.
 
-Der aktuelle Planner verwendet `newFoodEvery` zur zeitlichen Taktung automatischer Einführungen; der Default beträgt aktuell 2 Planungstage.
+## 5.3 Kein allgemeiner Mehrtages-Takt für Nicht-Allergene ✅ main
 
-Dieser Wert ist vorhandene Planner-Konfiguration. Eine zukünftige fachliche Änderung dieses Rhythmus ist eine eigene Entscheidung und darf nicht aus dem Phasenmodell abgeleitet werden.
+Der frühere `newFoodEvery`-Takt steuert die normale automatische Einführung von Nicht-Allergenen nicht mehr. Geeignete offene Nicht-Allergene können täglich und je freier aktiver Hauptmahlzeit geplant werden.
+
+Das bestehende Setting bleibt ausschließlich aus Daten-/Backup-Kompatibilitätsgründen im State erhalten und wird in der Oberfläche nicht mehr als wirksame Planner-Einstellung angeboten. Es darf nicht stillschweigend wieder als Mindestabstand zwischen normalen Nicht-Allergen-Einführungen verwendet werden.
+
+Allergen-Einführungen und -Wiederholungen behalten ihre eigene strengere Logik und werden nicht aus dieser Lockerung abgeleitet.
 
 ---
 
@@ -221,13 +267,38 @@ Allergenlogik verwendet das strukturierte `allergenGroup`/Allergen-Familienmodel
 
 Neue Allergengruppen müssen durch dieselbe Plannerlogik laufen wie bereits vorhandene.
 
-## 6.2 Einführung und Wiederholung ✅ main
+## 6.2 Einführung und gezielte Wiederholung ✅ main
 
 - Ein noch offenes Allergen kann nur eingeführt werden, wenn eine geeignete bekannte Basis vorhanden ist.
-- Fällige Allergene können gezielt wiederholt werden.
-- Allergen-Wiederholungen dürfen vorhandene harte Mahlzeiten-/Safety-Gates nicht umgehen.
+- Eine gezielte Wiederholung bleibt Teil der Lernphase, wenn sie fachlich noch zur Einführung gehört, etwa als bewusstes Follow-up nach einer Einführung oder Reaktion/Ablehnung.
+- Solche Allergen-Wiederholungen dürfen vorhandene harte Mahlzeiten-/Safety-Gates nicht umgehen.
+- Sobald automatisch eine Allergen-Einführung oder tatsächlich noch zur Lernphase gehörende gezielte Allergen-Wiederholung geplant wird, ist sie die **einzige automatische Lernaufgabe dieses Tages**; weitere neue Nicht-Allergene oder andere automatische Lernwiederholungen werden an diesem Tag nicht zusätzlich eingeplant.
+- Eine bereits manuell/fest geplante andere Kostprobe verhindert umgekehrt, dass zusätzlich automatisch ein Allergen als zweite Lernaufgabe desselben Tages eingeschoben wird.
+- Eine routinemäßige Langzeitpflege eines bereits vertragenen Allergens gehört **nicht** in diesen Lernpfad; dafür gilt Abschnitt 6.3.
 
-## 6.3 Nüsse/Samen: Komponente, Sample und Topping ✅ main
+## 6.3 Langfristige Allergenpflege 🟡 Branch/Integrations-PR
+
+Für bereits verträgliche Allergene ist die regelmäßige Pflegeexposition fachlich von Einführung und gezielter Lernwiederholung getrennt:
+
+- Langfristige Pflege ist **keine neue FOOD-Einführung, keine Kostprobe und keine Lernaufgabe**. Sie darf daher keinen ansonsten freien FOOD-Einführungsslot verbrauchen und wird als normale bekannte Mahlzeit/Komponente behandelt.
+- Die Fälligkeit wird nicht mehr allein pro FOOD-ID über `lastDate(foodId)` bewertet. Maßgeblich ist ein zentrales Maintenance-Ziel aus dem vorhandenen strukturierten Allergenmodell.
+- Wo eine feinere `allergenFamily` fachlich eine konkrete Allergenquelle trennt, bleibt diese Trennung erhalten. Insbesondere werden unterschiedliche Nussfamilien nicht allein über die breite Gruppe `Schalenfrüchte` gleichgesetzt.
+- Für die ausdrücklich freigegebene **Glutenpflege** gilt dagegen `Glutenhaltiges Getreide` als gemeinsames langfristiges Maintenance-Ziel. Ein bereits geeignetes glutenhaltiges Lebensmittel wie Hafer, Weizen oder Dinkel kann deshalb dasselbe Pflegeziel erfüllen. Das macht diese FOODs **nicht** zu derselben Einführungsfamilie und verändert ihre Einführungs-/Statuslogik nicht.
+- Ohne feinere Familie wird die bestehende strukturierte `allergenGroup` als langfristiges Pflegeziel verwendet; es wird dafür keine neue medizinische Gruppe erfunden.
+- Ein anderes FOOD darf ein Pflegeziel nur erfüllen, wenn es selbst über den normalen bekannten Planner-Pfad für die konkrete Mahlzeit geeignet ist. `autoPlan`, Mahlzeiteneignung, `minPhase`, Alter, `Pausiert`, Safety, Rollen und weitere harte Gates bleiben vollständig wirksam.
+- Rezepte können ein oder mehrere Pflegeziele über ihre **tatsächlichen kanonischen Zutaten** abdecken. Ein bloßer Rezeptname genügt nicht.
+- Eine bereits geplante passende Mahlzeit oder ein passendes Rezept zählt als **voraussichtliche Abdeckung** für die Planung. Historisch erfüllt bzw. zeitlich zurückgesetzt wird das Pflegeziel erst durch eine protokollierte relevante Zutat mit Ergebnis `eaten`.
+- Eine normale Mahlzeit darf mehrere bereits bekannte Pflegeziele gleichzeitig abdecken.
+- Der Planner versucht Pflege innerhalb ohnehin geeigneter normaler Mahlzeiten, bekannter Komponenten oder geeigneter Rezepte unterzubringen. Bei wenigen verfügbaren Mahlzeiten darf Pflege nicht praktisch alle Slots als Lernslots blockieren; eine echte FOOD-Einführung behält ihren eigenen Lernslot.
+- Ist in einem knappen Plan keine geeignete normale Abdeckung möglich, wird daraus **keine künstliche neue Lernaufgabe** konstruiert.
+
+Referenzfall:
+
+**„Hafer sollte als Allergen wieder angeboten werden; kein geeigneter freier Slot.“**
+
+Eine fällige Langzeitpflege darf diesen FOOD-Lernslot nicht mehr allein wegen der FOOD-ID `hafer` blockieren. Ist das gemeinsame Glutenpflegeziel bereits durch eine andere geeignete geplante glutenhaltige Quelle oder ein passendes Rezept abgedeckt, gilt die Planung voraussichtlich als gedeckt; tatsächlich erfüllt ist sie erst nach protokolliertem Essen der relevanten Zutat.
+
+## 6.4 Nüsse/Samen: Komponente, Sample und Topping ✅ main
 
 Fachlich beschlossen und auf `main` integriert:
 
@@ -312,7 +383,7 @@ Das eine neue FOOD muss bereits die einzige geplante Kostprobe der Mahlzeit sein
 
 Ohne geplante Kostprobe darf Recipe-first kein unbekanntes FOOD ergänzen.
 
-Ein nach Abschnitt 6.3 geplantes Nuss-/Samenmus-Topping bleibt die eine Kostprobe der Mahlzeit. Die zugrunde liegenden Zutaten des Obst-Getreide-Breis müssen vollständig bekannt und geeignet sein; das Topping wird nicht in die kanonische Rezeptzutatenmenge umgedeutet.
+Ein nach Abschnitt 6.4 geplantes Nuss-/Samenmus-Topping bleibt die eine Kostprobe der Mahlzeit. Die zugrunde liegenden Zutaten des Obst-Getreide-Breis müssen vollständig bekannt und geeignet sein; das Topping wird nicht in die kanonische Rezeptzutatenmenge umgedeutet.
 
 ## 9.3 Mehrdeutige Rezepte
 
@@ -339,8 +410,12 @@ Technische Auswahlpriorität bei proaktiven Kandidaten:
 - Kein automatischer Snack in Phase 1–3.
 - Phase 3: Snack nur manuell möglich.
 - Phase 4: automatischer Snackslot.
-- Automatische Snack-Eignung wird über vorhandene geeignete Snack-Rezepte bestimmt, nicht über ein pauschales allgemeines FOOD-`snack`-Feld.
-- Auch Snack-Rezeptzutaten müssen die harten Auto-Gates erfüllen.
+- Der Snack nimmt **nicht** an der automatischen Neueinführung teil; offene FOODs werden dort nicht neu eingeführt.
+- Ein Snack darf ein vorhandenes geeignetes Snack-Rezept **oder bereits bekanntes geeignetes Obst** sein.
+- Vorhandener echter Rezeptvorrat darf weiterhin Vorrang haben; ohne solchen Vorrat kann bekanntes Obst als einfacher Snack geplant werden.
+- Der Obstpfad ist ausdrücklich **kein allgemeines neues `FOOD.meals = snack`-Modell**. Aus ihm werden weder Gemüse noch Stärke, Fleisch, Ei oder andere Kategorien pauschal als einzelne automatische Snacks freigeschaltet.
+- Bekanntes Obst darf auch manuell als Snack gewählt werden; dafür wird es nicht künstlich zu einem Rezept umgedeutet.
+- Auch Snack-Rezeptzutaten und automatisch ausgewähltes Obst müssen die für ihren jeweiligen automatischen Pfad geltenden harten Gates erfüllen.
 
 ---
 
@@ -354,7 +429,7 @@ Verbindliche Grenzen:
 - ein vorhandener Rezept-/FOOD-Vorrat darf nur reserviert werden, wenn er tatsächlich für die geplante Mahlzeit verwendet wird;
 - Neuplanung und Auto-Lock-Rebuild dürfen keine Doppelreservierung erzeugen.
 
-Die konkrete Gewichtung von Vorrat gegenüber anderen gleich geeigneten Kandidaten ist Bestandsverhalten und keine implizite neue Fachregel.
+Die konkrete Gewichtung von Vorrat gegenüber anderen gleich geeigneten Kandidaten ist Bestandsverhalten und keine implizite neue Fachregel. Eine geeignete neue Nicht-Allergen-Einführung hat in einem freien Hauptmahlzeitenslot fachlich Vorrang vor einer rein bekannten Planung; innerhalb gleichartiger bekannter Alternativen bleibt die bestehende Vorrats-/Rotationsgewichtung bestehen.
 
 ---
 
@@ -393,6 +468,7 @@ Der bestehende Planner kann `ph`/Reisevorbereitung als Priorisierung verwenden. 
 - Ein FOOD mit Reaktionsstatus kann pausiert werden und fällt aus automatischer Planung.
 - Abgelehnte Kombinationen können zeitweise nachgereiht/pausiert werden.
 - Eine pausierte Kombination darf weder über Eisenpräferenz noch über einen weichen kulinarischen Fallback wieder eingeschleust werden.
+- Eine echte Ablehnung eines einzelnen FOODs darf als gezielte Wiederholung priorisiert werden; ein lediglich erfolgreich probiertes FOOD erhält diesen Pflichtstatus nicht.
 - Spätere erfolgreiche Kombinationen dürfen die Historie entsprechend neu bewerten.
 
 ---
@@ -510,9 +586,9 @@ Aktuell nicht als erledigt behandeln:
 
 Die vollständige österreichische `seasonMonths`-Matrix und die Nuss-/Samen-Rollen- und Toppingregel sind auf `main` integriert und nicht mehr als offene Planner-Blöcke zu behandeln. Die allgemeine Handling-/BLW-Schicht ist **keine offene Fachfrage mehr**. Der Oral-Processing-Contract ist fachlich auf `main` dokumentiert; Review, Einzelmigrationen und eine spätere technische Runtime-Abbildung bleiben ein separater Handling-/Oral-Arbeitsstrang und sind nicht Teil dieses Planner-Statusabgleichs.
 
-## 17.2 Fachlich beschlossen, aber noch nicht vollständig auf main nachgewiesen
+## 17.2 PHASE-TRANSITION ✅ main
 
-1. ⚠️ **PHASE-TRANSITION:** entwicklungsorientierte Empfehlung des nächsten Phasenwechsels plus bewusste Bestätigung. Bestätigung und manueller Wechsel sind vorhanden; eine eigenständige Entwicklungs-Empfehlungslogik ist noch nicht nachgewiesen.
+Für PHASE-TRANSITION besteht kein offener Soll/Ist-Gap mehr. Der read-only Readiness-Core, seine strukturierte Planner-Einbindung und die sichtbare Phase-Readiness-UX sind auf `main` integriert. Die bestehende bewusste Nutzerbestätigung bleibt der einzige Weg zum tatsächlichen Phasenwechsel; Alter, Grammwerte, Loganzahl, Phasendauer und Textur sind weiterhin keine Readiness-Schwellen.
 
 Weitere offene FOOD-Datenfragen werden separat im FOOD-Fachregel-Track geklärt und dürfen nicht als implizite Planner-Regel erfunden werden.
 
@@ -523,8 +599,17 @@ Weitere offene FOOD-Datenfragen werden separat im FOOD-Fachregel-Track geklärt 
 Änderungen am Planner müssen mindestens folgende Verträge regressiv erhalten:
 
 - Phasenmodell und Mahlzeitenslots;
-- PHASE-TRANSITION: kein automatischer Phasenwechsel durch Alter oder Grammwerte; bei späterer Implementierung der Empfehlung klare Trennung zwischen Empfehlung und bestätigtem Wechsel;
-- genau eine Einführung/Wiederholung pro automatischem Planungstag;
+- PHASE-TRANSITION: Readiness ist read-only; `recommended` setzt `currentPatternAccepted`, `additionalMealCue` und `routineCompatible` gemeinsam voraus; Alter, Grammwerte, Loganzahl, Phasendauer und Textur verändern die Empfehlung nicht und lösen niemals einen Phasenwechsel aus; fehlende qualitative Signale bleiben explizit `unknown`;
+- tägliche Nicht-Allergen-Einführung mit höchstens einem unbekannten FOOD je Frühstück/Mittag/Abend;
+- ein erfolgreich `Probiert`-FOOD blockiert keine geeignete offene Neueinführung; echte Ablehnung bleibt gezielter Wiederholungspfad;
+- Allergen-Einführung oder gezielte Allergen-Wiederholung bleibt die einzige automatische Lernaufgabe des Tages;
+- langfristige Allergenpflege ist keine Lernaufgabe, kein `sample` und verbraucht keinen FOOD-Einführungsslot;
+- Maintenance-Fälligkeit wird pro Pflegeziel statt ausschließlich pro FOOD-ID bewertet; nur `eaten` erfüllt die historische Exposition;
+- Glutenpflege darf durch eine andere bereits geeignete glutenhaltige Quelle oder ein Rezept mit tatsächlicher kanonischer Gluten-Zutat abgedeckt werden, ohne Hafer/Weizen/Dinkel als Einführungsfamilie gleichzusetzen;
+- feinere vorhandene Allergenfamilien – insbesondere einzelne Nussfamilien – bleiben als getrennte Maintenance-Ziele erhalten;
+- geplante FOODs/Rezepte zählen nur als voraussichtliche Maintenance-Abdeckung; mehrere bekannte Pflegeziele dürfen durch dieselbe normale Mahlzeit abgedeckt werden;
+- Snack führt keine neuen FOODs ein, darf aber ein geeignetes Rezept oder bekanntes Obst sein;
+- der Obst-Snackpfad erzeugt kein generisches FOOD-`snack`-Modell für andere Kategorien;
 - Mahlzeiteneignung/PLAN-07;
 - Auto-Gates für Fokus, Basis, Begleiter, Rezeptzutaten, Snack und Add-ons;
 - MILK-01;
@@ -536,7 +621,7 @@ Weitere offene FOOD-Datenfragen werden separat im FOOD-Fachregel-Track geklärt 
 - andere Allergene werden durch die Nuss-/Samen-Rollenregel nicht eingeschränkt;
 - PLAN-08-X1 / kein dritter Eisenfallback;
 - Single-Starch;
-- Recipe-first einschließlich maximal einem neuen FOOD;
+- Recipe-first einschließlich maximal einem neuen FOOD **pro Mahlzeit**;
 - Rollenstabilität `base/component/sample` Plan → Lock → Reload → Editor;
 - Vorrats-/Recipe-first-Reservierungen;
 - Replan-Semantik;
@@ -565,6 +650,7 @@ Aktuelle Kernquellen:
 
 - `js/state.js`
 - `js/model.js`
+- `js/phase-readiness.js`
 - `js/planning.js`
 - `js/planner-meal-eligibility.js`
 - `js/planner-milk-policy.js`
@@ -572,6 +658,9 @@ Aktuelle Kernquellen:
 - `js/planner-recipe-first.js`
 - `js/planner-proactive-recipe.js`
 - `js/planner-food-role-stability.js`
+- `js/planner-quality-rotation.js`
+- `js/planner-introduction-policy.js`
+- `js/planner-allergen-maintenance.js`
 - `docs/PLAN-08_COMBINATION_AUDIT.md`
 - `docs/PLAN-08_RECIPE_FIRST.md`
 - `docs/FOOD_SEASONMONTHS_AT_AUDIT.md`
@@ -579,6 +668,7 @@ Aktuelle Kernquellen:
 Zentrale Regressionen:
 
 - `tests/todo3-phase-model.test.cjs`
+- `tests/phase-readiness.test.cjs`
 - `tests/todo3-food-auto-integration.test.cjs`
 - `tests/todo3-replanning.test.cjs`
 - `tests/planner-meal-eligibility-p0.test.cjs`
@@ -589,6 +679,9 @@ Zentrale Regressionen:
 - `tests/planner-recipe-first.test.cjs`
 - `tests/planner-proactive-recipe-first.test.cjs`
 - `tests/planner-proactive-recipe-intro-exact.test.cjs`
+- `tests/planner-quality-rotation.test.cjs`
+- `tests/planner-introduction-frequency.test.cjs`
+- `tests/planner-allergen-maintenance.test.cjs`
 - `tests/planner-nut-seed-toppings.test.cjs`
 - `tests/planner-nut-seed-review-fixes.test.cjs`
 - `tests/planner-nut-seed-focus-gate-chain.test.cjs`

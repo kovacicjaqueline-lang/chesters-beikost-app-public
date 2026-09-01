@@ -123,4 +123,28 @@
     script.async = false;
     document.head.appendChild(script);
   }
+
+  // „Zutat fehlt“ baut bewusst auf dem bereits installierten Tauschen-/Kartenpfad
+  // auf und kommt deshalb unmittelbar danach. So bleibt die bestehende Planner-
+  // Semantik unangetastet und die neue Aktion ergänzt nur die Verfügbarkeit.
+  const missingIngredientSrc = "js/planner-missing-ingredient.js?v=10.1.26";
+  if (document.readyState === "loading") {
+    document.write(`<script src="${missingIngredientSrc}"></scr` + `ipt>`);
+  } else {
+    let script = document.createElement("script");
+    script.src = missingIngredientSrc;
+    script.async = false;
+    document.head.appendChild(script);
+  }
+
+  // app.js und nachgelagerte Planner-Schichten ersetzen einzelne Planner-Funktionen
+  // noch während des Parserlaufs. Nach Abschluss aller synchronen Skripte werden
+  // deshalb die Availability-Wrapper genau einmal auf die endgültige Runtime gelegt.
+  const finalizeMissingIngredientPolicies = () =>
+    globalScope.__plannerMissingIngredient?.installAvailabilityPolicies?.();
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", finalizeMissingIngredientPolicies, { once: true });
+  } else {
+    setTimeout(finalizeMissingIngredientPolicies, 0);
+  }
 })(typeof globalThis !== "undefined" ? globalThis : this);

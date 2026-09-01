@@ -114,7 +114,7 @@ test("der erste Core-Render installiert Precompute explizit ohne renderAll-Wrapp
     preservationIndex >= 0 && cooperativeIndex > preservationIndex && precomputeIndex > cooperativeIndex && coreIndex > precomputeIndex,
     "Preservation, kooperative Suche, Precompute und UI-Core müssen in dieser Reihenfolge geladen werden",
   );
-  assert.match(precompute, /globalScope\.__installPlanCheckSolutionPrecompute = installPlanCheckSolutionPrecompute/);
+  assert.match(precompute, /globalScope\.__installPlanCheckSolutionPrecompute = installPrecompute/);
   assert.match(uiCore, /globalScope\.__installPlanCheckSolutionPrecompute\(\{ renderNow: false \}\)/);
   assert.doesNotMatch(precompute, /renderAll = function installPrecomputeBeforeInitialCoreRender/);
   assert.doesNotMatch(

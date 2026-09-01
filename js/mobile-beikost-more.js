@@ -291,9 +291,19 @@
     showMenu();
   }
 
-  installFoodCatalogStructure();
-  installRecipeCatalogStructure();
-  installFoodRowDecorator();
-  installFoodDetailScreen();
-  installMoreNavigation();
+  function installMobileBeikostMore() {
+    installFoodCatalogStructure();
+    installRecipeCatalogStructure();
+    installFoodRowDecorator();
+    installFoodDetailScreen();
+    installMoreNavigation();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", () => {
+      setTimeout(installMobileBeikostMore, 0);
+    }, { once: true });
+  } else {
+    setTimeout(installMobileBeikostMore, 0);
+  }
 })(typeof globalThis !== "undefined" ? globalThis : window);

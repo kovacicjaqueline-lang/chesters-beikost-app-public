@@ -174,10 +174,12 @@
     <details class="help-topic">
      <summary>Lebensmittelstatus</summary>
      <div class="small">
-      <p><b>Probiert:</b> Kontakt mit dem Lebensmittel, aber noch keine normale Freigabe für Kombinationen.</p>
-      <p><b>Kombinierbar:</b> einmal problemlos gegessen.</p>
-      <p><b>Verträgliche Basis:</b> zweimal problemlos gegessen.</p>
-      <p><b>Regelmäßig:</b> mindestens dreimal problemlos gegessen.</p>
+      <p><b>Offen:</b> noch kein positiver Kontakt protokolliert.</p>
+      <p><b>Probiert:</b> mindestens einmal probiert oder einmal gegessen. Mehrfaches Probieren zählt als Erfahrung, macht das Lebensmittel aber nicht automatisch bekannt.</p>
+      <p><b>Kombinierbar:</b> ab einer gegessenen Exposition darf das Lebensmittel als bekannte Komponente verwendet werden.</p>
+      <p><b>Bekannt:</b> ab zwei getrennten gegessenen Expositionen. Weitere gegessene Expositionen erzeugen keinen zusätzlichen Status.</p>
+      <p><b>Pausiert:</b> Sonderstatus; im automatischen Planner ausgeschlossen.</p>
+      <p><b>❤️ Wird gern gegessen:</b> unabhängige optionale Vorliebe. Nicht markiert bedeutet neutral, nicht „mag er nicht“.</p>
       <p>Deaktivierte Lebensmittel bleiben gespeichert, werden aber nicht neu automatisch eingeplant.</p>
      </div>
     </details>
@@ -270,6 +272,7 @@
 <script src="js/prep.js?v=10.1.26"></script>
 <script src="js/prep-mobile.js?v=10.1.26"></script>
 <script src="js/recipe-frozen-ingredient-stock.js?v=10.1.26"></script>
+<script src="js/food-status-preferences.js?v=10.1.26"></script>
 <script src="js/statistics.js?v=10.1.26"></script>
 <script src="js/ui.js?v=10.1.26"></script>
 <script src="js/planner-log-rollover.js?v=10.1.26"></script>

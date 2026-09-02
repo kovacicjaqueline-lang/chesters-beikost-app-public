@@ -86,6 +86,22 @@ try {
   await page.locator('[data-catalog-mode="recipes"]').click();
   await page.waitForFunction(() => (document.getElementById("recipeList")?.childElementCount || 0) > 0);
   assert.ok(await page.locator("#recipesSection:not([hidden])").count(), "Der Rezeptkatalog muss nach dem Umschalten vollständig gerendert werden");
+  assert.equal(await page.locator("#prepNow > *").count(), 0, "Rezept-Navigation darf den versteckten Prep-Bereich nicht mitrendern");
+
+  await page.evaluate(() => {
+    const list = document.getElementById("recipeList");
+    if (list) list.innerHTML = '<div id="staleRecipeMarker">veraltet</div>';
+    renderCurrentView();
+  });
+  await page.waitForFunction(() =>
+    !document.getElementById("staleRecipeMarker") &&
+    (document.getElementById("recipeList")?.childElementCount || 0) > 0,
+  );
+  assert.equal(
+    await page.locator("#prepNow > *").count(),
+    0,
+    "Ein späterer Current-View-Render muss nur den sichtbaren Rezeptkatalog aktualisieren",
+  );
 
   await page.locator('nav button[data-view="more"]').click();
   await page.waitForFunction(() => (document.getElementById("statisticsBody")?.childElementCount || 0) > 0);

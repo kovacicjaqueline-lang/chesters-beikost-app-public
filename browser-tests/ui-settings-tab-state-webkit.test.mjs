@@ -77,12 +77,6 @@ try {
     await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "load" });
     await waitForApp(page);
 
-    assert.deepEqual(
-      await page.locator("#textureStage option").allTextContents(),
-      expectedTextureLabels,
-      `Konsistenzbezeichnungen müssen bei ${width}px exakt dem freigegebenen Text entsprechen`,
-    );
-
     assert.equal(await page.locator("#more #recipesSection").count(), 0, `Rezepte dürfen bei ${width}px nicht mehr unter Mehr liegen`);
     assert.equal(await page.locator("#foods #recipesSection").count(), 1, `Rezepte müssen bei ${width}px im gemeinsamen Lebensmittel-Tab liegen`);
 
@@ -112,6 +106,11 @@ try {
     assert.doesNotMatch(textureCoachText, /Test möglich/, `Texture Coach darf bei ${width}px keine unbegründete Bereitschaftsampel zeigen`);
 
     await openSettings(page);
+    assert.deepEqual(
+      await page.locator("#textureStage option").allTextContents(),
+      expectedTextureLabels,
+      `Konsistenzbezeichnungen müssen beim ersten sichtbaren Settings-Render bei ${width}px exakt dem freigegebenen Text entsprechen`,
+    );
     assert.equal(await page.locator("#feedingApproach").count(), 1, `Beikostform muss bei ${width}px vorhanden sein`);
     assert.equal(await page.locator("#smallSoftPiecesCapability").count(), 1, `Small-Soft-Fähigkeit muss bei ${width}px vorhanden sein`);
     assert.equal(await page.locator("#structuredChewCapability").count(), 1, `Structured-Chew-Fähigkeit muss bei ${width}px vorhanden sein`);

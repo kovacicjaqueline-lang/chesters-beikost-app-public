@@ -138,6 +138,7 @@ const UI_PRECACHE = [
   "./ui-meal-editor-footer.css?v=10.1.26",
   "./flow-dialog-ui.css?v=10.1.26",
   "./catalog-navigation.css",
+  "./mobile-beikost-more.css?v=10.1.26",
   "./plan-checks-ui.css?v=10.1.26",
   "./plan-mobile-ui.css?v=10.1.26",
   "./js/deferred-render.js?v=10.1.26",
@@ -156,6 +157,7 @@ const UI_PRECACHE = [
   "./js/product-allergens.js",
   "./js/product-allergens-guards.js",
   "./js/catalog-navigation.js",
+  "./js/mobile-beikost-more.js?v=10.1.26",
 ];
 
 self.addEventListener("install", (event) => {

@@ -78,3 +78,15 @@ test('green app runs do not upload plan-check screenshots', () => {
     /- name: Upload plan checks UX screenshots\n        if: \$\{\{ failure\(\) \}\}/,
   );
 });
+
+test('browser CI captures downloadable mobile screenshots on shard 1', () => {
+  assert.ok(
+    appWorkflow.includes('- name: Capture mobile CI screenshots\n        if: ${{ !cancelled() && matrix.shard == 1 }}\n        run: node browser-tests/ci-mobile-snapshots.mjs'),
+  );
+  assert.ok(
+    appWorkflow.includes('- name: Upload mobile CI screenshots\n        if: ${{ !cancelled() && matrix.shard == 1 }}\n        uses: actions/upload-artifact@v4'),
+  );
+  assert.ok(appWorkflow.includes('name: mobile-ui-screenshots-${{ github.run_id }}'));
+  assert.ok(appWorkflow.includes('path: artifacts/ci-mobile-screenshots/'));
+  assert.ok(appWorkflow.includes('if-no-files-found: error'));
+});

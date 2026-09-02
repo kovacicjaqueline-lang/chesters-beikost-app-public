@@ -166,6 +166,19 @@ Danach gilt:
 
 Für die Diagnose bevorzugt den GitHub-Connector/API-Weg verwenden: Workflow-Run -> Jobs -> fehlgeschlagener Job -> vollständiges Joblog. `gh` ist dafür nicht erforderlich.
 
+### Große CI-Logs ohne Abrufschleifen
+
+Bei großen GitHub-Actions-Joblogs gilt zusätzlich:
+
+1. das vollständige Joblog über den GitHub-Connector **einmal** abrufen,
+2. wenn der Abruf als gespeicherte Response-Ressource verfügbar ist, **dieselbe Ressource anschließend segmentiert bis zum Ende lesen und gezielt durchsuchen**, statt denselben Joblog erneut abzurufen,
+3. einen identischen Joblog-Abruf nur wiederholen, wenn der vorherige Abruf tatsächlich fehlgeschlagen ist oder keine wiederverwendbare Response-Ressource erzeugt hat,
+4. den chronologisch **ersten echten Fehler im vollständig gelesenen Log** als Primärfehler behandeln; spätere Warnungen und Folgefehler separat festhalten,
+5. spätere Fehler desselben alten Runs nicht vor dem Primärfehler reparieren, außer sie sind nach dessen Fix im aktuellen Integrationsstand weiterhin unabhängig reproduzierbar oder werden durch neue Evidenz bestätigt,
+6. nach einem evidenzbasierten Fix genau den laut Testmatrix erforderlichen neuen Test-/CI-Zyklus prüfen; bei erneutem Rot zuerst das neue vollständige Joblog und ein neues bzw. aktualisiertes Failure Packet sichern, bevor ein weiterer Fix erfolgt.
+
+Diese Regel verhindert wiederholte identische Log-Abrufe und sorgt dafür, dass Diagnose und Reparatur immer am tatsächlich ersten Fehler des vollständigen Runs ansetzen.
+
 Wichtig: Ein grüner schneller Teiltest oder eine große Zahl bereits grüner Node-Tests ersetzt den laut Testmatrix erforderlichen Browser-/App-/Deploy-Gate nicht. Ein Fix gilt erst als bestätigt, wenn der danach laut Testmatrix erforderliche Test bzw. CI-Lauf tatsächlich geprüft wurde.
 
 ## Bündelung gleichartiger Aufgaben

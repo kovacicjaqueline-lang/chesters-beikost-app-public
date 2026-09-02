@@ -8,7 +8,10 @@ const root = path.resolve(__dirname, '..');
 const stateSource = fs.readFileSync(path.join(root, 'js', 'state.js'), 'utf8');
 const modelSource = fs.readFileSync(path.join(root, 'js', 'model.js'), 'utf8');
 const migrationsSource = fs.readFileSync(path.join(root, 'js', 'migrations.js'), 'utf8');
-const policySource = fs.readFileSync(path.join(root, 'js', 'statistics.js'), 'utf8');
+const policySource = fs.readFileSync(path.join(root, 'js', 'food-status-preferences.js'), 'utf8');
+const statisticsSource = fs.readFileSync(path.join(root, 'js', 'statistics.js'), 'utf8');
+const foodsSource = fs.readFileSync(path.join(root, 'js', 'foods.js'), 'utf8');
+const indexSource = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
 function log(id, date, meal, outcome, foodId = 'karotte') {
   return { id, date, meal, foodIds: [foodId], foodOutcomes: { [foodId]: outcome }, createdAt: id };
@@ -140,4 +143,13 @@ test('PLANNER-PREFERENCE: gern gegessen ist nur ein Tie-Breaker', () => {
   assert.ok(policy.foodStatusPreferenceLikedTie(liked, neutral) < 0);
   assert.ok(policy.foodStatusPreferenceLikedTie(neutral, liked) > 0);
   assert.equal(policy.foodStatusPreferenceLikedTie(liked, { id: 'apfel', liked: true }), 0);
+});
+
+test('FOOD-STATUS-UI: Bekannt hat eigene aktive Darstellung und Policy ist kein Statistik-Seiteneffekt', () => {
+  assert.match(foodsSource, /raw === "Bekannt" \? "status-tolerated"/);
+  assert.doesNotMatch(foodsSource, /raw === "Regelmäßig"/);
+  assert.match(indexSource, /js\/food-status-preferences\.js/);
+  assert.match(policySource, /status\(foodRecord\) === "Bekannt"/);
+  assert.match(policySource, /progress-facts/);
+  assert.doesNotMatch(statisticsSource, /installFoodStatusPreferencePolicy/);
 });

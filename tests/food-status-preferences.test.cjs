@@ -10,7 +10,7 @@ const source = fs.readFileSync(path.join(root, 'js', 'statistics.js'), 'utf8');
 function loadPolicy() {
   const context = {};
   vm.createContext(context);
-  vm.runInContext(`${source}\nthis.__policy = { normalizeFoodStatusPreferenceStatus, foodStatusPreferenceCounts, deriveFoodStatusPreferenceStatus, foodStatusPreferenceLiked, foodStatusPreferenceCanCombine, foodStatusPreferenceShouldRetry, foodStatusPreferenceLikedTie };`, context);
+  vm.runInContext(`${source}\nthis.__policy = { normalizeFoodStatusPreferenceStatus, foodStatusPreferenceMigrationStrength, foodStatusPreferenceCounts, deriveFoodStatusPreferenceStatus, foodStatusPreferenceLiked, foodStatusPreferenceCanCombine, foodStatusPreferenceShouldRetry, foodStatusPreferenceLikedTie };`, context);
   return context.__policy;
 }
 
@@ -75,6 +75,10 @@ test('FOOD-STATUS-MIGRATION: alte Basis-/Regelmäßig-Werte werden kompatibel au
   }
   assert.equal(policy.normalizeFoodStatusPreferenceStatus('Probiert'), 'Probiert');
   assert.equal(policy.normalizeFoodStatusPreferenceStatus('Pausiert'), 'Pausiert');
+  assert.ok(
+    policy.foodStatusPreferenceMigrationStrength('Pausiert') > policy.foodStatusPreferenceMigrationStrength('Bekannt'),
+    'manuelle Pause muss beim Zusammenführen alter Daten Vorrang behalten',
+  );
 });
 
 test('FOOD-PREFERENCE: unmarkiert ist neutral; nur liked=true ist positiv markiert', () => {
@@ -93,6 +97,12 @@ test('PLANNER: ab 1× Gegessen kombinierbar, aber erst Bekannt ist eine Hauptbas
     log('e1', '2026-07-14', 'lunch', 'eaten'),
     log('e2', '2026-07-15', 'dinner', 'eaten'),
   ]), 'Bekannt');
+});
+
+test('PLANNER: Pausiert bleibt auch nach früherem Gegessen aus der Kombination ausgeschlossen', () => {
+  const policy = loadPolicy();
+  const paused = { id: 'ei', manualStatus: 'Pausiert' };
+  assert.equal(policy.foodStatusPreferenceCanCombine(paused, [log('e1', '2026-07-14', 'lunch', 'eaten', 'ei')]), false);
 });
 
 test('PLANNER: bloß Probiert erzwingt bei Nicht-Allergenen keine Wiederholung; Ablehnung und bestehender Allergenpfad bleiben getrennt', () => {

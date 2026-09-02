@@ -11,7 +11,7 @@ const mimeTypes = {
   ".js": "text/javascript; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".json": "application/json; charset=utf-8",
-  ".webmanifest": "application/manifest+json; charset=utf-8",
+  ".webmanifest": "application/manifest+json",
   ".svg": "image/svg+xml",
   ".png": "image/png",
   ".webp": "image/webp",
@@ -120,6 +120,19 @@ try {
   assert.equal(await days.nth(1).getAttribute("aria-pressed"), "true");
   assert.equal(await visibleDayCards.count(), 1);
   assert.equal(await visibleDayCards.first().getAttribute("data-plan-date"), secondDate, "Direkte Tagesauswahl wechselt das Tagesdetail");
+
+  await page.locator("#planToday").click();
+  await page.waitForFunction((date) =>
+    document.querySelector(`#planWeekOverview .plan-week-day[data-plan-date="${date}"]`)?.getAttribute("aria-pressed") === "true",
+  today);
+  assert.equal(
+    await visibleDayCards.first().getAttribute("data-plan-date"),
+    today,
+    "Heute setzt nach einer anderen Tagesauswahl das Tagesdetail wieder auf heute",
+  );
+
+  await days.nth(1).click();
+  assert.equal(await days.nth(1).getAttribute("aria-pressed"), "true", "Nach dem Heute-Sprung bleibt direkte Tagesauswahl möglich");
 
   const fromBefore = await page.evaluate(() => window.__beikostTest.getState().settings.planFrom);
   await page.locator("#plan .plan-week-step[data-week-step='7']").click();

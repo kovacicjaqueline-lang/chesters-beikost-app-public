@@ -122,6 +122,15 @@
     else secondary.appendChild(controls);
   }
 
+  function ensureTodaySelection(toolbar) {
+    const button = toolbar?.querySelector("#planToday");
+    if (!button || button.dataset.mobilePlanTodayBound === "true") return;
+    button.addEventListener("click", () => {
+      globalThis.__mobilePlanSelectedDate = today();
+    }, { capture: true });
+    button.dataset.mobilePlanTodayBound = "true";
+  }
+
   function ensureWeekNavigation(toolbar, from, selectedDate) {
     if (!toolbar) return;
     const heading = toolbar.querySelector(".plan-heading");
@@ -271,6 +280,7 @@
       ),
     );
 
+    ensureTodaySelection(toolbar);
     ensureSecondaryActions(toolbar);
     ensureWeekNavigation(toolbar, from, selectedDate);
     ensureWeekOverview(toolbar, block, days, selectedDate, statuses);

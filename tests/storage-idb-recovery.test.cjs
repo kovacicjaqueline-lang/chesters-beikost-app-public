@@ -63,6 +63,7 @@ function createStorageRuntime({ localStorage, idb, initialState }) {
     migrateState: clone,
     today: () => "2026-08-22",
     renderAll: () => {},
+    renderCurrentView: () => {},
   };
 
   vm.createContext(context);

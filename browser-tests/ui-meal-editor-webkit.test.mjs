@@ -174,8 +174,8 @@ try {
   });
 
   // Der gemeinsame Editor wird auch für eine bestehende Planner-Mahlzeit verwendet.
-  // Die FOOD-Darreichung muss dort gespeichert werden, das Datum aber unverändert bleiben
-  // und ein bloß manueller Lock darf nicht die spezielle Manual-Card-Titelregel aktivieren.
+  // Nur explizit strukturierte FOOD-Darreichungen dürfen dort auswählbar sein; das Datum
+  // bleibt unverändert und ein bloß manueller Lock aktiviert keine spezielle Manual-Card-Titelregel.
   await page.evaluate((today) => {
     window.__beikostTest.openManualMealSelector(today, "lunch", {
       meal: "lunch",
@@ -193,30 +193,27 @@ try {
   const editedBananaPreparation = page.locator('[data-manual-preparation="banane"]');
   const editedPeachPreparation = page.locator('[data-manual-preparation="pfirsich"]');
   await editedBananaPreparation.waitFor();
-  await editedPeachPreparation.waitFor();
+  assert.equal(await editedPeachPreparation.isVisible(), false, "Pfirsich ohne FOOD-Handling-Contract darf keine Fake-Darreichung anbieten");
   const editedBananaPreparationKey = await editedBananaPreparation.evaluate((select) =>
     Array.from(select.options).find((option) => option.value)?.value || "",
   );
-  const editedPeachPreparationKey = await editedPeachPreparation.evaluate((select) =>
-    Array.from(select.options).find((option) => option.value)?.value || "",
-  );
-  assert.ok(editedBananaPreparationKey && editedPeachPreparationKey, "bestehende Planner-Mahlzeit muss FOOD-Darreichungen anbieten");
+  assert.ok(editedBananaPreparationKey, "Banane mit FOOD-Handling-Contract muss eine Darreichung anbieten");
   await editedBananaPreparation.selectOption(editedBananaPreparationKey);
-  await editedPeachPreparation.selectOption(editedPeachPreparationKey);
   await page.locator("#confirmManualMeal").click();
 
   await page.waitForFunction((today) => !!window.__beikostTest.getState().planLocks?.[`${today}|lunch`], dates.today);
   savedState = await page.evaluate(() => window.__beikostTest.getState());
   assert.equal(savedState.planLocks[`${dates.today}|lunch`].foodPreparationKeys.banane, editedBananaPreparationKey, "bearbeiteter Planner-Lock muss Banane-Darreichung speichern");
-  assert.equal(savedState.planLocks[`${dates.today}|lunch`].foodPreparationKeys.pfirsich, editedPeachPreparationKey, "bearbeiteter Planner-Lock muss Pfirsich-Darreichung speichern");
+  assert.equal(savedState.planLocks[`${dates.today}|lunch`].foodPreparationKeys.pfirsich, undefined, "Pfirsich ohne explizite Auswahl darf keinen Darreichungsschlüssel erhalten");
   assert.equal(savedState.planLocks[`${dates.today}|lunch`].manualAdded, false, "bearbeiteter Planner-Slot bleibt von einer Zusatzmahlzeit unterscheidbar");
 
   const lockedPlannerCard = page.locator("#blockPlan .mealbox").filter({
     has: page.locator(`.replaceMeal[data-date="${dates.today}"][data-meal="lunch"]`),
   });
+  await lockedPlannerCard.locator(".dish-title").filter({ hasText: "Banane mit Pfirsich" }).waitFor();
   const lockedPlannerTitle = await lockedPlannerCard.locator(".dish-title").innerText();
-  assert.match(lockedPlannerTitle, /Banane/, "normaler manuell gesperrter Planner-Slot behält den Basistitel");
-  assert.doesNotMatch(lockedPlannerTitle, /Pfirsich|Einführung|Wiederholung/, "manuelles Sperren allein darf nicht den Manual-Card-Titel erzwingen");
+  assert.equal(lockedPlannerTitle, "Banane mit Pfirsich", "normaler manuell gesperrter Planner-Slot nutzt den deskriptiven FOOD-Titel");
+  assert.doesNotMatch(lockedPlannerTitle, /Einführung|Wiederholung/, "manuelles Sperren allein darf keine Lernrolle in den Titel schreiben");
 
   // Für den eigentlichen Zusatzmahlzeiten-/Rekey-Flow wieder einen freien Zustand herstellen.
   await page.evaluate(() => {
@@ -248,16 +245,11 @@ try {
   const preparationKey = await bananaPreparation.evaluate((select) =>
     Array.from(select.options).find((option) => option.value)?.value || "",
   );
-  assert.ok(preparationKey, "Banane muss vorhandene Darreichungsoptionen anbieten");
+  assert.ok(preparationKey, "Banane muss strukturierte Darreichungsoptionen anbieten");
   await bananaPreparation.selectOption(preparationKey);
 
   const peachPreparation = page.locator('[data-manual-preparation="pfirsich"]');
-  await peachPreparation.waitFor();
-  const peachPreparationKey = await peachPreparation.evaluate((select) =>
-    Array.from(select.options).find((option) => option.value)?.value || "",
-  );
-  assert.ok(peachPreparationKey, "Pfirsich muss vorhandene Darreichungsoptionen anbieten");
-  await peachPreparation.selectOption(peachPreparationKey);
+  assert.equal(await peachPreparation.isVisible(), false, "Pfirsich ohne expliziten Handling-Contract darf kein Dropdown zeigen");
 
   await page.locator("#confirmManualMeal").click();
   await page.locator(`#blockPlan .removeManualMeal[data-date="${dates.future}"][data-meal="breakfast"]`).waitFor({ state: "attached" });
@@ -274,13 +266,13 @@ try {
 
   savedState = await page.evaluate(() => window.__beikostTest.getState());
   assert.equal(savedState.manualMeals[`${dates.future}|breakfast`].foodPreparationKeys.banane, preparationKey);
-  assert.equal(savedState.manualMeals[`${dates.future}|breakfast`].foodPreparationKeys.pfirsich, peachPreparationKey);
+  assert.equal(savedState.manualMeals[`${dates.future}|breakfast`].foodPreparationKeys.pfirsich, undefined);
   assert.equal(savedState.planLocks[`${dates.future}|breakfast`].mode, "manual", "manueller Eintrag bleibt fest eingeplant");
 
   await manualCard.locator(".replaceMeal").click();
   await page.locator("#manualMealTargetDate").waitFor();
   assert.equal(await page.locator('[data-manual-preparation="banane"]').inputValue(), preparationKey, "Darreichung muss beim erneuten Öffnen erhalten bleiben");
-  assert.equal(await page.locator('[data-manual-preparation="pfirsich"]').inputValue(), peachPreparationKey, "Kostproben-Darreichung muss beim erneuten Öffnen erhalten bleiben");
+  assert.equal(await page.locator('[data-manual-preparation="pfirsich"]').isVisible(), false, "Pfirsich bleibt auch beim Wiederöffnen ohne Fake-Darreichung");
   await page.locator("#manualMealTargetDate").fill(dates.today);
   await page.locator("#manualMealTargetDate").dispatchEvent("change");
   await page.locator("#confirmManualMeal").click();
@@ -289,7 +281,7 @@ try {
   savedState = await page.evaluate(() => window.__beikostTest.getState());
   assert.equal(savedState.manualMeals[`${dates.future}|breakfast`], undefined, "alter Zukunftsschlüssel muss entfernt werden");
   assert.equal(savedState.manualMeals[`${dates.today}|breakfast`].foodPreparationKeys.banane, preparationKey, "Darreichung muss beim Verschieben auf heute erhalten bleiben");
-  assert.equal(savedState.manualMeals[`${dates.today}|breakfast`].foodPreparationKeys.pfirsich, peachPreparationKey, "Kostproben-Darreichung muss beim Verschieben erhalten bleiben");
+  assert.equal(savedState.manualMeals[`${dates.today}|breakfast`].foodPreparationKeys.pfirsich, undefined, "nicht gewählte Pfirsich-Darreichung darf beim Verschieben nicht entstehen");
 
   manualCard = page.locator("#blockPlan .manual-meal").filter({
     has: page.locator(`.removeManualMeal[data-date="${dates.today}"][data-meal="breakfast"]`),
@@ -313,7 +305,7 @@ try {
   await page.locator(`#blockPlan .removeManualMeal[data-date="${dates.today}"][data-meal="breakfast"]`).waitFor({ state: "attached" });
   savedState = await page.evaluate(() => window.__beikostTest.getState());
   assert.equal(savedState.manualMeals[`${dates.today}|breakfast`].foodPreparationKeys.banane, preparationKey, "Auf morgen darf die explizite Darreichung nicht verlieren");
-  assert.equal(savedState.manualMeals[`${dates.today}|breakfast`].foodPreparationKeys.pfirsich, peachPreparationKey, "Auf morgen darf die Kostproben-Darreichung nicht verlieren");
+  assert.equal(savedState.manualMeals[`${dates.today}|breakfast`].foodPreparationKeys.pfirsich, undefined, "Auf morgen darf keine nicht gewählte Pfirsich-Darreichung erzeugen");
   assert.equal(savedState.planLocks[`${dates.today}|breakfast`].mode, "manual", "Auf morgen darf den manuellen Lock nicht verlieren");
 
   // Review-Regression: Wird im Protokoll ein Lebensmittel entfernt, darf dessen

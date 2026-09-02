@@ -119,6 +119,12 @@ test('not_offered remains logged but does not complete its linked plan', () => {
   assert.equal(core.dayPlannerEntries(data, '2026-08-18', core.allPlanInstances(data)).filter((entry) => entry.kind === 'log').length, 1);
 });
 
+test('previous-day calculation crosses month and year boundaries safely', () => {
+  assert.equal(core.previousIsoDate('2026-09-01'), '2026-08-31');
+  assert.equal(core.previousIsoDate('2026-01-01'), '2025-12-31');
+  assert.equal(core.previousIsoDate('invalid'), '');
+});
+
 test('shifting open plans moves manual and automatic plans but creates and moves no logs', () => {
   const data = state({
     logs: [log('historical', '2026-08-18', 'breakfast')],
@@ -190,7 +196,7 @@ test('partially logged previous day prompts only for the uncompleted concrete pl
   assert.deepEqual(core.outstandingPastPlans(data, '2026-08-19').map((entry) => entry.planId), ['lunch']);
 });
 
-test('Plan beibehalten persists an acknowledgement and suppresses the same prompt', () => {
+test('Nicht verschieben persists an acknowledgement and suppresses the same prompt', () => {
   const data = state({ planLocks: { '2026-08-18|lunch': plan('open', '2026-08-18') } });
   const outstanding = core.outstandingPastPlans(data, '2026-08-19');
   core.markPlansKept(data, outstanding, '2026-08-19T20:00:00.000Z');
@@ -205,7 +211,7 @@ test('Gestern nachtragen does not require a persisted acknowledgement: unhandled
   assert.equal(core.outstandingPastPlans(JSON.parse(JSON.stringify(data)), '2026-08-19').length, 1);
 });
 
-test('multiple missed days are returned together and each selected plan moves exactly one day', () => {
+test('only open plans from the immediately previous day are rollover candidates', () => {
   const data = state({
     planLocks: {
       '2026-08-16|lunch': plan('p16', '2026-08-16'),
@@ -214,12 +220,22 @@ test('multiple missed days are returned together and each selected plan moves ex
     },
   });
   const outstanding = core.outstandingPastPlans(data, '2026-08-19');
-  assert.equal(outstanding.length, 3);
+  assert.deepEqual(outstanding.map((entry) => entry.planId), ['p18']);
   core.shiftOutstandingPlans(data, outstanding, addDays);
   const byId = Object.fromEntries(core.allPlanInstances(data).map((entry) => [entry.planId, entry.date]));
-  assert.equal(byId.p16, '2026-08-17');
-  assert.equal(byId.p17, '2026-08-18');
+  assert.equal(byId.p16, '2026-08-16');
+  assert.equal(byId.p17, '2026-08-17');
   assert.equal(byId.p18, '2026-08-19');
+});
+
+test('rollover dialog uses compact concrete-plan copy and the approved actions', () => {
+  const source = fs.readFileSync(path.join(__dirname, '..', 'js', 'planner-log-rollover.js'), 'utf8');
+  assert.match(source, /Gestern ·/);
+  assert.match(source, /Plan um 1 Tag verschieben/);
+  assert.match(source, /Gestern nachtragen/);
+  assert.match(source, />Nicht verschieben</);
+  assert.doesNotMatch(source, /Gestern wurde nicht vollständig protokolliert/);
+  assert.doesNotMatch(source, /Plan beibehalten/);
 });
 
 test('plan identity and rollover metadata survive a JSON persistence round trip', () => {

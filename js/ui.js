@@ -36,6 +36,23 @@ function renderAll() {
   if (document.getElementById("auditList")) renderAudit();
   renderStorageStatus();
 }
+function renderView(id) {
+  if (id === "home") renderHome();
+  else if (id === "plan") renderPlan();
+  else if (id === "prep") renderPrep();
+  else if (id === "foods") renderFoods();
+  else if (id === "more") {
+    renderLogs();
+    renderStatistics();
+    renderAllergenModule();
+    renderSettings();
+    if (document.getElementById("auditList")) renderAudit();
+    renderStorageStatus();
+  }
+}
+function renderCurrentView() {
+  renderView(document.querySelector(".view.active")?.id || "home");
+}
 function textureSuccessCount(stage = Number(state.settings.textureStage)) {
   return new Set(
     state.logs
@@ -1167,6 +1184,7 @@ function showView(id) {
   document
     .querySelectorAll("nav button")
     .forEach((b) => b.classList.toggle("active", b.dataset.view === id));
+  renderView(id);
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 function existingFoodWithName(name) {

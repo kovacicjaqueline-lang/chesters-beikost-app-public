@@ -284,6 +284,15 @@ if (typeof renderAll === "function") {
   };
 }
 
+if (typeof renderView === "function") {
+  const productAllergenBaseRenderView = renderView;
+  renderView = function renderViewWithProductAllergens(id) {
+    let result = productAllergenBaseRenderView(id);
+    if (id === "more") renderProductAllergenCard();
+    return result;
+  };
+}
+
 function productAllergenLogSelection(foodId) {
   pendingLog.productSelections ||= {};
   if (Object.prototype.hasOwnProperty.call(pendingLog.productSelections, foodId)) return String(pendingLog.productSelections[foodId] || "");

@@ -128,21 +128,57 @@ try {
   await page.locator("#selectorFoods").click();
   await page.waitForFunction(() => document.getElementById("genericTitle")?.textContent === "Mahlzeit hinzufügen");
   assert.equal(await page.locator("#mealSelectorSearch").evaluate((node) => getComputedStyle(node).fontSize), "16px");
-  assert.equal(await page.locator(".selector-results").evaluate((node) => getComputedStyle(node).overflowY), "visible");
+  assert.equal(await page.locator("#genericBody .selector-results").evaluate((node) => getComputedStyle(node).overflowY), "visible");
   await page.locator("#cancelManualMeal").click();
   assert.equal(await page.locator("#genericModal").evaluate((node) => node.classList.contains("open")), false);
 
-  // Geplante Mahlzeit bearbeiten nutzt dieselbe Header-Hierarchie, ohne Log-Semantik zu übernehmen.
+  // Geplante Karotten-Mahlzeit bearbeiten: Header bleibt im gemeinsamen Flow und die
+  // explizit strukturierte FOOD-Darreichung muss unter Name/Entfernen statt daneben liegen.
   await page.evaluate(() => {
-    const date = window.__beikostTest.today();
-    const day = window.__beikostTest.buildDays(date, 1)[0];
-    const meal = day.meals.find((item) => item.meal === "lunch" && item.active) || day.meals.find((item) => item.active);
-    if (!meal) throw new Error("Test benötigt eine aktive geplante Mahlzeit");
-    window.__beikostTest.openManualMealSelector(date, meal.meal, meal);
+    window.__beikostTest.reset();
+    const state = window.__beikostTest.getState();
+    const karotte = state.foods.find((item) => item.id === "karotte");
+    if (!karotte) throw new Error("Test benötigt das Lebensmittel Karotte");
+    karotte.manualStatus = "Verträgliche Basis";
+    window.__beikostTest.setState(state);
+    window.__beikostTest.openManualMealSelector(window.__beikostTest.today(), "lunch", {
+      meal: "lunch",
+      active: true,
+      focusId: "karotte",
+      foodIds: ["karotte"],
+      baseFoodIds: ["karotte"],
+      sampleFoodIds: [],
+      foodRoles: { karotte: "base" },
+      type: "known",
+    });
   });
   await page.waitForFunction(() => document.getElementById("genericTitle")?.textContent === "Mahlzeit bearbeiten");
   assert.equal(await page.locator("#genericModal .flow-dialog-header").count(), 1);
   assert.equal(await page.locator("#confirmManualMeal").textContent(), "Änderungen speichern");
+
+  const carrotPreparation = page.locator('[data-manual-preparation="karotte"]');
+  await carrotPreparation.waitFor();
+  const carrotItem = page.locator(".manual-role-item").filter({ has: carrotPreparation });
+  assert.equal(await carrotItem.count(), 1, "Karotte muss genau eine Rollen-/Darreichungszeile besitzen");
+  assert.equal(
+    await carrotItem.evaluate((node) => getComputedStyle(node).display),
+    "grid",
+    "Rollenzeile mit Darreichung muss als zweizeiliges Grid gerendert werden",
+  );
+
+  const itemBox = await carrotItem.boundingBox();
+  const foodBox = await carrotItem.locator(":scope > .grow").boundingBox();
+  const actionBox = await carrotItem.locator(":scope > .manual-role-actions").boundingBox();
+  const preparationBox = await carrotItem.locator(":scope > .manual-preparation-field").boundingBox();
+  assert.ok(itemBox && foodBox && actionBox && preparationBox, "Karotten-Editor muss vollständig messbar sein");
+  assert.ok(
+    preparationBox.y >= Math.max(foodBox.y + foodBox.height, actionBox.y + actionBox.height) - 1,
+    "Darreichung darf Karotte oder den Entfernen-Button nicht überlagern",
+  );
+  assert.ok(
+    preparationBox.x >= itemBox.x - 1 && preparationBox.x + preparationBox.width <= itemBox.x + itemBox.width + 1,
+    "Darreichungsfeld muss innerhalb der Rollenkarte die volle verfügbare Zeile nutzen",
+  );
   await page.locator("#cancelManualMeal").click();
 
   assert.ok(

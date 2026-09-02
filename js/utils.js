@@ -124,9 +124,9 @@ function food(id) {
 }
 
 // Planner-Mahlzeiteneignung wird als eigene Policy-Schicht nach app.js geladen.
-// Der erste ungeschützte renderAll()-Aufruf aus app.js bleibt währenddessen unsichtbar;
-// sichtbar wird die App erst nach Installation der vollständigen Policy-Kette und
-// einem erneuten Render mit den aktiven Planner-Regeln.
+// Die App bleibt während der Policy-Kette verborgen; sichtbar wird sie erst nach
+// Installation der vollständigen Planner-Regeln und einem erneuten Render der
+// aktuell sichtbaren Ansicht.
 if (typeof window !== "undefined" && typeof document !== "undefined") {
   let plannerPolicyBody = document.body;
   if (plannerPolicyBody) plannerPolicyBody.style.visibility = "hidden";
@@ -139,7 +139,7 @@ if (typeof window !== "undefined" && typeof document !== "undefined") {
     if (plannerPoliciesFinished) return;
     plannerPoliciesFinished = true;
     window.__plannerPoliciesReady = true;
-    if (typeof renderAll === "function") renderAll();
+    if (typeof renderCurrentView === "function") renderCurrentView();
     if (plannerPolicyBody) plannerPolicyBody.style.visibility = "";
   };
 
@@ -252,19 +252,70 @@ if (typeof window !== "undefined" && typeof document !== "undefined") {
           if (typeof installPlannerMealPresentationRuntime === "function") installPlannerMealPresentationRuntime();
 
           let loadQualityPolicy = () => {
+            let loadIntroductionPolicy = () => {
+              let loadMaintenancePolicy = () => {
+                let existingMaintenance = document.querySelector('script[data-planner-allergen-maintenance="maintenance-v2"]');
+                let installMaintenanceAndFinish = () => {
+                  if (typeof PlannerAllergenMaintenance === "undefined") {
+                    failPlannerPolicies(new Error("Planner-Allergenpflege fehlt."));
+                    return;
+                  }
+                  finishPlannerPolicies();
+                };
+                if (existingMaintenance) {
+                  if (typeof PlannerAllergenMaintenance !== "undefined") installMaintenanceAndFinish();
+                  else {
+                    existingMaintenance.addEventListener("load", installMaintenanceAndFinish, { once: true });
+                    attachPlannerLoadError(existingMaintenance);
+                  }
+                  return;
+                }
+                let maintenanceScript = document.createElement("script");
+                maintenanceScript.src = "js/planner-allergen-maintenance.js?v=10.1.26";
+                maintenanceScript.dataset.plannerAllergenMaintenance = "maintenance-v2";
+                maintenanceScript.addEventListener("load", installMaintenanceAndFinish, { once: true });
+                attachPlannerLoadError(maintenanceScript);
+                document.head.appendChild(maintenanceScript);
+              };
+
+              let existingIntroduction = document.querySelector('script[data-planner-introduction-policy="daily-food-introductions"]');
+              let installIntroductionAndContinue = () => {
+                if (typeof installPlannerIntroductionPolicyRuntime !== "function") {
+                  failPlannerPolicies(new Error("Planner-Einführungspolicy fehlt."));
+                  return;
+                }
+                installPlannerIntroductionPolicyRuntime();
+                loadMaintenancePolicy();
+              };
+              if (existingIntroduction) {
+                if (typeof installPlannerIntroductionPolicyRuntime === "function") installIntroductionAndContinue();
+                else {
+                  existingIntroduction.addEventListener("load", installIntroductionAndContinue, { once: true });
+                  attachPlannerLoadError(existingIntroduction);
+                }
+                return;
+              }
+              let introductionScript = document.createElement("script");
+              introductionScript.src = "js/planner-introduction-policy.js?v=10.1.26";
+              introductionScript.dataset.plannerIntroductionPolicy = "daily-food-introductions";
+              introductionScript.addEventListener("load", installIntroductionAndContinue, { once: true });
+              attachPlannerLoadError(introductionScript);
+              document.head.appendChild(introductionScript);
+            };
+
             let existingQuality = document.querySelector('script[data-planner-quality-rotation="planner-quality"]');
-            let installQualityAndFinish = () => {
+            let installQualityAndContinue = () => {
               if (typeof installPlannerQualityRotationRuntime !== "function") {
                 failPlannerPolicies(new Error("Planner-Quality-Policy fehlt."));
                 return;
               }
               installPlannerQualityRotationRuntime();
-              finishPlannerPolicies();
+              loadIntroductionPolicy();
             };
             if (existingQuality) {
-              if (typeof installPlannerQualityRotationRuntime === "function") installQualityAndFinish();
+              if (typeof installPlannerQualityRotationRuntime === "function") installQualityAndContinue();
               else {
-                existingQuality.addEventListener("load", installQualityAndFinish, { once: true });
+                existingQuality.addEventListener("load", installQualityAndContinue, { once: true });
                 attachPlannerLoadError(existingQuality);
               }
               return;
@@ -272,7 +323,7 @@ if (typeof window !== "undefined" && typeof document !== "undefined") {
             let qualityScript = document.createElement("script");
             qualityScript.src = "js/planner-quality-rotation.js?v=10.1.26";
             qualityScript.dataset.plannerQualityRotation = "planner-quality";
-            qualityScript.addEventListener("load", installQualityAndFinish, { once: true });
+            qualityScript.addEventListener("load", installQualityAndContinue, { once: true });
             attachPlannerLoadError(qualityScript);
             document.head.appendChild(qualityScript);
           };

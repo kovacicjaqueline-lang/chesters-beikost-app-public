@@ -52,13 +52,13 @@ function hasLegacyCustomMealFallback(meals) {
 function normalizeStatus(x) {
   let value = String(x || "auto");
   if (["Noch nicht", "Offen"].includes(value)) return "Offen";
-  if (["Vertragen", "Verträgliche Basis"].includes(value)) return "Verträgliche Basis";
-  if (["Pause – Reaktion", "Pausiert", "Pausiert"].includes(value)) return "Pausiert";
-  if (["Probiert", "Regelmäßig", "auto"].includes(value)) return value;
+  if (["Vertragen", "Verträgliche Basis", "Regelmäßig", "Bekannt"].includes(value)) return "Bekannt";
+  if (["Pause – Reaktion", "Pausiert"].includes(value)) return "Pausiert";
+  if (["Probiert", "auto"].includes(value)) return value;
   return "auto";
 }
 function statusStrength(x) {
-  return ({ auto: 0, Offen: 1, Probiert: 2, "Verträgliche Basis": 3, Regelmäßig: 4, Pausiert: 5 }[normalizeStatus(x)] ?? 0);
+  return ({ auto: 0, Offen: 1, Probiert: 2, Bekannt: 3, Pausiert: 4 }[normalizeStatus(x)] ?? 0);
 }
 function isLegacyMilkReference(id, name = "") {
   return id === LEGACY_MILK_ID || normalizeName(name) === "kuhmilch joghurt";
@@ -90,6 +90,7 @@ function mergeFoodRecord(target, raw, options = {}) {
   if (!target || !raw) return;
   if (!options.keepPriority && Number.isFinite(Number(raw.priority))) target.priority = Number(raw.priority);
   if (typeof raw.active === "boolean") target.active = raw.active;
+  if (Object.prototype.hasOwnProperty.call(raw, "liked")) target.liked = raw.liked === true;
   let incoming = normalizeStatus(raw.manualStatus);
   if (options.legacyMilk && incoming !== "Pausiert" && statusStrength(incoming) > 0) incoming = "Probiert";
   if (statusStrength(incoming) > statusStrength(target.manualStatus)) target.manualStatus = incoming;
@@ -131,6 +132,7 @@ function mergeFoods(saved) {
       count100: raw.count100 !== false,
       manualStatus: normalizeStatus(raw.manualStatus),
       active: raw.active !== false,
+      liked: raw.liked === true,
       meals: customDefaults && (!Array.isArray(raw.meals) || hasLegacyCustomMealFallback(raw.meals))
       ? customDefaults
       : Array.isArray(raw.meals)

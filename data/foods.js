@@ -108,7 +108,7 @@ const FOOD_DB = [
       "lunch",
       "dinner"
     ],
-    "safeForm": "Vollständig durchgaren; fein püriert, zerzupft oder später als sehr weiches Bällchen.",
+    "safeForm": "Vollständig durchgaren; fein püriert, zerzupft oder als sehr weiches längliches oder flaches, gut greifbares Stück anbieten. Keine zähen großen Stücke und keine festen runden Bällchen.",
     "prep": "20-g-Portionen",
     "seasonMonths": [],
     "count100": true,

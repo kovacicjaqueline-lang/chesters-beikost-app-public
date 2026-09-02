@@ -59,8 +59,8 @@ function setFoodActiveWithPlanCheck(f, nextActive) {
     delete state.inactivePlanKept?.[f.id];
     save();
     closeGeneric();
-    renderAll();
     showToast(`${f.name} ist wieder aktiv.`);
+    renderAllAfterNextPaint();
     return;
   }
   let refs = futurePlanReferences(f.id);
@@ -69,8 +69,8 @@ function setFoodActiveWithPlanCheck(f, nextActive) {
     delete state.inactivePlanKept?.[f.id];
     save();
     closeGeneric();
-    renderAll();
     showToast(`${f.name} bleibt unter „Deaktiviert“ abrufbar.`);
+    renderAllAfterNextPaint();
     return;
   }
   openGeneric(
@@ -88,8 +88,8 @@ function setFoodActiveWithPlanCheck(f, nextActive) {
     cleanFoodFromFuturePlan(f.id);
     save();
     closeGeneric();
-    renderAll();
     showToast(`${f.name} deaktiviert; zukünftige Planungen wurden bereinigt.`);
+    renderAllAfterNextPaint();
   };
   document.getElementById("deactivateKeep").onclick = () => {
     f.active = false;
@@ -97,8 +97,8 @@ function setFoodActiveWithPlanCheck(f, nextActive) {
     state.inactivePlanKept[f.id] = true;
     save();
     closeGeneric();
-    renderAll();
     showToast(`${f.name} deaktiviert; bestehende Planungen bleiben sichtbar.`);
+    renderAllAfterNextPaint();
   };
   document.getElementById("deactivateCancel").onclick = closeGeneric;
 }
@@ -281,7 +281,7 @@ function showFoodInfoCore(f) {
       <summary>Status und Planung</summary>
       <div class="grid2" style="margin-top:10px">
         <div class="field"><label>Reihenfolge</label><input id="foodDetailsPriority" type="number" min="1" step="1" value="${f.priority}"></div>
-        <div class="field"><label>Status</label><select id="foodDetailsStatus"><option value="auto" ${f.manualStatus === "auto" ? "selected" : ""}>Automatisch → ${esc(status(f))}</option>${["Offen", "Probiert", "Verträgliche Basis", "Regelmäßig", "Pausiert"].map((x) => `<option value="${x}" ${f.manualStatus === x ? "selected" : ""}>${x} manuell</option>`).join("")}</select></div>
+        <div class="field"><label>Status</label><select id="foodDetailsStatus"><option value="auto" ${f.manualStatus === "auto" ? "selected" : ""}>Automatisch → ${esc(status(f))}</option>${["Offen", "Probiert", "Bekannt", "Pausiert"].map((x) => `<option value="${x}" ${f.manualStatus === x ? "selected" : ""}>${x} manuell</option>`).join("")}</select></div>
       </div>
       <div class="grid2"><button class="btn secondary smallbtn" id="foodDetailsTop">Ganz nach oben</button><button class="btn secondary smallbtn" id="foodDetailsBottom">Ganz nach unten</button></div>
     </details>
@@ -441,7 +441,7 @@ function renderFoods() {
   let activeCount = state.foods.length - inactiveCount;
   document.getElementById("foodCountText").textContent = `${arr.length + followups.length} angezeigt · ${activeCount} aktiv · ${inactiveCount} deaktiviert`;
   let renderFoodCard = (f) => {
-    let raw = status(f), statusClass = raw === "Offen" ? "status-open" : raw === "Probiert" ? "status-tried" : raw === "Verträgliche Basis" ? "status-tolerated" : raw === "Regelmäßig" ? "status-regular" : "status-paused";
+    let raw = status(f), statusClass = raw === "Offen" ? "status-open" : raw === "Probiert" ? "status-tried" : raw === "Bekannt" ? "status-tolerated" : "status-paused";
     return `<div class="foodcard ${statusClass} ${f.active ? "" : "inactive"} ${foodReorderMode && f.active ? "reorderable" : ""}" data-food="${f.id}"><div class="row">${foodReorderMode && f.active ? `<div class="food-sort-actions"><button class="food-jump jumpTop" aria-label="Ganz nach oben">⇧</button><button class="drag-handle" aria-label="Lebensmittel verschieben">⠿</button><button class="food-jump jumpBottom" aria-label="Ganz nach unten">⇩</button></div>` : ""}<div class="grow"><div class="foodtitle"><span class="food-emoji">${foodEmoji(f)}</span>${esc(f.name)} ${!f.active ? '<span class="pill inactive-pill">Deaktiviert</span>' : ""}</div><div class="foodmeta">${esc(f.alias || f.category)} · <span class="food-status-text">${esc(displayStatus(f))}</span></div>${!f.active ? '<div class="inactive-note">Nicht in neuen Planungen, Rezeptvorschlägen oder Prep.</div>' : ""}</div><button class="btn secondary smallbtn foodInfo">Details</button></div></div>`;
   };
   let sections = [];
@@ -499,8 +499,8 @@ function showFoodInfo(f) {
   let raw = status(f), count = offeredCount(f.id);
   let modal = document.getElementById("genericBody");
   let dynamic = modal?.querySelector(".food-detail-dynamic");
-  modal?.querySelectorAll(".chips .pill").forEach((pill) => { if (["Offen", "Verträgliche Basis"].includes((pill.textContent || "").trim())) pill.textContent = ({ Offen: "Noch offen", "Verträgliche Basis": "Vertragen" })[(pill.textContent || "").trim()]; });
-  if (["Probiert", "Verträgliche Basis"].includes(raw)) {
+  modal?.querySelectorAll(".chips .pill").forEach((pill) => { if ((pill.textContent || "").trim() === "Offen") pill.textContent = "Noch offen"; });
+  if (["Probiert", "Bekannt"].includes(raw)) {
     dynamic?.insertAdjacentHTML("beforeend", `<div class="small food-offer-count">${count}× angeboten · ${esc(statusSource(f))}</div>`);
   }
   let follow = state.followUps?.[f.id];

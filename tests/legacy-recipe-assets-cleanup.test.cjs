@@ -39,19 +39,25 @@ test("produktive und testseitige Quellen referenzieren keinen Legacy-Recipe-Pfad
 test("aktive Recipe-Mappings decken den V2-Bestand exakt ab und sind offline precached", () => {
   const block = ICON_SOURCE.match(/const RECIPE_ICON_PATHS\s*=\s*Object\.freeze\(\{([\s\S]*?)\}\);/);
   assert.ok(block, "RECIPE_ICON_PATHS fehlt");
+  const aliasBlock = ICON_SOURCE.match(/const RECIPE_RUNTIME_ICON_ALIASES\s*=\s*Object\.freeze\(\{([\s\S]*?)\}\);/);
+  assert.ok(aliasBlock, "RECIPE_RUNTIME_ICON_ALIASES fehlt");
 
   const mappedPaths = [...block[1].matchAll(/:\s*"(assets\/illustrations-v2\/recipes\/[^\"]+\.svg)"/g)]
     .map((match) => match[1]);
   assert.ok(mappedPaths.length > 0, "keine aktiven Recipe-V2-Mappings gefunden");
   assert.equal(new Set(mappedPaths).size, mappedPaths.length, "doppelte Recipe-V2-Mappings");
 
+  const runtimeAliasPaths = [...aliasBlock[1].matchAll(/:\s*"(assets\/illustrations-v2\/recipes\/[^\"]+\.svg)"/g)]
+    .map((match) => match[1]);
+  const referencedPaths = [...new Set([...mappedPaths, ...runtimeAliasPaths])];
+
   const v2Paths = fs.readdirSync(V2_RECIPE_DIR)
     .filter((name) => name.endsWith(".svg"))
     .map((name) => `assets/illustrations-v2/recipes/${name}`)
     .sort();
 
-  assert.deepEqual([...mappedPaths].sort(), v2Paths, "V2-Recipe-Bestand und aktive Mappings weichen voneinander ab");
-  for (const relativePath of mappedPaths) {
+  assert.deepEqual([...referencedPaths].sort(), v2Paths, "V2-Recipe-Bestand und aktive Mappings weichen voneinander ab");
+  for (const relativePath of referencedPaths) {
     assert.ok(fs.existsSync(path.join(ROOT, relativePath)), `${relativePath}: Asset fehlt`);
     assert.ok(SW_CORE.includes(`\"./${relativePath}\"`), `${relativePath}: Offline-Precache fehlt`);
   }

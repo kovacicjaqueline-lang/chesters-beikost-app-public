@@ -85,6 +85,63 @@
   margin-bottom: var(--space-related, 10px);
 }
 
+/* Im Essensprotokoll bleibt die Fachlogik in log.js. FLOW-C ordnet nur die schon
+ * vorhandenen Rezept-/FOOD-Picker in dasselbe sichtbare Auswahlmuster wie den
+ * Mahlzeiteneditor ein: Umschalter, ein aktives Suchfeld und dieselben Trefferkarten. */
+#logModal.flow-dialog .flow-log-selector {
+  min-width: 0;
+}
+
+#logModal.flow-dialog .flow-log-selector .flow-log-selector-panel {
+  margin: 0;
+}
+
+#logModal.flow-dialog .flow-log-selector-panel[hidden] {
+  display: none;
+}
+
+#logModal.flow-dialog .flow-log-selector .flow-log-search-toggle {
+  width: auto;
+  min-height: 38px;
+  margin: 2px 0 7px;
+}
+
+#logModal.flow-dialog .flow-log-selector-panel > label[hidden] + #logRecipeSearch,
+#logModal.flow-dialog .flow-log-selector-panel > label[hidden] + #logFoodSearch {
+  display: none;
+}
+
+#logModal.flow-dialog .flow-log-selector .log-recipe-results-label,
+#logModal.flow-dialog .flow-log-selector .log-food-results-label {
+  margin: 7px 0;
+}
+
+#logModal.flow-dialog .flow-log-selector .log-recipe-results-label[hidden],
+#logModal.flow-dialog .flow-log-selector .log-food-results-label[hidden] {
+  display: none;
+}
+
+#logModal.flow-dialog .flow-log-selector #addCustomLogFood {
+  margin: 1px 0 6px;
+}
+
+/* Die FOOD-Darreichung wird nachträglich als drittes Kind in .manual-role-item
+ * eingesetzt. Im Basis-Stylesheet ist dieser Container ein Flex-Row; dadurch wurde
+ * das volle Darreichungsfeld neben Name und Entfernen-Button gequetscht. Im
+ * Plan-Editor bekommt die Zeile deshalb zwei Spalten und die Darreichung die bereits
+ * vorgesehene volle zweite Zeile. */
+#genericModal.flow-dialog .manual-role-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 7px;
+  row-gap: 0;
+}
+
+#genericModal.flow-dialog .manual-role-item > .manual-preparation-field {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
 #genericModal.flow-dialog #mealSelectorSearch,
 #logModal.flow-dialog #logFoodSearch,
 #logModal.flow-dialog #logRecipeSearch {

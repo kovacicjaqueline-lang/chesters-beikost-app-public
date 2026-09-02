@@ -19,6 +19,13 @@
     return `${date}|${meal}`;
   }
 
+  function previousIsoDate(date) {
+    let [year, month, day] = String(date || "").split("-").map(Number);
+    if (![year, month, day].every(Number.isFinite)) return "";
+    let value = new Date(Date.UTC(year, month - 1, day - 1));
+    return value.toISOString().slice(0, 10);
+  }
+
   function hashText(value) {
     let hash = 2166136261;
     let text = String(value || "");
@@ -98,8 +105,8 @@
     for (let key of keys) {
       let [date, meal] = key.split("|");
       if (!date || !meal) continue;
-      let manual = data.manualMeals[key] || null;
-      let lock = data.planLocks[key] || null;
+      let manual = data.manualMeals?.[key] || null;
+      let lock = data.planLocks?.[key] || null;
       let planId = manual?.planId || lock?.planId || stablePlanId(manual || lock || {}, date, meal);
       if (manual && manual.planId !== planId) { manual.planId = planId; changed = true; }
       if (lock && lock.planId !== planId) { lock.planId = planId; changed = true; }
@@ -197,8 +204,10 @@
 
   function outstandingPastPlans(data, todayValue) {
     let handled = ensurePlannerMeta(data).rolloverHandled || {};
-    return openPlanInstances(data, (plan) => plan.date < todayValue && !handled[plan.planId])
-      .sort((a, b) => b.date.localeCompare(a.date) || (MEAL_ORDER[b.meal] || 0) - (MEAL_ORDER[a.meal] || 0));
+    let previousDay = previousIsoDate(todayValue);
+    if (!previousDay) return [];
+    return openPlanInstances(data, (plan) => plan.date === previousDay && !handled[plan.planId])
+      .sort((a, b) => (MEAL_ORDER[a.meal] || 99) - (MEAL_ORDER[b.meal] || 99));
   }
 
   function markPlansKept(data, plans, at = new Date().toISOString()) {
@@ -335,6 +344,7 @@
     FEATURE_VERSION,
     MEAL_ORDER,
     planKey,
+    previousIsoDate,
     stablePlanId,
     logQualifiesAsCompletion,
     legacyCompletedLog,
@@ -563,11 +573,12 @@
     let actualDate = document.getElementById("logDate")?.value || current?.date || "";
     let actualMeal = document.getElementById("logMeal")?.value || current?.meal || "";
     let beforeIds = new Set((state.logs || []).map((log) => log.id));
+    let beforeEditedLog = editId ? state.logs.find((log) => log.id === editId) : null;
     let result = baseSaveLog();
     let saved = editId
       ? state.logs.find((log) => log.id === editId)
       : state.logs.find((log) => !beforeIds.has(log.id));
-    if (!saved) return result;
+    if (!saved || (editId && saved === beforeEditedLog)) return result;
     let changed = false;
     if (plannedMealId && actualDate === plannedDate && actualMeal === plannedMeal) {
       if (saved.plannedMealId !== plannedMealId) { saved.plannedMealId = plannedMealId; changed = true; }
@@ -801,12 +812,24 @@
     return CORE.outstandingPastPlans(state, today());
   }
 
-  function rolloverPromptCopy(plans) {
-    let days = [...new Set(plans.map((plan) => plan.date))].sort();
-    if (days.length === 1 && days[0] === addDays(today(), -1)) {
-      return "Gestern wurde nicht vollständig protokolliert. Möchtest du den offenen Plan um einen Tag verschieben?";
-    }
-    return `${plans.length} offene Planung${plans.length === 1 ? "" : "en"} aus ${days.length} vergangenen Tag${days.length === 1 ? "" : "en"} wurden noch nicht vollständig protokolliert. Möchtest du die offenen Pläne jeweils um einen Tag verschieben?`;
+  function rolloverPlanTitle(plan) {
+    return mealDisplayTitle(plan) || food(plan?.focusId)?.name || plan?.recipeName || "Mahlzeit";
+  }
+
+  function rolloverPlanReason(plan) {
+    let statusText = String(mealStatusText(plan) || "").trim();
+    if (statusText) return statusText;
+    let type = String(plan?.type || "").trim();
+    return ["neu", "gezielt wiederholen", "Allergen einführen", "Allergen wiederholen"].includes(type)
+      ? type
+      : "";
+  }
+
+  function rolloverPlanListHtml(plans) {
+    return `<div class="rollover-plan-list">${(plans || []).map((plan) => {
+      let reason = rolloverPlanReason(plan);
+      return `<div class="rollover-plan-item"><div class="small"><b>Gestern · ${esc(mealName(plan.meal))}</b></div><div><b>${esc(rolloverPlanTitle(plan))}</b>${reason ? ` <span class="small">· ${esc(reason)}</span>` : ""}</div></div>`;
+    }).join("")}</div>`;
   }
 
   function scheduleRolloverPrompt() {
@@ -822,7 +845,7 @@
       plannerPromptOpen = true;
       openGeneric(
         "Offene Planung",
-        `<p>${esc(rolloverPromptCopy(currentPlans))}</p><div class="stack-actions"><button class="btn full" id="shiftOpenPlans">Plan um 1 Tag verschieben</button><button class="btn secondary full" id="keepOpenPlans">Plan beibehalten</button><button class="btn secondary full" id="backfillOpenPlans">Gestern nachtragen</button></div>`,
+        `${rolloverPlanListHtml(currentPlans)}<div class="stack-actions"><button class="btn full" id="shiftOpenPlans">Plan um 1 Tag verschieben</button><button class="btn secondary full" id="backfillOpenPlans">Gestern nachtragen</button><button class="btn secondary full" id="keepOpenPlans">Nicht verschieben</button></div>`,
         () => { plannerPromptOpen = false; plannerSessionDeferred = true; },
       );
       document.getElementById("shiftOpenPlans").onclick = () => {
@@ -833,7 +856,7 @@
         save();
         closeGeneric();
         renderAll();
-        showToast("Offene Planung jeweils um einen Tag verschoben.");
+        showToast("Offene Planung um einen Tag verschoben.");
       };
       document.getElementById("keepOpenPlans").onclick = () => {
         CORE.markPlansKept(state, outstandingNow());
@@ -842,7 +865,7 @@
         save();
         closeGeneric();
         renderAll();
-        showToast("Offene Planung bleibt am ursprünglichen Tag.");
+        showToast("Planung nicht verschoben.");
       };
       document.getElementById("backfillOpenPlans").onclick = () => {
         let selected = outstandingNow();
@@ -864,7 +887,7 @@
     plannerStorageReady = true;
     plannerLastSeenDay = today();
     await save();
-    renderAll();
+    renderCurrentView();
     scheduleRolloverPrompt();
     return result;
   };

@@ -134,8 +134,6 @@ const PLAN_CHECK_PRECACHE = [
 // Dateien, die index.html mit ?v=10.1.26 lädt, werden unter exakt derselben URL precached.
 // Dadurch überschreibt ein Service-Worker-Update auch einen bereits vorhandenen direkten
 // Query-Cachetreffer und liefert die aktuelle UI-/Flow-Runtime beim nächsten Start.
-// planner-log-rollover-cascade.js finalisiert außerdem den Availability-Guard für bekannte
-// Hauptbasen; die Worker-Aktualisierung lädt diesen Fix deshalb bewusst neu in den App-Cache.
 const UI_PRECACHE = [
   "./ui-meal-editor-footer.css?v=10.1.26",
   "./flow-dialog-ui.css?v=10.1.26",

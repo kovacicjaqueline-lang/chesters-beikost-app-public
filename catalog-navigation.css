@@ -139,7 +139,7 @@ body.mobile-foundation .app-bar-brand {
 
 body.mobile-foundation #appBarTitle {
   margin: 0;
-  font-size: 20px;
+  font-size: 12px;
   line-height: 1.15;
   letter-spacing: -.015em;
 }

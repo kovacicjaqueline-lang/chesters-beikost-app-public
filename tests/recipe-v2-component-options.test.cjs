@@ -28,7 +28,7 @@ function actualFoods() {
   const context = {};
   vm.createContext(context);
   vm.runInContext(`${source}\nthis.__FOOD_DB = FOOD_DB;`, context);
-  return context.__FOOD_DB.map((item) => ({ ...item }));
+  return Array.from(context.__FOOD_DB, (item) => ({ ...item }));
 }
 
 function policyFoods() {

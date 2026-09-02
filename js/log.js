@@ -711,13 +711,7 @@ function saveLog() {
   let affectedFoodIds = new Set([...(oldLog?.foodIds || []), ...ids]);
   for (let foodId of affectedFoodIds) rebuildFoodConsequences(foodId);
 
-  save(); closeLog(); renderAll(); showView("more");
-  let details = document.getElementById("logDetails");
-  if (details) details.open = true;
-  requestAnimationFrame(() => {
-    let entry = document.querySelector(`[data-log="${newLog.id}"]`);
-    (entry || document.getElementById("logSection"))?.scrollIntoView({ behavior: "smooth", block: "start" });
-  });
+  save(); closeLog(); renderAll();
   let inventoryMessage = consumedNames.length ? ` · ${consumedNames.length} Vorratsportion${consumedNames.length === 1 ? "" : "en"} abgezogen` : "";
   showToast(`${isEdit ? "Eintrag geändert" : "Eintrag gespeichert"}${inventoryMessage}.`, () => {
     state = stateBefore; save(); renderAll();

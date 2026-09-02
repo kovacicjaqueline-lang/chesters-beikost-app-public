@@ -194,7 +194,8 @@ try {
   assert.equal(inventoryImmediate.inventoryCount, inventoryBefore + 1);
   await waitForDeferredRender(page, inventoryImmediate.before);
 
-  // Protokoll speichern: Save-Semantik ist synchron, Modal-Close ebenfalls; Voll-Render ist koalesziert verzögert.
+  // Protokoll speichern: Save-Semantik ist synchron, Modal-Close ebenfalls; die aktuelle Ansicht bleibt erhalten.
+  await page.evaluate(() => window.showView("home"));
   await page.evaluate(() => window.openLog(null));
   await page.waitForFunction(() => !!document.querySelector(".addLogFoodResult"));
   await page.evaluate(() => {
@@ -211,14 +212,21 @@ try {
       after: window.__saveUiLatencyProbe.renderCalls,
       modalOpen: document.getElementById("logModal").classList.contains("open"),
       logCount: window.__beikostTest.getState().logs.length,
+      homeVisible: document.getElementById("home").classList.contains("active"),
       moreVisible: document.getElementById("more").classList.contains("active"),
     };
   });
   assert.equal(logImmediate.after, logImmediate.before, "Protokoll-Save darf nicht synchron voll rendern");
   assert.equal(logImmediate.modalOpen, false, "Protokoll-Modal muss sofort schließen");
   assert.equal(logImmediate.logCount, logsBefore + 1, "Protokoll muss vor dem Voll-Render persistiert sein");
-  assert.equal(logImmediate.moreVisible, true, "Zielansicht muss ohne Warten auf renderAll umschalten");
+  assert.equal(logImmediate.homeVisible, true, "Ausgangsansicht muss nach dem Speichern aktiv bleiben");
+  assert.equal(logImmediate.moreVisible, false, "Speichern darf nicht automatisch in die Protokollansicht wechseln");
   await waitForDeferredRender(page, logImmediate.before);
+  assert.equal(
+    await page.evaluate(() => document.getElementById("home").classList.contains("active")),
+    true,
+    "Ausgangsansicht muss auch nach dem verzögerten Voll-Render aktiv bleiben",
+  );
 
   // Einstellungen: Toast/State werden im Klickpfad gesetzt, kompletter Re-Render folgt separat.
   await page.evaluate(() => window.showView("more"));

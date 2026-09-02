@@ -209,7 +209,8 @@
 
   if (changed > 0) {
     if (typeof save === "function") save();
-    if (typeof renderAll === "function") renderAll();
+    if (typeof renderCurrentView === "function") renderCurrentView();
+    else enhanceKeepLabels();
   } else {
     enhanceKeepLabels();
   }

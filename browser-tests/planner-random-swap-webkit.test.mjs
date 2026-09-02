@@ -135,7 +135,7 @@ try {
   await page.waitForFunction(() => !!window.__beikostTest?.buildDays && !!window.__plannerRandomSwap);
   await page.waitForFunction(() => {
     const persisted = window.__beikostTest.getState().backupMeta?.storagePersisted;
-    return persisted && persisted !== "unknown";
+    return persisted && persisted !== "unknown" && window.__plannerPoliciesReady === true;
   });
 
   const today = await configurePlanner(page, 0);

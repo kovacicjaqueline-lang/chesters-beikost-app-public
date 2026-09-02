@@ -54,7 +54,7 @@ function loadMigration() {
 function loadPlannerPolicy() {
   const context = {};
   vm.createContext(context);
-  vm.runInContext(`${policySource}\nthis.__policy = { foodStatusPreferenceLiked, foodStatusPreferenceMergeLiked, foodStatusPreferenceCanCombine, foodStatusPreferenceShouldRetry, foodStatusPreferenceLikedTie };`, context);
+  vm.runInContext(`${policySource}\nthis.__policy = { foodStatusPreferenceLiked, foodStatusPreferenceMergeLiked, foodStatusPreferenceCanCombine, foodStatusPreferenceShouldRetry, foodStatusPreferenceShouldSkipAutomaticResult, foodStatusPreferenceLikedTie };`, context);
   return context.__policy;
 }
 
@@ -130,34 +130,48 @@ test('FOOD-PREFERENCE-MIGRATION: positive Markierung bleibt bei neutralem Alias-
   assert.equal(policy.foodStatusPreferenceMergeLiked(false, false), false);
 });
 
-test('PLANNER: ab 1× Gegessen kombinierbar, Pausiert bleibt ausgeschlossen', () => {
+test('PLANNER: ab 1× Gegessen kombinierbar, Bekannt vertrauenswürdig, Pausiert ausgeschlossen', () => {
   const policy = loadPlannerPolicy();
-  const eaten = [log('e1', '2026-07-14', 'lunch', 'eaten')];
-  assert.equal(policy.foodStatusPreferenceCanCombine({ id: 'karotte', manualStatus: 'auto' }, eaten), true);
-  assert.equal(policy.foodStatusPreferenceCanCombine({ id: 'karotte', manualStatus: 'Pausiert' }, eaten), false);
+  const food = { id: 'karotte' };
+  assert.equal(policy.foodStatusPreferenceCanCombine(food, 'Probiert', 0), false);
+  assert.equal(policy.foodStatusPreferenceCanCombine(food, 'Probiert', 1), true);
+  assert.equal(policy.foodStatusPreferenceCanCombine(food, 'Bekannt', 0), true);
+  assert.equal(policy.foodStatusPreferenceCanCombine(food, 'Pausiert', 3), false);
 });
 
-test('PLANNER: bloß Probiert erzwingt bei Nicht-Allergenen keine Wiederholung; Allergenpfad bleibt getrennt', () => {
+test('PLANNER: bloß Probiert erzwingt bei Nicht-Allergenen keine Wiederholung; echte Ablehnung und Allergenpfad bleiben', () => {
   const policy = loadPlannerPolicy();
-  assert.equal(policy.foodStatusPreferenceShouldRetry({ id: 'zucchini', allergenGroup: '' }, 1, 'tried'), false);
-  assert.equal(policy.foodStatusPreferenceShouldRetry({ id: 'zucchini', allergenGroup: '' }, 1, 'not_accepted'), true);
-  assert.equal(policy.foodStatusPreferenceShouldRetry({ id: 'ei', allergenGroup: 'Ei' }, 1, 'tried'), true);
+  const normal = { id: 'zucchini', allergenGroup: '' };
+  const allergen = { id: 'ei', allergenGroup: 'Ei' };
+  assert.equal(policy.foodStatusPreferenceShouldRetry(normal, 1, 'tried'), false);
+  assert.equal(policy.foodStatusPreferenceShouldRetry(normal, 1, 'not_accepted'), true);
+  assert.equal(policy.foodStatusPreferenceShouldRetry(allergen, 1, 'tried'), true);
+
+  assert.equal(policy.foodStatusPreferenceShouldSkipAutomaticResult({ f: normal, type: 'bekannt kombinieren' }, 1, 'tried'), true);
+  assert.equal(policy.foodStatusPreferenceShouldSkipAutomaticResult({ f: normal, type: 'gezielt wiederholen' }, 1, 'not_accepted'), false);
+  assert.equal(policy.foodStatusPreferenceShouldSkipAutomaticResult({ f: allergen, type: 'gezielt wiederholen' }, 1, 'tried'), false);
+  assert.equal(policy.foodStatusPreferenceShouldSkipAutomaticResult({ f: normal, type: 'manuell' }, 1, 'tried'), false);
 });
 
-test('PLANNER-PREFERENCE: gern gegessen ist nur ein Tie-Breaker', () => {
+test('PLANNER-PREFERENCE: gern gegessen ist nur nach Abwechslung/Eignung und vor Rohpriorität Tie-Breaker', () => {
   const policy = loadPlannerPolicy();
   const liked = { id: 'banane', liked: true };
   const neutral = { id: 'birne' };
   assert.ok(policy.foodStatusPreferenceLikedTie(liked, neutral) < 0);
   assert.ok(policy.foodStatusPreferenceLikedTie(neutral, liked) > 0);
   assert.equal(policy.foodStatusPreferenceLikedTie(liked, { id: 'apfel', liked: true }), 0);
+  assert.match(policySource, /usageCount\(a\.id\) - usageCount\(b\.id\) \|\|\s*foodStatusPreferenceLikedTie\(a, b\) \|\|\s*a\.priority - b\.priority/s);
+  assert.doesNotMatch(policySource, /knownCandidate\s*=/);
 });
 
-test('FOOD-STATUS-UI: Bekannt hat eigene aktive Darstellung und Policy ist kein Statistik-Seiteneffekt', () => {
+test('FOOD-STATUS-UI: Bekannt hat aktive Darstellung und Statusableitung bleibt kanonisch', () => {
   assert.match(foodsSource, /raw === "Bekannt" \? "status-tolerated"/);
   assert.doesNotMatch(foodsSource, /raw === "Regelmäßig"/);
   assert.match(indexSource, /js\/food-status-preferences\.js/);
-  assert.match(policySource, /status\(foodRecord\) === "Bekannt"/);
-  assert.match(policySource, /progress-facts/);
+  assert.ok(indexSource.indexOf('js/food-status-preferences.js') < indexSource.indexOf('js/ui.js'));
+  assert.doesNotMatch(policySource, /\bautoStatus\s*=/);
+  assert.doesNotMatch(policySource, /\bstatus\s*=/);
+  assert.doesNotMatch(policySource, /\brank\s*=/);
+  assert.doesNotMatch(policySource, /renderHomeCore/);
   assert.doesNotMatch(statisticsSource, /installFoodStatusPreferencePolicy/);
 });

@@ -11,6 +11,13 @@ const FOOD_STATUS_PREFERENCE_ORDER = Object.freeze({
   Bekannt: 2,
   Pausiert: -1,
 });
+const FOOD_STATUS_PREFERENCE_MIGRATION_STRENGTH = Object.freeze({
+  auto: 0,
+  Offen: 1,
+  Probiert: 2,
+  Bekannt: 3,
+  Pausiert: 4,
+});
 
 function normalizeFoodStatusPreferenceStatus(value) {
   let statusValue = String(value || "auto");
@@ -19,6 +26,10 @@ function normalizeFoodStatusPreferenceStatus(value) {
   if (["Pause – Reaktion", "Pausiert"].includes(statusValue)) return "Pausiert";
   if (["Probiert", "auto"].includes(statusValue)) return statusValue;
   return "auto";
+}
+
+function foodStatusPreferenceMigrationStrength(value) {
+  return FOOD_STATUS_PREFERENCE_MIGRATION_STRENGTH[normalizeFoodStatusPreferenceStatus(value)] ?? 0;
 }
 
 function foodStatusPreferenceExposureKey(log) {
@@ -71,7 +82,11 @@ function foodStatusPreferenceLiked(foodRecord) {
 
 function foodStatusPreferenceCanCombine(foodRecord, logs = [], outcomeFn = null) {
   let manual = normalizeFoodStatusPreferenceStatus(foodRecord?.manualStatus);
-  if (manual === "Bekannt") return true;
+  let current = manual !== "auto"
+    ? manual
+    : deriveFoodStatusPreferenceStatus(foodRecord, logs, outcomeFn);
+  if (current === "Pausiert") return false;
+  if (current === "Bekannt") return true;
   return foodStatusPreferenceCounts(foodRecord?.id, logs, outcomeFn).eaten >= 1;
 }
 
@@ -92,7 +107,7 @@ function installFoodStatusPreferencePolicy() {
     normalizeStatus = normalizeFoodStatusPreferenceStatus;
   }
   if (typeof statusStrength === "function") {
-    statusStrength = (value) => FOOD_STATUS_PREFERENCE_ORDER[normalizeFoodStatusPreferenceStatus(value)] ?? 0;
+    statusStrength = foodStatusPreferenceMigrationStrength;
   }
   if (typeof mergeFoodRecord === "function") {
     let originalMergeFoodRecord = mergeFoodRecord;
@@ -136,7 +151,10 @@ function installFoodStatusPreferencePolicy() {
   }
 
   if (typeof canCombine === "function") {
-    canCombine = (foodRecord) => status(foodRecord) === "Bekannt" || foodStatusPreferenceCounts(foodRecord.id, state?.logs || [], outcomeForFood).eaten >= 1;
+    canCombine = (foodRecord) => {
+      if (status(foodRecord) === "Pausiert") return false;
+      return status(foodRecord) === "Bekannt" || foodStatusPreferenceCounts(foodRecord.id, state?.logs || [], outcomeForFood).eaten >= 1;
+    };
   }
   if (typeof isTrustedBase === "function") {
     isTrustedBase = (foodRecord) => status(foodRecord) === "Bekannt";
@@ -380,7 +398,7 @@ if (typeof window !== "undefined") installFoodStatusPreferencePolicy();
 
 /* Statistik 10.1.15
  * Rein aus dem bestehenden Protokoll abgeleitete, nicht persistierte Kennzahlen.
- * Keine Schemaänderung und keine medizinische Bewertung.
+ * Keine neue Statistik-Datenhaltung und keine medizinische Bewertung.
  */
 
 let statisticsRange = "7";

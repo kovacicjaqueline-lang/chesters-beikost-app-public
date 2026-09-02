@@ -144,11 +144,26 @@
   function installMoreNavigation() {
     const more = document.getElementById("more");
     if (!more || more.dataset.mobileMore === "true") return;
+
+    const products = document.getElementById("productAllergenCard");
+    if (!products) {
+      if (!root.__mobileMoreWaitingForLazyProduct) {
+        root.__mobileMoreWaitingForLazyProduct = true;
+        const observer = new MutationObserver(() => {
+          if (!document.getElementById("productAllergenCard")) return;
+          observer.disconnect();
+          root.__mobileMoreWaitingForLazyProduct = false;
+          installMoreNavigation();
+        });
+        observer.observe(more, { childList: true, subtree: true });
+      }
+      return;
+    }
+
     more.dataset.mobileMore = "true";
 
     const log = document.getElementById("logSection");
     const statistics = document.getElementById("statisticsSection");
-    const products = document.getElementById("productAllergenCard");
     const allergen = more.querySelector(".allergen-card");
     const settings = more.querySelector(".settings-card");
     const help = more.querySelector(".help-card");

@@ -122,7 +122,7 @@ test("Joghurt-Nussmus bezieht geeignete kanonische Nüsse zentral aus FOOD", () 
   assert.equal(recipe.editorComponents.oneOf.label, "Nussmus");
 });
 
-test("Runtime installiert FOOD-Komponenten vor dem ersten echten renderAll", () => {
+test("Runtime installiert FOOD-Komponenten explizit vor dem ersten Render", () => {
   const foods = policyFoods();
   const recipes = [{ name: "Joghurt-Nussmus-Miniportion", oneOf: ["Erdnuss"] }];
   const stateFoods = [
@@ -147,14 +147,16 @@ test("Runtime installiert FOOD-Komponenten vor dem ersten echten renderAll", () 
   vm.createContext(context);
   vm.runInContext(componentSource, context);
 
-  assert.equal(context.installRecipeV2ComponentBeforeFirstRender(), true);
-  context.renderAll();
-
-  assert.equal(renderSnapshots.length, 1);
-  assert.ok(renderSnapshots[0].includes("Pecannuss"));
-  assert.equal(renderSnapshots[0].includes("Erdnussmus"), false);
+  context.installRecipeV2ComponentRuntime();
+  assert.ok(recipes[0].oneOf.includes("Pecannuss"));
+  assert.equal(recipes[0].oneOf.includes("Erdnussmus"), false);
   assert.equal(
     context.state.foods.find((item) => item.id === "erdnussmus")?.recipeComponentForm,
     "prepared",
   );
+
+  context.renderAll();
+  assert.equal(renderSnapshots.length, 1);
+  assert.ok(renderSnapshots[0].includes("Pecannuss"));
+  assert.doesNotMatch(componentSource, /renderAll = function recipeComponentAwareRenderAll/);
 });

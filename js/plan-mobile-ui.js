@@ -122,22 +122,45 @@
   }
 
   function ensureSecondaryActions(toolbar) {
-    const secondary = toolbar?.querySelector(".plan-secondary-actions");
+    let secondary = toolbar?.querySelector(".plan-secondary-actions");
     const controls = document.getElementById("planFrom")?.closest(".plan-controls") || toolbar?.querySelector(".plan-controls");
     if (!secondary || !controls) return;
 
-    const summary = [...secondary.children].find((node) => node.tagName === "SUMMARY");
-    if (summary && secondary.firstElementChild !== summary) secondary.prepend(summary);
-
-    if (summary && (controls.parentElement !== secondary || summary.nextElementSibling !== controls)) {
-      summary.insertAdjacentElement("afterend", controls);
-      return;
+    if (secondary.tagName === "DETAILS") {
+      const replacement = document.createElement("div");
+      replacement.className = secondary.className;
+      const toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.className = "btn ghost plan-secondary-toggle";
+      toggle.textContent = "Weitere Planaktionen";
+      toggle.setAttribute("aria-expanded", "false");
+      const rebuild = secondary.querySelector("#planRebuildAll");
+      replacement.appendChild(toggle);
+      replacement.appendChild(controls);
+      if (rebuild) replacement.appendChild(rebuild);
+      secondary.replaceWith(replacement);
+      secondary = replacement;
     }
-    if (controls.parentElement === secondary) return;
 
+    const toggle = secondary.querySelector(".plan-secondary-toggle");
     const rebuild = secondary.querySelector("#planRebuildAll");
-    if (rebuild) secondary.insertBefore(controls, rebuild);
-    else secondary.appendChild(controls);
+    if (controls.parentElement !== secondary) {
+      if (rebuild) secondary.insertBefore(controls, rebuild);
+      else secondary.appendChild(controls);
+    }
+
+    const setExpanded = (expanded) => {
+      secondary.toggleAttribute("open", expanded);
+      if (toggle) toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+      controls.hidden = !expanded;
+      if (rebuild) rebuild.hidden = !expanded;
+    };
+
+    if (toggle && toggle.dataset.mobilePlanSecondaryBound !== "true") {
+      toggle.onclick = () => setExpanded(!secondary.hasAttribute("open"));
+      toggle.dataset.mobilePlanSecondaryBound = "true";
+    }
+    setExpanded(secondary.hasAttribute("open"));
   }
 
   function ensureTodaySelection(toolbar) {

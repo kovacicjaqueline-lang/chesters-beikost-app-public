@@ -281,13 +281,25 @@
 
 @media(max-width:370px){
   #plan .plan-week-days{
-    gap:3px;
+    display:flex;
+    gap:4px;
+    overflow-x:auto;
+    padding-bottom:4px;
+    scroll-snap-type:x proximity;
+    scrollbar-width:none;
+  }
+
+  #plan .plan-week-days::-webkit-scrollbar{
+    display:none;
   }
 
   #plan .plan-week-day{
+    flex:0 0 44px;
+    min-width:44px;
     min-height:62px;
     padding-left:1px;
     padding-right:1px;
+    scroll-snap-align:start;
   }
 
   #plan .plan-week-weekday{

@@ -134,6 +134,14 @@ try {
   await days.nth(1).click();
   assert.equal(await days.nth(1).getAttribute("aria-pressed"), "true", "Nach dem Heute-Sprung bleibt direkte Tagesauswahl möglich");
 
+  await page.evaluate(() => {
+    window.__mobilePlanRenderAllCalls = 0;
+    window.__mobilePlanOriginalRenderAll = window.renderAll;
+    window.renderAll = function mobilePlanRenderAllProbe(...args) {
+      window.__mobilePlanRenderAllCalls += 1;
+      return window.__mobilePlanOriginalRenderAll.apply(this, args);
+    };
+  });
   const fromBefore = await page.evaluate(() => window.__beikostTest.getState().settings.planFrom);
   await page.locator("#plan .plan-week-step[data-week-step='7']").click();
   await page.waitForFunction((previous) => window.__beikostTest.getState().settings.planFrom !== previous, fromBefore);
@@ -141,6 +149,32 @@ try {
   const expected = await page.evaluate((date) => window.__beikostTest.addDays(date, 7), fromBefore);
   assert.equal(fromAfter, expected, "Nächste Woche verschiebt den sichtbaren Plan um sieben Tage");
   assert.equal(await page.locator("#planWeekOverview .plan-week-day").count(), 7);
+  assert.equal(
+    await page.evaluate(() => window.__mobilePlanRenderAllCalls),
+    0,
+    "Wochenwechsel rendert nur den Plan statt alle versteckten App-Bereiche",
+  );
+  await page.evaluate(() => {
+    window.renderAll = window.__mobilePlanOriginalRenderAll;
+    delete window.__mobilePlanOriginalRenderAll;
+    delete window.__mobilePlanRenderAllCalls;
+  });
+
+  await page.setViewportSize({ width: 320, height: 844 });
+  const narrowTargets = await page.locator("#planWeekOverview .plan-week-day").evaluateAll((buttons) =>
+    buttons.map((button) => button.getBoundingClientRect().width),
+  );
+  assert.ok(
+    narrowTargets.every((width) => width >= 44),
+    `Auch bei 320 px bleiben alle Tagesziele mindestens 44 px breit: ${narrowTargets.join(", ")}`,
+  );
+  const narrowStrip = await page.locator("#planWeekOverview .plan-week-days").evaluate((element) => ({
+    clientWidth: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+    overflowX: getComputedStyle(element).overflowX,
+  }));
+  assert.ok(narrowStrip.scrollWidth > narrowStrip.clientWidth, "Auf sehr schmalen Geräten darf die Tagesleiste horizontal scrollen");
+  assert.equal(narrowStrip.overflowX, "auto", "Die schmale Tagesleiste nutzt explizites horizontales Scrolling");
 
   await context.close();
 } finally {

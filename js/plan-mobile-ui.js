@@ -40,10 +40,10 @@
       allergen: hasAllergenType || allFoodIds.some((id) => isAllergenFood(id)),
       prep: prepDates.has(day?.date),
       incomplete: open.some((meal) => meal?.empty || !meal?.focusId),
-      locked: open.some((meal) => !!planLocks[`${day.date}|${meal.meal}`]),
-      done: planned.length > 0 && open.length === 0,
+      locked: open.some((meal) => planLocks[`${day.date}|${meal.meal}`]?.mode === "manual"),
+      done: planned.length > 0 && open.length === 0 && planned.every((meal) => !meal?.empty && !!meal?.focusId),
       plannedCount: planned.length,
-      completedCount: Math.max(0, planned.length - open.length),
+      completedCount: planned.filter((meal) => !meal?.empty && !!meal?.focusId && isCompleted(day.date, meal.meal)).length,
     };
   }
 
@@ -63,6 +63,15 @@
     if (status.locked) labels.push("Geschützt");
     if (status.done) labels.push("Erledigt");
     return labels;
+  }
+
+  function mobilePlanCompletionTitle(currentTitle = "", status = {}) {
+    const title = String(currentTitle || "");
+    const base = title.replace(/\s+(?:teilweise\s+)?erledigt\s*$/i, "").trim();
+    if (!base) return title;
+    if (status.done) return `${base} erledigt`;
+    if (status.completedCount > 0 && status.incomplete) return `${base} teilweise erledigt`;
+    return title;
   }
   /* MOBILE-PLAN-HELPERS END */
 
@@ -159,7 +168,7 @@
         globalThis.__mobilePlanSelectedDate = addDays(nextFrom, selectedIndex);
         state.settings.planFrom = nextFrom;
         save();
-        renderAll();
+        renderPlan();
       };
     });
   }
@@ -231,7 +240,7 @@
     overview.querySelectorAll(".plan-week-day").forEach((button) => {
       button.onclick = () => {
         globalThis.__mobilePlanSelectedDate = button.dataset.planDate;
-        applySelectedDay(block, days, button.dataset.planDate);
+        applySelectedDay(block, days, button.dataset.planDate, statuses);
         overview.querySelectorAll(".plan-week-day").forEach((item) => {
           const active = item.dataset.planDate === button.dataset.planDate;
           item.classList.toggle("selected", active);
@@ -241,13 +250,24 @@
     });
   }
 
-  function applySelectedDay(block, days, selectedDate) {
+  function normalizeCompletedDayPresentation(node, status) {
+    if (!node?.matches?.("details.completed-day")) return;
+    const title = node.querySelector(".completed-day-title");
+    if (!title) return;
+    if (!title.dataset.planBaseTitle) title.dataset.planBaseTitle = title.textContent || "";
+    title.textContent = mobilePlanCompletionTitle(title.dataset.planBaseTitle, status);
+    node.classList.toggle("plan-partial-day", status.completedCount > 0 && status.incomplete && !status.done);
+  }
+
+  function applySelectedDay(block, days, selectedDate, statuses = []) {
     const dayNodes = [...block.children].filter(
       (node) => node.classList.contains("day-card") || node.classList.contains("completed-day"),
     );
     dayNodes.forEach((node, index) => {
       const date = days[index]?.date || "";
+      const status = statuses[index] || {};
       node.dataset.planDate = date;
+      normalizeCompletedDayPresentation(node, status);
       const selected = date === selectedDate;
       node.hidden = !selected;
       node.classList.toggle("plan-selected-day", selected);
@@ -284,7 +304,7 @@
     ensureSecondaryActions(toolbar);
     ensureWeekNavigation(toolbar, from, selectedDate);
     ensureWeekOverview(toolbar, block, days, selectedDate, statuses);
-    applySelectedDay(block, days, selectedDate);
+    applySelectedDay(block, days, selectedDate, statuses);
   }
 
   const baseRenderPlanCore = renderPlanCore;
@@ -297,8 +317,9 @@
     mobilePlanDayStatus,
     mobilePlanSelectedDate,
     mobilePlanStatusLabels,
+    mobilePlanCompletionTitle,
     enhance: enhanceMobilePlan,
   };
 
-  renderPlan();
+  if (document.getElementById("plan")?.classList.contains("active")) renderPlan();
 })();

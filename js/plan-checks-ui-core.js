@@ -463,5 +463,10 @@
     };
   }
 
-  renderAll();
+  if (typeof installRecipeV2ComponentRuntime === "function") installRecipeV2ComponentRuntime();
+  if (typeof globalScope.__installPlanCheckSolutionPrecompute === "function") {
+    globalScope.__installPlanCheckSolutionPrecompute({ renderNow: false });
+  }
+  if (typeof renderCurrentView === "function") renderCurrentView();
+  else renderAll();
 })(typeof globalThis !== "undefined" ? globalThis : this);

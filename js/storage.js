@@ -149,8 +149,8 @@ async function bootstrapStorage() {
   } else state.backupMeta.storagePersisted = "unavailable";
   syncPlanFromToToday();
   await save();
-  renderAll();
-  renderStorageStatus();
+  globalThis.installRecipeV2ComponentRuntime?.();
+  renderCurrentView();
 }
 
 function showStorageError(message) {

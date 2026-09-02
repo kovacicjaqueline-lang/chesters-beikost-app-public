@@ -3,9 +3,9 @@
 /*
  * Kleiner Loader, damit zuerst die AP3-Vertragserweiterung, danach die zentrale
  * Solution-Preservation, die kooperative Suche und anschließend die Lösungsvorbereitung
- * installiert werden. Die Vorbereitung fängt den ersten Core-Render einmal ab; dadurch
- * kann die sichtbare Plan-Checks-UI nie vor der Lösungsprüfung einen irreführenden CTA
- * zeichnen. Mobile-Plan wird zuletzt geladen und verdichtet ausschließlich die Darstellung.
+ * installiert werden. Der UI-Core installiert den vorbereiteten Renderer anschließend
+ * explizit vor seinem ersten sichtbaren Render; dadurch kann die Plan-Checks-UI nie vor
+ * der Lösungsprüfung einen irreführenden CTA zeichnen. Die Dateien bleiben separat precachebar.
  */
 (function loadPlanChecksUi() {
   if (typeof document === "undefined" || globalThis.__planChecksUiLoaderStarted) return;

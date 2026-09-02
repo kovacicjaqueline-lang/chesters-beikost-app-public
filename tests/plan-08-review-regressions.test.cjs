@@ -142,11 +142,13 @@ test("PLAN-08 review: genau ein freigeschaltetes exaktes Rezept darf ein sonst s
 test("PLAN-08 review: erster sichtbarer Render erfolgt erst nach vollständiger Browser-Policy-Kette", () => {
   let domReady = null;
   let renders = 0;
+  let fullRenders = 0;
   const appended = [];
   const body = { style: { visibility: "" } };
   const context = {
     console: { error: () => {} },
-    renderAll: () => { renders += 1; },
+    renderAll: () => { fullRenders += 1; },
+    renderCurrentView: () => { renders += 1; },
     normalizeName: (value) => String(value || "").toLowerCase(),
   };
   context.window = context;
@@ -194,6 +196,7 @@ test("PLAN-08 review: erster sichtbarer Render erfolgt erst nach vollständiger 
   vm.runInContext(utilsSource, context);
   assert.equal(body.style.visibility, "hidden");
   assert.equal(renders, 0);
+  assert.equal(fullRenders, 0);
   assert.equal(context.__plannerPoliciesReady, false);
   assert.equal(typeof domReady, "function");
 
@@ -217,5 +220,6 @@ test("PLAN-08 review: erster sichtbarer Render erfolgt erst nach vollständiger 
   assert.equal(context.__handlingReadinessReady, true);
   assert.equal(context.__plannerPoliciesReady, true);
   assert.equal(renders, 1);
+  assert.equal(fullRenders, 0);
   assert.equal(body.style.visibility, "");
 });

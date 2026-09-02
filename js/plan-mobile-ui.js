@@ -125,7 +125,16 @@
     const secondary = toolbar?.querySelector(".plan-secondary-actions");
     const controls = document.getElementById("planFrom")?.closest(".plan-controls") || toolbar?.querySelector(".plan-controls");
     if (!secondary || !controls) return;
+
+    const summary = [...secondary.children].find((node) => node.tagName === "SUMMARY");
+    if (summary && secondary.firstElementChild !== summary) secondary.prepend(summary);
+
+    if (summary && (controls.parentElement !== secondary || summary.nextElementSibling !== controls)) {
+      summary.insertAdjacentElement("afterend", controls);
+      return;
+    }
     if (controls.parentElement === secondary) return;
+
     const rebuild = secondary.querySelector("#planRebuildAll");
     if (rebuild) secondary.insertBefore(controls, rebuild);
     else secondary.appendChild(controls);

@@ -115,6 +115,40 @@ try {
   const secondaryToggle = secondary.locator(":scope > .plan-secondary-toggle");
   assert.equal(await secondary.getAttribute("open"), null, "Sekundäre Planaktionen sind standardmäßig geschlossen");
   assert.equal(await secondary.locator(".plan-controls").count(), 1, "Datum und Neuplanung sind in den sekundären Aktionsbereich verdichtet");
+  const secondaryDiagnostics = await secondary.evaluate((element) => {
+    const toggle = element.querySelector(":scope > .plan-secondary-toggle");
+    const elementStyle = getComputedStyle(element);
+    const elementRect = element.getBoundingClientRect();
+    const toggleStyle = toggle ? getComputedStyle(toggle) : null;
+    const toggleRect = toggle?.getBoundingClientRect();
+    return {
+      tagName: element.tagName,
+      outerHTML: element.outerHTML,
+      open: element.hasAttribute("open"),
+      display: elementStyle.display,
+      visibility: elementStyle.visibility,
+      rect: {
+        x: elementRect.x,
+        y: elementRect.y,
+        width: elementRect.width,
+        height: elementRect.height,
+      },
+      toggleCount: element.querySelectorAll(":scope > .plan-secondary-toggle").length,
+      toggle: toggle && toggleStyle && toggleRect ? {
+        hidden: toggle.hidden,
+        connected: toggle.isConnected,
+        display: toggleStyle.display,
+        visibility: toggleStyle.visibility,
+        opacity: toggleStyle.opacity,
+        position: toggleStyle.position,
+        width: toggleRect.width,
+        height: toggleRect.height,
+        clientRects: toggle.getClientRects().length,
+        ariaExpanded: toggle.getAttribute("aria-expanded"),
+      } : null,
+    };
+  });
+  console.log(`PLAN_SECONDARY_DIAGNOSTICS ${JSON.stringify(secondaryDiagnostics)}`);
   assert.equal(await secondaryToggle.isVisible(), true, "Der Einstieg zu den sekundären Planaktionen bleibt sichtbar");
   assert.equal(await secondaryToggle.getAttribute("aria-expanded"), "false", "Der Toggle weist den geschlossenen Zustand zugänglich aus");
   assert.equal(await secondary.locator(".plan-controls").isVisible(), false, "Plan ab und Neu planen bleiben im geschlossenen Zustand wirklich verborgen");

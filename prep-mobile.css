@@ -381,6 +381,10 @@ body.mobile-foundation #prep .shopping-followup-title {
   text-transform: uppercase;
 }
 
+body.mobile-foundation #prep .shopping-followup-title {
+  text-transform: none;
+}
+
 body.mobile-foundation #prep .shopping-row {
   position: relative;
   display: grid !important;

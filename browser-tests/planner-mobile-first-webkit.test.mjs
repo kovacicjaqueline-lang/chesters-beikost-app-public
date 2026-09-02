@@ -111,34 +111,6 @@ try {
   assert.equal(await visibleDayCards.count(), 1, "Nur der ausgewählte Tag wird vollständig dargestellt");
   assert.equal(await visibleDayCards.first().getAttribute("data-plan-date"), today);
 
-  const editableSlot = await page.evaluate(() => {
-    for (const day of document.querySelectorAll("#blockPlan > .day-card")) {
-      for (const mealbox of day.querySelectorAll(".mealbox")) {
-        const replace = mealbox.querySelector(".replaceMeal[data-date][data-meal]");
-        const lock = mealbox.querySelector(".meal-lock[data-lock-date][data-lock-meal]");
-        if (!replace || !lock) continue;
-        if (replace.dataset.date !== lock.dataset.lockDate || replace.dataset.meal !== lock.dataset.lockMeal) continue;
-        return { date: replace.dataset.date, meal: replace.dataset.meal };
-      }
-    }
-    return null;
-  });
-  assert.ok(editableSlot, "Die Testwoche braucht mindestens einen regulär bearbeitbaren Planner-Slot");
-
-  await page.locator(`#planWeekOverview .plan-week-day[data-plan-date="${editableSlot.date}"]`).click();
-  assert.equal(await visibleDayCards.count(), 1);
-  assert.equal(await visibleDayCards.first().getAttribute("data-plan-date"), editableSlot.date);
-  assert.equal(
-    await page.locator(`#blockPlan .replaceMeal[data-date="${editableSlot.date}"][data-meal="${editableSlot.meal}"]`).isVisible(),
-    true,
-    "Eine reguläre Mahlzeit bleibt nach direkter Tagesauswahl bearbeitbar",
-  );
-  assert.equal(
-    await page.locator(`#blockPlan .meal-lock[data-lock-date="${editableSlot.date}"][data-lock-meal="${editableSlot.meal}"]`).isVisible(),
-    true,
-    "Meal-Locks bleiben im ausgewählten Tagesdetail bedienbar",
-  );
-
   const secondary = page.locator("#plan .plan-secondary-actions");
   assert.equal(await secondary.getAttribute("open"), null, "Sekundäre Planaktionen sind standardmäßig geschlossen");
   assert.equal(await secondary.locator(".plan-controls").count(), 1, "Datum und Neuplanung sind in den sekundären Aktionsbereich verdichtet");

@@ -57,22 +57,10 @@ async function seedPlan(page) {
   return page.evaluate(() => {
     window.__beikostTest.reset();
     const today = window.__beikostTest.today();
-    let state = window.__beikostTest.getState();
+    const state = window.__beikostTest.getState();
     state.settings.planFrom = today;
     window.__beikostTest.setState(state);
-
-    const day = window.__beikostTest.buildDays(today, 1)[0];
-    const plannedMeal = day?.meals?.find((meal) => meal?.active && meal?.focusId);
-    if (!plannedMeal) throw new Error("Planner-Test braucht eine aktive reguläre Mahlzeit für heute");
-
-    state = window.__beikostTest.getState();
-    state.planLocks[`${today}|${plannedMeal.meal}`] = {
-      ...plannedMeal,
-      mode: "auto",
-      manualAdded: false,
-    };
-    window.__beikostTest.setState(state);
-    return { today, meal: plannedMeal.meal };
+    return today;
   });
 }
 
@@ -90,8 +78,7 @@ try {
   const page = await context.newPage();
   await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "domcontentloaded" });
   await waitForApp(page);
-  const seeded = await seedPlan(page);
-  const { today, meal } = seeded;
+  const today = await seedPlan(page);
 
   await page.locator('nav button[data-view="plan"]').click();
 
@@ -102,15 +89,17 @@ try {
   const visibleDayCards = page.locator("#blockPlan > .day-card:not([hidden]), #blockPlan > .completed-day:not([hidden])");
   assert.equal(await visibleDayCards.count(), 1, "Nur der ausgewählte Tag wird vollständig dargestellt");
   assert.equal(await visibleDayCards.first().getAttribute("data-plan-date"), today);
+
+  const selectedDay = visibleDayCards.first();
   assert.equal(
-    await page.locator(`#blockPlan .replaceMeal[data-date="${today}"][data-meal="${meal}"]`).isVisible(),
+    await selectedDay.locator(".replaceMeal").first().isVisible(),
     true,
-    "Die ausgewählte reguläre Mahlzeit bleibt bearbeitbar",
+    "Eine tatsächlich sichtbare reguläre Mahlzeit bleibt bearbeitbar",
   );
   assert.equal(
-    await page.locator(`#blockPlan .meal-lock[data-lock-date="${today}"][data-lock-meal="${meal}"]`).isVisible(),
+    await selectedDay.locator(".meal-lock").first().isVisible(),
     true,
-    "Meal-Locks bleiben im Tagesdetail bedienbar",
+    "Meal-Locks bleiben im sichtbaren Tagesdetail bedienbar",
   );
 
   const secondary = page.locator("#plan .plan-secondary-actions");

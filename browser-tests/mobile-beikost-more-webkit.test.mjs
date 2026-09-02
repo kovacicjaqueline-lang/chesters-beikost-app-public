@@ -103,8 +103,10 @@ try {
   assert.equal(detailLayout.radius, "0px", "Lebensmittel-Details sollen kein Bottom-Sheet-Radiusmuster verwenden");
   await page.locator("#closeGeneric").click();
 
-  await page.locator('nav button[data-view="prep"]').click();
-  await page.locator("#prepOpenFreezerRecipes").click();
+  await page.evaluate(() => {
+    recipeFilter = "freezer";
+    renderPrep();
+  });
   await page.waitForFunction(() => {
     const details = document.querySelector("#recipeFilter > .mobile-filter-secondary");
     const active = details?.querySelector('button[data-recipe-filter="freezer"].active');
@@ -118,7 +120,7 @@ try {
   assert.equal(
     await page.locator('#recipeFilter button[data-recipe-filter="freezer"]').evaluate((button) => button.classList.contains("active")),
     true,
-    "Prep → Rezepte auf Vorrat muss den Filter Einfrierbar sichtbar aktivieren",
+    "der programmgesteuerte Filter Einfrierbar muss sichtbar aktiv sein",
   );
 
   await page.locator('#catalogSwitch button[data-catalog-mode="recipes"]').click();

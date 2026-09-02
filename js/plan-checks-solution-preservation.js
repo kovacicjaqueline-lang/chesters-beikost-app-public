@@ -82,8 +82,8 @@
 /*
  * Mahlzeiten bleiben nur dann bewusst fest, wenn die Nutzerin sie manuell hinzugefügt,
  * bearbeitet oder mit dem Schloss behalten hat. Die historische pauschale Drei-Tage-
- * Fixierung wird nicht mehr neu erzeugt. Follow-ups und explizite Random-Swap-Snapshots
- * behalten ihre bestehende Sondersemantik.
+ * Fixierung wird nicht mehr neu erzeugt. Follow-ups, Tracking-/Rollover-Zustände und
+ * explizite Random-Swap-Snapshots behalten ihre bestehende Sondersemantik.
  */
 (function installExplicitMealKeepPolicy(globalScope) {
   const RANDOM_SWAP_FLAGS = Object.freeze([
@@ -96,6 +96,8 @@
     return !!lock &&
       lock.mode === "auto" &&
       !lock.followUpFoodId &&
+      !lock.plannerTrackingSnapshot &&
+      !lock.rolloverShifted &&
       !RANDOM_SWAP_FLAGS.some((flag) => !!lock[flag]);
   }
 
@@ -110,6 +112,11 @@
       if (currentState.overrides?.[key] === lock.focusId) delete currentState.overrides[key];
       delete currentState.autoLockExcluded?.[key];
       removed += 1;
+    }
+    for (const [key, excluded] of Object.entries(currentState.autoLockExcluded || {})) {
+      const date = String(key || "").split("|")[0];
+      if (date < currentDate || date > until || excluded !== true) continue;
+      delete currentState.autoLockExcluded[key];
     }
     return removed;
   }
@@ -212,7 +219,6 @@
     typeof today === "function" ? today() : "",
     typeof addDays === "function" ? addDays : null,
   );
-  if (state.autoLockExcluded && Object.keys(state.autoLockExcluded).length) state.autoLockExcluded = {};
 
   if (removed > 0) {
     if (typeof save === "function") save();

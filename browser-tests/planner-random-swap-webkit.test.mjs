@@ -133,6 +133,7 @@ try {
   const page = await context.newPage();
   await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => !!window.__beikostTest?.buildDays && !!window.__plannerRandomSwap);
+  await page.waitForFunction(() => !!window.__beikostTest.getState().backupMeta?.migratedAt);
 
   const today = await configurePlanner(page, 0);
   const targetKey = `${today}|lunch`;

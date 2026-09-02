@@ -127,36 +127,45 @@
     if (!secondary || !controls) return;
 
     if (secondary.tagName === "DETAILS") {
-      const replacement = document.createElement("div");
-      replacement.className = secondary.className;
-      const toggle = document.createElement("button");
-      toggle.type = "button";
-      toggle.className = "btn ghost plan-secondary-toggle";
-      toggle.textContent = "Weitere Planaktionen";
-      toggle.setAttribute("aria-expanded", "false");
-      const rebuild = secondary.querySelector("#planRebuildAll");
-      replacement.appendChild(toggle);
-      replacement.appendChild(controls);
-      if (rebuild) replacement.appendChild(rebuild);
-      secondary.replaceWith(replacement);
-      secondary = replacement;
+      const details = secondary;
+      const wrapper = document.createElement("div");
+      wrapper.className = details.className;
+      details.classList.remove("plan-secondary-actions");
+      details.classList.add("plan-secondary-content");
+      details.insertAdjacentElement("beforebegin", wrapper);
+      wrapper.appendChild(details);
+      secondary = wrapper;
     }
 
-    const toggle = secondary.querySelector(".plan-secondary-toggle");
-    const rebuild = secondary.querySelector("#planRebuildAll");
-    if (controls.parentElement !== secondary) {
-      if (rebuild) secondary.insertBefore(controls, rebuild);
-      else secondary.appendChild(controls);
+    let toggle = secondary.querySelector(":scope > .plan-secondary-toggle");
+    if (!toggle) {
+      toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.className = "btn ghost smallbtn plan-secondary-toggle";
+      toggle.textContent = "Weitere Planaktionen";
+      toggle.setAttribute("aria-expanded", "false");
+      secondary.prepend(toggle);
+    }
+
+    const details = secondary.querySelector(":scope > details.plan-secondary-content");
+    const summary = details?.querySelector(":scope > summary");
+    if (summary) summary.hidden = true;
+    const contentRoot = details || secondary;
+    const rebuild = contentRoot.querySelector("#planRebuildAll");
+    if (controls.parentElement !== contentRoot) {
+      if (rebuild) contentRoot.insertBefore(controls, rebuild);
+      else contentRoot.appendChild(controls);
     }
 
     const setExpanded = (expanded) => {
       secondary.toggleAttribute("open", expanded);
-      if (toggle) toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+      if (details) details.toggleAttribute("open", expanded);
+      toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
       controls.hidden = !expanded;
       if (rebuild) rebuild.hidden = !expanded;
     };
 
-    if (toggle && toggle.dataset.mobilePlanSecondaryBound !== "true") {
+    if (toggle.dataset.mobilePlanSecondaryBound !== "true") {
       toggle.onclick = () => setExpanded(!secondary.hasAttribute("open"));
       toggle.dataset.mobilePlanSecondaryBound = "true";
     }

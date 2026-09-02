@@ -15,6 +15,7 @@ test('historische Drei-Tage-Auto-Locks werden entfernt, echte Schutz- und Persis
     planLocks: {
       '2026-09-02|lunch': { mode: 'auto', focusId: 'legacy' },
       '2026-09-02|breakfast': { mode: 'auto', focusId: 'tracking', plannerTrackingSnapshot: true, planId: 'plan-tracking' },
+      '2026-09-02|dinner': { mode: 'auto', focusId: 'linked-legacy', planId: 'plan-linked-legacy' },
       '2026-09-03|lunch': { mode: 'auto', focusId: 'follow', followUpFoodId: 'follow' },
       '2026-09-03|dinner': { mode: 'auto', focusId: 'rollover', rolloverShifted: true, planId: 'plan-rollover' },
       '2026-09-04|lunch': { mode: 'manual', focusId: 'manual' },
@@ -30,10 +31,17 @@ test('historische Drei-Tage-Auto-Locks werden entfernt, echte Schutz- und Persis
       '2026-09-03|breakfast': true,
       '2026-09-04|snack': 'meal-removed',
     },
+    logs: [{
+      id: 'linked-log',
+      date: '2026-09-02',
+      meal: 'dinner',
+      plannedMealId: 'plan-linked-legacy',
+      outcome: 'eaten',
+    }],
   };
 
-  const removed = policy.cleanupLegacyThreeDayAutoLocks(state, '2026-09-02', addDays);
-  assert.equal(removed, 1);
+  const changed = policy.cleanupLegacyThreeDayAutoLocks(state, '2026-09-02', addDays);
+  assert.equal(changed, 3, 'Auto-Lock, verknüpfter Alt-Lock und alte boolesche Ausnahme werden migriert');
   assert.equal(state.planLocks['2026-09-02|lunch'], undefined);
   assert.equal(state.overrides['2026-09-02|lunch'], undefined);
   assert.equal(state.autoLockExcluded['2026-09-02|lunch'], undefined);
@@ -41,6 +49,8 @@ test('historische Drei-Tage-Auto-Locks werden entfernt, echte Schutz- und Persis
   assert.equal(state.autoLockExcluded['2026-09-04|snack'], 'meal-removed', 'bewusst gelöschte Mahlzeit bleibt über Reload entfernt');
   assert.ok(state.planLocks['2026-09-02|breakfast']);
   assert.equal(state.planLocks['2026-09-02|breakfast'].planId, 'plan-tracking', 'Tracking-Plan-ID bleibt für Log-Verknüpfung erhalten');
+  assert.equal(state.planLocks['2026-09-02|dinner'].planId, 'plan-linked-legacy');
+  assert.equal(state.planLocks['2026-09-02|dinner'].plannerTrackingSnapshot, true, 'verknüpfter alter Tages-Lock wird zu unsichtbarem Tracking statt gelöscht');
   assert.ok(state.planLocks['2026-09-03|lunch']);
   assert.ok(state.planLocks['2026-09-03|dinner']);
   assert.ok(state.planLocks['2026-09-04|lunch']);

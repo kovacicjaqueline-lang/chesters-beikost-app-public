@@ -139,7 +139,9 @@
       };
     });
     document.querySelector('nav button[data-view="prep"]')?.addEventListener("click", () => {
-      if (hasNeededShoppingHint()) activePanel = "shopping";
+      if (!hasNeededShoppingHint()) return;
+      activePanel = "shopping";
+      applyPanelState();
     });
     applyPanelState();
   }

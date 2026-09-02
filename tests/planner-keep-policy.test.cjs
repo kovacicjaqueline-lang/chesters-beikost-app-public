@@ -74,12 +74,14 @@ test('Woche neu planen entfernt nur neu berechenbaren Auto-Zustand', () => {
     planLocks: {
       '2026-09-02|breakfast': { mode: 'auto', focusId: 'tracking', plannerTrackingSnapshot: true, planId: 'plan-tracking' },
       '2026-09-02|lunch': { mode: 'auto', focusId: 'automatic' },
+      '2026-09-03|breakfast': { mode: 'auto', focusId: 'random', randomSwapPinned: true },
       '2026-09-03|lunch': { mode: 'manual', focusId: 'kept' },
       '2026-09-04|lunch': { mode: 'auto', focusId: 'follow', followUpFoodId: 'follow' },
       '2026-09-10|lunch': { mode: 'auto', focusId: 'outside' },
     },
     overrides: {
       '2026-09-02|lunch': 'automatic',
+      '2026-09-03|breakfast': 'random',
       '2026-09-03|lunch': 'kept',
       '2026-09-04|lunch': 'follow',
       '2026-09-10|lunch': 'outside',
@@ -96,6 +98,8 @@ test('Woche neu planen entfernt nur neu berechenbaren Auto-Zustand', () => {
   assert.equal(state.planLocks['2026-09-02|lunch'], undefined, 'normaler Auto-Zustand wird neu berechenbar');
   assert.equal(state.overrides['2026-09-02|lunch'], undefined);
   assert.ok(state.planLocks['2026-09-02|breakfast'], 'Tracking-Plan-ID bleibt bestehen');
+  assert.equal(state.planLocks['2026-09-03|breakfast'], undefined, 'interner Random-Swap-Pin wird bei bewusster Wochen-Neuplanung freigegeben');
+  assert.equal(state.overrides['2026-09-03|breakfast'], undefined);
   assert.ok(state.planLocks['2026-09-03|lunch'], 'Behalten bleibt bestehen');
   assert.equal(state.overrides['2026-09-03|lunch'], 'kept');
   assert.ok(state.planLocks['2026-09-04|lunch'], 'Wiedervorlage bleibt bestehen');
@@ -106,8 +110,8 @@ test('Woche neu planen entfernt nur neu berechenbaren Auto-Zustand', () => {
   assert.equal(state.autoLockExcluded['2026-09-10|lunch'], true);
 });
 
-test('heutiger Tracking-Snapshot hat keine Schutzwirkung und bleibt bei gleicher Mahlzeit stabil', () => {
-  const first = {
+test('interne Tracking- und Random-Swap-Snapshots sind kein sichtbares Behalten', () => {
+  const trackingLock = {
     mode: 'auto',
     plannerTrackingSnapshot: true,
     planId: 'plan-a',
@@ -116,15 +120,20 @@ test('heutiger Tracking-Snapshot hat keine Schutzwirkung und bleibt bei gleicher
     foodIds: ['kartoffel'],
   };
   const sameMeal = {
-    ...first,
+    ...trackingLock,
     planId: 'plan-b',
     createdAt: '2026-09-02T09:00:00.000Z',
   };
+  const randomPin = { mode: 'auto', randomSwapPinned: true, focusId: 'karotte', foodIds: ['karotte'] };
 
-  assert.equal(tracking.isTrackingOnly(first), true);
-  assert.equal(tracking.sameTrackingPlan(first, sameMeal), true);
-  assert.equal(tracking.isTrackingOnly({ ...first, rolloverShifted: true }), false);
-  assert.equal(tracking.sameTrackingPlan(first, { ...sameMeal, focusId: 'karotte', foodIds: ['karotte'] }), false);
+  assert.equal(tracking.isTrackingOnly(trackingLock), true);
+  assert.equal(tracking.sameTrackingPlan(trackingLock, sameMeal), true);
+  assert.equal(tracking.isTrackingOnly({ ...trackingLock, rolloverShifted: true }), false);
+  assert.equal(tracking.sameTrackingPlan(trackingLock, { ...sameMeal, focusId: 'karotte', foodIds: ['karotte'] }), false);
+  assert.equal(tracking.isInternalPlannerPin(randomPin), true);
+  assert.equal(tracking.isInvisibleKeepState(randomPin), true);
+  assert.equal(tracking.isTrackingOnly(randomPin), false, 'Random-Swap-Pin stabilisiert den Plan weiterhin fachlich');
+  assert.equal(tracking.isInternalPlannerPin({ ...randomPin, followUpFoodId: 'x' }), false);
 });
 
 test('Tracking-Snapshot bleibt fuer den Tageswechsel sichtbar und wird beim Verschieben echte feste Planung', () => {

@@ -11,7 +11,7 @@ const mimeTypes = {
   ".js": "text/javascript; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".json": "application/json; charset=utf-8",
-  ".webmanifest": "application/manifest+json; charset=utf-8",
+  ".webmanifest": "application/manifest+json",
   ".svg": "image/svg+xml",
   ".png": "image/png",
   ".webp": "image/webp",
@@ -190,8 +190,10 @@ try {
   await page.locator('.missingIngredientChoice[data-food="banane"]').click();
   await page.waitForFunction(() => !document.getElementById("genericModal")?.classList.contains("open"));
 
-  const after = await page.evaluate(({ currentKey, futureKey, carriedPlanId }) => {
+  const after = await page.evaluate(({ currentKey, futureKey, future, carriedPlanId }) => {
     const state = window.__beikostTest.getState();
+    const futureDay = window.__beikostTest.buildDays(future, 1, false)?.[0] || null;
+    const futurePlanned = futureDay?.meals?.find((meal) => meal.meal === "lunch" && meal.active && meal.focusId) || null;
     return {
       logs: state.logs,
       hint: state.shoppingHints?.banane,
@@ -200,6 +202,7 @@ try {
       currentMeal: state.manualMeals?.[currentKey] || state.planLocks?.[currentKey] || null,
       futureManual: state.manualMeals?.[futureKey] || null,
       futureLock: state.planLocks?.[futureKey] || null,
+      futurePlanned,
       futureOverride: state.overrides?.[futureKey] || null,
       carried: state.backupMeta?.plannerLinking?.carriedPlans?.[carriedPlanId] || null,
       unavailable: typeof window.isFoodUnavailable === "function" ? window.isFoodUnavailable("banane") : null,
@@ -218,8 +221,9 @@ try {
   assert.equal(after.currentMeal.foodIds.includes("banane"), false);
   assert.ok(after.currentMeal.foodIds.some((id) => ["apfel", "birne"].includes(id)), "fehlendes Obst wird innerhalb der Recipe-V2-Auswahl ersetzt");
   assert.equal(after.futureManual, null, "zukünftiger offener manueller Banane-Slot wird freigegeben");
-  assert.ok(after.futureLock, "freigegebener Zukunftsslot darf direkt ohne Banane neu geplant werden");
-  assert.equal(after.futureLock.foodIds.includes("banane"), false, "neu geplanter Zukunftsslot enthält die fehlende Zutat nicht");
+  assert.equal(after.futureLock, null, "freigegebener Zukunftsslot bleibt ohne pauschalen Auto-Lock");
+  assert.ok(after.futurePlanned, "freigegebener Zukunftsslot darf dynamisch neu geplant werden");
+  assert.equal(after.futurePlanned.foodIds.includes("banane"), false, "dynamisch neu geplanter Zukunftsslot enthält die fehlende Zutat nicht");
   assert.equal(after.futureOverride, null, "zukünftiger Banane-Override wird entfernt");
   assert.equal(after.carried, null, "auch ein verschobener offener Rollover-Plan mit Banane wird entfernt");
   assert.match(await page.locator("#toastText").innerText(), /Einkaufsliste.*Plan wurde angepasst/i);

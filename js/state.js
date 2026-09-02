@@ -54,10 +54,9 @@ const PHASES = {
   familie: { label: "Familienkost", rank: 3, meals: ["breakfast", "lunch", "snack", "dinner"] },
 };
 const STATUS_ORDER = {
-  "Offen": 0,
+  Offen: 0,
   Probiert: 1,
-  "Verträgliche Basis": 2,
-  Regelmäßig: 3,
+  Bekannt: 2,
   Pausiert: -1,
 };
 const LEGACY_MILK_ID = "kuhmilch-joghurt";

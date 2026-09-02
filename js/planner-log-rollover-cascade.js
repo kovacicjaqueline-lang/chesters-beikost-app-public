@@ -137,33 +137,11 @@
     document.head.appendChild(script);
   }
 
-  // Der Core-Fokuspfad kennt fehlende Lebensmittel bereits. knownBase ist jedoch
-  // ein eigener Hauptbasis-Picker und muss dieselbe Verfügbarkeit explizit erben,
-  // damit eine eben als fehlend markierte Zutat nicht sofort wieder eingeplant wird.
-  function installUnavailableKnownBaseGuard() {
-    if (typeof knownBase !== "function" || knownBase.__missingIngredientAvailabilityAware) return;
-    const originalKnownBase = knownBase;
-    const wrappedKnownBase = function missingIngredientAwareKnownBase(meal, exclude = []) {
-      const blocked = new Set(exclude || []);
-      if (typeof isFoodUnavailable === "function") {
-        const foods = typeof state !== "undefined" ? state?.foods || [] : [];
-        for (const item of foods) {
-          if (item?.id && isFoodUnavailable(item.id)) blocked.add(item.id);
-        }
-      }
-      return originalKnownBase(meal, [...blocked]);
-    };
-    wrappedKnownBase.__missingIngredientAvailabilityAware = true;
-    knownBase = wrappedKnownBase;
-  }
-
   // app.js und nachgelagerte Planner-Schichten ersetzen einzelne Planner-Funktionen
   // noch während des Parserlaufs. Nach Abschluss aller synchronen Skripte werden
   // deshalb die Availability-Wrapper genau einmal auf die endgültige Runtime gelegt.
-  const finalizeMissingIngredientPolicies = () => {
+  const finalizeMissingIngredientPolicies = () =>
     globalScope.__plannerMissingIngredient?.installAvailabilityPolicies?.();
-    installUnavailableKnownBaseGuard();
-  };
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", finalizeMissingIngredientPolicies, { once: true });
   } else {

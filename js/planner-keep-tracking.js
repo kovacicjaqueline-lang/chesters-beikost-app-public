@@ -1,17 +1,34 @@
 "use strict";
 
 /*
- * Entkoppelt die Plan-ID fuer Tageswechsel/Log-Verknuepfung von der sichtbaren
- * Schutzwirkung. Nur der heutige automatische Plan bekommt einen internen
- * Tracking-Snapshot. Dieser Snapshot darf den Planner nicht einfrieren und wird
- * in der UI wie ein ungeschuetzter Slot behandelt. Wird er am Tageswechsel aktiv
- * verschoben, macht rolloverShifted daraus wieder eine echte feste Planung.
+ * Entkoppelt interne Planner-Snapshots von der sichtbaren Schutzwirkung.
+ * Tracking-Snapshots halten nur Plan-ID/Tageswechsel stabil. Random-Swap-Pins
+ * stabilisieren den aktuellen Tauschkontext. Beide sind kein bewusstes „Behalten“
+ * und erscheinen deshalb mit offenem Schloss; nur Tracking darf zusätzlich die
+ * eigentliche Planner-Auswahl nicht einfrieren.
  */
 (function installPlannerKeepTracking(globalScope) {
   const TRACKING_FLAG = "plannerTrackingSnapshot";
+  const INTERNAL_PIN_FLAGS = Object.freeze([
+    "randomSwapPinned",
+    "randomSwapPreserved",
+    "randomSwapTarget",
+  ]);
 
   function isTrackingOnly(lock) {
     return !!lock?.[TRACKING_FLAG] && !lock?.rolloverShifted;
+  }
+
+  function isInternalPlannerPin(lock) {
+    return !!lock &&
+      lock.mode === "auto" &&
+      !lock.followUpFoodId &&
+      !lock.rolloverShifted &&
+      INTERNAL_PIN_FLAGS.some((flag) => !!lock[flag]);
+  }
+
+  function isInvisibleKeepState(lock) {
+    return isTrackingOnly(lock) || isInternalPlannerPin(lock);
   }
 
   function comparable(record) {
@@ -28,7 +45,14 @@
     return comparable(a) === comparable(b);
   }
 
-  const API = Object.freeze({ TRACKING_FLAG, isTrackingOnly, sameTrackingPlan });
+  const API = Object.freeze({
+    TRACKING_FLAG,
+    INTERNAL_PIN_FLAGS,
+    isTrackingOnly,
+    isInternalPlannerPin,
+    isInvisibleKeepState,
+    sameTrackingPlan,
+  });
   globalScope.PlannerKeepTracking = API;
   if (typeof module !== "undefined" && module.exports) module.exports = API;
 
@@ -109,7 +133,7 @@
   if (baseToggleMealLock) {
     globalScope.toggleMealLock = function toggleExplicitMealKeep(date, meal, shownMeal = null) {
       const key = `${date}|${meal}`;
-      if (isTrackingOnly(state.planLocks?.[key])) {
+      if (isInvisibleKeepState(state.planLocks?.[key])) {
         delete state.planLocks[key];
         delete state.autoLockExcluded?.[key];
       }
@@ -126,7 +150,7 @@
     let reservedCount = 0;
     for (const [key, lock] of Object.entries(state.planLocks || {})) {
       const [date, meal] = String(key || "").split("|");
-      if (!date || date < from || date > until || isTrackingOnly(lock)) continue;
+      if (!date || date < from || date > until || isInvisibleKeepState(lock)) continue;
       if (trackingCompletionExists(date, meal)) continue;
       if (lock?.mode === "manual") manualCount += 1;
       else if (lock?.mode === "auto") reservedCount += 1;
@@ -142,7 +166,7 @@
       const date = button.dataset?.lockDate || "";
       const meal = button.dataset?.lockMeal || "";
       const lock = date && meal ? state.planLocks?.[`${date}|${meal}`] : null;
-      if (!isTrackingOnly(lock)) return;
+      if (!isInvisibleKeepState(lock)) return;
 
       button.classList.remove("locked");
       button.classList.add("unlocked");

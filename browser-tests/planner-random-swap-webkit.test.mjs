@@ -135,7 +135,7 @@ try {
   await page.waitForFunction(() => !!window.__beikostTest?.buildDays && !!window.__plannerRandomSwap);
   await page.waitForFunction(() => {
     const persisted = window.__beikostTest.getState().backupMeta?.storagePersisted;
-    return persisted && persisted !== "unknown" && window.__plannerPoliciesReady === true;
+    return persisted && persisted !== "unknown" && window.__plannerPoliciesReady === true && window.__plannerKeepTrackingInstalled === true;
   });
 
   const today = await configurePlanner(page, 0);
@@ -158,6 +158,16 @@ try {
   }, { key: targetKey, previous: previousTarget });
 
   assert.match(await page.locator("#toastText").innerText(), /restliche Wochenplan bleibt unverändert/i);
+  const targetInternalPin = await page.evaluate((key) => {
+    const lock = window.__beikostTest.getState().planLocks?.[key];
+    return { pinned: !!lock?.randomSwapPinned, target: !!lock?.randomSwapTarget };
+  }, targetKey);
+  assert.deepEqual(targetInternalPin, { pinned: true, target: true }, "Tauschen behält seinen internen Stabilisierungssnapshot");
+  const targetLockButton = page.locator(`#todayCard .meal-lock[data-lock-date="${today}"][data-lock-meal="lunch"]`);
+  await targetLockButton.waitFor();
+  assert.equal(await targetLockButton.evaluate((node) => node.classList.contains("unlocked")), true, "Random-Swap-Pin erscheint nicht als bewusstes Behalten");
+  assert.equal(await targetLockButton.getAttribute("aria-label"), "Mahlzeit bei automatischer Neuplanung behalten");
+  assert.equal(await targetLockButton.closest(".mealbox").locator(".lock-label").count(), 0, "Interner Random-Swap-Pin bekommt keine Schutzbeschriftung");
 
   const after = await visiblePlan(page);
   assert.equal(after[targetKey]?.length, 1, "getauschter Slot muss im sichtbaren Wochenplan genau einmal offen bleiben");

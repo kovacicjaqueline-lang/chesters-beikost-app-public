@@ -130,6 +130,66 @@ function foodStatusPreferenceCompanionFor(focus, meal, on, focusType = "") {
   return pool[0] || null;
 }
 
+function foodStatusPreferenceProgressLabels(knownCount = 0, dueCount = 0) {
+  let known = Math.max(0, Number(knownCount) || 0);
+  let due = Math.max(0, Number(dueCount) || 0);
+  let facts = [];
+  if (known) facts.push(`${known} bekannt`);
+  if (due) facts.push(`${due} ${due === 1 ? "Allergen" : "Allergene"} fällig`);
+  return facts;
+}
+
+function syncFoodStatusPreferenceProgressFacts() {
+  if (typeof document === "undefined") return;
+  let card = document.getElementById("progressCard");
+  if (!card) return;
+
+  let on = typeof today === "function" ? today() : "";
+  let known = (state?.foods || []).filter((foodRecord) => status(foodRecord) === "Bekannt").length;
+  let due = typeof dueAllergen === "function"
+    ? (state?.foods || []).filter((foodRecord) => dueAllergen(foodRecord, on)).length
+    : 0;
+  let text = foodStatusPreferenceProgressLabels(known, due).join(" · ");
+  let existing = card.querySelector(".progress-facts");
+
+  if (!text) {
+    existing?.remove();
+    return;
+  }
+  if (existing) {
+    if (existing.textContent !== text) existing.textContent = text;
+    return;
+  }
+  let progress = card.querySelector(".progress");
+  if (!progress) return;
+  let facts = document.createElement("div");
+  facts.className = "small progress-facts";
+  facts.textContent = text;
+  progress.insertAdjacentElement("afterend", facts);
+}
+
+function installFoodStatusPreferenceProgressSync() {
+  if (typeof document === "undefined" || typeof MutationObserver === "undefined") return false;
+  if (globalThis.__foodStatusPreferenceProgressObserver) return true;
+
+  let attach = () => {
+    if (globalThis.__foodStatusPreferenceProgressObserver) return;
+    let card = document.getElementById("progressCard");
+    if (!card) return;
+    let observer = new MutationObserver(() => syncFoodStatusPreferenceProgressFacts());
+    observer.observe(card, { childList: true, subtree: true });
+    globalThis.__foodStatusPreferenceProgressObserver = observer;
+    syncFoodStatusPreferenceProgressFacts();
+  };
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", attach, { once: true });
+  } else {
+    attach();
+  }
+  return true;
+}
+
 function installFoodStatusPreferencePolicy() {
   if (typeof globalThis === "undefined" || globalThis.__foodStatusPreferencePolicyInstalled) return false;
   globalThis.__foodStatusPreferencePolicyInstalled = true;
@@ -210,7 +270,10 @@ function installFoodStatusPreferencePolicy() {
   return true;
 }
 
-if (typeof window !== "undefined") installFoodStatusPreferencePolicy();
+if (typeof window !== "undefined") {
+  installFoodStatusPreferencePolicy();
+  installFoodStatusPreferenceProgressSync();
+}
 
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
@@ -220,6 +283,7 @@ if (typeof module !== "undefined" && module.exports) {
     foodStatusPreferenceCanCombine,
     foodStatusPreferenceShouldRetry,
     foodStatusPreferenceShouldSkipAutomaticResult,
+    foodStatusPreferenceProgressLabels,
     installFoodStatusPreferencePolicy,
   };
 }

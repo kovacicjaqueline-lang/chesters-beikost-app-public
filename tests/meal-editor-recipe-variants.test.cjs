@@ -9,7 +9,9 @@ const {
   mealEditorRecipeConfiguredFoodIds,
 } = require("../js/meal-editor-recipe-variants.js");
 const {
+  RECIPE_COMPONENT_KINDS,
   RECIPE_V2_COMPONENT_OPTIONS,
+  recipeComponentFoodNames,
   installRecipeV2ComponentOptions,
 } = require("../js/recipe-v2-component-options.js");
 
@@ -56,10 +58,10 @@ test("gespeicherte variable Rezeptkomponente wird aus foodIds wiederhergestellt"
   );
 });
 
-test("Recipe-V2-Vertrag enthält alle vorgesehenen Milch-Identitäten zentral in milkChoices", () => {
-  assert.deepEqual(
-    RECIPE_V2_COMPONENT_OPTIONS["Milch-Getreide-Brei"].milkChoices,
-    ["Kuhmilch", "Naturjoghurt", "Buttermilch", "Haferdrink", "Sojabohne", "Mandel", "Kokos"],
+test("Recipe-V2-Vertrag leitet Milch-Identitäten zentral aus FOOD-Capabilities ab", () => {
+  assert.equal(
+    RECIPE_V2_COMPONENT_OPTIONS["Milch-Getreide-Brei"].milkChoicesFromFood.kind,
+    RECIPE_COMPONENT_KINDS.MILK_PORRIDGE_LIQUID,
   );
   const recipes = [{
     name: "Milch-Getreide-Brei",
@@ -67,23 +69,24 @@ test("Recipe-V2-Vertrag enthält alle vorgesehenen Milch-Identitäten zentral in
     oneOf: ["Hafer", "Hirse"],
     milkChoices: ["Kuhmilch", "Naturjoghurt", "Buttermilch"],
   }];
-  assert.equal(installRecipeV2ComponentOptions(recipes), true);
-  assert.deepEqual(recipes[0].milkChoices, [
-    "Kuhmilch", "Naturjoghurt", "Buttermilch", "Haferdrink", "Sojabohne", "Mandel", "Kokos",
-  ]);
+  assert.equal(installRecipeV2ComponentOptions(recipes, foods), true);
+  assert.deepEqual(
+    recipes[0].milkChoices,
+    recipeComponentFoodNames(RECIPE_COMPONENT_KINDS.MILK_PORRIDGE_LIQUID, foods),
+  );
   assert.equal(recipes[0].editorComponents.milkChoices.choiceLabels.Sojabohne, "Sojamilch");
   assert.equal(recipes[0].editorComponents.milkChoices.choiceLabels.Mandel, "Mandelmilch");
   assert.equal(recipes[0].editorComponents.milkChoices.choiceLabels.Kokos, "Kokosmilch");
 });
 
-test("Milch-Getreide-Brei liest Milchoptionen ausschließlich aus zentralen milkChoices", () => {
+test("Milch-Getreide-Brei liest Milchoptionen ausschließlich aus zentral abgeleiteten milkChoices", () => {
   const recipe = {
     name: "Milch-Getreide-Brei",
     requires: [],
     oneOf: ["Hafer", "Hirse"],
     milkChoices: [],
   };
-  installRecipeV2ComponentOptions([recipe]);
+  installRecipeV2ComponentOptions([recipe], foods);
   const slots = mealEditorRecipeComponentSlots(recipe, lookup);
   assert.deepEqual(slots.map((slot) => slot.field), ["oneOf", "milkChoices"]);
   assert.equal(slots[0].label, "Getreide");
@@ -92,11 +95,13 @@ test("Milch-Getreide-Brei liest Milchoptionen ausschließlich aus zentralen milk
   assert.equal(slots[1].preparationSelectable, false);
   assert.deepEqual(
     slots[1].foodIds,
-    ["kuhmilch", "naturjoghurt", "buttermilch", "haferdrink", "sojabohne", "mandel", "kokos"],
+    recipeComponentFoodNames(RECIPE_COMPONENT_KINDS.MILK_PORRIDGE_LIQUID, foods)
+      .map((name) => byName.get(name)?.id)
+      .filter(Boolean),
   );
   assert.deepEqual(
     slots[1].choices.map((choice) => choice.label),
-    ["Kuhmilch", "Naturjoghurt", "Buttermilch", "Haferdrink", "Sojamilch", "Mandelmilch", "Kokosmilch"],
+    ["Kuhmilch", "Naturjoghurt", "Buttermilch", "Mandelmilch", "Kokosmilch", "Haferdrink", "Sojamilch"],
   );
   assert.deepEqual(
     mealEditorRecipeConfiguredFoodIds(recipe, ["hafer", "kuhmilch"], { oneOf: "hirse", milkChoices: "mandel" }, lookup),

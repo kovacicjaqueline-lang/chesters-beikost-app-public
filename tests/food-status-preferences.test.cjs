@@ -5,115 +5,136 @@ const path = require('node:path');
 const vm = require('node:vm');
 
 const root = path.resolve(__dirname, '..');
-const source = fs.readFileSync(path.join(root, 'js', 'statistics.js'), 'utf8');
-
-function loadPolicy() {
-  const context = {};
-  vm.createContext(context);
-  vm.runInContext(`${source}\nthis.__policy = { normalizeFoodStatusPreferenceStatus, foodStatusPreferenceMigrationStrength, foodStatusPreferenceCounts, deriveFoodStatusPreferenceStatus, foodStatusPreferenceLiked, foodStatusPreferenceCanCombine, foodStatusPreferenceShouldRetry, foodStatusPreferenceLikedTie };`, context);
-  return context.__policy;
-}
+const stateSource = fs.readFileSync(path.join(root, 'js', 'state.js'), 'utf8');
+const modelSource = fs.readFileSync(path.join(root, 'js', 'model.js'), 'utf8');
+const migrationsSource = fs.readFileSync(path.join(root, 'js', 'migrations.js'), 'utf8');
+const policySource = fs.readFileSync(path.join(root, 'js', 'statistics.js'), 'utf8');
 
 function log(id, date, meal, outcome, foodId = 'karotte') {
   return { id, date, meal, foodIds: [foodId], foodOutcomes: { [foodId]: outcome }, createdAt: id };
 }
 
-test('FOOD-STATUS: Offen → Probiert → Bekannt basiert nur auf getrennten positiven Expositionen', () => {
-  const policy = loadPolicy();
-  const food = { id: 'karotte', manualStatus: 'auto' };
+function loadModel(logs = [], foodRecord = { id: 'karotte', manualStatus: 'auto', priority: 1 }) {
+  const context = {
+    FOOD_DB: [],
+    RECIPES: [],
+    __state: { settings: { amountSelected: 'taste', phaseSelected: 'kennenlernen', targetFoods: 100 }, foods: [foodRecord], logs, inventory: [] },
+    save: () => {},
+    renderAll: () => {},
+    normalizeName: (value) => String(value || '').toLowerCase(),
+    foodByName: () => null,
+    foodAliasTerms: () => [],
+    canonicalId: (id) => id,
+  };
+  vm.createContext(context);
+  vm.runInContext(`${stateSource}\nstate = this.__state;`, context);
+  vm.runInContext(`${modelSource}\nthis.__model = { autoStatus, status, rank, statusSource, modelExposureKey };`, context);
+  return context.__model;
+}
 
-  assert.equal(policy.deriveFoodStatusPreferenceStatus(food, []), 'Offen');
-  assert.equal(policy.deriveFoodStatusPreferenceStatus(food, [log('t1', '2026-07-14', 'lunch', 'tried')]), 'Probiert');
-  assert.equal(policy.deriveFoodStatusPreferenceStatus(food, [
+function loadMigration() {
+  const context = {
+    FOOD_DB: [],
+    RECIPES: [],
+    clone: (value) => JSON.parse(JSON.stringify(value)),
+    today: () => '2026-09-02',
+    diffDays: () => 0,
+    suggestedAmountLevelFromLogs: () => 'taste',
+    __state: { settings: {}, foods: [], logs: [], inventory: [] },
+  };
+  vm.createContext(context);
+  vm.runInContext(`${stateSource}\nstate = this.__state;`, context);
+  vm.runInContext(`${migrationsSource}\nthis.__migration = { normalizeStatus, statusStrength, mergeFoodRecord };`, context);
+  return context.__migration;
+}
+
+function loadPlannerPolicy() {
+  const context = {};
+  vm.createContext(context);
+  vm.runInContext(`${policySource}\nthis.__policy = { foodStatusPreferenceLiked, foodStatusPreferenceCanCombine, foodStatusPreferenceShouldRetry, foodStatusPreferenceLikedTie };`, context);
+  return context.__policy;
+}
+
+test('FOOD-STATUS: Offen → Probiert → Bekannt basiert auf getrennten Expositionen', () => {
+  assert.equal(loadModel([]).autoStatus({ id: 'karotte' }), 'Offen');
+  assert.equal(loadModel([log('t1', '2026-07-14', 'lunch', 'tried')]).autoStatus({ id: 'karotte' }), 'Probiert');
+  assert.equal(loadModel([
     log('t1', '2026-07-14', 'lunch', 'tried'),
     log('t2', '2026-07-16', 'lunch', 'tried'),
     log('t3', '2026-07-20', 'dinner', 'tried'),
-  ]), 'Probiert', 'mehrfach Probiert darf nicht automatisch Bekannt ergeben');
-  assert.equal(policy.deriveFoodStatusPreferenceStatus(food, [log('e1', '2026-07-14', 'lunch', 'eaten')]), 'Probiert');
-  assert.equal(policy.deriveFoodStatusPreferenceStatus(food, [
+  ]).autoStatus({ id: 'karotte' }), 'Probiert', 'mehrfach Probiert darf nicht automatisch Bekannt ergeben');
+  assert.equal(loadModel([log('e1', '2026-07-14', 'lunch', 'eaten')]).autoStatus({ id: 'karotte' }), 'Probiert');
+  assert.equal(loadModel([
     log('e1', '2026-07-14', 'lunch', 'eaten'),
-    log('e2', '2026-07-15', 'lunch', 'eaten'),
-  ]), 'Bekannt');
-  assert.equal(policy.deriveFoodStatusPreferenceStatus(food, [
+    log('e2', '2026-07-15', 'dinner', 'eaten'),
+  ]).autoStatus({ id: 'karotte' }), 'Bekannt');
+  assert.equal(loadModel([
     log('e1', '2026-07-14', 'lunch', 'eaten'),
-    log('e2', '2026-07-15', 'lunch', 'eaten'),
-    log('e3', '2026-07-16', 'dinner', 'eaten'),
-  ]), 'Bekannt', '3+ gegessen erzeugt keinen weiteren Status');
+    log('e2', '2026-07-15', 'dinner', 'eaten'),
+    log('e3', '2026-07-16', 'lunch', 'eaten'),
+  ]).autoStatus({ id: 'karotte' }), 'Bekannt', '3+ gegessen erzeugt keinen weiteren Status');
 });
 
-test('FOOD-STATUS: doppelte Einträge derselben Mahlzeitenexposition zählen nicht als zwei Gegessen-Expositionen', () => {
-  const policy = loadPolicy();
-  const food = { id: 'karotte' };
-  const logs = [
+test('FOOD-STATUS: doppelte Einträge derselben Mahlzeitenexposition zählen nur einmal', () => {
+  const model = loadModel([
     log('e1', '2026-07-14', 'lunch', 'eaten'),
     log('e2', '2026-07-14', 'lunch', 'eaten'),
-  ];
-  assert.equal(policy.foodStatusPreferenceCounts('karotte', logs).eaten, 1);
-  assert.equal(policy.deriveFoodStatusPreferenceStatus(food, logs), 'Probiert');
+  ]);
+  assert.equal(model.autoStatus({ id: 'karotte' }), 'Probiert');
 });
 
-test('FOOD-STATUS: kein Recency-Kriterium; weit auseinanderliegende Gegessen-Expositionen ergeben Bekannt', () => {
-  const policy = loadPolicy();
-  const food = { id: 'karotte' };
-  assert.equal(policy.deriveFoodStatusPreferenceStatus(food, [
+test('FOOD-STATUS: kein Recency-Kriterium; weit getrennte Gegessen-Expositionen ergeben Bekannt', () => {
+  const model = loadModel([
     log('e1', '2026-07-14', 'lunch', 'eaten'),
     log('e2', '2026-09-01', 'dinner', 'eaten'),
-  ]), 'Bekannt');
+  ]);
+  assert.equal(model.autoStatus({ id: 'karotte' }), 'Bekannt');
+  assert.equal(model.rank({ id: 'karotte', manualStatus: 'auto' }), 2);
 });
 
 test('FOOD-STATUS: Reaktion führt zum Sonderstatus Pausiert', () => {
-  const policy = loadPolicy();
-  const food = { id: 'ei' };
-  const reaction = { id: 'r1', date: '2026-08-01', meal: 'lunch', foodIds: ['ei'], foodOutcomes: { ei: 'reaction' }, reactionFoodId: 'ei' };
-  assert.equal(policy.deriveFoodStatusPreferenceStatus(food, [reaction]), 'Pausiert');
+  const reaction = { id: 'r1', date: '2026-08-01', meal: 'lunch', foodIds: ['ei'], foodOutcomes: { ei: 'reaction' }, reactionFoodId: 'ei', createdAt: 'r1' };
+  assert.equal(loadModel([reaction]).autoStatus({ id: 'ei' }), 'Pausiert');
 });
 
-test('FOOD-STATUS-MIGRATION: alte Basis-/Regelmäßig-Werte werden kompatibel auf Bekannt normalisiert', () => {
-  const policy = loadPolicy();
+test('FOOD-STATUS-MIGRATION: alte aktive Statuswerte werden kompatibel auf Bekannt normalisiert', () => {
+  const migration = loadMigration();
   for (const legacy of ['Vertragen', 'Verträgliche Basis', 'Regelmäßig', 'Bekannt']) {
-    assert.equal(policy.normalizeFoodStatusPreferenceStatus(legacy), 'Bekannt', legacy);
+    assert.equal(migration.normalizeStatus(legacy), 'Bekannt', legacy);
   }
-  assert.equal(policy.normalizeFoodStatusPreferenceStatus('Probiert'), 'Probiert');
-  assert.equal(policy.normalizeFoodStatusPreferenceStatus('Pausiert'), 'Pausiert');
-  assert.ok(
-    policy.foodStatusPreferenceMigrationStrength('Pausiert') > policy.foodStatusPreferenceMigrationStrength('Bekannt'),
-    'manuelle Pause muss beim Zusammenführen alter Daten Vorrang behalten',
-  );
+  assert.equal(migration.normalizeStatus('Probiert'), 'Probiert');
+  assert.equal(migration.normalizeStatus('Pausiert'), 'Pausiert');
+  assert.ok(migration.statusStrength('Pausiert') > migration.statusStrength('Bekannt'));
+
+  const target = { manualStatus: 'auto', liked: false };
+  migration.mergeFoodRecord(target, { manualStatus: 'Regelmäßig', liked: true });
+  assert.equal(target.manualStatus, 'Bekannt');
+  assert.equal(target.liked, true);
 });
 
 test('FOOD-PREFERENCE: unmarkiert ist neutral; nur liked=true ist positiv markiert', () => {
-  const policy = loadPolicy();
+  const policy = loadPlannerPolicy();
   assert.equal(policy.foodStatusPreferenceLiked({}), false);
   assert.equal(policy.foodStatusPreferenceLiked({ liked: false }), false);
   assert.equal(policy.foodStatusPreferenceLiked({ liked: true }), true);
 });
 
-test('PLANNER: ab 1× Gegessen kombinierbar, aber erst Bekannt ist eine Hauptbasis', () => {
-  const policy = loadPolicy();
-  const food = { id: 'karotte', manualStatus: 'auto' };
-  assert.equal(policy.foodStatusPreferenceCanCombine(food, [log('e1', '2026-07-14', 'lunch', 'eaten')]), true);
-  assert.equal(policy.deriveFoodStatusPreferenceStatus(food, [log('e1', '2026-07-14', 'lunch', 'eaten')]), 'Probiert');
-  assert.equal(policy.deriveFoodStatusPreferenceStatus(food, [
-    log('e1', '2026-07-14', 'lunch', 'eaten'),
-    log('e2', '2026-07-15', 'dinner', 'eaten'),
-  ]), 'Bekannt');
+test('PLANNER: ab 1× Gegessen kombinierbar, Pausiert bleibt ausgeschlossen', () => {
+  const policy = loadPlannerPolicy();
+  const eaten = [log('e1', '2026-07-14', 'lunch', 'eaten')];
+  assert.equal(policy.foodStatusPreferenceCanCombine({ id: 'karotte', manualStatus: 'auto' }, eaten), true);
+  assert.equal(policy.foodStatusPreferenceCanCombine({ id: 'karotte', manualStatus: 'Pausiert' }, eaten), false);
 });
 
-test('PLANNER: Pausiert bleibt auch nach früherem Gegessen aus der Kombination ausgeschlossen', () => {
-  const policy = loadPolicy();
-  const paused = { id: 'ei', manualStatus: 'Pausiert' };
-  assert.equal(policy.foodStatusPreferenceCanCombine(paused, [log('e1', '2026-07-14', 'lunch', 'eaten', 'ei')]), false);
-});
-
-test('PLANNER: bloß Probiert erzwingt bei Nicht-Allergenen keine Wiederholung; Ablehnung und bestehender Allergenpfad bleiben getrennt', () => {
-  const policy = loadPolicy();
+test('PLANNER: bloß Probiert erzwingt bei Nicht-Allergenen keine Wiederholung; Allergenpfad bleibt getrennt', () => {
+  const policy = loadPlannerPolicy();
   assert.equal(policy.foodStatusPreferenceShouldRetry({ id: 'zucchini', allergenGroup: '' }, 1, 'tried'), false);
   assert.equal(policy.foodStatusPreferenceShouldRetry({ id: 'zucchini', allergenGroup: '' }, 1, 'not_accepted'), true);
   assert.equal(policy.foodStatusPreferenceShouldRetry({ id: 'ei', allergenGroup: 'Ei' }, 1, 'tried'), true);
 });
 
 test('PLANNER-PREFERENCE: gern gegessen ist nur ein Tie-Breaker', () => {
-  const policy = loadPolicy();
+  const policy = loadPlannerPolicy();
   const liked = { id: 'banane', liked: true };
   const neutral = { id: 'birne' };
   assert.ok(policy.foodStatusPreferenceLikedTie(liked, neutral) < 0);

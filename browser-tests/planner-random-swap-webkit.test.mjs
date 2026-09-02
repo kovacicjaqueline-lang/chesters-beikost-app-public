@@ -163,7 +163,7 @@ try {
     return { pinned: !!lock?.randomSwapPinned, target: !!lock?.randomSwapTarget };
   }, targetKey);
   assert.deepEqual(targetInternalPin, { pinned: true, target: true }, "Tauschen behält seinen internen Stabilisierungssnapshot");
-  const targetLockButton = page.locator(`#todayCard .meal-lock[data-lock-date="${today}"][data-lock-meal="lunch"]`);
+  const targetLockButton = page.locator(`#blockPlan .meal-lock[data-lock-date="${today}"][data-lock-meal="lunch"]`);
   await targetLockButton.waitFor();
   assert.equal(await targetLockButton.evaluate((node) => node.classList.contains("unlocked")), true, "Random-Swap-Pin erscheint nicht als bewusstes Behalten");
   assert.equal(await targetLockButton.getAttribute("aria-label"), "Mahlzeit bei automatischer Neuplanung behalten");

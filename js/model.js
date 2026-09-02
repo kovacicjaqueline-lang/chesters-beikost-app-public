@@ -60,10 +60,9 @@ function autoStatus(f) {
   let ls = logsFor(f.id);
   if (ls.some((l) => outcomeForFood(l, f.id) === "reaction" && (!l.reactionFoodId || l.reactionFoodId === f.id))) return "Pausiert";
   let success = new Set(ls.filter((l) => outcomeForFood(l, f.id) === "eaten").map(modelExposureKey));
-  let tried = ls.some((l) => ["tried", "eaten"].includes(outcomeForFood(l, f.id)));
-  if (success.size >= 3) return "Regelmäßig";
-  if (success.size >= 2) return "Verträgliche Basis";
-  if (tried) return "Probiert";
+  let positive = new Set(ls.filter((l) => ["tried", "eaten"].includes(outcomeForFood(l, f.id))).map(modelExposureKey));
+  if (success.size >= 2) return "Bekannt";
+  if (positive.size >= 1) return "Probiert";
   return "Offen";
 }
 function status(f) {
@@ -76,11 +75,13 @@ function rank(f) {
 }
 function statusSource(f) {
   if (f.manualStatus && f.manualStatus !== "auto") return "manuell gesetzt";
-  let ls = logsFor(f.id), success = new Set(ls.filter((l) => outcomeForFood(l, f.id) === "eaten").map(modelExposureKey));
-  if (success.size >= 3) return `automatisch aus ${success.size} gegessenen Gaben`;
-  if (success.size === 2) return "automatisch aus 2 gegessenen Gaben";
-  if (success.size === 1) return "automatisch aus einer gegessenen Gabe";
-  if (ls.some((l) => outcomeForFood(l, f.id) === "tried")) return "automatisch aus einer Einführung oder Wiederholung";
+  let ls = logsFor(f.id);
+  let success = new Set(ls.filter((l) => outcomeForFood(l, f.id) === "eaten").map(modelExposureKey));
+  let positive = new Set(ls.filter((l) => ["tried", "eaten"].includes(outcomeForFood(l, f.id))).map(modelExposureKey));
+  if (success.size >= 2) return `automatisch aus ${success.size} getrennten gegessenen Expositionen`;
+  if (success.size === 1) return "automatisch aus einer gegessenen Exposition";
+  if (positive.size > 1) return `automatisch aus ${positive.size} protokollierten Probier-Expositionen`;
+  if (positive.size === 1) return "automatisch aus einer protokollierten Probier-Exposition";
   return "automatisch – noch ohne Protokoll";
 }
 

@@ -46,6 +46,10 @@
   const baseRenderPlan = typeof renderPlan === "function" ? renderPlan : null;
   const baseRenderHome = typeof renderHome === "function" ? renderHome : null;
 
+  function trackingCompletionExists(date, meal) {
+    return typeof mealIsCompleted === "function" && !!mealIsCompleted(date, meal);
+  }
+
   if (baseLockedMeal) {
     globalScope.lockedMeal = function plannerTrackingAwareLockedMeal(date, meal) {
       const lock = state.planLocks?.[`${date}|${meal}`];
@@ -69,7 +73,7 @@
           meal.empty ||
           !meal.focusId ||
           meal.manualAdded ||
-          (typeof mealIsCompleted === "function" && mealIsCompleted(day.date, meal.meal))
+          trackingCompletionExists(day.date, meal.meal)
         ) continue;
         desired.set(`${day.date}|${meal.meal}`, { day, meal });
       }
@@ -77,9 +81,9 @@
 
     let changed = false;
     for (const [key, lock] of Object.entries(state.planLocks)) {
-      const date = String(key || "").split("|")[0];
+      const [date, meal] = String(key || "").split("|");
       if (!isTrackingOnly(lock) || date < current) continue;
-      if (date > current || !desired.has(key)) {
+      if (date > current || (!desired.has(key) && !trackingCompletionExists(date, meal))) {
         delete state.planLocks[key];
         delete state.autoLockExcluded[key];
         changed = true;
@@ -123,7 +127,7 @@
     for (const [key, lock] of Object.entries(state.planLocks || {})) {
       const [date, meal] = String(key || "").split("|");
       if (!date || date < from || date > until || isTrackingOnly(lock)) continue;
-      if (typeof mealIsCompleted === "function" && mealIsCompleted(date, meal)) continue;
+      if (trackingCompletionExists(date, meal)) continue;
       if (lock?.mode === "manual") manualCount += 1;
       else if (lock?.mode === "auto") reservedCount += 1;
     }

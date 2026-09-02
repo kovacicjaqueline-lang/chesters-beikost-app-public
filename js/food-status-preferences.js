@@ -80,6 +80,10 @@ function foodStatusPreferenceLiked(foodRecord) {
   return foodRecord?.liked === true;
 }
 
+function foodStatusPreferenceMergeLiked(currentLiked, incomingLiked) {
+  return currentLiked === true || incomingLiked === true;
+}
+
 function foodStatusPreferenceCanCombine(foodRecord, logs = [], outcomeFn = null) {
   let manual = normalizeFoodStatusPreferenceStatus(foodRecord?.manualStatus);
   let current = manual !== "auto"
@@ -108,8 +112,9 @@ function installFoodStatusPreferencePolicy() {
   if (typeof mergeFoodRecord === "function") {
     let originalMergeFoodRecord = mergeFoodRecord;
     mergeFoodRecord = function mergeFoodRecordWithPreference(target, raw, options = {}) {
+      let wasLiked = target?.liked === true;
       originalMergeFoodRecord(target, raw, options);
-      if (target && raw && raw.liked === true) target.liked = true;
+      if (target && raw) target.liked = foodStatusPreferenceMergeLiked(wasLiked, raw.liked);
     };
   }
 
@@ -335,15 +340,6 @@ function installFoodStatusPreferencePolicy() {
     showFoodInfoCore = function showFoodInfoCoreWithPreference(foodRecord) {
       originalShowFoodInfoCore(foodRecord);
       if (typeof document === "undefined") return;
-      let select = document.getElementById("foodDetailsStatus");
-      if (select) {
-        let manual = normalizeFoodStatusPreferenceStatus(foodRecord.manualStatus);
-        select.innerHTML = [
-          `<option value="auto">Automatisch → ${esc(status(foodRecord))}</option>`,
-          ...["Offen", "Probiert", "Bekannt", "Pausiert"].map((value) => `<option value="${value}">${value} manuell</option>`),
-        ].join("");
-        select.value = manual;
-      }
       let statusChips = document.querySelector(".food-detail-status");
       if (foodStatusPreferenceLiked(foodRecord) && statusChips && !statusChips.querySelector("[data-food-liked-chip]")) {
         statusChips.insertAdjacentHTML("beforeend", '<span class="pill" data-food-liked-chip>❤️ Wird gern gegessen</span>');
@@ -389,22 +385,6 @@ function installFoodStatusPreferencePolicy() {
     };
   }
 
-  if (typeof document !== "undefined") {
-    let statusTopic = [...document.querySelectorAll(".help-topic")]
-      .find((detail) => detail.querySelector("summary")?.textContent?.trim() === "Lebensmittelstatus");
-    let body = statusTopic?.querySelector(".small");
-    if (body) {
-      body.innerHTML = `
-        <p><b>Offen:</b> noch kein positiver Kontakt protokolliert.</p>
-        <p><b>Probiert:</b> mindestens einmal probiert oder einmal gegessen. Mehrfaches Probieren zählt als Erfahrung, macht das Lebensmittel aber nicht automatisch bekannt.</p>
-        <p><b>Kombinierbar:</b> ab einer gegessenen Exposition darf das Lebensmittel als bekannte Komponente verwendet werden.</p>
-        <p><b>Bekannt:</b> ab zwei getrennten gegessenen Expositionen. Weitere gegessene Expositionen erzeugen keinen zusätzlichen Status.</p>
-        <p><b>Pausiert:</b> Sonderstatus; im automatischen Planner ausgeschlossen.</p>
-        <p><b>❤️ Wird gern gegessen:</b> unabhängige optionale Vorliebe. Nicht markiert bedeutet neutral, nicht „mag er nicht“.</p>
-        <p>Deaktivierte Lebensmittel bleiben gespeichert, werden aber nicht neu automatisch eingeplant.</p>`;
-    }
-  }
-
   return true;
 }
 
@@ -419,6 +399,7 @@ if (typeof module !== "undefined" && module.exports) {
     foodStatusPreferenceCounts,
     deriveFoodStatusPreferenceStatus,
     foodStatusPreferenceLiked,
+    foodStatusPreferenceMergeLiked,
     foodStatusPreferenceCanCombine,
     foodStatusPreferenceShouldRetry,
     foodStatusPreferenceLikedTie,

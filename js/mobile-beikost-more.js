@@ -134,6 +134,19 @@
     };
   }
 
+  function ensureProductAllergenDestination() {
+    const more = document.getElementById("more");
+    if (!more || document.getElementById("productAllergenCard")) return;
+    if (typeof renderProductAllergenCard !== "function") return;
+
+    const card = document.createElement("div");
+    card.id = "productAllergenCard";
+    card.className = "card product-allergen-card";
+    const anchor = more.querySelector(".allergen-card");
+    if (anchor) more.insertBefore(card, anchor);
+    else more.appendChild(card);
+  }
+
   function moreDestinationId(card, fallback) {
     if (!card) return "";
     if (!card.id) card.id = fallback;
@@ -309,6 +322,7 @@
     installRecipeCatalogStructure();
     installFoodRowDecorator();
     installFoodDetailScreen();
+    ensureProductAllergenDestination();
     installMoreNavigation();
   }
 

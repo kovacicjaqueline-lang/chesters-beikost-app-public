@@ -56,33 +56,23 @@ async function waitForApp(page) {
 async function seedPlan(page) {
   return page.evaluate(() => {
     window.__beikostTest.reset();
-    const state = window.__beikostTest.getState();
     const today = window.__beikostTest.today();
+    let state = window.__beikostTest.getState();
     state.settings.planFrom = today;
-
-    const peach = state.foods.find((item) => item.id === "pfirsich");
-    if (peach) peach.manualStatus = "Verträgliche Basis";
     window.__beikostTest.setState(state);
 
-    const stored = window.__beikostTest.storeManualMeal(today, "lunch", {
-      meal: "lunch",
-      active: true,
-      focusId: "pfirsich",
-      foodIds: ["pfirsich"],
-      baseFoodIds: ["pfirsich"],
-      sampleFoodIds: [],
-      foodRoles: { pfirsich: "base" },
-      optionalAddons: [],
-      inventoryFoodIds: [],
-      recipeName: "",
-      recipeInventoryId: "",
-      type: "bekannt kombinieren",
-      note: "",
-      foodPreparationKeys: {},
-    }, "edited");
-    if (!stored.ok) throw new Error(`Planner-Testmahlzeit konnte nicht gespeichert werden: ${stored.message || "unbekannt"}`);
-    window.__beikostTest.setState(stored.state);
-    return today;
+    const day = window.__beikostTest.buildDays(today, 1)[0];
+    const plannedMeal = day?.meals?.find((meal) => meal?.active && meal?.focusId);
+    if (!plannedMeal) throw new Error("Planner-Test braucht eine aktive reguläre Mahlzeit für heute");
+
+    state = window.__beikostTest.getState();
+    state.planLocks[`${today}|${plannedMeal.meal}`] = {
+      ...plannedMeal,
+      mode: "auto",
+      manualAdded: false,
+    };
+    window.__beikostTest.setState(state);
+    return { today, meal: plannedMeal.meal };
   });
 }
 
@@ -100,7 +90,8 @@ try {
   const page = await context.newPage();
   await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "domcontentloaded" });
   await waitForApp(page);
-  const today = await seedPlan(page);
+  const seeded = await seedPlan(page);
+  const { today, meal } = seeded;
 
   await page.locator('nav button[data-view="plan"]').click();
 
@@ -111,8 +102,16 @@ try {
   const visibleDayCards = page.locator("#blockPlan > .day-card:not([hidden]), #blockPlan > .completed-day:not([hidden])");
   assert.equal(await visibleDayCards.count(), 1, "Nur der ausgewählte Tag wird vollständig dargestellt");
   assert.equal(await visibleDayCards.first().getAttribute("data-plan-date"), today);
-  assert.equal(await page.locator("#blockPlan .replaceMeal:visible").count() > 0, true, "Die ausgewählte Mahlzeit bleibt bearbeitbar");
-  assert.equal(await page.locator("#blockPlan .meal-lock:visible").count() > 0, true, "Meal-Locks bleiben im Tagesdetail bedienbar");
+  assert.equal(
+    await page.locator(`#blockPlan .replaceMeal[data-date="${today}"][data-meal="${meal}"]`).isVisible(),
+    true,
+    "Die ausgewählte reguläre Mahlzeit bleibt bearbeitbar",
+  );
+  assert.equal(
+    await page.locator(`#blockPlan .meal-lock[data-lock-date="${today}"][data-lock-meal="${meal}"]`).isVisible(),
+    true,
+    "Meal-Locks bleiben im Tagesdetail bedienbar",
+  );
 
   const secondary = page.locator("#plan .plan-secondary-actions");
   assert.equal(await secondary.getAttribute("open"), null, "Sekundäre Planaktionen sind standardmäßig geschlossen");

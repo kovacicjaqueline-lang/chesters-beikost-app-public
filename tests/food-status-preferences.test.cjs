@@ -54,7 +54,7 @@ function loadMigration() {
 function loadPlannerPolicy() {
   const context = {};
   vm.createContext(context);
-  vm.runInContext(`${policySource}\nthis.__policy = { foodStatusPreferenceLiked, foodStatusPreferenceMergeLiked, foodStatusPreferenceCanCombine, foodStatusPreferenceShouldRetry, foodStatusPreferenceShouldSkipAutomaticResult, foodStatusPreferenceLikedTie };`, context);
+  vm.runInContext(`${policySource}\nthis.__policy = { foodStatusPreferenceLiked, foodStatusPreferenceMergeLiked, foodStatusPreferenceCanCombine, foodStatusPreferenceShouldRetry, foodStatusPreferenceShouldSkipAutomaticResult, foodStatusPreferenceLikedTie, foodStatusPreferenceProgressLabels };`, context);
   return context.__policy;
 }
 
@@ -162,6 +162,15 @@ test('PLANNER-PREFERENCE: gern gegessen ist nur nach Abwechslung/Eignung und vor
   assert.equal(policy.foodStatusPreferenceLikedTie(liked, { id: 'apfel', liked: true }), 0);
   assert.match(policySource, /usageCount\(a\.id\) - usageCount\(b\.id\) \|\|\s*foodStatusPreferenceLikedTie\(a, b\) \|\|\s*a\.priority - b\.priority/s);
   assert.doesNotMatch(policySource, /knownCandidate\s*=/);
+});
+
+test('FOOD-STATUS-UI: Fortschrittsfakten verwenden Bekannt statt der alten Statusstufen', () => {
+  const policy = loadPlannerPolicy();
+  assert.deepEqual(Array.from(policy.foodStatusPreferenceProgressLabels(3, 1)), ['3 bekannt', '1 Allergen fällig']);
+  assert.deepEqual(Array.from(policy.foodStatusPreferenceProgressLabels(0, 2)), ['2 Allergene fällig']);
+  assert.deepEqual(Array.from(policy.foodStatusPreferenceProgressLabels(0, 0)), []);
+  assert.match(policySource, /status\(foodRecord\) === "Bekannt"/);
+  assert.match(policySource, /MutationObserver/);
 });
 
 test('FOOD-STATUS-UI: Bekannt hat aktive Darstellung und Statusableitung bleibt kanonisch', () => {

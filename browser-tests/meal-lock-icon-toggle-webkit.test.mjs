@@ -52,6 +52,7 @@ async function waitForApp(page) {
     !!window.__plannerRandomSwap &&
     window.__plannerPoliciesReady === true &&
     window.__plannerKeepPolicyInstalled === true &&
+    window.__plannerKeepTrackingInstalled === true &&
     window.__beikostTest.getState()?.backupMeta?.storagePersisted !== "unknown",
   );
 }
@@ -102,11 +103,28 @@ try {
   await waitForApp(page);
   const today = await resetPlan(page);
 
-  const automaticLock = await page.evaluate((date) => {
+  const trackingState = await page.evaluate((date) => {
     const state = window.__beikostTest.getState();
-    return state.planLocks?.[`${date}|lunch`] || null;
+    const tracking = state.planLocks?.[`${date}|lunch`] || null;
+    const addIsoDays = (value, count) => {
+      const d = new Date(`${value}T00:00:00Z`);
+      d.setUTCDate(d.getUTCDate() + count);
+      return d.toISOString().slice(0, 10);
+    };
+    const until = addIsoDays(date, 2);
+    const futureGenericLocks = Object.entries(state.planLocks || {}).filter(([key, lock]) => {
+      const lockDate = key.split("|")[0];
+      return lockDate > date && lockDate <= until && lock?.mode === "auto" && !lock?.followUpFoodId && !lock?.randomSwapPinned && !lock?.randomSwapPreserved && !lock?.randomSwapTarget;
+    });
+    return {
+      mode: tracking?.mode || "",
+      tracking: !!tracking?.plannerTrackingSnapshot,
+      futureGenericLocks: futureGenericLocks.length,
+    };
   }, today);
-  assert.equal(automaticLock, null, "Der Planner erzeugt für heute keinen pauschalen Auto-Lock mehr");
+  assert.equal(trackingState.mode, "auto", "Der heutige Plan behält intern eine Plan-ID für Tageswechsel und Log-Verknüpfung");
+  assert.equal(trackingState.tracking, true, "Der heutige Snapshot ist ausdrücklich nur Tracking und kein Schutz");
+  assert.equal(trackingState.futureGenericLocks, 0, "Morgen und übermorgen werden nicht mehr pauschal automatisch fixiert");
 
   const meal = page.locator("#todayCard .mealbox").filter({
     has: page.locator(`.meal-lock[data-lock-date="${today}"][data-lock-meal="lunch"]`),
@@ -118,7 +136,7 @@ try {
   assert.equal(
     await unlockedButton.getAttribute("aria-label"),
     "Mahlzeit bei automatischer Neuplanung behalten",
-    "Das offene Schloss beschreibt den bewussten Behalten-Zustand",
+    "Der interne Tracking-Snapshot erscheint für die Nutzerin als ungeschützt",
   );
   assert.equal(await unlockedButton.locator(".lock-svg-open").count(), 1, "Ungeschützter Slot zeigt das offene Schloss");
   const unlockedColors = await computedThemeColor(unlockedButton, "--ochre");
@@ -143,19 +161,22 @@ try {
   const afterKeep = await page.evaluate((date) => {
     const state = window.__beikostTest.getState();
     window.renderAll();
-    return state.planLocks?.[`${date}|lunch`]?.mode || "";
+    const lock = state.planLocks?.[`${date}|lunch`];
+    return { mode: lock?.mode || "", tracking: !!lock?.plannerTrackingSnapshot };
   }, today);
-  assert.equal(afterKeep, "manual", "Behalten speichert einen manuellen Lock und überlebt erneutes Rendern");
+  assert.deepEqual(afterKeep, { mode: "manual", tracking: false }, "Behalten ersetzt das interne Tracking durch einen echten manuellen Schutz");
 
   await meal.locator(".meal-lock.locked").click();
   await meal.locator(".meal-lock.unlocked").waitFor();
   const afterRelease = await page.evaluate((date) => {
     const state = window.__beikostTest.getState();
-    return !!state.planLocks?.[`${date}|lunch`];
+    const lock = state.planLocks?.[`${date}|lunch`];
+    return { mode: lock?.mode || "", tracking: !!lock?.plannerTrackingSnapshot };
   }, today);
-  assert.equal(afterRelease, false, "Freigeben entfernt den manuellen Lock wieder");
+  assert.deepEqual(afterRelease, { mode: "auto", tracking: true }, "Freigeben stellt nur den unsichtbaren Tageswechsel-Tracking-Snapshot wieder her");
 
   await page.locator('nav button[data-view="plan"]').click();
+  assert.equal(await page.locator("#planLockSummary .plan-lock-text").textContent(), "Keine Mahlzeit bewusst behalten", "Tracking wird nicht als geschützte Mahlzeit zusammengezählt");
   const rebuildButton = page.locator("#planRebuildAll");
   await rebuildButton.waitFor();
   assert.equal(await rebuildButton.textContent(), "Woche neu planen", "Die sekundäre Wochenaktion ist eindeutig benannt");

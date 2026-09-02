@@ -34,6 +34,16 @@
     });
 
     container.replaceChildren(primary, secondary);
+
+    const syncSecondaryVisibility = () => {
+      secondary.open = !!secondaryList.querySelector("button.active");
+    };
+    new MutationObserver(syncSecondaryVisibility).observe(secondaryList, {
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+    syncSecondaryVisibility();
   }
 
   function installFoodCatalogStructure() {

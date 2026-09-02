@@ -112,18 +112,21 @@ try {
   assert.equal(await visibleDayCards.first().getAttribute("data-plan-date"), today);
 
   const secondary = page.locator("#plan .plan-secondary-actions");
-  const secondarySummary = secondary.locator(":scope > summary");
+  const secondaryToggle = secondary.locator(":scope > .plan-secondary-toggle");
   assert.equal(await secondary.getAttribute("open"), null, "Sekundäre Planaktionen sind standardmäßig geschlossen");
   assert.equal(await secondary.locator(".plan-controls").count(), 1, "Datum und Neuplanung sind in den sekundären Aktionsbereich verdichtet");
-  assert.equal(await secondarySummary.isVisible(), true, "Der Einstieg zu den sekundären Planaktionen bleibt sichtbar");
+  assert.equal(await secondaryToggle.isVisible(), true, "Der Einstieg zu den sekundären Planaktionen bleibt sichtbar");
+  assert.equal(await secondaryToggle.getAttribute("aria-expanded"), "false", "Der Toggle weist den geschlossenen Zustand zugänglich aus");
   assert.equal(await secondary.locator(".plan-controls").isVisible(), false, "Plan ab und Neu planen bleiben im geschlossenen Zustand wirklich verborgen");
   assert.equal(await secondary.locator("#planRebuildAll").isVisible(), false, "Vollständige Neuplanung bleibt im geschlossenen Zustand wirklich verborgen");
-  await secondarySummary.click();
-  assert.equal(await secondary.evaluate((node) => node.open), true, "Sekundäre Planaktionen lassen sich öffnen");
+  await secondaryToggle.click();
+  assert.equal(await secondary.getAttribute("open"), "", "Sekundäre Planaktionen lassen sich öffnen");
+  assert.equal(await secondaryToggle.getAttribute("aria-expanded"), "true", "Der Toggle weist den offenen Zustand zugänglich aus");
   assert.equal(await secondary.locator(".plan-controls").isVisible(), true, "Plan ab und Neu planen werden erst nach dem Öffnen sichtbar");
   assert.equal(await secondary.locator("#planRebuildAll").isVisible(), true, "Vollständige Neuplanung wird erst nach dem Öffnen sichtbar");
-  await secondarySummary.click();
-  assert.equal(await secondary.evaluate((node) => node.open), false, "Sekundäre Planaktionen lassen sich wieder schließen");
+  await secondaryToggle.click();
+  assert.equal(await secondary.getAttribute("open"), null, "Sekundäre Planaktionen lassen sich wieder schließen");
+  assert.equal(await secondaryToggle.getAttribute("aria-expanded"), "false", "Der Toggle weist den erneut geschlossenen Zustand zugänglich aus");
   assert.equal(await secondary.locator(".plan-controls").isVisible(), false, "Plan ab und Neu planen sind nach dem Schließen wieder verborgen");
 
   const secondDate = await days.nth(1).getAttribute("data-plan-date");

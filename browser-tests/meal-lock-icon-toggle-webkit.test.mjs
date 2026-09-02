@@ -155,6 +155,17 @@ try {
   }, today);
   assert.equal(afterRelease, false, "Freigeben entfernt den manuellen Lock wieder");
 
+  await page.locator('nav button[data-view="plan"]').click();
+  const rebuildButton = page.locator("#planRebuildAll");
+  await rebuildButton.waitFor();
+  assert.equal(await rebuildButton.textContent(), "Woche neu planen", "Die sekundäre Wochenaktion ist eindeutig benannt");
+  await rebuildButton.click();
+  assert.equal(await page.locator("#genericTitle").textContent(), "Woche neu planen", "Die Wochen-Neuplanung öffnet den vereinfachten Dialog");
+  assert.equal(await page.locator("#confirmPlanRebuild").count(), 1, "Der Dialog bietet genau eine Neuplanungsbestätigung");
+  assert.equal(await page.locator("#rebuildKeepLocks").count(), 0, "Die alte Variante mit Schutz-Auswahl ist entfernt");
+  assert.equal(await page.locator("#rebuildReleaseLocks").count(), 0, "Die alte Variante zum Lösen manueller Locks ist entfernt");
+  await page.locator("#cancelPlanRebuild").click();
+
   await context.close();
 } finally {
   await browser.close();

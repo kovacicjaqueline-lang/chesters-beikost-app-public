@@ -40,7 +40,7 @@ body.mobile-foundation #prep .prep-kicker {
 
 body.mobile-foundation #prep .prep-segments {
   position: sticky;
-  top: calc(55px + env(safe-area-inset-top));
+  top: 0;
   z-index: 18;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

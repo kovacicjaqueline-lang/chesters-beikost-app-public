@@ -161,6 +161,25 @@ try {
   assert.equal(await page.locator('#catalogSwitch [data-catalog-mode="recipes"]').getAttribute("aria-pressed"), "true", "Prep-Rezeptaktion führt weiterhin direkt in den Rezeptkatalog");
 
   await page.locator('nav button[data-view="prep"]').click();
+  const stickyPosition = await page.evaluate(async () => {
+    const main = document.querySelector("main");
+    const segments = document.querySelector("#prep .prep-segments");
+    if (!main || !segments) return null;
+    main.scrollTop = 0;
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    const maxScroll = Math.max(0, main.scrollHeight - main.clientHeight);
+    main.scrollTop = Math.min(500, maxScroll);
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    return {
+      scrollTop: main.scrollTop,
+      mainTop: main.getBoundingClientRect().top,
+      segmentTop: segments.getBoundingClientRect().top,
+    };
+  });
+  assert.ok(stickyPosition?.scrollTop > 80, "Prep-Inhalt muss für den Sticky-Regressionscheck im main-Scrollcontainer scrollen");
+  const stickyOffset = stickyPosition.segmentTop - stickyPosition.mainTop;
+  assert.ok(stickyOffset >= -1 && stickyOffset <= 20, `Prep-Segmente müssen am oberen Rand des main-Scrollcontainers sticky bleiben (Offset ${stickyOffset}px)`);
+
   const overflow = await page.locator("main").evaluate((node) => ({ scrollWidth: node.scrollWidth, clientWidth: node.clientWidth }));
   assert.ok(overflow.scrollWidth <= overflow.clientWidth + 1, "Prep darf auf 390 px nicht horizontal überlaufen");
   assert.deepEqual(pageErrors, [], "Der Mobile-Prep-Fluss darf keine Page-Errors erzeugen");

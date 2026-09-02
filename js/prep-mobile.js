@@ -311,23 +311,6 @@
     document.querySelectorAll("#freezerRecipes > .freezer-recipe").forEach((row) => row.classList.add("prep-idea-row"));
   }
 
-  function openRecipeCatalog(filter = "") {
-    if (filter) recipeFilter = filter;
-    showView("foods");
-    setTimeout(() => {
-      document.querySelector('#catalogSwitch [data-catalog-mode="recipes"]')?.click();
-      if (filter) renderPrep();
-      document.getElementById("recipesSection")?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 50);
-  }
-
-  function rebindPrepCatalogActions() {
-    const recipes = document.getElementById("prepOpenRecipes");
-    if (recipes) recipes.onclick = () => openRecipeCatalog("");
-    const freezer = document.getElementById("prepOpenFreezerRecipes");
-    if (freezer) freezer.onclick = () => openRecipeCatalog("freezer");
-  }
-
   installPrepMarkup();
   bindSegments();
 
@@ -339,7 +322,6 @@
     groupShoppingRows();
     decorateInventory();
     compactIdeaRows();
-    rebindPrepCatalogActions();
     applyPanelState();
     return result;
   };

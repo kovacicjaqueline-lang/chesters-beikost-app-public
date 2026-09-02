@@ -127,6 +127,7 @@
 
   const originalRebuildVisiblePlan = typeof rebuildVisiblePlan === "function" ? rebuildVisiblePlan : null;
   const originalRenderPlan = typeof renderPlan === "function" ? renderPlan : null;
+  const originalOpenFullPlanRebuild = typeof openFullPlanRebuild === "function" ? openFullPlanRebuild : null;
 
   globalScope.isAutoLockDate = () => false;
   globalScope.ensureAutoLocks = () => false;
@@ -157,6 +158,11 @@
       if (typeof showToast === "function") showToast("Woche neu geplant; deine bewusst festgelegten Mahlzeiten bleiben erhalten.");
     };
   };
+
+  const rebuildButton = document.getElementById("planRebuildAll");
+  if (rebuildButton && originalOpenFullPlanRebuild)
+    rebuildButton.removeEventListener("click", originalOpenFullPlanRebuild);
+  if (rebuildButton) rebuildButton.addEventListener("click", globalScope.openFullPlanRebuild);
 
   function enhanceKeepLabels() {
     document.querySelectorAll?.(".meal-lock").forEach((button) => {

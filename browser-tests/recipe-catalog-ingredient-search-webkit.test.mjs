@@ -108,6 +108,41 @@ try {
     "Jeder Treffer für die exakte Lebensmittelsuche Ei muss Ei als strukturierte Rezeptzutat enthalten",
   );
 
+  await search.fill("Brombeere");
+  const afterBlackberrySearch = await recipeNames();
+  for (const recipeName of [
+    "Obst-Haferbrei",
+    "Obst-Hirsebrei",
+    "Obst-Reisbrei",
+    "Obst-Hafer-Pancakes",
+    "Obst-Hafer-Muffins",
+    "Obst-Joghurt",
+    "Obst-Hafer-Joghurt",
+  ]) {
+    assert.ok(
+      afterBlackberrySearch.includes(recipeName),
+      `${recipeName} muss Brombeere über die zentrale Obst-Kategorie als variable Zutat enthalten`,
+    );
+  }
+  const nonBlackberryIngredientResults = await page.evaluate((names) => {
+    const blackberry = foodByName("Brombeere", FOOD_DB);
+    return names.filter((name) => {
+      const recipe = recipeByName(name);
+      const labels = [
+        ...(recipe?.requires || []),
+        ...((recipe?.alternatives || []).flat()),
+        ...(recipe?.oneOf || []),
+        ...(recipe?.milkChoices || []),
+      ];
+      return !blackberry || !labels.some((label) => recipeFoodFromStructuredLabel(label, FOOD_DB)?.id === blackberry.id);
+    });
+  }, afterBlackberrySearch);
+  assert.deepEqual(
+    nonBlackberryIngredientResults,
+    [],
+    "Jeder Treffer für Brombeere muss Brombeere als strukturierte Rezeptzutat enthalten",
+  );
+
   await search.fill("flocken");
   const afterLongSearch = await recipeNames();
   assert.ok(

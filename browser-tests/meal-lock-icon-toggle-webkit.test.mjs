@@ -187,6 +187,34 @@ try {
   assert.equal(await page.locator("#rebuildReleaseLocks").count(), 0, "Die alte Variante zum Lösen manueller Locks ist entfernt");
   await page.locator("#cancelPlanRebuild").click();
 
+  const completedTracking = await page.evaluate((date) => {
+    const state = window.__beikostTest.getState();
+    const key = `${date}|lunch`;
+    const lock = state.planLocks?.[key];
+    if (!lock?.planId) return { before: "", after: "", tracking: false };
+    state.logs.push({
+      id: "meal-lock-tracking-completion",
+      date,
+      meal: "lunch",
+      plannedMealId: lock.planId,
+      focusId: lock.focusId,
+      foodIds: [...(lock.foodIds || [])],
+      baseFoodIds: [...(lock.baseFoodIds || [])],
+      sampleFoodIds: [...(lock.sampleFoodIds || [])],
+      outcome: "eaten",
+      createdAt: new Date().toISOString(),
+    });
+    window.__beikostTest.setState(state);
+    const next = window.__beikostTest.getState().planLocks?.[key];
+    return {
+      before: lock.planId,
+      after: next?.planId || "",
+      tracking: !!next?.plannerTrackingSnapshot,
+    };
+  }, today);
+  assert.equal(completedTracking.after, completedTracking.before, "Protokollieren erhält die Tracking-Plan-ID für die Log-Verknüpfung");
+  assert.equal(completedTracking.tracking, true, "Ein erledigter heutiger Slot behält seinen unsichtbaren Tracking-Snapshot");
+
   await context.close();
 } finally {
   await browser.close();

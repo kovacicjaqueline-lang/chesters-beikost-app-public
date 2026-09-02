@@ -103,6 +103,24 @@ try {
   assert.equal(detailLayout.radius, "0px", "Lebensmittel-Details sollen kein Bottom-Sheet-Radiusmuster verwenden");
   await page.locator("#closeGeneric").click();
 
+  await page.locator('nav button[data-view="prep"]').click();
+  await page.locator("#prepOpenFreezerRecipes").click();
+  await page.waitForFunction(() => {
+    const details = document.querySelector("#recipeFilter > .mobile-filter-secondary");
+    const active = details?.querySelector('button[data-recipe-filter="freezer"].active');
+    return !!details?.open && !!active;
+  });
+  assert.equal(
+    await page.locator("#recipeFilter > .mobile-filter-secondary").evaluate((details) => details.open),
+    true,
+    "ein programmgesteuert aktiver sekundärer Rezeptfilter muss sichtbar aufgeklappt werden",
+  );
+  assert.equal(
+    await page.locator('#recipeFilter button[data-recipe-filter="freezer"]').evaluate((button) => button.classList.contains("active")),
+    true,
+    "Prep → Rezepte auf Vorrat muss den Filter Einfrierbar sichtbar aktivieren",
+  );
+
   await page.locator('#catalogSwitch button[data-catalog-mode="recipes"]').click();
   await page.locator('#recipeFilter button[data-recipe-filter="all"]').click();
   const firstRecipe = page.locator("#recipeList .recipe-card-v2").first();

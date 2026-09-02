@@ -54,7 +54,7 @@ function loadMigration() {
 function loadPlannerPolicy() {
   const context = {};
   vm.createContext(context);
-  vm.runInContext(`${policySource}\nthis.__policy = { foodStatusPreferenceLiked, foodStatusPreferenceCanCombine, foodStatusPreferenceShouldRetry, foodStatusPreferenceLikedTie };`, context);
+  vm.runInContext(`${policySource}\nthis.__policy = { foodStatusPreferenceLiked, foodStatusPreferenceMergeLiked, foodStatusPreferenceCanCombine, foodStatusPreferenceShouldRetry, foodStatusPreferenceLikedTie };`, context);
   return context.__policy;
 }
 
@@ -120,6 +120,14 @@ test('FOOD-PREFERENCE: unmarkiert ist neutral; nur liked=true ist positiv markie
   assert.equal(policy.foodStatusPreferenceLiked({}), false);
   assert.equal(policy.foodStatusPreferenceLiked({ liked: false }), false);
   assert.equal(policy.foodStatusPreferenceLiked({ liked: true }), true);
+});
+
+test('FOOD-PREFERENCE-MIGRATION: positive Markierung bleibt bei neutralem Alias-Merge erhalten', () => {
+  const policy = loadPlannerPolicy();
+  assert.equal(policy.foodStatusPreferenceMergeLiked(true, false), true);
+  assert.equal(policy.foodStatusPreferenceMergeLiked(true, undefined), true);
+  assert.equal(policy.foodStatusPreferenceMergeLiked(false, true), true);
+  assert.equal(policy.foodStatusPreferenceMergeLiked(false, false), false);
 });
 
 test('PLANNER: ab 1× Gegessen kombinierbar, Pausiert bleibt ausgeschlossen', () => {

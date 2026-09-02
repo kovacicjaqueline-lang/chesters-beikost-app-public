@@ -114,10 +114,12 @@
 
   function ensureSecondaryActions(toolbar) {
     const secondary = toolbar?.querySelector(".plan-secondary-actions");
-    const controls = toolbar?.querySelector(".plan-controls");
-    const summary = secondary?.querySelector(":scope > summary");
-    if (!secondary || !controls || !summary) return;
-    if (controls.parentElement !== secondary) summary.insertAdjacentElement("afterend", controls);
+    const controls = document.getElementById("planFrom")?.closest(".plan-controls") || toolbar?.querySelector(".plan-controls");
+    if (!secondary || !controls) return;
+    if (controls.parentElement === secondary) return;
+    const rebuild = secondary.querySelector("#planRebuildAll");
+    if (rebuild) secondary.insertBefore(controls, rebuild);
+    else secondary.appendChild(controls);
   }
 
   function ensureWeekNavigation(toolbar, from, selectedDate) {

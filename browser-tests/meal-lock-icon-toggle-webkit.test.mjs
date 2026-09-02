@@ -51,11 +51,12 @@ async function waitForApp(page) {
     !!window.__plannerRolloverReviewFixes &&
     !!window.__plannerRandomSwap &&
     window.__plannerPoliciesReady === true &&
+    window.__plannerKeepPolicyInstalled === true &&
     window.__beikostTest.getState()?.backupMeta?.storagePersisted !== "unknown",
   );
 }
 
-async function seedLockedLunch(page) {
+async function resetPlan(page) {
   return page.evaluate(() => {
     window.__beikostTest.reset();
     const state = window.__beikostTest.getState();
@@ -64,26 +65,6 @@ async function seedLockedLunch(page) {
 
     const potato = state.foods.find((food) => food.id === "kartoffel");
     if (potato) potato.manualStatus = "Verträgliche Basis";
-
-    state.planLocks[`${today}|lunch`] = {
-      date: today,
-      meal: "lunch",
-      focusId: "kartoffel",
-      foodIds: ["kartoffel"],
-      baseFoodIds: ["kartoffel"],
-      sampleFoodIds: [],
-      optionalAddons: [],
-      inventoryFoodIds: [],
-      recipeName: "",
-      recipeInventoryId: "",
-      type: "bekannt kombinieren",
-      note: "",
-      manualAdded: false,
-      active: true,
-      mode: "auto",
-      planId: "meal-lock-toggle-regression",
-      createdAt: new Date().toISOString(),
-    };
 
     window.__beikostTest.setState(state);
     window.renderAll();
@@ -119,52 +100,60 @@ try {
   const page = await context.newPage();
   await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "domcontentloaded" });
   await waitForApp(page);
-  const today = await seedLockedLunch(page);
+  const today = await resetPlan(page);
+
+  const automaticLock = await page.evaluate((date) => {
+    const state = window.__beikostTest.getState();
+    return state.planLocks?.[`${date}|lunch`] || null;
+  }, today);
+  assert.equal(automaticLock, null, "Der Planner erzeugt für heute keinen pauschalen Auto-Lock mehr");
 
   const meal = page.locator("#todayCard .mealbox").filter({
     has: page.locator(`.meal-lock[data-lock-date="${today}"][data-lock-meal="lunch"]`),
   });
   await meal.waitFor();
 
-  const lockedButton = meal.locator(".meal-lock.locked");
-  await lockedButton.waitFor();
-  assert.equal(await lockedButton.locator(".lock-svg-open").count(), 0, "Geschützter Slot zeigt das geschlossene Schloss");
-  const lockedColors = await computedThemeColor(lockedButton, "--accent");
-  assert.equal(lockedColors.actual, lockedColors.expected, "Der geschützte Zustand verwendet die Akzentfarbe");
-
-  const lockedMarkup = await lockedButton.innerHTML();
-  await lockedButton.click();
-
   const unlockedButton = meal.locator(".meal-lock.unlocked");
   await unlockedButton.waitFor();
   assert.equal(
     await unlockedButton.getAttribute("aria-label"),
-    "Mahlzeit vor automatischer Änderung schützen",
-    "Nach dem Tippen beschreibt die Aktion wieder das Sperren",
+    "Mahlzeit bei automatischer Neuplanung behalten",
+    "Das offene Schloss beschreibt den bewussten Behalten-Zustand",
   );
-  assert.equal(await unlockedButton.locator(".lock-svg-open").count(), 1, "Nach dem Tippen wird das offene Schloss gerendert");
-  assert.notEqual(await unlockedButton.innerHTML(), lockedMarkup, "Das sichtbare Icon-Markup muss beim Entsperren wechseln");
+  assert.equal(await unlockedButton.locator(".lock-svg-open").count(), 1, "Ungeschützter Slot zeigt das offene Schloss");
   const unlockedColors = await computedThemeColor(unlockedButton, "--ochre");
-  assert.equal(unlockedColors.actual, unlockedColors.expected, "Der offene Zustand erhält eine eindeutige Ocker-Farbe");
+  assert.equal(unlockedColors.actual, unlockedColors.expected, "Der offene Zustand verwendet die Ocker-Farbe");
 
-  const afterUnlock = await page.evaluate((date) => {
+  const unlockedMarkup = await unlockedButton.innerHTML();
+  await unlockedButton.click();
+
+  const lockedButton = meal.locator(".meal-lock.locked");
+  await lockedButton.waitFor();
+  assert.equal(await lockedButton.locator(".lock-svg-open").count(), 0, "Behalten zeigt das geschlossene Schloss");
+  assert.notEqual(await lockedButton.innerHTML(), unlockedMarkup, "Das sichtbare Icon-Markup wechselt beim Behalten");
+  assert.equal(
+    await lockedButton.getAttribute("aria-label"),
+    "Mahlzeit bei automatischer Neuplanung wieder freigeben",
+    "Der geschützte Zustand beschreibt das Freigeben",
+  );
+  assert.equal(await meal.locator(".lock-label").textContent(), "Behalten", "Die sichtbare Beschriftung heißt Behalten");
+  const lockedColors = await computedThemeColor(lockedButton, "--accent");
+  assert.equal(lockedColors.actual, lockedColors.expected, "Der Behalten-Zustand verwendet die Akzentfarbe");
+
+  const afterKeep = await page.evaluate((date) => {
+    const state = window.__beikostTest.getState();
+    window.renderAll();
+    return state.planLocks?.[`${date}|lunch`]?.mode || "";
+  }, today);
+  assert.equal(afterKeep, "manual", "Behalten speichert einen manuellen Lock und überlebt erneutes Rendern");
+
+  await meal.locator(".meal-lock.locked").click();
+  await meal.locator(".meal-lock.unlocked").waitFor();
+  const afterRelease = await page.evaluate((date) => {
     const state = window.__beikostTest.getState();
     return !!state.planLocks?.[`${date}|lunch`];
   }, today);
-  assert.equal(afterUnlock, false, "Der Tap hebt den Lock auch im Zustand auf");
-
-  await unlockedButton.click();
-  const relockedButton = meal.locator(".meal-lock.locked");
-  await relockedButton.waitFor();
-  assert.equal(await relockedButton.locator(".lock-svg-open").count(), 0, "Beim erneuten Tippen erscheint wieder das geschlossene Schloss");
-  const relockedColors = await computedThemeColor(relockedButton, "--accent");
-  assert.equal(relockedColors.actual, relockedColors.expected, "Beim erneuten Sperren wird wieder die Akzentfarbe verwendet");
-
-  const afterRelock = await page.evaluate((date) => {
-    const state = window.__beikostTest.getState();
-    return state.planLocks?.[`${date}|lunch`]?.mode || "";
-  }, today);
-  assert.equal(afterRelock, "manual", "Erneutes Tippen schützt den Slot wieder manuell");
+  assert.equal(afterRelease, false, "Freigeben entfernt den manuellen Lock wieder");
 
   await context.close();
 } finally {

@@ -174,20 +174,20 @@ body.mobile-foundation #foods .foodcard.mobile-food-row .foodtitle {
 }
 
 body.mobile-foundation #foods .foodcard.mobile-food-row .food-emoji {
-  --icon-food: 32px;
-  flex: 0 0 32px;
-  width: 32px;
-  min-width: 32px;
-  height: 32px;
+  --icon-food: 42px;
+  flex: 0 0 42px;
+  width: 42px;
+  min-width: 42px;
+  height: 42px;
 }
 
 body.mobile-foundation #foods .foodcard.mobile-food-row .foodmeta {
-  margin: 2px 0 0 42px;
+  margin: 2px 0 0 52px;
   line-height: 1.3;
 }
 
 body.mobile-foundation #foods .foodcard.mobile-food-row .inactive-note {
-  margin-left: 42px;
+  margin-left: 52px;
 }
 
 body.mobile-foundation #foods .foodcard.mobile-food-row.inactive {

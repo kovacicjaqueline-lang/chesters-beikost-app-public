@@ -393,7 +393,7 @@ applyFoodSafetyAudit(FOOD_DB);
 function reapplyFoodSafetyAuditAfterRuntime() {
   applyFoodSafetyAudit(FOOD_DB);
   if (Array.isArray(state?.foods)) applyFoodSafetyAudit(state.foods);
-  if (state && typeof renderAll === "function") renderAll();
+  if (state && typeof renderCurrentView === "function") renderCurrentView();
 }
 
 if (typeof window !== "undefined" && typeof document !== "undefined") {

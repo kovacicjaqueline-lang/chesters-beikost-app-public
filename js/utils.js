@@ -124,9 +124,9 @@ function food(id) {
 }
 
 // Planner-Mahlzeiteneignung wird als eigene Policy-Schicht nach app.js geladen.
-// Der erste ungeschützte renderAll()-Aufruf aus app.js bleibt währenddessen unsichtbar;
-// sichtbar wird die App erst nach Installation der vollständigen Policy-Kette und
-// einem erneuten Render mit den aktiven Planner-Regeln.
+// Die App bleibt während der Policy-Kette verborgen; sichtbar wird sie erst nach
+// Installation der vollständigen Planner-Regeln und einem erneuten Render der
+// aktuell sichtbaren Ansicht.
 if (typeof window !== "undefined" && typeof document !== "undefined") {
   let plannerPolicyBody = document.body;
   if (plannerPolicyBody) plannerPolicyBody.style.visibility = "hidden";
@@ -139,7 +139,7 @@ if (typeof window !== "undefined" && typeof document !== "undefined") {
     if (plannerPoliciesFinished) return;
     plannerPoliciesFinished = true;
     window.__plannerPoliciesReady = true;
-    if (typeof renderAll === "function") renderAll();
+    if (typeof renderCurrentView === "function") renderCurrentView();
     if (plannerPolicyBody) plannerPolicyBody.style.visibility = "";
   };
 

@@ -9,6 +9,7 @@ const root = path.resolve(__dirname, "..");
 const precompute = fs.readFileSync(path.join(root, "js", "plan-checks-solution-precompute.js"), "utf8");
 const cooperative = fs.readFileSync(path.join(root, "js", "plan-checks-cooperative-search.js"), "utf8");
 const loader = fs.readFileSync(path.join(root, "js", "plan-checks-ui.js"), "utf8");
+const uiCore = fs.readFileSync(path.join(root, "js", "plan-checks-ui-core.js"), "utf8");
 const sw = fs.readFileSync(path.join(root, "sw.js"), "utf8");
 
 test("offene Plan-Check-Ziele werden gemeinsam vorab gestartet", () => {
@@ -104,7 +105,7 @@ test("Lösung ansehen erscheint erst nach einer gefundenen Lösung", () => {
   );
 });
 
-test("der erste Core-Render läuft bereits durch den Precompute-Renderer ohne fremde renderAll-Wrapper zurückzusetzen", () => {
+test("der erste Core-Render installiert Precompute explizit ohne renderAll-Wrapper", () => {
   const preservationIndex = loader.indexOf("plan-checks-solution-preservation.js");
   const cooperativeIndex = loader.indexOf("plan-checks-cooperative-search.js");
   const precomputeIndex = loader.indexOf("plan-checks-solution-precompute.js");
@@ -113,9 +114,9 @@ test("der erste Core-Render läuft bereits durch den Precompute-Renderer ohne fr
     preservationIndex >= 0 && cooperativeIndex > preservationIndex && precomputeIndex > cooperativeIndex && coreIndex > precomputeIndex,
     "Preservation, kooperative Suche, Precompute und UI-Core müssen in dieser Reihenfolge geladen werden",
   );
-  assert.match(precompute, /renderAll = function installPrecomputeBeforeInitialCoreRender/);
-  assert.match(precompute, /installPrecompute\(\{ renderNow: false \}\)/);
-  assert.match(precompute, /globalScope\.__planChecksUiInstalled/);
+  assert.match(precompute, /globalScope\.__installPlanCheckSolutionPrecompute = installPrecompute/);
+  assert.match(uiCore, /globalScope\.__installPlanCheckSolutionPrecompute\(\{ renderNow: false \}\)/);
+  assert.doesNotMatch(precompute, /renderAll = function installPrecomputeBeforeInitialCoreRender/);
   assert.doesNotMatch(
     precompute,
     /renderAll = baseRenderAll/,

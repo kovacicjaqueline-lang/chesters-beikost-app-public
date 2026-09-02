@@ -123,8 +123,9 @@ try {
   await page.locator('nav button[data-view="more"]').click();
   const groupLabels = await page.locator("#moreNavScreen .more-nav-group > h2").allTextContents();
   assert.deepEqual(groupLabels, ["Verlauf", "Beikost", "App"], "Mehr soll als gruppierte Navigationsliste aufgebaut sein");
-  assert.equal(await page.locator("#moreNavScreen .more-nav-row").count(), 8, "Mehr soll die bestehenden Ziele als kompakte Rows anbieten");
+  assert.equal(await page.locator("#moreNavScreen .more-nav-row").count(), 9, "Mehr soll die bestehenden Ziele als kompakte Rows anbieten");
   assert.equal(await page.locator("#morePanelScreen").isHidden(), true, "Mehr soll zunächst die Navigationsliste zeigen");
+  assert.equal(await page.locator("#productAllergenCard").isHidden(), true, "Konkrete Produkte dürfen im Mehr-Menü nicht als große Restkarte sichtbar bleiben");
 
   const rowHeight = await page.locator("#moreNavScreen .more-nav-row").first().evaluate((row) => row.getBoundingClientRect().height);
   assert.ok(rowHeight >= 44, "Mehr-Navigationsrows müssen mobile Touch-Ziele behalten");
@@ -137,6 +138,11 @@ try {
   await page.locator("#moreBack").click();
   assert.equal(await page.locator("#moreNavScreen").isVisible(), true, "Zurück soll wieder in die gruppierte Mehr-Navigation führen");
 
+  await page.locator('#moreNavScreen .more-nav-row[data-more-title="Konkrete Produkte"]').click();
+  assert.equal(await page.locator("#productAllergenCard").isVisible(), true, "Produktkennzeichnung soll als eigene Mehr-Unterseite erreichbar bleiben");
+  assert.equal(await page.locator("#appBarTitle").textContent(), "Konkrete Produkte", "App-Bar soll die Produkt-Unterseite benennen");
+
+  await page.locator("#moreBack").click();
   await page.locator('#moreNavScreen .more-nav-row[data-more-title="Konsistenz"]').click();
   assert.equal(await page.locator("#settingsSection").isVisible(), true, "Konsistenz soll die bestehende Einstellungs-Unterseite nutzen");
   const settingsGroups = await page.locator("#settingsSection .settings-group").evaluateAll((groups) => groups.map((details) => details.open));

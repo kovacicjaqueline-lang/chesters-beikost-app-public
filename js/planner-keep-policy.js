@@ -22,29 +22,42 @@
       !RANDOM_SWAP_FLAGS.some((flag) => !!lock[flag]);
   }
 
+  function hasLinkedLog(currentState, lock) {
+    if (!lock?.planId) return false;
+    return (currentState?.logs || []).some((log) => log?.plannedMealId === lock.planId);
+  }
+
   function cleanupLegacyThreeDayAutoLocks(currentState, currentDate, addDaysFn) {
     if (!currentState?.planLocks || !currentDate || typeof addDaysFn !== "function") return 0;
     const until = addDaysFn(currentDate, 2);
-    let removed = 0;
+    let changed = 0;
     for (const [key, lock] of Object.entries(currentState.planLocks)) {
       const date = String(key || "").split("|")[0];
       if (date < currentDate || date > until || !isLegacyThreeDayAutoLock(lock)) continue;
+      if (date === currentDate && hasLinkedLog(currentState, lock)) {
+        lock.plannerTrackingSnapshot = true;
+        delete currentState.autoLockExcluded?.[key];
+        changed += 1;
+        continue;
+      }
       delete currentState.planLocks[key];
       if (currentState.overrides?.[key] === lock.focusId) delete currentState.overrides[key];
       delete currentState.autoLockExcluded?.[key];
-      removed += 1;
+      changed += 1;
     }
     for (const [key, excluded] of Object.entries(currentState.autoLockExcluded || {})) {
       const date = String(key || "").split("|")[0];
       if (date < currentDate || date > until || excluded !== true) continue;
       delete currentState.autoLockExcluded[key];
+      changed += 1;
     }
-    return removed;
+    return changed;
   }
 
   const policy = Object.freeze({
     RANDOM_SWAP_FLAGS,
     isLegacyThreeDayAutoLock,
+    hasLinkedLog,
     cleanupLegacyThreeDayAutoLocks,
   });
   globalScope.PlannerKeepPolicy = policy;
@@ -135,13 +148,13 @@
     };
   }
 
-  const removed = cleanupLegacyThreeDayAutoLocks(
+  const changed = cleanupLegacyThreeDayAutoLocks(
     state,
     typeof today === "function" ? today() : "",
     typeof addDays === "function" ? addDays : null,
   );
 
-  if (removed > 0) {
+  if (changed > 0) {
     if (typeof save === "function") save();
     if (typeof renderAll === "function") renderAll();
   } else {

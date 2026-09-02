@@ -276,6 +276,7 @@ try {
   await page.locator("#manualMealTargetDate").fill(dates.today);
   await page.locator("#manualMealTargetDate").dispatchEvent("change");
   await page.locator("#confirmManualMeal").click();
+  await page.locator("#genericModal").waitFor({ state: "hidden" });
   await page.locator(`#blockPlan .removeManualMeal[data-date="${dates.today}"][data-meal="breakfast"]`).waitFor({ state: "attached" });
 
   savedState = await page.evaluate(() => window.__beikostTest.getState());

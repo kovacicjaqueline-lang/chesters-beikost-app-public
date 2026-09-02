@@ -14,6 +14,7 @@ const {
   foodHasRecipeComponentKind,
   foodRecipeComponentForm,
   installFoodRecipeComponentMetadata,
+  recipeComponentFoodNames,
   installRecipeV2ComponentOptions,
 } = require("../js/recipe-v2-component-options.js");
 
@@ -37,11 +38,20 @@ function policyFoods() {
   return foods;
 }
 
-test("Milch-Getreide-Brei definiert alle Milchoptionen zentral", () => {
+test("Milch-Getreide-Brei leitet alle Milchoptionen aus FOOD-Capabilities ab", () => {
+  const foods = policyFoods();
   const recipe = { name: "Milch-Getreide-Brei", milkChoices: ["Kuhmilch"] };
-  assert.equal(installRecipeV2ComponentOptions([recipe], []), true);
-  assert.deepEqual(recipe.milkChoices, ["Kuhmilch", "Naturjoghurt", "Buttermilch", "Haferdrink", "Sojabohne", "Mandel", "Kokos"]);
-  assert.deepEqual(recipe.milkChoices, [...RECIPE_V2_COMPONENT_OPTIONS["Milch-Getreide-Brei"].milkChoices]);
+  assert.equal(installRecipeV2ComponentOptions([recipe], foods), true);
+  const expected = recipeComponentFoodNames(RECIPE_COMPONENT_KINDS.MILK_PORRIDGE_LIQUID, foods);
+  assert.deepEqual(recipe.milkChoices, expected);
+  for (const name of ["Kuhmilch", "Naturjoghurt", "Buttermilch", "Haferdrink", "Sojabohne", "Mandel", "Kokos"]) {
+    assert.ok(recipe.milkChoices.includes(name), name);
+  }
+  assert.equal(RECIPE_V2_COMPONENT_OPTIONS["Milch-Getreide-Brei"].milkChoices, undefined);
+  assert.equal(
+    RECIPE_V2_COMPONENT_OPTIONS["Milch-Getreide-Brei"].milkChoicesFromFood.kind,
+    RECIPE_COMPONENT_KINDS.MILK_PORRIDGE_LIQUID,
+  );
 });
 
 test("Nuss-/Sesampasten werden nur aus strukturierten FOOD-Eigenschaften abgeleitet", () => {

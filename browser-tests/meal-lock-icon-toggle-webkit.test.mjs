@@ -177,9 +177,10 @@ try {
 
   await page.locator('nav button[data-view="plan"]').click();
   assert.equal(await page.locator("#planLockSummary .plan-lock-text").textContent(), "Keine Mahlzeit bewusst behalten", "Tracking wird nicht als geschützte Mahlzeit zusammengezählt");
-  const rebuildButton = page.locator("#planRebuildAll");
+  const rebuildButton = page.locator("#planRecalculate");
   await rebuildButton.waitFor();
-  assert.equal(await rebuildButton.textContent(), "Woche neu planen", "Die sekundäre Wochenaktion ist eindeutig benannt");
+  assert.equal(await rebuildButton.textContent(), "Woche neu planen", "Es gibt eine eindeutige sichtbare Wochen-Neuplanung");
+  assert.equal(await page.locator("#planRebuildAll").isHidden(), true, "Die alte zweite Neuplanungsaktion ist ausgeblendet");
   await rebuildButton.click();
   assert.equal(await page.locator("#genericTitle").textContent(), "Woche neu planen", "Die Wochen-Neuplanung öffnet den vereinfachten Dialog");
   assert.equal(await page.locator("#confirmPlanRebuild").count(), 1, "Der Dialog bietet genau eine Neuplanungsbestätigung");
@@ -214,6 +215,19 @@ try {
   }, today);
   assert.equal(completedTracking.after, completedTracking.before, "Protokollieren erhält die Tracking-Plan-ID für die Log-Verknüpfung");
   assert.equal(completedTracking.tracking, true, "Ein erledigter heutiger Slot behält seinen unsichtbaren Tracking-Snapshot");
+
+  await page.locator("#planRecalculate").click();
+  await page.locator("#confirmPlanRebuild").click();
+  const afterCompletedReplan = await page.evaluate((date) => {
+    const state = window.__beikostTest.getState();
+    const lock = state.planLocks?.[`${date}|lunch`];
+    return { planId: lock?.planId || "", tracking: !!lock?.plannerTrackingSnapshot };
+  }, today);
+  assert.deepEqual(
+    afterCompletedReplan,
+    { planId: completedTracking.before, tracking: true },
+    "Woche neu planen erhält die Tracking-Identität eines protokollierten Slots",
+  );
 
   await context.close();
 } finally {

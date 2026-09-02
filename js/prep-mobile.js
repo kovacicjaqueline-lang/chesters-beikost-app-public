@@ -12,9 +12,11 @@
   root.__mobilePrepInstalled = true;
   let activePanel = "prepare";
 
-  function hasNeededShoppingHint() {
+  function hasNeededPlanShoppingHint() {
     return typeof state !== "undefined" &&
-      Object.values(state.shoppingHints || {}).some((hint) => hint?.status === "needed");
+      Object.values(state.shoppingHints || {}).some(
+        (hint) => hint?.status === "needed" && hint?.source === "plan",
+      );
   }
 
   function installPrepMarkup() {
@@ -139,7 +141,7 @@
       };
     });
     document.querySelector('nav button[data-view="prep"]')?.addEventListener("click", () => {
-      if (!hasNeededShoppingHint()) return;
+      if (!hasNeededPlanShoppingHint()) return;
       activePanel = "shopping";
       applyPanelState();
     });

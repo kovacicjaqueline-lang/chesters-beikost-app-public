@@ -126,6 +126,37 @@ try {
   assert.deepEqual(segmentLabels.map((text) => text.trim()), ["Vorbereiten", "Einkauf", "Vorrat"]);
   assert.equal(await page.locator('#prep [data-prep-panel="prepare"]').getAttribute("aria-selected"), "true");
 
+  await page.evaluate(() => {
+    const api = window.__beikostTest;
+    const state = api.getState();
+    state.shoppingHints = {
+      brokkoli: {
+        foodId: "brokkoli",
+        status: "needed",
+        sourceLogId: "mobile-prep-legacy-hint",
+      },
+    };
+    api.setState(state);
+  });
+  await page.locator('nav button[data-view="home"]').click();
+  await page.locator('nav button[data-view="prep"]').click();
+  assert.equal(
+    await page.locator('#prep [data-prep-panel="prepare"]').getAttribute("aria-selected"),
+    "true",
+    "Nicht-Plan-Einkaufshinweise dürfen Prep nicht vom primären Vorbereiten-Segment weglenken",
+  );
+  assert.equal(
+    await page.locator("#prepPanelPrepare").evaluate((node) => node.hidden),
+    false,
+    "Vorbereiten bleibt bei einem normalen Einkaufshinweis sichtbar",
+  );
+  await page.evaluate(() => {
+    const api = window.__beikostTest;
+    const state = api.getState();
+    state.shoppingHints = {};
+    api.setState(state);
+  });
+
   assert.ok(await page.locator("#prepToday .prep-task-mobile").count() >= 1, "Heute fällige Vorbereitung wird als kompakte Aufgabe gezeigt");
   assert.ok(await page.locator("#prepTomorrow .prep-task-mobile").count() >= 1, "Morgen fällige Vorbereitung wird getrennt gezeigt");
   assert.ok(await page.locator("#prepToday .prep-task-marker").count() >= 1, "Vorbereitung nutzt die mobile Checklisten-Darstellung");

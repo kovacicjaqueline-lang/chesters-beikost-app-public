@@ -180,8 +180,23 @@
         button.setAttribute("title", "Behalten");
       }
     });
+
+    const summary = document.querySelector("#planLockSummary .plan-lock-text");
+    if (summary) {
+      summary.innerHTML = summary.innerHTML
+        .replace(/manuell geschützt/g, "behalten")
+        .replace("Keine feste Planung", "Keine Mahlzeit bewusst behalten");
+    }
+
     const rebuild = document.getElementById("planRebuildAll");
     if (rebuild) rebuild.textContent = "Woche neu planen";
+
+    document.querySelectorAll?.(".help-topic").forEach((topic) => {
+      if (topic.querySelector("summary")?.textContent?.trim() !== "Plan und Schlösser") return;
+      const body = topic.querySelector(".small");
+      if (!body) return;
+      body.innerHTML = `<p><b>Geschlossenes Schloss · Behalten:</b> Diese konkrete Mahlzeit bleibt bei einer automatischen Neuplanung unverändert.</p><p><b>Offenes Schloss:</b> Die App darf die Mahlzeit bei einer Neuplanung an den aktuellen Stand anpassen.</p><p>Automatisch vorgeschlagene Mahlzeiten werden nicht mehr pauschal für drei Tage eingefroren. „Neu planen“ berechnet normale Vorschläge neu; protokollierte, manuell hinzugefügte oder bearbeitete, bewusst behaltene Mahlzeiten und Wiedervorlagen bleiben bestehen.</p>`;
+    });
   }
 
   if (originalRenderPlan) {

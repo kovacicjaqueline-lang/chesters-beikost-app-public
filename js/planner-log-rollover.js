@@ -887,7 +887,7 @@
     plannerStorageReady = true;
     plannerLastSeenDay = today();
     await save();
-    renderAll();
+    renderCurrentView();
     scheduleRolloverPrompt();
     return result;
   };

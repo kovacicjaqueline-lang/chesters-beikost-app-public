@@ -97,6 +97,95 @@
     };
   }
 
+  function recipeCatalogCategoryMatches(recipe) {
+    return recipeFilter === "available"
+      ? recipe.unlocked
+      : recipeFilter === "almost"
+        ? recipe.almost
+        : recipeFilter === "all"
+          ? true
+          : recipeFilter === "pantry"
+            ? (recipe.requires || []).every((name) => {
+                const item = state.foods.find((foodItem) => foodItem.name === name);
+                return item && (inventoryPortions(item.id) > 0 || state.pantry[item.id]);
+              })
+            : recipeFilter === "freezer"
+              ? !!recipe.freezable
+              : recipeFilter === "philippines"
+                ? recipe.ph || recipe.category === "philippines"
+                : recipeFilter === "snack"
+                  ? (recipe.tags || []).some((tag) => normalizeName(tag) === "snack")
+                  : recipe.category === recipeFilter;
+  }
+
+  function renderRecipeCatalog() {
+    const filterBar = document.getElementById("recipeFilter");
+    const search = document.getElementById("recipeSearch");
+    if (!document.getElementById("recipeList")) return;
+
+    if (filterBar) {
+      filterBar.querySelectorAll("[data-recipe-filter]").forEach((button) =>
+        button.classList.toggle("active", button.dataset.recipeFilter === recipeFilter),
+      );
+    }
+    if (search) search.value = recipeQuery;
+
+    const query = normalizeName(recipeQuery);
+    const recipes = recipeStates().filter((recipe) => {
+      if (!recipeCatalogCategoryMatches(recipe)) return false;
+      if (!query) return true;
+      const fullSearchText = typeof recipeSearchText === "function" ? recipeSearchText(recipe) : "";
+      return recipeCatalogSearchMatches(recipe, recipeQuery, fullSearchText);
+    });
+
+    const countBox = document.getElementById("recipeCount");
+    if (countBox) {
+      const context = recipeFilter === "almost"
+        ? "es fehlen höchstens zwei Schritte"
+        : recipeFilter === "snack"
+          ? "Snack"
+          : "passend zu Filter und Suche";
+      countBox.textContent = `${recipes.length} Rezept${recipes.length === 1 ? "" : "e"} · ${context}`;
+    }
+
+    const allRecipeStates = recipeStates();
+    const emptyMode = query || recipeFilter !== "available"
+      ? "reset"
+      : allRecipeStates.some((item) => item.almost)
+        ? "almost"
+        : "all";
+    const emptyLabel = emptyMode === "reset"
+      ? "Filter zurücksetzen"
+      : emptyMode === "almost"
+        ? "Fast passende Rezepte anzeigen"
+        : "Alle Rezepte anzeigen";
+
+    document.getElementById("recipeList").innerHTML = recipes.length
+      ? recipes.map(renderRecipeCard).join("")
+      : `<div class="empty ds-empty"><div>Keine Rezepte für diesen Filter gefunden.</div><button class="btn" id="recipeEmptyAction" type="button">${emptyLabel}</button></div>`;
+
+    document.getElementById("recipeEmptyAction")?.addEventListener("click", () => {
+      recipeQuery = "";
+      if (emptyMode === "almost") recipeFilter = "almost";
+      else if (emptyMode === "all") recipeFilter = "all";
+      else recipeFilter = "available";
+      renderRecipeCatalog();
+    });
+    filterBar?.querySelectorAll("[data-recipe-filter]").forEach((button) => {
+      button.onclick = () => {
+        recipeFilter = button.dataset.recipeFilter;
+        renderRecipeCatalog();
+      };
+    });
+    if (search) {
+      search.oninput = (event) => {
+        recipeQuery = event.target.value;
+        renderRecipeCatalog();
+      };
+    }
+    if (typeof bindRecipeStockButtons === "function") bindRecipeStockButtons();
+  }
+
   function setCatalogMode(mode) {
     const foodsSection = document.getElementById("foodsCatalogSection");
     const recipesSection = document.getElementById("recipesSection");
@@ -116,11 +205,21 @@
     });
   }
 
+  function installCatalogAwareViewRenderer() {
+    if (typeof renderView !== "function") return;
+    const baseRenderView = renderView;
+    renderView = function catalogAwareRenderView(id) {
+      if (id === "foods" && document.getElementById("recipesSection")?.hidden === false) {
+        return renderRecipeCatalog();
+      }
+      return baseRenderView.apply(this, arguments);
+    };
+  }
+
   function openRecipeCatalog(filter = "") {
     if (filter && typeof recipeFilter !== "undefined") recipeFilter = filter;
-    showView("foods");
     setCatalogMode(MODE_RECIPES);
-    renderPrep();
+    showView("foods");
     requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
   }
 
@@ -142,10 +241,16 @@
   }
 
   installIngredientAwareRecipeSearch();
+  installCatalogAwareViewRenderer();
 
   const switcher = document.getElementById("catalogSwitch");
   switcher?.querySelectorAll("[data-catalog-mode]").forEach((button) => {
-    button.addEventListener("click", () => setCatalogMode(button.dataset.catalogMode));
+    button.addEventListener("click", () => {
+      const mode = button.dataset.catalogMode;
+      setCatalogMode(mode);
+      if (mode === MODE_RECIPES) renderRecipeCatalog();
+      else if (typeof renderFoods === "function") renderFoods();
+    });
   });
 
   const recipesDetails = document.getElementById("recipesDetails");
@@ -174,7 +279,7 @@
     }
 
     if (button.matches('nav button[data-view="foods"]')) {
-      queueMicrotask(() => setCatalogMode(MODE_FOODS));
+      setCatalogMode(MODE_FOODS);
     }
   }, true);
 

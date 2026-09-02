@@ -8,11 +8,10 @@
  * bindet Ergebnisse an den aktuellen Evaluation-Key und zeigt „Lösung ansehen“
  * erst, wenn bereits eine validierte Lösung vorliegt.
  *
- * Der Loader lädt diese Datei bewusst vor plan-checks-ui-core.js. Der erste Render
- * des Core wird einmal abgefangen, damit der Precompute-Renderer installiert ist,
- * bevor ein offenes Ziel überhaupt einen CTA zeichnen kann. Der danach verbleibende
- * Delegator schreibt renderAll bewusst nicht zurück, damit später installierte Wrapper
- * (z. B. Deferred-Render/Profiling) nicht durch eine veraltete Referenz verloren gehen.
+ * Der Loader lädt diese Datei bewusst vor plan-checks-ui-core.js. Der Core
+ * installiert den Precompute-Renderer nach seiner eigenen Initialisierung explizit,
+ * bevor die aktive View erneut gerendert wird. Damit braucht dieser Pfad keinen
+ * Vollrender als Installationssignal.
  */
 (function bootstrapPlanCheckSolutionPrecompute(globalScope) {
   if (typeof document === "undefined" || !globalScope.PlannerPlanCheckSolutions) return;
@@ -342,19 +341,9 @@
     return true;
   }
 
+  globalScope.__installPlanCheckSolutionPrecompute = installPrecompute;
+
   if (globalScope.__planChecksUiInstalled) {
     installPrecompute({ renderNow: true });
-    return;
   }
-
-  if (typeof renderAll !== "function") return;
-  const baseRenderAll = renderAll;
-  let interceptInitialCoreRender = true;
-  renderAll = function installPrecomputeBeforeInitialCoreRender(...args) {
-    if (interceptInitialCoreRender && globalScope.__planChecksUiInstalled) {
-      interceptInitialCoreRender = false;
-      installPrecompute({ renderNow: false });
-    }
-    return baseRenderAll.apply(this, args);
-  };
 })(typeof globalThis !== "undefined" ? globalThis : this);

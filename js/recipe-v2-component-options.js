@@ -194,24 +194,6 @@
     if (typeof RECIPES !== "undefined") installRecipeV2ComponentOptions(RECIPES, foods);
   }
 
-  function installRecipeV2ComponentBeforeFirstRender() {
-    if (typeof renderAll !== "function") return false;
-    let originalRenderAll = renderAll;
-    let installed = false;
-    renderAll = function recipeComponentAwareRenderAll(...args) {
-      if (!installed) {
-        installed = true;
-        installRecipeV2ComponentRuntime();
-      }
-      return originalRenderAll(...args);
-    };
-    return true;
-  }
-
-  if (typeof window !== "undefined" && typeof document !== "undefined") {
-    installRecipeV2ComponentBeforeFirstRender();
-  }
-
   const api = {
     RECIPE_COMPONENT_KINDS: RECIPE_V2_COMPONENT_KINDS_INTERNAL,
     RECIPE_COMPONENT_FORMS,
@@ -225,7 +207,6 @@
     recipeComponentFoodNames,
     installRecipeV2ComponentOptions,
     installRecipeV2ComponentRuntime,
-    installRecipeV2ComponentBeforeFirstRender,
   };
 
   if (typeof module !== "undefined" && module.exports) {

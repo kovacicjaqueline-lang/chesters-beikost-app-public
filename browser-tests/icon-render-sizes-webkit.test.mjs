@@ -76,11 +76,11 @@ try {
     };
   });
 
-  assert.equal(catalogSize.token, "32px", "FOOD-Katalog muss den lokalen 32px-Token tatsächlich erben");
-  assert.equal(catalogSize.wrapperWidth, 32, "FOOD-Katalog-Wrapper muss tatsächlich 32px breit rendern");
-  assert.equal(catalogSize.wrapperHeight, 32, "FOOD-Katalog-Wrapper muss tatsächlich 32px hoch rendern");
-  assert.equal(catalogSize.assetWidth, 32, "FOOD-Katalog-Asset muss tatsächlich 32px breit rendern");
-  assert.equal(catalogSize.assetHeight, 32, "FOOD-Katalog-Asset muss tatsächlich 32px hoch rendern");
+  assert.equal(catalogSize.token, "42px", "FOOD-Katalog muss den mobilen 42px-Token tatsächlich erben");
+  assert.equal(catalogSize.wrapperWidth, 42, "FOOD-Katalog-Wrapper muss tatsächlich 42px breit rendern");
+  assert.equal(catalogSize.wrapperHeight, 42, "FOOD-Katalog-Wrapper muss tatsächlich 42px hoch rendern");
+  assert.equal(catalogSize.assetWidth, 42, "FOOD-Katalog-Asset muss tatsächlich 42px breit rendern");
+  assert.equal(catalogSize.assetHeight, 42, "FOOD-Katalog-Asset muss tatsächlich 42px hoch rendern");
 
   const compactSize = await catalogIcon.evaluate((source) => {
     const host = document.createElement("div");

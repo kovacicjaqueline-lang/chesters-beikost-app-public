@@ -196,6 +196,6 @@
     };
   }
 
-  if (typeof renderAll === "function") renderAll();
+  if (typeof renderCurrentView === "function") renderCurrentView();
   else patchKeepUi();
 })(typeof globalThis !== "undefined" ? globalThis : this);

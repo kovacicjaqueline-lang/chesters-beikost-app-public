@@ -21,13 +21,13 @@ const foods = [
   { id: "banane", name: "Banane", category: "Obst" },
   { id: "apfel", name: "Apfel", category: "Obst" },
   { id: "birne", name: "Birne", category: "Obst" },
-  { id: "kuhmilch", name: "Kuhmilch", category: "Milchprodukt" },
-  { id: "naturjoghurt", name: "Naturjoghurt", category: "Milchprodukt" },
-  { id: "buttermilch", name: "Buttermilch", category: "Milchprodukt" },
-  { id: "haferdrink", name: "Haferdrink", category: "Getreide/Stärke" },
-  { id: "sojabohne", name: "Sojabohne", category: "Hülsenfrucht" },
-  { id: "mandel", name: "Mandel", category: "Nuss" },
-  { id: "kokos", name: "Kokos", category: "Obst/Fett" },
+  { id: "kuhmilch", name: "Kuhmilch", category: "Milchprodukt", priority: 1 },
+  { id: "naturjoghurt", name: "Naturjoghurt", category: "Milchprodukt", priority: 2 },
+  { id: "buttermilch", name: "Buttermilch", category: "Milchprodukt", priority: 3 },
+  { id: "haferdrink", name: "Haferdrink", category: "Getreide/Stärke", priority: 6 },
+  { id: "sojabohne", name: "Sojabohne", category: "Hülsenfrucht", priority: 7 },
+  { id: "mandel", name: "Mandel", category: "Nuss", priority: 4 },
+  { id: "kokos", name: "Kokos", category: "Obst/Fett", priority: 5 },
 ];
 const byId = new Map(foods.map((item) => [item.id, item]));
 const byName = new Map(foods.map((item) => [item.name, item]));

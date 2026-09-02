@@ -58,7 +58,28 @@ async function seedPlan(page) {
     window.__beikostTest.reset();
     const today = window.__beikostTest.today();
     const state = window.__beikostTest.getState();
+    state.settings.phaseSelected = "aufbau";
     state.settings.planFrom = today;
+    state.settings.preferInventoryInPlan = false;
+    state.settings.newFoodEvery = 99;
+    state.planLocks = {};
+    state.manualMeals = {};
+    state.overrides = {};
+    state.autoLockExcluded = {};
+    state.followUps = {};
+    state.deferred = { [today]: true };
+    state.inventory = [];
+    state.backupMeta ||= {};
+    state.backupMeta.plannerLinking = {
+      version: 1,
+      rolloverHandled: {},
+      carriedPlans: {},
+    };
+    for (const food of state.foods) {
+      if (food.active && food.autoPlan !== false && (food.meals || []).some((meal) => ["breakfast", "lunch"].includes(meal))) {
+        food.manualStatus = "Regelmäßig";
+      }
+    }
     window.__beikostTest.setState(state);
     return today;
   });
@@ -90,14 +111,13 @@ try {
   assert.equal(await visibleDayCards.count(), 1, "Nur der ausgewählte Tag wird vollständig dargestellt");
   assert.equal(await visibleDayCards.first().getAttribute("data-plan-date"), today);
 
-  const selectedDay = visibleDayCards.first();
   assert.equal(
-    await selectedDay.locator(".replaceMeal").first().isVisible(),
+    await page.locator(`#blockPlan .replaceMeal[data-date="${today}"][data-meal="lunch"]`).isVisible(),
     true,
-    "Eine tatsächlich sichtbare reguläre Mahlzeit bleibt bearbeitbar",
+    "Die reguläre heutige Planmahlzeit bleibt bearbeitbar",
   );
   assert.equal(
-    await selectedDay.locator(".meal-lock").first().isVisible(),
+    await page.locator(`#blockPlan .meal-lock[data-lock-date="${today}"][data-lock-meal="lunch"]`).isVisible(),
     true,
     "Meal-Locks bleiben im sichtbaren Tagesdetail bedienbar",
   );

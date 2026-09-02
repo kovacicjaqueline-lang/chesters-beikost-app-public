@@ -69,6 +69,43 @@ test('nur generische Auto-Snapshots gelten als alte Drei-Tage-Fixierung', () => 
   assert.equal(policy.isLegacyThreeDayAutoLock({ mode: 'auto', randomSwapTarget: true }), false);
 });
 
+test('Woche neu planen entfernt nur neu berechenbaren Auto-Zustand', () => {
+  const state = {
+    planLocks: {
+      '2026-09-02|breakfast': { mode: 'auto', focusId: 'tracking', plannerTrackingSnapshot: true, planId: 'plan-tracking' },
+      '2026-09-02|lunch': { mode: 'auto', focusId: 'automatic' },
+      '2026-09-03|lunch': { mode: 'manual', focusId: 'kept' },
+      '2026-09-04|lunch': { mode: 'auto', focusId: 'follow', followUpFoodId: 'follow' },
+      '2026-09-10|lunch': { mode: 'auto', focusId: 'outside' },
+    },
+    overrides: {
+      '2026-09-02|lunch': 'automatic',
+      '2026-09-03|lunch': 'kept',
+      '2026-09-04|lunch': 'follow',
+      '2026-09-10|lunch': 'outside',
+    },
+    autoLockExcluded: {
+      '2026-09-02|lunch': true,
+      '2026-09-03|snack': 'meal-removed',
+      '2026-09-10|lunch': true,
+    },
+  };
+
+  policy.clearReplannablePlanState(state, '2026-09-02', 7, addDays);
+
+  assert.equal(state.planLocks['2026-09-02|lunch'], undefined, 'normaler Auto-Zustand wird neu berechenbar');
+  assert.equal(state.overrides['2026-09-02|lunch'], undefined);
+  assert.ok(state.planLocks['2026-09-02|breakfast'], 'Tracking-Plan-ID bleibt bestehen');
+  assert.ok(state.planLocks['2026-09-03|lunch'], 'Behalten bleibt bestehen');
+  assert.equal(state.overrides['2026-09-03|lunch'], 'kept');
+  assert.ok(state.planLocks['2026-09-04|lunch'], 'Wiedervorlage bleibt bestehen');
+  assert.equal(state.overrides['2026-09-04|lunch'], 'follow');
+  assert.equal(state.autoLockExcluded['2026-09-02|lunch'], undefined, 'alte boolesche Auto-Ausnahme wird gelöst');
+  assert.equal(state.autoLockExcluded['2026-09-03|snack'], 'meal-removed', 'bewusst gelöschte Mahlzeit bleibt gelöscht');
+  assert.ok(state.planLocks['2026-09-10|lunch'], 'außerhalb der Woche bleibt Zustand unverändert');
+  assert.equal(state.autoLockExcluded['2026-09-10|lunch'], true);
+});
+
 test('heutiger Tracking-Snapshot hat keine Schutzwirkung und bleibt bei gleicher Mahlzeit stabil', () => {
   const first = {
     mode: 'auto',

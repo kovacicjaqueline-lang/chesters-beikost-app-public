@@ -100,6 +100,55 @@
       .filter(Boolean);
   }
 
+  function recipeCategoryChoiceNames(category, foods = []) {
+    return (foods || [])
+      .filter((item) => item && item.active !== false && String(item.category || "") === category)
+      .sort((a, b) =>
+        (Number(a.priority) || 9999) - (Number(b.priority) || 9999) ||
+        String(a.name || "").localeCompare(String(b.name || ""), "de"),
+      )
+      .map((item) => item.name)
+      .filter(Boolean);
+  }
+
+  function installRecipeCategoryComponentOptions(recipes = [], foods = [], category = "") {
+    if (!Array.isArray(recipes) || !Array.isArray(foods) || !category) return false;
+    let choiceNames = recipeCategoryChoiceNames(category, foods);
+    if (!choiceNames.length) return false;
+
+    let foodsByName = new Map(
+      foods
+        .filter((item) => item?.name)
+        .map((item) => [item.name, item]),
+    );
+    let changed = false;
+
+    for (let recipe of recipes) {
+      if (!Array.isArray(recipe?.oneOf) || !recipe.oneOf.length) continue;
+      let sourceFoods = recipe.oneOf.map((name) => foodsByName.get(name));
+      if (sourceFoods.some((item) => !item || String(item.category || "") !== category)) continue;
+
+      if (recipe.oneOf.length !== choiceNames.length || recipe.oneOf.some((name, index) => name !== choiceNames[index])) {
+        recipe.oneOf = [...choiceNames];
+        changed = true;
+      }
+      if (Array.isArray(recipe.variantLabels)) {
+        if (recipe.variantLabels.length !== choiceNames.length || recipe.variantLabels.some((name, index) => name !== choiceNames[index])) {
+          recipe.variantLabels = [...choiceNames];
+          changed = true;
+        }
+      }
+      if (category === "Obst" && recipe.family && /^\d+ Obstvarianten$/.test(String(recipe.familyLabel || ""))) {
+        let familyLabel = `${choiceNames.length} Obstvarianten`;
+        if (recipe.familyLabel !== familyLabel) {
+          recipe.familyLabel = familyLabel;
+          changed = true;
+        }
+      }
+    }
+    return changed;
+  }
+
   const RECIPE_V2_COMPONENT_OPTIONS = Object.freeze({
     "Milch-Getreide-Brei": Object.freeze({
       milkChoices: Object.freeze([
@@ -150,6 +199,10 @@
     if (Array.isArray(foods)) installFoodRecipeComponentMetadata(foods);
 
     let changed = false;
+    if (Array.isArray(foods) && installRecipeCategoryComponentOptions(recipes, foods, "Obst")) {
+      changed = true;
+    }
+
     for (let [recipeName, config] of Object.entries(RECIPE_V2_COMPONENT_OPTIONS)) {
       let recipe = recipes.find((item) => item?.name === recipeName);
       if (!recipe) continue;
@@ -205,6 +258,8 @@
     foodHasRecipeComponentKind,
     installFoodRecipeComponentMetadata,
     recipeComponentFoodNames,
+    recipeCategoryChoiceNames,
+    installRecipeCategoryComponentOptions,
     installRecipeV2ComponentOptions,
     installRecipeV2ComponentRuntime,
   };

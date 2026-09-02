@@ -184,6 +184,19 @@ jobs:
         if: ${{ !cancelled() }}
         run: npm run test:browser
 
+      - name: Capture mobile CI screenshots
+        if: ${{ !cancelled() && matrix.shard == 1 }}
+        run: node browser-tests/ci-mobile-snapshots.mjs
+
+      - name: Upload mobile CI screenshots
+        if: ${{ !cancelled() && matrix.shard == 1 }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-ui-screenshots-${{ github.run_id }}
+          path: artifacts/ci-mobile-screenshots/
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Upload plan checks UX screenshots
         if: ${{ failure() }}
         uses: actions/upload-artifact@v4

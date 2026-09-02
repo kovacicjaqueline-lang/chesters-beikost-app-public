@@ -58,10 +58,10 @@ test("Tagesstatus bündelt Neu, Allergen, Prep, Unvollständig und Schutz ohne P
   );
 });
 
-test("vollständig erledigter Tag wird als erledigt erkannt und nicht mehr als geschützt markiert", () => {
+test("vollständig erledigter Tag wird nur als erledigt erkannt und nicht mehr als offen oder geschützt markiert", () => {
   const day = {
     date: "2026-09-02",
-    meals: [{ meal: "lunch", active: true, focusId: "kartoffel", foodIds: ["kartoffel"], type: "bekannt kombinieren" }],
+    meals: [{ meal: "lunch", active: true, focusId: "", foodIds: [], type: "bekannt kombinieren", empty: true }],
   };
   const status = mobilePlanDayStatus(
     day,
@@ -69,6 +69,7 @@ test("vollständig erledigter Tag wird als erledigt erkannt und nicht mehr als g
     () => true,
   );
   assert.equal(status.done, true);
+  assert.equal(status.incomplete, false);
   assert.equal(status.locked, false);
   assert.equal(status.completedCount, 1);
 });

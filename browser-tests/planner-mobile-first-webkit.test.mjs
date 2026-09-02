@@ -60,31 +60,28 @@ async function seedPlan(page) {
     const today = window.__beikostTest.today();
     state.settings.planFrom = today;
 
-    const potato = state.foods.find((item) => item.id === "kartoffel");
-    if (potato) potato.manualStatus = "Verträgliche Basis";
+    const peach = state.foods.find((item) => item.id === "pfirsich");
+    if (peach) peach.manualStatus = "Verträgliche Basis";
+    window.__beikostTest.setState(state);
 
-    state.planLocks[`${today}|lunch`] = {
-      date: today,
+    const stored = window.__beikostTest.storeManualMeal(today, "lunch", {
       meal: "lunch",
-      focusId: "kartoffel",
-      foodIds: ["kartoffel"],
-      baseFoodIds: ["kartoffel"],
+      active: true,
+      focusId: "pfirsich",
+      foodIds: ["pfirsich"],
+      baseFoodIds: ["pfirsich"],
       sampleFoodIds: [],
+      foodRoles: { pfirsich: "base" },
       optionalAddons: [],
       inventoryFoodIds: [],
       recipeName: "",
       recipeInventoryId: "",
       type: "bekannt kombinieren",
       note: "",
-      manualAdded: false,
-      active: true,
-      mode: "manual",
-      planId: "planner-mobile-first",
-      createdAt: new Date().toISOString(),
-    };
-
-    window.__beikostTest.setState(state);
-    window.renderAll();
+      foodPreparationKeys: {},
+    }, "edited");
+    if (!stored.ok) throw new Error(`Planner-Testmahlzeit konnte nicht gespeichert werden: ${stored.message || "unbekannt"}`);
+    window.__beikostTest.setState(stored.state);
     return today;
   });
 }

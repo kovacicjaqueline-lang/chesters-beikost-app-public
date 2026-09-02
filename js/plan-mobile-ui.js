@@ -39,7 +39,7 @@
       newFood: open.some((meal) => ["neu", "Allergen einführen"].includes(meal.type)),
       allergen: hasAllergenType || allFoodIds.some((id) => isAllergenFood(id)),
       prep: prepDates.has(day?.date),
-      incomplete: planned.some((meal) => meal?.empty || !meal?.focusId),
+      incomplete: open.some((meal) => meal?.empty || !meal?.focusId),
       locked: open.some((meal) => !!planLocks[`${day.date}|${meal.meal}`]),
       done: planned.length > 0 && open.length === 0,
       plannedCount: planned.length,

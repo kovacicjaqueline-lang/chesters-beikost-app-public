@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const policy = require('../js/plan-checks-solution-preservation.js');
+const policy = require('../js/planner-keep-policy.js');
 const tracking = require('../js/planner-keep-tracking.js');
 const rollover = require('../js/planner-log-rollover.js');
 

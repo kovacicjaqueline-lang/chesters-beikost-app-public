@@ -473,42 +473,57 @@ Der bestehende Planner kann `ph`/Reisevorbereitung als Priorisierung verwenden. 
 
 ---
 
-# 14. Neuplanung und Schutzmechanismen ✅ main
+# 14. Neuplanung und Behalten ✅ main
 
-## 14.1 „Neu planen“
+## 14.1 „Woche neu planen“
 
-Die normale Neuplanung bereinigt nur den normalen automatischen Zustand der sichtbaren sieben Tage.
+Für die sichtbaren sieben Tage gibt es genau eine sichtbare Wochen-Neuplanung: **„Woche neu planen“**. Sie berechnet normale automatische Vorschläge aus dem aktuellen fachlichen Zustand neu.
 
 Erhalten bleiben insbesondere:
 
-- manuelle Schutzmechanismen;
+- protokollierte bzw. bereits erledigte Mahlzeiten;
+- manuell hinzugefügte oder manuell bearbeitete Mahlzeiten;
+- ausdrücklich mit geschlossenem Schloss als **„Behalten“** markierte Mahlzeiten;
+- bewusst gelöschte Mahlzeiten über den bestehenden `meal-removed`-Marker;
 - Follow-ups/Wiedervorlagen;
-- manuell hinzugefügte Mahlzeiten;
 - Zustände außerhalb der sichtbaren Woche.
 
-## 14.2 Einzelnes „Bearbeiten“
+Interne Tracking-Snapshots sind kein Schutzmechanismus und blockieren die dynamische Neuplanung nicht. Interne Random-Swap-Pins dienen nur der technischen Stabilisierung des unmittelbar gewählten Tauschs und dürfen bei einer bewussten Wochen-Neuplanung wieder freigegeben werden.
 
-Das Bearbeiten eines einzelnen bestehenden Slots ersetzt nur diesen Slot und schützt ihn anschließend manuell.
+Eine zweite sichtbare Variante „Sichtbare Woche vollständig neu planen“ mit Auswahl zwischen Schutz und Freigabe lösbarer Locks gibt es nicht mehr.
+
+## 14.2 Schloss und „Behalten“
+
+Das Schloss bildet ausschließlich eine bewusste Nutzerentscheidung ab:
+
+- **geschlossenes Schloss · Behalten:** Diese konkrete Mahlzeit bleibt bei automatischer Neuplanung unverändert;
+- **offenes Schloss:** Die App darf die Mahlzeit bei einer Neuplanung an den aktuellen Stand anpassen.
+
+Normale automatisch vorgeschlagene Mahlzeiten werden nicht mehr pauschal für heute, morgen und übermorgen als generische Auto-Locks geschützt. Historische Drei-Tage-Auto-Locks sind nur noch ein Migrationsfall und keine aktuelle Produktsemantik.
+
+## 14.3 Einzelnes „Bearbeiten“
+
+Das Bearbeiten eines einzelnen bestehenden Slots ersetzt nur diesen Slot und macht die Änderung zu einer bewussten festen Nutzerplanung.
 
 Andere Slots werden nicht mitneu geplant.
 
-## 14.3 „Sichtbare Woche vollständig neu planen“
-
-Die vorhandene Semantik bleibt:
-
-- mit Schutz: entspricht im Wesentlichen der normalen automatischen Bereinigung;
-- mit Freigabe lösbarer Locks: lösbare feste Planungen können aufgehoben werden;
-- protokollierte Mahlzeiten, Follow-ups und manuell hinzugefügte Mahlzeiten bleiben geschützt.
-
-Diese beiden Neuplanungsarten dürfen nicht stillschweigend semantisch zusammengelegt werden.
-
 ---
 
-# 15. Persistenz und Rollenstabilität ✅ main
+# 15. Persistenz, Tracking und Rollenstabilität ✅ main
 
-Ein automatisch erzeugter Plan muss auch nach Auto-Lock und Reload fachlich derselbe Plan bleiben.
+**Persistenz ist nicht automatisch Schutz.** Ein normaler automatisch erzeugter Vorschlag darf neu berechnet werden, solange keine bewusste Nutzerentscheidung oder andere fachlich feste Sondersemantik vorliegt.
 
-Insbesondere dürfen sich nicht verändern:
+Für den heutigen automatischen Plan darf ein interner `plannerTrackingSnapshot` gespeichert werden, damit Plan-ID, Log-Verknüpfung und Tageswechsel-/Rollover-Funktionen stabil bleiben. Dieser Snapshot:
+
+- ist für die Nutzerin kein „Behalten“ und erscheint mit offenem Schloss;
+- wird vom dynamischen Planner nicht als schützender Lock verwendet;
+- behält seine `planId`, solange der dynamisch berechnete Mahlzeiteninhalt fachlich derselbe bleibt;
+- wird synchronisiert bzw. ersetzt, wenn sich der dynamisch berechnete Inhalt tatsächlich ändert;
+- bleibt nach einer Protokollverknüpfung so lange erhalten, wie seine Plan-ID für diese Verknüpfung benötigt wird.
+
+Für morgen und übermorgen werden normale automatische Vorschläge nicht allein zur Stabilisierung als generische Auto-Locks persistiert.
+
+Wo eine Mahlzeit tatsächlich fest ist – insbesondere manuell hinzugefügt, manuell bearbeitet, ausdrücklich **Behalten**, Follow-up oder bereits protokolliert – müssen ihre fachlichen Daten und Rollen stabil bleiben. Insbesondere dürfen dabei nicht widersprüchlich verändert werden:
 
 - `focusId`;
 - `foodIds`;
@@ -522,9 +537,9 @@ Insbesondere dürfen sich nicht verändern:
 
 Für historische Datensätze ohne `presentationMode` darf kein Fallback aus `textureStage` erfunden werden.
 
-Der Bearbeiten-Dialog muss einen automatisch erzeugten Plan ohne fachliche Umklassifizierung wieder öffnen können.
+Der Bearbeiten-Dialog muss einen vorhandenen Plan ohne fachliche Umklassifizierung wieder öffnen können.
 
-Für Nuss-/Samen-Toppings gilt zusätzlich: Eine automatisch gelockte Kostprobe muss nach Reload weiterhin Sample bleiben. Ein alter automatischer Nuss-/Samen-Hauptfokus darf nicht als gültige neue Rollenwahrheit konserviert werden; echte Rezeptzutaten bleiben davon unberührt.
+Für Nuss-/Samen-Toppings gilt zusätzlich: Eine tatsächlich persistierte Kostprobe muss nach Reload weiterhin Sample bleiben. Ein historischer automatischer Nuss-/Samen-Hauptfokus darf nicht als gültige neue Rollenwahrheit konserviert werden; echte Rezeptzutaten bleiben davon unberührt.
 
 ---
 

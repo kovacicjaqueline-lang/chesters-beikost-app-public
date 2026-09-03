@@ -123,7 +123,7 @@ try {
   assert.equal(await secondary.getAttribute("open"), "", "Sekundäre Planaktionen lassen sich öffnen");
   assert.equal(await secondaryToggle.getAttribute("aria-expanded"), "true", "Der Toggle weist den offenen Zustand zugänglich aus");
   assert.equal(await secondary.locator(".plan-controls").isVisible(), true, "Plan ab und Neu planen werden erst nach dem Öffnen sichtbar");
-  assert.equal(await secondary.locator("#planRebuildAll").isVisible(), true, "Vollständige Neuplanung wird erst nach dem Öffnen sichtbar");
+  assert.equal(await secondary.locator("#planRebuildAll").isVisible(), false, "Die alte vollständige Neuplanung bleibt auch nach dem Öffnen dauerhaft verborgen");
   await secondaryToggle.click();
   assert.equal(await secondary.getAttribute("open"), null, "Sekundäre Planaktionen lassen sich wieder schließen");
   assert.equal(await secondaryToggle.getAttribute("aria-expanded"), "false", "Der Toggle weist den erneut geschlossenen Zustand zugänglich aus");

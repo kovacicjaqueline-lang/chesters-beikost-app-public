@@ -62,6 +62,11 @@ async function waitForApp(page) {
 
 async function openManualCard(locator) {
   await locator.evaluate((element) => {
+    const date = element.querySelector("[data-date]")?.dataset.date || "";
+    const dayButton = date
+      ? document.querySelector(`#planWeekOverview .plan-week-day[data-plan-date="${date}"]`)
+      : null;
+    if (dayButton) dayButton.click();
     const day = element.closest("details.day-details");
     if (day) day.open = true;
     element.open = true;
@@ -117,7 +122,6 @@ try {
 
     await carrot.scrollIntoViewIfNeeded();
     assertInsideViewport(await carrot.boundingBox(), width, 500, `Suchergebnis bei ${width}px`);
-
     const footer = page.locator("#confirmManualMeal");
     await footer.scrollIntoViewIfNeeded();
     assertInsideViewport(await footer.boundingBox(), width, 500, `Footer bei ${width}px`);
@@ -276,6 +280,7 @@ try {
   await page.locator("#manualMealTargetDate").fill(dates.today);
   await page.locator("#manualMealTargetDate").dispatchEvent("change");
   await page.locator("#confirmManualMeal").click();
+  await page.locator("#genericModal").waitFor({ state: "hidden" });
   await page.locator(`#blockPlan .removeManualMeal[data-date="${dates.today}"][data-meal="breakfast"]`).waitFor({ state: "attached" });
 
   savedState = await page.evaluate(() => window.__beikostTest.getState());

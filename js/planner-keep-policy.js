@@ -179,11 +179,7 @@
       recalculate.onclick = globalScope.openFullPlanRebuild;
     }
     const rebuild = document.getElementById("planRebuildAll");
-    if (rebuild) {
-      rebuild.hidden = true;
-      const wrapper = rebuild.closest?.(".plan-secondary-actions");
-      if (wrapper) wrapper.hidden = true;
-    }
+    if (rebuild) rebuild.hidden = true;
 
     document.querySelectorAll?.(".help-topic").forEach((topic) => {
       if (topic.querySelector("summary")?.textContent?.trim() !== "Plan und Schlösser") return;

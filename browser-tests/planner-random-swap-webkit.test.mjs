@@ -135,7 +135,7 @@ try {
   await page.waitForFunction(() => !!window.__beikostTest?.buildDays && !!window.__plannerRandomSwap);
   await page.waitForFunction(() => {
     const persisted = window.__beikostTest.getState().backupMeta?.storagePersisted;
-    return persisted && persisted !== "unknown" && window.__plannerPoliciesReady === true;
+    return persisted && persisted !== "unknown" && window.__plannerPoliciesReady === true && window.__plannerKeepTrackingInstalled === true;
   });
 
   const today = await configurePlanner(page, 0);
@@ -158,6 +158,24 @@ try {
   }, { key: targetKey, previous: previousTarget });
 
   assert.match(await page.locator("#toastText").innerText(), /restliche Wochenplan bleibt unverändert/i);
+  const targetInternalPin = await page.evaluate((key) => {
+    const lock = window.__beikostTest.getState().planLocks?.[key];
+    return { pinned: !!lock?.randomSwapPinned, target: !!lock?.randomSwapTarget };
+  }, targetKey);
+  assert.deepEqual(targetInternalPin, { pinned: true, target: true }, "Tauschen behält seinen internen Stabilisierungssnapshot");
+
+  await page.locator('nav button[data-view="plan"]').click();
+  const targetDayButton = page.locator(`#planWeekOverview .plan-week-day[data-plan-date="${today}"]`);
+  await targetDayButton.click();
+  const targetLockButton = page.locator(`#blockPlan .meal-lock[data-lock-date="${today}"][data-lock-meal="lunch"]`);
+  await targetLockButton.waitFor();
+  assert.equal(await targetLockButton.evaluate((node) => node.classList.contains("unlocked")), true, "Random-Swap-Pin erscheint nicht als bewusstes Behalten");
+  assert.equal(await targetLockButton.getAttribute("aria-label"), "Mahlzeit bei automatischer Neuplanung behalten");
+  assert.equal(
+    await targetLockButton.evaluate((node) => node.closest(".mealbox")?.querySelectorAll(".lock-label").length ?? -1),
+    0,
+    "Interner Random-Swap-Pin bekommt keine Schutzbeschriftung",
+  );
 
   const after = await visiblePlan(page);
   assert.equal(after[targetKey]?.length, 1, "getauschter Slot muss im sichtbaren Wochenplan genau einmal offen bleiben");
@@ -171,6 +189,7 @@ try {
     assert.ok(before[key], `Tausch darf keinen zusätzlichen sichtbaren Plan-Slot erzeugen: ${key}`);
   }
 
+  await page.locator('nav button[data-view="home"]').click();
   const shiftedToday = await configurePlanner(page, 1);
   const shiftedTargetKey = `${shiftedToday}|lunch`;
   const visibleBeforeTodaySwap = await visiblePlan(page);

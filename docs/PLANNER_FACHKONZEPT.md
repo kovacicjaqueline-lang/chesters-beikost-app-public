@@ -473,7 +473,7 @@ Der bestehende Planner kann `ph`/Reisevorbereitung als Priorisierung verwenden. 
 
 ---
 
-# 14. Neuplanung und Behalten 🟡 Branch/Integrations-PR
+# 14. Neuplanung und Behalten ✅ main
 
 ## 14.1 „Woche neu planen“
 
@@ -509,7 +509,7 @@ Andere Slots werden nicht mitneu geplant.
 
 ---
 
-# 15. Persistenz, Tracking und Rollenstabilität 🟡 Branch/Integrations-PR
+# 15. Persistenz, Tracking und Rollenstabilität ✅ main
 
 **Persistenz ist nicht automatisch Schutz.** Ein normaler automatisch erzeugter Vorschlag darf neu berechnet werden, solange keine bewusste Nutzerentscheidung oder andere fachlich feste Sondersemantik vorliegt.
 

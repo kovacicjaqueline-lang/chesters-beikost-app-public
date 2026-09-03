@@ -171,7 +171,11 @@ try {
   await targetLockButton.waitFor();
   assert.equal(await targetLockButton.evaluate((node) => node.classList.contains("unlocked")), true, "Random-Swap-Pin erscheint nicht als bewusstes Behalten");
   assert.equal(await targetLockButton.getAttribute("aria-label"), "Mahlzeit bei automatischer Neuplanung behalten");
-  assert.equal(await targetLockButton.closest(".mealbox").locator(".lock-label").count(), 0, "Interner Random-Swap-Pin bekommt keine Schutzbeschriftung");
+  assert.equal(
+    await targetLockButton.evaluate((node) => node.closest(".mealbox")?.querySelectorAll(".lock-label").length ?? -1),
+    0,
+    "Interner Random-Swap-Pin bekommt keine Schutzbeschriftung",
+  );
 
   const after = await visiblePlan(page);
   assert.equal(after[targetKey]?.length, 1, "getauschter Slot muss im sichtbaren Wochenplan genau einmal offen bleiben");

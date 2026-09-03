@@ -177,6 +177,9 @@ try {
 
   await page.locator('nav button[data-view="plan"]').click();
   assert.equal(await page.locator("#planLockSummary .plan-lock-text").textContent(), "Keine Mahlzeit bewusst behalten", "Tracking wird nicht als geschützte Mahlzeit zusammengezählt");
+  const secondaryToggle = page.locator("#plan .plan-secondary-toggle");
+  await secondaryToggle.click();
+  assert.equal(await secondaryToggle.getAttribute("aria-expanded"), "true", "Die sekundären Planaktionen werden vor der Wochen-Neuplanung bewusst geöffnet");
   const rebuildButton = page.locator("#planRecalculate");
   await rebuildButton.waitFor();
   assert.equal(await rebuildButton.textContent(), "Woche neu planen", "Es gibt eine eindeutige sichtbare Wochen-Neuplanung");

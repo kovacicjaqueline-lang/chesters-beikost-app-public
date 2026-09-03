@@ -129,6 +129,7 @@ const PLAN_CHECK_PRECACHE = [
   "./js/plan-checks-contract-extension.js?v=10.1.26",
   "./js/plan-checks-solution-precompute.js?v=10.1.26",
   "./js/plan-checks-ui-core.js?v=10.1.26",
+  "./js/plan-mobile-ui.js?v=10.1.26",
 ];
 
 // Zusätzliche UI-/Flow-Dateien, die nicht im statischen FILES-Stamm von sw-core.js liegen.
@@ -141,6 +142,7 @@ const UI_PRECACHE = [
   "./catalog-navigation.css",
   "./mobile-beikost-more.css?v=10.1.26",
   "./plan-checks-ui.css?v=10.1.26",
+  "./plan-mobile-ui.css?v=10.1.26",
   "./js/deferred-render.js?v=10.1.26",
   "./js/manual-meal-flow.js",
   "./js/recipe-v2-component-options.js",

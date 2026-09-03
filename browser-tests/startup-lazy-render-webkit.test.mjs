@@ -65,18 +65,30 @@ try {
     const persisted = window.__beikostTest?.getState?.()?.backupMeta?.storagePersisted;
     return persisted && persisted !== "unknown";
   });
+  await page.waitForFunction(() => window.__mobilePlanUiInstalled === true);
 
   const startup = await page.evaluate(() => ({
     homeText: document.getElementById("todayCard")?.textContent?.trim() || "",
+    planChildren: document.getElementById("blockPlan")?.childElementCount || 0,
     foodsChildren: document.getElementById("foodList")?.childElementCount || 0,
     prepChildren: document.getElementById("prepNow")?.childElementCount || 0,
     logChildren: document.getElementById("logList")?.childElementCount || 0,
   }));
 
   assert.ok(startup.homeText.length > 0, "Die sichtbare Heute-Ansicht muss beim ersten Start sofort gerendert werden");
+  assert.equal(startup.planChildren, 0, "Der unsichtbare Plan-Tab darf beim Start noch nicht gerendert werden");
   assert.equal(startup.foodsChildren, 0, "Der unsichtbare Lebensmittel-Tab darf beim Start noch nicht vollständig gerendert werden");
   assert.equal(startup.prepChildren, 0, "Der unsichtbare Prep-Tab darf beim Start noch nicht vollständig gerendert werden");
   assert.equal(startup.logChildren, 0, "Der unsichtbare Mehr-/Protokoll-Tab darf beim Start noch nicht vollständig gerendert werden");
+
+  await page.locator('nav button[data-view="plan"]').click();
+  await page.waitForFunction(() =>
+    (document.getElementById("blockPlan")?.childElementCount || 0) > 0 &&
+    !!document.getElementById("planWeekOverview"),
+  );
+  assert.ok(await page.locator("#plan.view.active").count(), "Plan muss erst nach Navigation aktiv und gerendert sein");
+  assert.equal(await page.locator("#planWeekOverview .plan-week-day").count(), 7, "Der erste Plan-Render baut die Mobile-Woche auf");
+  assert.equal(await page.locator("#prepNow > *").count(), 0, "Plan-Navigation darf den versteckten Prep-Bereich nicht mitrendern");
 
   await page.locator('nav button[data-view="foods"]').click();
   await page.waitForFunction(() => (document.getElementById("foodList")?.childElementCount || 0) > 0);

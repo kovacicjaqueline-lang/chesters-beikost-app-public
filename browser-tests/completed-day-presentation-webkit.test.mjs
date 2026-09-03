@@ -50,6 +50,7 @@ async function waitForApp(page) {
     !!window.__mealCardUnification &&
     !!window.__plannerRolloverReviewFixes &&
     window.__plannerPoliciesReady === true &&
+    window.__mobilePlanUiInstalled === true &&
     window.__beikostTest.getState()?.backupMeta?.storagePersisted !== "unknown",
   );
 }
@@ -129,13 +130,14 @@ try {
   });
 
   await page.locator('nav button[data-view="plan"]').click();
+  await page.locator(`#planWeekOverview .plan-week-day[data-plan-date="${pastDate}"]`).click();
 
-  const completedDay = page.locator("#blockPlan > details.completed-day").first();
+  const completedDay = page.locator(`#blockPlan > details.completed-day[data-plan-date="${pastDate}"]`);
   await completedDay.waitFor();
   assert.equal(
     await completedDay.evaluate((node) => node.open),
-    false,
-    "Ein abgeschlossener vergangener Log-Tag startet eingeklappt",
+    true,
+    "Der ausgewählte abgeschlossene Tag wird im Mobile-First-Plan vollständig dargestellt",
   );
   assert.match(await completedDay.locator(":scope > summary").innerText(), /erledigt/i);
   assert.match(await completedDay.locator(":scope > summary").innerText(), /2 Protokolleinträge/);
@@ -148,8 +150,6 @@ try {
     "Der vergangene abgeschlossene Tag bleibt keine offene Tageskarte",
   );
 
-  await completedDay.locator(":scope > summary").click();
-  assert.equal(await completedDay.evaluate((node) => node.open), true, "Der Tag lässt sich aufklappen");
   assert.equal(await completedDay.locator(".mealbox.completed").count(), 2);
   assert.equal(
     await completedDay.locator(".completed-edit-actions .editCompletedLog").count(),
@@ -178,7 +178,9 @@ try {
   assert.ok(alignment.centerDelta <= 1, `Bearbeiten-Button ist um ${alignment.centerDelta}px aus der Mitte versetzt`);
 
   await completedDay.locator(":scope > summary").click();
-  assert.equal(await completedDay.evaluate((node) => node.open), false, "Der Tag lässt sich wieder einklappen");
+  assert.equal(await completedDay.evaluate((node) => node.open), false, "Der ausgewählte Tag lässt sich weiterhin einklappen");
+  await completedDay.locator(":scope > summary").click();
+  assert.equal(await completedDay.evaluate((node) => node.open), true, "Der ausgewählte Tag lässt sich wieder aufklappen");
 
   await context.close();
 } finally {

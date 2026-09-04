@@ -14,6 +14,7 @@ const {
   foodHasRecipeComponentKind,
   foodRecipeComponentForm,
   installFoodRecipeComponentMetadata,
+  recipeComponentFoodNames,
   installRecipeV2ComponentOptions,
 } = require("../js/recipe-v2-component-options.js");
 
@@ -27,7 +28,7 @@ function actualFoods() {
   const context = {};
   vm.createContext(context);
   vm.runInContext(`${source}\nthis.__FOOD_DB = FOOD_DB;`, context);
-  return context.__FOOD_DB.map((item) => ({ ...item }));
+  return Array.from(context.__FOOD_DB, (item) => ({ ...item }));
 }
 
 function policyFoods() {
@@ -37,11 +38,20 @@ function policyFoods() {
   return foods;
 }
 
-test("Milch-Getreide-Brei definiert alle Milchoptionen zentral", () => {
+test("Milch-Getreide-Brei leitet alle Milchoptionen aus FOOD-Capabilities ab", () => {
+  const foods = policyFoods();
   const recipe = { name: "Milch-Getreide-Brei", milkChoices: ["Kuhmilch"] };
-  assert.equal(installRecipeV2ComponentOptions([recipe], []), true);
-  assert.deepEqual(recipe.milkChoices, ["Kuhmilch", "Naturjoghurt", "Buttermilch", "Haferdrink", "Sojabohne", "Mandel", "Kokos"]);
-  assert.deepEqual(recipe.milkChoices, [...RECIPE_V2_COMPONENT_OPTIONS["Milch-Getreide-Brei"].milkChoices]);
+  assert.equal(installRecipeV2ComponentOptions([recipe], foods), true);
+  const expected = recipeComponentFoodNames(RECIPE_COMPONENT_KINDS.MILK_PORRIDGE_LIQUID, foods);
+  assert.deepEqual(recipe.milkChoices, expected);
+  for (const name of ["Kuhmilch", "Naturjoghurt", "Buttermilch", "Haferdrink", "Sojabohne", "Mandel", "Kokos"]) {
+    assert.ok(recipe.milkChoices.includes(name), name);
+  }
+  assert.equal(RECIPE_V2_COMPONENT_OPTIONS["Milch-Getreide-Brei"].milkChoices, undefined);
+  assert.equal(
+    RECIPE_V2_COMPONENT_OPTIONS["Milch-Getreide-Brei"].milkChoicesFromFood.kind,
+    RECIPE_COMPONENT_KINDS.MILK_PORRIDGE_LIQUID,
+  );
 });
 
 test("Nuss-/Sesampasten werden nur aus strukturierten FOOD-Eigenschaften abgeleitet", () => {
@@ -159,4 +169,63 @@ test("Runtime installiert FOOD-Komponenten explizit vor dem ersten Render", () =
   assert.equal(renderSnapshots.length, 1);
   assert.ok(renderSnapshots[0].includes("Pecannuss"));
   assert.doesNotMatch(componentSource, /renderAll = function recipeComponentAwareRenderAll/);
+});
+
+test("Recipe-V2 memoisiert Zutaten-Readiness nur innerhalb eines Auswertungsaufrufs", () => {
+  const context = {
+    FOOD_DB: [],
+    RECIPES: [],
+    state: { foods: [] },
+    readinessCalls: 0,
+    readinessGeneration: 1,
+  };
+  vm.createContext(context);
+  vm.runInContext(`
+    function recipeIngredientReady(name) {
+      readinessCalls += 1;
+      return name + ":" + readinessGeneration;
+    }
+    function recipeStates() {
+      return [
+        recipeIngredientReady("Apfel"),
+        recipeIngredientReady("Apfel"),
+        recipeIngredientReady("Birne"),
+      ];
+    }
+    function buildDay() {
+      return [
+        recipeIngredientReady("Apfel"),
+        recipeIngredientReady("Apfel"),
+        recipeStates(),
+      ];
+    }
+  `, context);
+  vm.runInContext(componentSource, context);
+
+  context.installRecipeV2ComponentRuntime();
+
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(context.recipeStates())),
+    ["Apfel:1", "Apfel:1", "Birne:1"],
+  );
+  assert.equal(context.readinessCalls, 2, "gleiche Zutat wird innerhalb recipeStates nur einmal geprüft");
+
+  context.readinessGeneration = 2;
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(context.recipeStates())),
+    ["Apfel:2", "Apfel:2", "Birne:2"],
+  );
+  assert.equal(context.readinessCalls, 4, "neuer recipeStates-Aufruf erhält einen frischen Cache");
+
+  context.readinessCalls = 0;
+  context.readinessGeneration = 3;
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(context.buildDay())),
+    ["Apfel:3", "Apfel:3", ["Apfel:3", "Apfel:3", "Birne:3"]],
+  );
+  assert.equal(
+    context.readinessCalls,
+    2,
+    "buildDay teilt denselben kurzlebigen Cache mit verschachtelten recipeStates-Aufrufen",
+  );
 });

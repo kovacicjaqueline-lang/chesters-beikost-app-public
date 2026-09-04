@@ -737,4 +737,5 @@ function renderPrep() {
       save(); renderAll(); showToast(`${food(id)?.name || "Zutat"} ist vorhanden und wird wieder eingeplant.`);
     });
   }
+  globalThis.MobileUiLifecycle?.afterRender("prep");
 }

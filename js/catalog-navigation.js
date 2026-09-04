@@ -184,6 +184,7 @@
       };
     }
     if (typeof bindRecipeStockButtons === "function") bindRecipeStockButtons();
+    globalThis.MobileUiLifecycle?.afterRender("foods", { source: "recipe-catalog" });
   }
 
   function setCatalogMode(mode) {
@@ -296,7 +297,7 @@
 (function mobileFoundationModule(root) {
   if (typeof document === "undefined") return;
   if (root.__mobileFoundationInstalled) return;
-  if (typeof renderHome !== "function" || typeof showView !== "function") return;
+  if (typeof renderHome !== "function" || typeof showView !== "function" || !root.MobileUiLifecycle?.onRender || !root.MobileUiLifecycle?.onViewChange) return;
 
   root.__mobileFoundationInstalled = true;
   document.body.classList.add("mobile-foundation");
@@ -455,12 +456,7 @@ body.mobile-foundation #genericModal .sheet {
   installMealEditorSearchScrollGuard();
   updateAppBar("home");
 
-  const baseShowView = showView;
-  showView = function mobileFoundationShowView(id) {
-    const result = baseShowView.apply(this, arguments);
-    updateAppBar(id);
-    return result;
-  };
+  root.MobileUiLifecycle.onViewChange(({ viewId }) => updateAppBar(viewId));
 
   function bindRenderedMealActions(container) {
     if (!container?.querySelectorAll) return;
@@ -725,11 +721,6 @@ body.mobile-foundation #genericModal .sheet {
     arrangeTodaySections();
   }
 
-  const baseRenderHome = renderHome;
-  renderHome = function mobileFoundationRenderHome() {
-    const result = baseRenderHome.apply(this, arguments);
-    renderMobileToday();
-    return result;
-  };
+  root.MobileUiLifecycle.onRender("home", renderMobileToday);
 
 })(typeof globalThis !== "undefined" ? globalThis : window);

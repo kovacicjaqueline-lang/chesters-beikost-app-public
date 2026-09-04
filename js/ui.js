@@ -1072,6 +1072,7 @@ function renderMeal(day, meal) {
 
 function renderPlan() {
   renderPlanCore();
+  globalThis.MobileUiLifecycle?.afterRender("plan");
   let summary = document.getElementById("planLockSummary");
   let amountLabel = AMOUNT_LEVELS[currentAmountLevel()]?.label || "";
   let compactAmount = compactPlanAmountLabel(amountLabel);
@@ -1099,6 +1100,7 @@ function renderHome() {
   if (button) {
     button.onclick = (event) => { event.preventDefault(); openLog(null); };
   }
+  globalThis.MobileUiLifecycle?.afterRender("home");
 }
 
 function renderSettings() {
@@ -1186,6 +1188,7 @@ function showView(id) {
     .forEach((b) => b.classList.toggle("active", b.dataset.view === id));
   renderView(id);
   window.scrollTo({ top: 0, behavior: "smooth" });
+  globalThis.MobileUiLifecycle?.afterViewChange(id, previous);
 }
 function existingFoodWithName(name) {
   let normalized = normalizeName(name);

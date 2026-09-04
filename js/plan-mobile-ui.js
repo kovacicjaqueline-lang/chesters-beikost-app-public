@@ -8,7 +8,7 @@
  */
 (function installMobilePlanUi() {
   if (typeof document === "undefined" || globalThis.__mobilePlanUiInstalled) return;
-  if (typeof renderPlanCore !== "function" || typeof planDisplayDays !== "function") return;
+  if (typeof renderPlan !== "function" || typeof planDisplayDays !== "function" || !globalThis.MobileUiLifecycle?.onRender) return;
 
   globalThis.__mobilePlanUiInstalled = true;
 
@@ -348,11 +348,7 @@
     applySelectedDay(block, days, selectedDate, statuses);
   }
 
-  const baseRenderPlanCore = renderPlanCore;
-  renderPlanCore = function renderMobileFirstPlanCore() {
-    baseRenderPlanCore();
-    enhanceMobilePlan();
-  };
+  globalThis.MobileUiLifecycle.onRender("plan", enhanceMobilePlan);
 
   globalThis.__mobilePlanUi = {
     mobilePlanDayStatus,

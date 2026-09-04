@@ -157,6 +157,18 @@ try {
   assert.equal((await primaryAction.innerText()).trim(), "Essen eintragen");
   assert.ok(await primaryAction.evaluate((node) => node.getBoundingClientRect().height) >= 44, "Primäraktion bleibt gut antippbar");
 
+  const focusMealStyle = await todayCard.locator(".today-focus-meal > .mealbox").evaluate((node) => {
+    const style = getComputedStyle(node);
+    return {
+      borderTopWidth: style.borderTopWidth,
+      backgroundColor: style.backgroundColor,
+      paddingTop: style.paddingTop,
+    };
+  });
+  assert.equal(focusMealStyle.borderTopWidth, "0px", "Die aktuelle Mahlzeit bekommt keine innere Kartenkante");
+  assert.equal(focusMealStyle.backgroundColor, "rgba(0, 0, 0, 0)", "Die aktuelle Mahlzeit bleibt auf derselben visuellen Ebene wie der Heute-Fokus");
+  assert.equal(focusMealStyle.paddingTop, "0px", "Der Heute-Fokus erzeugt keine zusätzliche Card-in-Card-Innenfläche");
+
   const timeline = todayCard.locator(".today-timeline-row");
   assert.equal(await timeline.count(), 3, "Alle geplanten Mahlzeiten des Tages bleiben sichtbar");
   assert.match((await timeline.nth(0).innerText()).replace(/\s+/g, " "), /Frühstück .* Erledigt/);
@@ -169,7 +181,7 @@ try {
   assert.ok(await edit.evaluate((node) => node.getBoundingClientRect().height) >= 44, "Erledigte Mahlzeiten bleiben direkt bearbeitbar");
 
   assert.match(await page.locator("#progressCard").innerText(), /von 100 kennengelernt/);
-  assert.ok(await page.locator("#textureCoachCard.today-recommendation:visible").count() <= 1, "Maximal eine Empfehlung ist sichtbar");
+  assert.equal(await page.locator("#textureCoachCard").isVisible(), false, "Ohne fällige Empfehlung bleibt der separate Konsistenz-Coach verborgen");
   assert.ok(await page.locator("#recipePreviewCard .today-recipe-row").count() <= 1, "Heute zeigt maximal eine kontextuelle Rezeptidee");
 
   const navLabels = await page.locator("nav button").evaluateAll((nodes) => nodes.map((node) => node.textContent.trim()));

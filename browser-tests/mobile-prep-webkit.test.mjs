@@ -159,7 +159,20 @@ try {
 
   assert.ok(await page.locator("#prepToday .prep-task-mobile").count() >= 1, "Heute fällige Vorbereitung wird als kompakte Aufgabe gezeigt");
   assert.ok(await page.locator("#prepTomorrow .prep-task-mobile").count() >= 1, "Morgen fällige Vorbereitung wird getrennt gezeigt");
-  assert.ok(await page.locator("#prepToday .prep-task-marker").count() >= 1, "Vorbereitung nutzt die mobile Checklisten-Darstellung");
+  const taskMarker = page.locator("#prepToday .prep-task-marker").first();
+  await taskMarker.waitFor();
+  const taskMarkerStyle = await taskMarker.evaluate((node) => {
+    const style = getComputedStyle(node);
+    return {
+      width: style.width,
+      height: style.height,
+      borderTopWidth: style.borderTopWidth,
+    };
+  });
+  assert.equal(await taskMarker.evaluate((node) => node.tagName), "SPAN", "Der Prep-Aufgabenmarker bleibt rein präsentational");
+  assert.equal(await taskMarker.getAttribute("role"), null, "Der Prep-Aufgabenmarker täuscht keine interaktive Checkbox-Rolle vor");
+  assert.equal(taskMarkerStyle.borderTopWidth, "0px", "Der neutrale Aufgabenpunkt hat keine Checkbox-Kontur");
+  assert.ok(parseFloat(taskMarkerStyle.width) <= 10 && parseFloat(taskMarkerStyle.height) <= 10, "Der neutrale Aufgabenpunkt bleibt deutlich kleiner als eine Checkbox");
   assert.equal(await page.locator("#prepCoveredGroup").evaluate((node) => node.open), false, "Gedeckter Vorrat ist standardmäßig verdichtet");
   assert.equal(await page.locator("#prepTools").evaluate((node) => node.open), false, "Werkzeuge bleiben sekundär und eingeklappt");
 

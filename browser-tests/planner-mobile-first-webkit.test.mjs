@@ -117,6 +117,17 @@ try {
   assert.equal(await secondary.locator(".plan-controls").count(), 1, "Datum und Neuplanung sind in den sekundären Aktionsbereich verdichtet");
   assert.equal(await secondaryToggle.isVisible(), true, "Der Einstieg zu den sekundären Planaktionen bleibt sichtbar");
   assert.equal(await secondaryToggle.getAttribute("aria-expanded"), "false", "Der Toggle weist den geschlossenen Zustand zugänglich aus");
+  const secondaryToggleStyle = await secondaryToggle.evaluate((node) => {
+    const style = getComputedStyle(node);
+    return {
+      height: node.getBoundingClientRect().height,
+      backgroundColor: style.backgroundColor,
+      borderTopWidth: style.borderTopWidth,
+    };
+  });
+  assert.ok(secondaryToggleStyle.height >= 44, "Die sekundäre Disclosure-Aktion bleibt gut antippbar");
+  assert.equal(secondaryToggleStyle.backgroundColor, "rgba(0, 0, 0, 0)", "Weitere Planaktionen wirkt nicht wie ein dominanter gefüllter Button");
+  assert.equal(secondaryToggleStyle.borderTopWidth, "0px", "Weitere Planaktionen bleibt eine leichte Disclosure-Aktion ohne Button-Rahmen");
   assert.equal(await secondary.locator(".plan-controls").isVisible(), false, "Plan ab und Neu planen bleiben im geschlossenen Zustand wirklich verborgen");
   assert.equal(await secondary.locator("#planRebuildAll").isVisible(), false, "Vollständige Neuplanung bleibt im geschlossenen Zustand wirklich verborgen");
   await secondaryToggle.click();

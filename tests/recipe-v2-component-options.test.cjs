@@ -170,3 +170,62 @@ test("Runtime installiert FOOD-Komponenten explizit vor dem ersten Render", () =
   assert.ok(renderSnapshots[0].includes("Pecannuss"));
   assert.doesNotMatch(componentSource, /renderAll = function recipeComponentAwareRenderAll/);
 });
+
+test("Recipe-V2 memoisiert Zutaten-Readiness nur innerhalb eines Auswertungsaufrufs", () => {
+  const context = {
+    FOOD_DB: [],
+    RECIPES: [],
+    state: { foods: [] },
+    readinessCalls: 0,
+    readinessGeneration: 1,
+  };
+  vm.createContext(context);
+  vm.runInContext(`
+    function recipeIngredientReady(name) {
+      readinessCalls += 1;
+      return name + ":" + readinessGeneration;
+    }
+    function recipeStates() {
+      return [
+        recipeIngredientReady("Apfel"),
+        recipeIngredientReady("Apfel"),
+        recipeIngredientReady("Birne"),
+      ];
+    }
+    function buildDay() {
+      return [
+        recipeIngredientReady("Apfel"),
+        recipeIngredientReady("Apfel"),
+        recipeStates(),
+      ];
+    }
+  `, context);
+  vm.runInContext(componentSource, context);
+
+  context.installRecipeV2ComponentRuntime();
+
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(context.recipeStates())),
+    ["Apfel:1", "Apfel:1", "Birne:1"],
+  );
+  assert.equal(context.readinessCalls, 2, "gleiche Zutat wird innerhalb recipeStates nur einmal geprüft");
+
+  context.readinessGeneration = 2;
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(context.recipeStates())),
+    ["Apfel:2", "Apfel:2", "Birne:2"],
+  );
+  assert.equal(context.readinessCalls, 4, "neuer recipeStates-Aufruf erhält einen frischen Cache");
+
+  context.readinessCalls = 0;
+  context.readinessGeneration = 3;
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(context.buildDay())),
+    ["Apfel:3", "Apfel:3", ["Apfel:3", "Apfel:3", "Birne:3"]],
+  );
+  assert.equal(
+    context.readinessCalls,
+    2,
+    "buildDay teilt denselben kurzlebigen Cache mit verschachtelten recipeStates-Aufrufen",
+  );
+});

@@ -346,11 +346,62 @@
     return changed;
   }
 
+  function withRecipeV2IngredientReadinessMemo(run) {
+    if (typeof run !== "function" || typeof recipeIngredientReady !== "function") {
+      return typeof run === "function" ? run() : undefined;
+    }
+    let originalReady = recipeIngredientReady;
+    if (originalReady.__recipeV2ReadinessMemoized) return run();
+
+    let readinessByName = new Map();
+    let memoizedReady = function recipeV2MemoizedIngredientReady(name) {
+      let key = String(name || "");
+      if (readinessByName.has(key)) return readinessByName.get(key);
+      let ready = originalReady(name);
+      readinessByName.set(key, ready);
+      return ready;
+    };
+    memoizedReady.__recipeV2ReadinessMemoized = true;
+    recipeIngredientReady = memoizedReady;
+    try {
+      return run();
+    } finally {
+      if (recipeIngredientReady === memoizedReady) recipeIngredientReady = originalReady;
+    }
+  }
+
+  function installRecipeV2ReadinessMemoRuntime() {
+    let changed = false;
+
+    if (typeof recipeStates === "function" && !recipeStates.__recipeV2ReadinessMemoized) {
+      let originalRecipeStates = recipeStates;
+      let memoizedRecipeStates = function recipeV2MemoizedRecipeStates(...args) {
+        return withRecipeV2IngredientReadinessMemo(() => originalRecipeStates.apply(this, args));
+      };
+      memoizedRecipeStates.__recipeV2ReadinessMemoized = true;
+      recipeStates = memoizedRecipeStates;
+      changed = true;
+    }
+
+    if (typeof buildDay === "function" && !buildDay.__recipeV2ReadinessMemoized) {
+      let originalBuildDay = buildDay;
+      let memoizedBuildDay = function recipeV2MemoizedBuildDay(...args) {
+        return withRecipeV2IngredientReadinessMemo(() => originalBuildDay.apply(this, args));
+      };
+      memoizedBuildDay.__recipeV2ReadinessMemoized = true;
+      buildDay = memoizedBuildDay;
+      changed = true;
+    }
+
+    return changed;
+  }
+
   function installRecipeV2ComponentRuntime() {
     let foods = typeof FOOD_DB !== "undefined" ? FOOD_DB : null;
     if (Array.isArray(foods)) installFoodRecipeComponentMetadata(foods);
     if (typeof state !== "undefined" && Array.isArray(state?.foods)) installFoodRecipeComponentMetadata(state.foods);
     if (typeof RECIPES !== "undefined") installRecipeV2ComponentOptions(RECIPES, foods);
+    installRecipeV2ReadinessMemoRuntime();
   }
 
   const api = {

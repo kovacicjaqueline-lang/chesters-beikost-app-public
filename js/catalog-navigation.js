@@ -337,9 +337,11 @@ body.mobile-foundation nav button {
   min-height: 44px;
 }
 body.mobile-foundation #todayCard .today-focus-meal > .mealbox {
-  border: 1px solid var(--line) !important;
-  border-radius: 15px !important;
-  background: var(--surface-soft, #fffaf3) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
   box-shadow: none !important;
 }
 body.mobile-foundation #todayCard .today-timeline-completed {
@@ -366,12 +368,6 @@ body.mobile-foundation #todayCard .today-timeline-actions {
 }
 body.mobile-foundation #todayCard .today-timeline-actions .meal-plan-actions {
   margin-top: 0;
-}
-body.mobile-foundation .today-recommendation.today-texture-coach {
-  display: block !important;
-}
-body.mobile-foundation .today-recommendation.today-texture-coach > details {
-  width: 100%;
 }
 body.mobile-foundation #genericModal .sheet {
   overflow-anchor: none;
@@ -646,7 +642,7 @@ body.mobile-foundation #genericModal .sheet {
     const textureReady = stage < 4 && textureSuccessCount(stage) >= 4;
 
     card.className = "today-recommendation";
-    card.style.display = "block";
+    card.style.display = "none";
 
     if (due.length) {
       const target = due[0];
@@ -663,7 +659,6 @@ body.mobile-foundation #genericModal .sheet {
       return;
     }
 
-    card.classList.add("today-texture-coach");
   }
 
   function renderCompactProgress() {

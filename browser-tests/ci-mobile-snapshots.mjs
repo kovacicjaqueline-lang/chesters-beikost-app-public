@@ -88,6 +88,12 @@ try {
 
   await openView(page, "home");
   await capture("01-heute.png");
+  await page.locator("main").evaluate(async (node) => {
+    node.scrollTop = node.scrollHeight;
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  });
+  await capture("01b-heute-unten.png");
+  await settleViewport(page);
 
   await openView(page, "plan");
   await capture("02-plan.png");
@@ -109,9 +115,20 @@ try {
   await openView(page, "more");
   await capture("06-mehr.png");
 
+  await page.setViewportSize({ width: 430, height: 932 });
+  await openView(page, "home");
+  await capture("07-heute-430x932.png");
+
   fs.writeFileSync(
     path.join(outputDir, "manifest.json"),
-    `${JSON.stringify({ generatedAt: new Date().toISOString(), viewport: { width: 390, height: 844, deviceScaleFactor: 2 }, screenshots }, null, 2)}\n`,
+    `${JSON.stringify({
+      generatedAt: new Date().toISOString(),
+      viewport: { width: 390, height: 844, deviceScaleFactor: 2 },
+      additionalViewports: [
+        { width: 430, height: 932, deviceScaleFactor: 2, screenshots: ["07-heute-430x932.png"] },
+      ],
+      screenshots,
+    }, null, 2)}\n`,
   );
 
   await context.close();

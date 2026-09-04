@@ -35,7 +35,7 @@ Nicht alle Dokumente vorsorglich lesen. Die aktuelle Aufgabe bestimmt die zusät
 - **Planner, Phasen, automatische Mahlzeiten, Eignung, Rollen, Recipe-first, Readiness oder Neuplanung:** `docs/PLANNER_FACHKONZEPT.md`.
 - **Neues kanonisches FOOD oder neues Laufzeitrezept:** zusätzlich den Pflichtcheck in `docs/AI_WORKFLOW.md` und `docs/FOOD_HANDLING_ORAL_PROCESSING_CONTRACT.md`; bei Icon-Arbeit außerdem `docs/ICON_GUIDELINES.md`.
 - **Handling / Oral Processing:** `docs/FOOD_HANDLING_ORAL_PROCESSING_CONTRACT.md`.
-- **FOOD-/Recipe-V2-Icons, Mapping oder Precache:** `docs/ICON_GUIDELINES.md`.
+- **FOOD-/Recipe-V2-Icons, Mapping oder Precache:** `docs/ICON_GUIDELINES.md`; bei visueller Neuerzeugung zusätzlich `docs/AI_ICON_GENERATION_WORKFLOW.md`.
 - **CI, Testauswahl, Browser-Runner oder Diagnose:** `docs/AI_WORKFLOW.md`.
 
 Ist unklar, ob eine Fachregel betroffen ist, zuerst den naheliegenden Fachdoc prüfen. Diese Scope-Auswahl darf niemals dazu benutzt werden, eine tatsächlich relevante Regelquelle zu überspringen.
@@ -75,6 +75,18 @@ Eine zusätzliche Plan-/Freigabeschleife ist nicht nötig, wenn die fachlichen E
 Eine fachliche Review-/Freigabeschleife bleibt erforderlich, wenn neue Produktsemantik, neue Sicherheits-/Eignungsregeln, neue Planner-Logik, eine Migration oder eine noch nicht entschiedene Darstellung eingeführt werden soll.
 
 Technisch gleichartige, bereits einzeln fachlich freigegebene Änderungen dürfen gemeinsam umgesetzt und getestet werden. Aus einer Einzelentscheidung darf dabei keine fachliche Gruppenfreigabe abgeleitet werden.
+
+### FOOD-/Recipe-V2-Bildgenerierung
+
+Wenn ein Auftrag verlangt, ein FOOD-/Recipe-V2-Icon oder eine App-Illustration **zu erstellen, zu generieren, neu zu generieren, neu zu zeichnen oder visuell zu ersetzen**, muss der sichtbare Bildinhalt mit der verfügbaren Bildgenerierungs-KI erzeugt werden.
+
+- Das Auslesen, Extrahieren, Dekodieren, Kopieren, Skalieren, Umverpacken oder Anzeigen eines vorhandenen PNG/SVG ist keine Bildgenerierung und darf nicht als „generiert“ bezeichnet werden.
+- SVG-Pfade, CSS, Emoji, Icon-Libraries oder vorhandene Repository-Assets ersetzen eine beauftragte Bildgenerierung nicht.
+- Ein SVG-/128×128-Wrapper ist nur technische Nachbearbeitung nach der Bildgenerierung.
+- Wenn ausdrücklich das „generierte Icon“ gezeigt werden soll, muss das tatsächliche Ergebnis des Bildgenerierungs-Tools gezeigt werden; existiert noch kein solches Ergebnis, zuerst die Bild-KI verwenden.
+- Für reine Audits oder das ausdrücklich gewünschte Anzeigen eines bereits vorhandenen Repository-Assets ist keine neue Generierung erforderlich; das Bild ist dann klar als bestehendes Repository-Asset zu bezeichnen.
+
+Der operative Ablauf und die Abgrenzung stehen in `docs/AI_ICON_GENERATION_WORKFLOW.md`; Stil-, Motiv- und technische Assetregeln bleiben in `docs/ICON_GUIDELINES.md` verbindlich.
 
 ## Tests
 

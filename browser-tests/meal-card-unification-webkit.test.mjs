@@ -250,7 +250,11 @@ try {
   assert.equal(await planStockBadge.innerHTML(), homeStockBadgeMarkup, "Heute und Plan verwenden dasselbe Vorratsbadge");
 
   assert.deepEqual(await mealActionLabels(planMeal), homeActions, "Heute und Plan bieten dieselben Kartenaktionen an");
-  assert.deepEqual(await mealVisualStyle(planMeal), homeStyle, "Heute und Plan verwenden dieselbe Kartenoptik");
+  const planStyle = await mealVisualStyle(planMeal);
+  assert.equal(homeStyle.backgroundColor, "rgba(0, 0, 0, 0)", "Heute bleibt im Fokus ohne zusätzliche Kartenfläche");
+  assert.equal(homeStyle.borderWidth, "0px", "Heute erhält keine innere Kartenkante");
+  assert.notEqual(planStyle.backgroundColor, homeStyle.backgroundColor, "Plan darf seine eigenständige Kartenfläche behalten");
+  assert.notEqual(planStyle.borderWidth, homeStyle.borderWidth, "Plan bleibt visuell als Tagesdetailkarte abgegrenzt");
 
   // Ein regulärer Planner-Slot wird bewusst entfernt und darf beim nächsten Render nicht neu entstehen.
   await planMeal.locator(".meal-plan-actions > summary").click();

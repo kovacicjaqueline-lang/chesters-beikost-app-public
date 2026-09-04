@@ -143,6 +143,7 @@ const UI_PRECACHE = [
   "./mobile-beikost-more.css?v=10.1.26",
   "./plan-checks-ui.css?v=10.1.26",
   "./plan-mobile-ui.css?v=10.1.26",
+  "./js/mobile-ui-lifecycle.js?v=10.1.26",
   "./js/deferred-render.js?v=10.1.26",
   "./js/manual-meal-flow.js",
   "./js/recipe-v2-component-options.js",

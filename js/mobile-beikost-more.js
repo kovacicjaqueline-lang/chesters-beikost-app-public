@@ -7,10 +7,18 @@
 (function mobileBeikostMoreModule(root) {
   if (typeof document === "undefined") return;
   if (root.__mobileBeikostMoreInstalled) return;
+  if (!root.MobileUiLifecycle?.onRender || !root.MobileUiLifecycle?.onViewChange) return;
   root.__mobileBeikostMoreInstalled = true;
 
   const FOOD_PRIMARY_FILTERS = new Set(["all", "open", "allergen"]);
   const RECIPE_PRIMARY_FILTERS = new Set(["available", "almost", "all"]);
+
+  function syncGroupedFilterVisibility() {
+    document.querySelectorAll(".mobile-filter-secondary").forEach((secondary) => {
+      const list = secondary.querySelector(".mobile-filter-secondary-list");
+      secondary.open = !!list?.querySelector("button.active");
+    });
+  }
 
   function groupFilters(container, primaryKeys, keyAttribute, label) {
     if (!container || container.dataset.mobileGrouped === "true") return;
@@ -35,15 +43,7 @@
 
     container.replaceChildren(primary, secondary);
 
-    const syncSecondaryVisibility = () => {
-      secondary.open = !!secondaryList.querySelector("button.active");
-    };
-    new MutationObserver(syncSecondaryVisibility).observe(secondaryList, {
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["class"],
-    });
-    syncSecondaryVisibility();
+    syncGroupedFilterVisibility();
   }
 
   function installFoodCatalogStructure() {
@@ -103,14 +103,6 @@
   }
 
   function installFoodRowDecorator() {
-    if (typeof renderFoods !== "function" || root.__mobileFoodRowsWrapped) return;
-    root.__mobileFoodRowsWrapped = true;
-    const baseRenderFoods = renderFoods;
-    renderFoods = function mobileFirstRenderFoods(...args) {
-      const result = baseRenderFoods.apply(this, args);
-      decorateFoodRows();
-      return result;
-    };
     decorateFoodRows();
   }
 
@@ -146,19 +138,7 @@
     if (!more || more.dataset.mobileMore === "true") return;
 
     const products = document.getElementById("productAllergenCard");
-    if (!products) {
-      if (!root.__mobileMoreWaitingForLazyProduct) {
-        root.__mobileMoreWaitingForLazyProduct = true;
-        const observer = new MutationObserver(() => {
-          if (!document.getElementById("productAllergenCard")) return;
-          observer.disconnect();
-          root.__mobileMoreWaitingForLazyProduct = false;
-          installMoreNavigation();
-        });
-        observer.observe(more, { childList: true, subtree: true });
-      }
-      return;
-    }
+    if (!products) return false;
 
     more.dataset.mobileMore = "true";
 
@@ -306,17 +286,9 @@
       });
     });
 
-    if (typeof showView === "function" && !root.__mobileMoreShowViewWrapped) {
-      root.__mobileMoreShowViewWrapped = true;
-      const baseShowView = showView;
-      showView = function mobileMoreShowView(id, ...args) {
-        const result = baseShowView.call(this, id, ...args);
-        if (id === "more") showMenu();
-        return result;
-      };
-    }
-
+    root.__mobileMoreShowMenu = showMenu;
     showMenu();
+    return true;
   }
 
   function installMobileBeikostMore() {
@@ -326,6 +298,17 @@
     installFoodDetailScreen();
     installMoreNavigation();
   }
+
+  root.MobileUiLifecycle.onRender("foods", () => {
+    decorateFoodRows();
+    syncGroupedFilterVisibility();
+  });
+  root.MobileUiLifecycle.onRender("prep", syncGroupedFilterVisibility);
+  root.MobileUiLifecycle.onViewChange(({ viewId }) => {
+    if (viewId !== "more") return;
+    installMoreNavigation();
+    root.__mobileMoreShowMenu?.();
+  });
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", () => {

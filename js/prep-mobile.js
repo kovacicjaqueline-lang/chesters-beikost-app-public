@@ -7,7 +7,7 @@
 (function mobilePrepModule(root) {
   if (typeof document === "undefined") return;
   if (root.__mobilePrepInstalled) return;
-  if (typeof renderPrep !== "function") return;
+  if (typeof renderPrep !== "function" || !root.MobileUiLifecycle?.onRender) return;
 
   root.__mobilePrepInstalled = true;
   let activePanel = "prepare";
@@ -316,15 +316,14 @@
   installPrepMarkup();
   bindSegments();
 
-  const baseRenderPrep = renderPrep;
-  renderPrep = function mobilePrepRender() {
-    const result = baseRenderPrep.apply(this, arguments);
+  function enhanceMobilePrep() {
     organizePrepTasks();
     updatePrepSummary();
     groupShoppingRows();
     decorateInventory();
     compactIdeaRows();
     applyPanelState();
-    return result;
-  };
+  }
+
+  root.MobileUiLifecycle.onRender("prep", enhanceMobilePrep);
 })(typeof globalThis !== "undefined" ? globalThis : window);

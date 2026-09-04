@@ -63,6 +63,7 @@ try {
   await page.waitForFunction(() => typeof window.installRecipeV2ComponentOptions === "function");
   await page.waitForFunction(() => !!window.__beikostTest?.openManualMealSelector);
   await page.waitForFunction(() => window.__mealEditorRecipeVariantsInstalled === true);
+  await page.waitForFunction(() => recipeByName("Obst-Reisbrei")?.oneOf?.includes("Brombeere"));
 
   const runtime = await page.evaluate(() => {
     const ids = (names) => names.map((name) => foodByName(name, FOOD_DB)?.id || `missing:${name}`);

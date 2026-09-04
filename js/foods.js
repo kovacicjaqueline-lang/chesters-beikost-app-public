@@ -492,6 +492,7 @@ function renderFoods() {
     record.updatedAt = new Date().toISOString();
     save(); renderAll();
   });
+  globalThis.MobileUiLifecycle?.afterRender("foods");
 }
 
 function showFoodInfo(f) {

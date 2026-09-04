@@ -129,7 +129,8 @@ test("Tagesauswahl bleibt innerhalb der sichtbaren Woche und fällt auf Heute od
 
 test("Mobile-Plan bleibt lazy, wird als letzte Plan-UI-Erweiterung geladen und nutzt planspezifische Styles", () => {
   assert.match(loader, /plan-mobile-ui\.js/);
-  assert.match(source, /baseRenderPlanCore/);
+  assert.match(source, /MobileUiLifecycle\.onRender\("plan", enhanceMobilePlan\)/);
+  assert.doesNotMatch(source, /baseRenderPlanCore|renderPlanCore\s*=/);
   assert.match(source, /applySelectedDay/);
   assert.match(source, /plan-week-overview/);
   assert.match(source, /plan-secondary-actions/);

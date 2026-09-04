@@ -51,7 +51,7 @@ const browser = await webkit.launch();
 try {
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 },
-    deviceScaleFactor: 2,
+    deviceScaleFactor: 3,
     isMobile: true,
     hasTouch: true,
   });
@@ -111,6 +111,31 @@ try {
   assert.equal(compactSize.wrapperHeight, 25, "kompakter FOOD-Wrapper muss tatsächlich 25px hoch rendern");
   assert.equal(compactSize.assetWidth, 25, "kompaktes FOOD-Asset muss tatsächlich 25px breit rendern");
   assert.equal(compactSize.assetHeight, 25, "kompaktes FOOD-Asset muss tatsächlich 25px hoch rendern");
+
+  await page.locator("#foodsCatalogSection .foodcard .foodInfo").first().click();
+  const detailIcon = page.locator(".food-detail-hero-icon");
+  await detailIcon.waitFor({ state: "visible" });
+
+  const detailSize = await detailIcon.evaluate((wrapper) => {
+    const asset = wrapper.querySelector(".food-illustration");
+    const wrapperRect = wrapper.getBoundingClientRect();
+    const assetRect = asset?.getBoundingClientRect();
+    return {
+      wrapperWidth: wrapperRect.width,
+      wrapperHeight: wrapperRect.height,
+      assetWidth: assetRect?.width ?? 0,
+      assetHeight: assetRect?.height ?? 0,
+      token: getComputedStyle(wrapper).getPropertyValue("--icon-food").trim(),
+      deviceScaleFactor: window.devicePixelRatio,
+    };
+  });
+
+  assert.equal(detailSize.token, "96px", "FOOD-Detail muss die verbindliche 96px-Darstellung behalten");
+  assert.equal(detailSize.wrapperWidth, 96, "FOOD-Detail-Wrapper muss tatsächlich 96px breit rendern");
+  assert.equal(detailSize.wrapperHeight, 96, "FOOD-Detail-Wrapper muss tatsächlich 96px hoch rendern");
+  assert.equal(detailSize.assetWidth, 96, "FOOD-Detail-Asset muss tatsächlich 96px breit rendern");
+  assert.equal(detailSize.assetHeight, 96, "FOOD-Detail-Asset muss tatsächlich 96px hoch rendern");
+  assert.equal(detailSize.deviceScaleFactor, 3, "FOOD-Detail-Regression muss auch einen 3×-Viewport prüfen");
 
   await context.close();
 } finally {

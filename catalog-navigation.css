@@ -59,6 +59,27 @@
   height: var(--icon-food);
 }
 
+/* FOOD-Detail: Die verbindliche 96px-Hierarchie wird zentral über CSS gesteuert. */
+.food-detail-hero {
+  --food-detail-icon-size: 96px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--food-detail-icon-size);
+  gap: 14px;
+  align-items: start;
+  min-height: var(--food-detail-icon-size);
+  margin-bottom: 4px;
+}
+
+.food-detail-hero-icon {
+  --icon-food: var(--food-detail-icon-size);
+  width: var(--food-detail-icon-size);
+  height: var(--food-detail-icon-size);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
 /* NAV-B: kompakte Navigation in einem stabilen Viewport-Shell.
  * iOS 26 kann fixed/sticky Elemente in Standalone-PWAs beim Scrollen sichtbar
  * versetzen. Deshalb scrollt nur noch <main>; die Navigation selbst wird absolut

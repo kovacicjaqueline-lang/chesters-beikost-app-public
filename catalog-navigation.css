@@ -271,10 +271,11 @@ body.mobile-foundation .today-focus-meal {
 
 body.mobile-foundation #todayCard .today-focus-meal > .mealbox {
   margin: 0 !important;
-  padding: 14px !important;
+  padding: 0 !important;
   border: 0 !important;
-  border-radius: 16px;
-  background: var(--accent2) !important;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none !important;
 }
 
 body.mobile-foundation #todayCard .today-focus-meal .logMeal,

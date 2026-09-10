@@ -1,213 +1,289 @@
-# FOOD Handling – Orale Verarbeitungsdimension
+# FOOD Handling – Bite Separation und orale Verarbeitung
 
-Stand: 2026-08-20  
-Status: fachlich freigegeben und für alle 103 Laufzeitrezepte einzeln auditiert  
+Stand: 2026-08-22  
+Status: fachlich freigegeben; 103 Bestandsrezepte gezielt reauditiert und zwei neue graded-bite-Referenzrezepte ergänzt  
 Bezug: `docs/FOOD_HANDLING_READINESS_TECHNICAL_DESIGN.md` und `docs/PLANNER_FACHKONZEPT.md`
 
 ## Zweck
 
-Der Handling-Contract trennt Darreichungsformen von der oralen Verarbeitung eines tatsächlich abgetrennten Bissens.
+Der Contract trennt bei einer konkreten Rezept-/Servierform vier unabhängige Fragen:
 
-Für jede konkrete Rezept-/Servierform werden drei Dimensionen unabhängig bewertet:
+1. **Handlingmodus** – wie wird das Food aufgenommen beziehungsweise angeboten?
+2. **Bite Separation** – wie anspruchsvoll ist es, aus einem größeren zusammenhängenden Fingerfood einen beherrschbaren Bissen abzutrennen?
+3. **Oral Processing** – was verlangt der bereits abgetrennte Bissen im Mund?
+4. **Beobachtete Capability** – nur wenn die konkrete Form tatsächlich eine zusätzliche Fähigkeit voraussetzt.
 
-1. **Handlingmodus** – z. B. `spoon-mashed`, `spoon-soft-lumpy`, `finger-graspable`, `finger-small-soft`.
-2. **Orales Verarbeitungsprofil** – `soft-breakdown`, `easy-bite-separate`, `structured-chew-required`.
-3. **Zusätzliche Fähigkeit**, aber nur wenn der konkrete Fall sie wirklich benötigt.
+Diese Dimensionen sind orthogonal. Weder Rezeptkategorie noch `stage`, `minMonths`, Backmethode, Fingerfood-Label, Zwei-Finger-Test oder eine andere Capability darf eine Einstufung automatisch erzeugen.
 
-Weder Rezeptkategorie noch `stage`, `minMonths`, Backmethode oder Zwei-Finger-Test erzeugen automatisch ein späteres Gate.
+Insbesondere gilt:
 
-## 1. Orale Profile
+- `graded-bite` => **nicht** automatisch `structured-chew`;
+- `structured-chew` => **nicht** automatisch `graded-bite`;
+- Zähne sind keine Voraussetzung für `graded-bite`;
+- Alter bleibt Orientierung, sofern keine eigenständige harte Alters-/Safety-Regel vorliegt.
 
-### `soft-breakdown`
+## 1. Handlingmodus
 
-Der essbare Bissen ist sehr weich beziehungsweise feucht und lässt sich unter leichtem Druck von Zunge, Gaumen, Zahnleisten oder Kiefer weiter zerdrücken beziehungsweise zerfällt leicht.
+Unverändert:
 
-Es bleibt keine relevante zähe, elastische, faserige, trockene oder kompakte Struktur bestehen.
+- `spoon-smooth`
+- `spoon-mashed`
+- `spoon-soft-lumpy`
+- `finger-graspable`
+- `finger-small-soft`
 
-**Folge:** keine zusätzliche orale Capability allein aufgrund dieses Profils.
+`finger-graspable` ist keine spätere Entwicklungsstufe. Ein geeignetes weiches, gut greifbares Fingerfood kann unabhängig von der Löffelkonsistenz angeboten werden.
+
+`finger-small-soft` bezeichnet kleine weiche Einzelstücke. Die dafür bestehende Capability `small-soft-pieces` wird fachlich auf **Aufnehmen und selbst zum Mund führen** begrenzt; sie beschreibt keine separate orale Small-Piece-Fähigkeit.
+
+## 2. Bite Separation
+
+Bite Separation wird nur für zusammenhängende `finger-graspable`-Formen verwendet. Für Löffelkost und bereits einzeln angebotene kleine Stücke ist die Dimension nicht anwendbar.
+
+### `low-resistance-separate`
+
+Die konkrete Form gibt bereits unter sehr geringem Mund-/Kieferdruck nach, kollabiert, quetscht sich ab oder trennt sich sehr leicht. Eine relevante graduierte Steuerung der Bissgröße ist nicht erforderlich.
+
+**Folge:** keine zusätzliche Capability.
 
 ### `easy-bite-separate`
 
-Das zusammenhängende Fingerfood kann leicht abgebissen, abgequetscht oder anderweitig abgetrennt werden. Der abgetrennte Bissen bleibt weich, gut beherrschbar, nicht zäh, nicht elastisch und nicht relevant faserig.
+Ein tatsächliches Abbeißen oder Abquetschen findet statt, die weiche Struktur trennt sich aber zuverlässig unter geringer Belastung. Eine besondere Bite-Capability ist nicht erforderlich.
 
-**Folge:** keine zusätzliche orale Capability. Das bloße Abbeißen ist ausdrücklich kein Grund für eine spätere Freigabe.
+**Folge:** keine zusätzliche Capability.
+
+### `graded-bite-required`
+
+Die konkrete zusammenhängende Form verlangt einen **gezielt dosierten Kieferschluss**, damit ein beherrschbarer Bissen gezielt abgetrennt werden kann. Typischerweise ist sie formstabiler, fester oder zäher als frühe leicht nachgebende Fingerfoods und trennt sich nicht bereits zuverlässig unter geringer Belastung.
+
+**Folge:** zusätzliche Capability `graded-bite`.
+
+`graded-bite` bedeutet **Kontrolle des Kieferschlusses und der Bissgröße**, nicht „kräftiger beißen“.
+
+Beobachtbare Nutzersemantik:
+
+> Mein Kind kann bei einem weichen, aber formstabilen Stück gezielt einen passenden Bissen abtrennen.
+
+Nicht Bestandteil der Capability:
+
+- bestimmtes Alter;
+- bestimmte Zahl von Zähnen;
+- bestimmte absolute Bisskraft;
+- Rotary Chew;
+- Verarbeitung eines danach faserigen/elastischen Bissens;
+- bloßes Zerreißen mit der Hand;
+- zufälliges Abbrechen eines sehr weichen Foods.
+
+Ein späteres `controlled-sustained-bite` wird im aktuellen Rezeptumfang bewusst **nicht** als weitere Capability modelliert.
+
+### Quellenorientierung für `graded-bite`
+
+Die PEAS-Entwicklungstabelle von Alberta Health Services beschreibt bei 9–12 Monaten einen **„graded bite through harder or chewy food“** und nennt dazu härtere beziehungsweise zähere Fingerfoods wie Brot, Pasta, Ei und Fleischformen. Dieselbe Quelle führt weiche frühe Fingerfoods bereits davor separat.
+
+Daraus folgt für die App:
+
+- `graded-bite` ist eine reale, eigenständige orale Fähigkeit;
+- die Quellen nennen **Lebensmittel-/Texturklassen, keine App-Rezeptnamen**;
+- ein Rezept erhält den Gate nur, wenn seine konkrete kanonische Servierform die entsprechende kontrollierte Bissdosierung tatsächlich verlangt;
+- „Muffin“, „Bällchen“, „Brot“, „Pasta“ oder „Fleisch“ allein sind keine Klassifikationsregel.
+
+## 3. Oral Processing nach dem Abtrennen
+
+Diese Dimension beantwortet ausschließlich:
+
+> Was verlangt der bereits abgetrennte essbare Bissen?
+
+### `soft-breakdown`
+
+Der Bissen ist sehr weich beziehungsweise feucht und lässt sich unter leichtem Druck von Zunge, Gaumen, Zahnleisten oder Kiefer weiter zerdrücken beziehungsweise zerfällt leicht.
+
+Es bleibt keine relevante zähe, elastische, faserige, trockene oder kompakte Struktur bestehen.
+
+**Folge:** keine zusätzliche orale Capability.
+
+### `easy-chew`
+
+Der Bissen bleibt als weicher, beherrschbarer Bissen erkennbar zusammenhängend und benötigt einfache Mund-/Kieferarbeit, ist aber nicht relevant zäh, elastisch, faserig, trocken oder dicht-kompakt.
+
+**Folge:** keine zusätzliche orale Capability.
+
+`easy-chew` übernimmt damit den post-separation-Anteil, der zuvor mit `easy-bite-separate` in einer gemeinsamen Oral-Semantik vermischt war.
 
 ### `structured-chew-required`
 
-Nach dem Abtrennen bleibt ein essbarer Bissen mit zusammenhängender, dichter, elastischer oder faseriger Struktur bestehen. Er muss aktiv im Mund positioniert und durch wiederholte Kiefer- und Zungenbewegungen weiter zerkleinert werden, bevor er schluckfähig wird.
+Nach dem Abtrennen bleibt ein zusammenhängender, dichter, elastischer oder faseriger Bissen bestehen. Er muss aktiv im Mund positioniert und durch wiederholte Kiefer- und Zungenbewegungen weiter zerkleinert werden.
 
 **Folge:** zusätzliche Capability `structured-chew`.
 
-`structured-chew-required` ist keine Altersstufe und insbesondere kein verstecktes „ab 10 Monaten“.
+`structured-chew-required` ist keine Altersstufe.
 
-## 2. Entscheidend ist der abgetrennte Bissen
-
-Für die Abgrenzung zählt nicht primär, wie viel Widerstand ein größeres Stück beim ersten Abbeißen bietet.
-
-Entscheidend ist:
-
-> Was passiert mit dem tatsächlich abgetrennten essbaren Bissen im Mund?
-
-Daraus folgen zwei Regeln:
-
-- Widerstand beim Nagen oder Abbeißen ist nicht automatisch `structured-chew-required`.
-- Ein äußerlich weiches Lebensmittel kann trotzdem einen kompakten, elastischen oder faserigen Bissen bilden und dadurch oral anspruchsvoller sein.
-
-Resistive Übungsformen sind durch diesen Contract nicht pauschal freigegeben.
-
-## 3. Verbindliche Prüfkriterien
+## 4. Verbindliche Prüfkriterien
 
 Bei jeder Einzelentscheidung sind mindestens zu prüfen:
 
-1. konkrete Servierform und Geometrie;
-2. Kompressibilität;
-3. Abtrennverhalten;
-4. Verhalten des abgetrennten Bissens;
-5. Feuchtigkeit, Kruste, Haut und harte Kanten;
-6. Geometrie des entstehenden Bissens;
-7. Reproduzierbarkeit aus der konkreten Rezeptur;
-8. unabhängige Safety-, Zutaten-, Allergen-, Alters- und Mahlzeitengates.
+1. konkrete kanonische Servierform und Geometrie;
+2. Kompressibilität beziehungsweise `firmness`;
+3. Kohäsion beziehungsweise `cohesion`;
+4. Feuchtigkeit beziehungsweise `moisture`;
+5. Partikel-/Mischstruktur beziehungsweise `particleStructure`;
+6. Abtrennverhalten und notwendige Dosierung des Kieferschlusses;
+7. Verhalten des abgetrennten Bissens;
+8. Kruste, Haut, harte Kanten, Faserigkeit und Elastizität;
+9. Geometrie des entstehenden Bissens;
+10. Reproduzierbarkeit aus der konkreten Rezeptur;
+11. unabhängige Safety-, Zutaten-, Allergen-, Alters- und Mahlzeitengates.
 
-Der Zwei-Finger-Test bleibt ein nützlicher Sicherheits-/Konsistenzhinweis, reicht aber allein nicht für die orale Einstufung.
+Die vier mechanischen Eigenschaften `firmness`, `cohesion`, `moisture` und `particleStructure` sind Auditmerkmale. Sie erzeugen **keine automatische Regelmaschine** und müssen nicht allein deshalb als Runtime-Felder gespeichert werden.
 
-## 4. Ergebnis des vollständigen Rezept-Audits
+Der Zwei-Finger-Test bleibt ein nützlicher Konsistenzhinweis, reicht aber allein nicht für Bite-/Oral-Einstufungen.
 
-Alle **103 Laufzeitrezepte** wurden einzeln geprüft.
+## 5. Ergebnis des gezielten Bite-Separation-Rechecks
 
-Ergebnis:
+Alle **41 zuvor bestehenden zusammenhängenden `finger-graspable`-Rezepte** wurden für die neue Dimension einzeln anhand ihrer kanonischen Rezeptur und Servierform geprüft.
 
-- **87 Rezepte:** kein zusätzliches späteres Capability-/Form-Gate;
-- **16 Rezepte:** bewusst später wegen konkreter Form, Handling oder oraler Verarbeitung;
-- **0 offene Rezepte**.
+| Bite Separation | Anzahl | zusätzliche Bite-Capability |
+| --- | ---: | --- |
+| `low-resistance-separate` | 13 | keine |
+| `easy-bite-separate` | 28 | keine |
+| `graded-bite-required` | 0 | – |
 
-Die 16 späteren Fälle zerfallen in drei unterschiedliche Gruppen. Diese Gruppen dürfen technisch und fachlich nicht vermischt werden.
+Die 13 `low-resistance-separate`-Fälle sind:
 
-### 4.1 Vier Fälle mit `structured-chew-required`
-
-| Rezept | Handling | Oral | Capability |
-| --- | --- | --- | --- |
-| Rind-Hafer-Bällchen | `finger-graspable` | `structured-chew-required` | `structured-chew` |
-| Baby-Bananenbrot | `finger-graspable` | `structured-chew-required` | `structured-chew` |
-| Weiche Joghurt-Fladen | `finger-graspable` | `structured-chew-required` | `structured-chew` |
-| Huhn-Gemüse-Muffins | `finger-graspable` | `structured-chew-required` | `structured-chew` |
-
-Diese vier Entscheidungen sind Einzelentscheidungen. Sie erzeugen keine Regel wie „Fleisch“, „Brot“ oder „Muffin“ = Structured Chew.
-
-#### Safety-Zusatz Baby-Bananenbrot
-
-Das Bananenbrot muss vollständig durchgebacken und vollständig ausgekühlt sein. Die Krume darf nicht klebrig, teigig oder ballend sein.
-
-Eine klebrig-teigige beziehungsweise ballende Charge ist **kein** „späteres Kaulevel“, sondern ein Safety-Ausschluss und darf nicht angeboten werden.
-
-### 4.2 Drei Fälle mit `finger-small-soft`
-
-| Rezept | Handling | Oral | Capability |
-| --- | --- | --- | --- |
-| Huhn-Zucchini-Nockerl | `finger-small-soft` | `soft-breakdown` | `small-soft-pieces` |
-| Rind-Karotten-Nockerl | `finger-small-soft` | `soft-breakdown` | `small-soft-pieces` |
-| Linsen-Süßkartoffel-Nockerl | `finger-small-soft` | `soft-breakdown` | `small-soft-pieces` |
-
-Die Nockerl bleiben kleine einzelne, längliche, sehr weiche Stücke. Sie dürfen nicht gummiartig, klebrig-gummiartig oder kompakt-elastisch sein.
-
-Der spätere Grund ist die **Handhabung kleiner weicher Einzelstücke**, nicht Structured Chew.
-
-### 4.3 Neun Fälle mit weicher späterer Formorientierung
-
-Diese Rezepte erhalten **keine** zusätzliche orale Capability:
-
-- Gemüse-Nudel-Sauce
-- Baby-Linsen-Bolognese
-- Huhn-Karotte-Nudel-Topf
-- Huhn-Lauch-Kartoffel-Topf
-- Brokkoli-Linsen-Pasta
-- Gemüse-Pasta mit Zucchini und Tomate
-- Ei-Champignon-Cups
-- Tinola-inspiriert
-- Sayote-Huhn-Reis
-
-Bei den weich-stückigen Löffelgerichten bleibt die Stück-/Mischtextur Teil der kanonischen Rezeptidentität. Glatt pürieren ist nicht die Begründung für eine frühe Einstufung, wenn dadurch das eigentliche Gericht verloren geht.
-
-`Ei-Champignon-Cups` bleibt als weiche Cup-Form eine spätere weiche Orientierung, aber ohne `structured-chew`.
-
-## 5. Explizite Gegenbeispiele gegen Kategorienlogik
-
-Folgende einzeln geprüfte Rezepte bleiben ohne zusätzliche orale Capability, obwohl sie zusammenhängende Fingerfoods sind:
-
-- Obst-Hafer-Pancakes
-- Birne-Hirse-Pancakes
-- Gemüse-Hafer-Pancakes
-- Zucchini-Hafer-Pancakes
-- Ube-Bananen-Pancakes
+- Lachs-Kartoffel-Bällchen
+- Rote-Linsen-Gemüsebällchen
+- Tofu-Brokkoli-Bällchen
+- Brokkoli-Kartoffel-Taler
+- Kichererbsen-Kürbis-Taler
+- Süßkartoffel-Hirse-Sticks
 - Omelettstreifen
-- Zucchini-Omelett als breite weiche Streifen
-- Obst-Hafer-Muffins
-- Gemüse-Hafer-Muffins
-- Kürbis-Hirse-Muffins
-- Joghurt-Hafer-Waffeln
-- Gemüse-Joghurt-Mini-Muffins
-- Süßkartoffel-Linsen-Muffins
-- Geflügel-Gemüse-Hafer-Bällchen in der festgelegten flachen/länglichen saftigen Form
-- Fleisch-Gemüse-Bällchen in der festgelegten flachen/länglichen saftigen Form
+- Zucchini-Omelett
+- Bangus-Kartoffel-Taler
+- Paprika-Omelettstreifen
+- Süßkartoffel-Linsen-Taler
+- Gebackene Saba-Banane
+- Bananen-Ei-Pancakes
 
-Damit gilt weiterhin ausdrücklich:
+Die übrigen 28 zuvor bestehenden zusammenhängenden Fingerfoods sind `easy-bite-separate`.
 
-- `Muffin` != Structured Chew
-- `Pancake` != Structured Chew
-- `Bällchen` != Structured Chew
-- `Fleisch` != Structured Chew
-- `gebacken` != Structured Chew
-- `finger-graspable` != „später“
+Im aktuellen **105er Laufzeitkatalog** kommen zwei einzeln geprüfte neue graded-bite-Referenzrezepte hinzu:
 
-## 6. Kanonische Form statt theoretischer Pürierbarkeit
+| Rezept | Bite Separation | Bite-Capability | Oral Processing | Oral-Capability |
+| --- | --- | --- | --- | --- |
+| Pizza Wrap | `graded-bite-required` | `graded-bite` | `easy-chew` | keine |
+| Chicken Fajita Wrap | `graded-bite-required` | `graded-bite` | `structured-chew-required` | `structured-chew` |
 
-Bewertet wird das **beabsichtigte Rezept in seiner kanonischen Form**.
+Damit bleibt die 41er Bestandsmatrix unverändert, während der aktuelle Runtime-Contract **105/105 Rezepte** explizit abdeckt. Die beiden Wrap-Einstufungen sind Einzelentscheidungen aus ihrer konkreten kanonischen Servierform und keine Kategorienregel.
 
-Dass Zutaten theoretisch püriert werden könnten, ist kein Beleg dafür, dass das Rezept selbst früh geeignet ist. Aus Nockerln, Pasta, Muffins, Fladen oder einer weich-stückigen Mischmahlzeit darf nicht durch beliebiges Pürieren ein anderes Gericht gemacht werden, nur um ein früheres Profil zu begründen.
+## 6. Vier Fälle mit unabhängigem Structured-Chew-Gate
 
-Umgekehrt darf eine zusammenhängende Form nicht künstlich nach hinten geschoben werden, wenn ihr tatsächlicher Bissen bereits `easy-bite-separate` oder `soft-breakdown` erfüllt.
+Vier zuvor bestehende Rezepte benötigen weiterhin `structured-chew` für den bereits abgetrennten Bissen, **ohne** deshalb Bite-seitig `graded-bite` zu verlangen:
 
-## 7. Alterssemantik
+| Rezept | Bite Separation | Bite-Capability | Oral Processing | Oral-Capability |
+| --- | --- | --- | --- | --- |
+| Rind-Hafer-Bällchen | `easy-bite-separate` | keine | `structured-chew-required` | `structured-chew` |
+| Baby-Bananenbrot | `easy-bite-separate` | keine | `structured-chew-required` | `structured-chew` |
+| Weiche Joghurt-Fladen | `easy-bite-separate` | keine | `structured-chew-required` | `structured-chew` |
+| Huhn-Gemüse-Muffins | `easy-bite-separate` | keine | `structured-chew-required` | `structured-chew` |
 
-Die orale Dimension erzeugt keine neue Altersleiter.
+Diese vier Fälle sind ein Referenzbeispiel dafür, dass Bite Separation und post-separation Oral Processing unabhängig sind.
 
-- `soft-breakdown` und `easy-bite-separate` können bei allgemeiner Beikostreife geeignet sein.
-- `small-soft-pieces` ist eine konkret beobachtete Handlingfähigkeit, kein Geburtstagsschalter.
-- `structured-chew` ist eine konkret beobachtete orale Fähigkeit, kein Geburtstagsschalter.
-- `minMonths` bleibt eine weiche Orientierung.
-- `hardMinMonths` bleibt ausschließlich unabhängigen echten Altersgründen vorbehalten.
-- Safety wird nie in ein Alters- oder Fähigkeitsgate umgedeutet.
+### Safety-Zusatz Baby-Bananenbrot
 
-## 8. Technischer Contract
+Das Bananenbrot muss vollständig durchgebacken und vollständig ausgekühlt sein. Die Krume darf nicht klebrig, teigig oder ballend sein. Eine solche Fehlcharge ist ein Safety-Ausschluss und darf nicht durch irgendeine Capability freigeschaltet werden.
 
-Die Runtime verwendet für migrierte Rezepte explizite Felder:
+## 7. Drei `finger-small-soft`-Fälle
+
+| Rezept | Handling | Bite Separation | Oral | Capability |
+| --- | --- | --- | --- | --- |
+| Huhn-Zucchini-Nockerl | `finger-small-soft` | nicht anwendbar | `soft-breakdown` | `small-soft-pieces` |
+| Rind-Karotten-Nockerl | `finger-small-soft` | nicht anwendbar | `soft-breakdown` | `small-soft-pieces` |
+| Linsen-Süßkartoffel-Nockerl | `finger-small-soft` | nicht anwendbar | `soft-breakdown` | `small-soft-pieces` |
+
+Die kanonische Form bleibt bewusst **kleine einzelne, längliche, sehr weiche Nockerl**. Der spätere Grund ist Aufnehmen/Selbstfüttern, nicht Bite Separation oder Structured Chew.
+
+## 8. Hummus mit weichen Gemüsesticks
+
+„Weich“ ist eine **mechanische Eigenschaft**, keine Zubereitungsmethode.
+
+Für die kanonische Stickform gilt deshalb:
+
+- in der tatsächlich angebotenen Form mechanisch weich;
+- sicher greifbar;
+- keine harten, zähen oder spröden Bissen;
+- roh **oder** gegart möglich, sofern die konkrete Form diese Kriterien erfüllt.
+
+Eine rohe und eine gegarte Form dürfen nicht allein aufgrund der Zubereitungsart unterschiedlich eingestuft werden; entscheidend ist das reale mechanische Verhalten.
+
+## 9. Mischtexturen und weitere mögliche Fähigkeiten
+
+Für Mischtexturen wird derzeit **keine** eigene harte Capability eingeführt.
+
+`spoon-soft-lumpy`, tatsächliche Partikel-/Mischstruktur und das Oral-Profil reichen im aktuellen Katalog aus. Zungenlateralisierung bleibt ein Review-Kriterium, aber kein eigenes Nutzer-Boolean.
+
+Ebenso wird keine zusätzliche orale `small-piece`-Capability eingeführt.
+
+## 10. Alters- und Zahnsemantik
+
+- `minMonths` bleibt eine weiche Altersorientierung.
+- `hardMinMonths` bleibt echten unabhängigen Alters-/Safety-Gründen vorbehalten.
+- Eine höhere Quellenaltersangabe ist Review-Signal, kein automatisches Gate.
+- Bite-/Oral-Capabilities werden nur aus beobachtbaren Fähigkeiten bestätigt.
+- **Zahl oder Vorhandensein von Zähnen ist kein Capability-Gate.**
+
+## 11. Technischer Contract
+
+Beispiel ohne zusätzliche Capability:
 
 ```js
 {
   modes: ["finger-graspable"],
+  biteSeparation: "easy-bite-separate",
+  oralProcessing: "easy-chew"
+}
+```
+
+Beispiel nur mit Bite-Capability:
+
+```js
+{
+  modes: ["finger-graspable"],
+  biteSeparation: "graded-bite-required",
+  biteRequiredCapability: "graded-bite",
+  oralProcessing: "easy-chew"
+}
+```
+
+Beispiel nur mit Structured Chew:
+
+```js
+{
+  modes: ["finger-graspable"],
+  biteSeparation: "easy-bite-separate",
   oralProcessing: "structured-chew-required",
   oralRequiredCapability: "structured-chew"
 }
 ```
 
-Für kleine weiche Stücke bleibt die Capability handlingbezogen:
+Beispiel mit beiden unabhängigen Capabilities:
 
 ```js
 {
-  modes: ["finger-small-soft"],
-  oralProcessing: "soft-breakdown",
-  requiredCapabilities: {
-    "finger-small-soft": "small-soft-pieces"
-  }
+  modes: ["finger-graspable"],
+  biteSeparation: "graded-bite-required",
+  biteRequiredCapability: "graded-bite",
+  oralProcessing: "structured-chew-required",
+  oralRequiredCapability: "structured-chew"
 }
 ```
 
-Die beiden Fähigkeiten werden unabhängig gespeichert:
+Die Fähigkeiten werden unabhängig gespeichert:
 
 ```js
 handlingCapabilities: {
   smallSoftPieces: false,
+  gradedBite: false,
   structuredChew: false
 }
 ```
 
-Fehlende Altwerte werden konservativ als `false` behandelt. Keine Fähigkeit wird aus Alter, `textureStage`, Rezeptkategorie oder Feeding-Präferenz abgeleitet.
+Fehlende Altwerte werden konservativ als `false` normalisiert. Keine Fähigkeit wird aus Alter, `textureStage`, Rezeptkategorie, Feeding-Präferenz oder einer anderen Fähigkeit abgeleitet.

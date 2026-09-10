@@ -9,6 +9,7 @@ const vm = require("node:vm");
 const root = path.resolve(__dirname, "..");
 const {
   HANDLING_MODES,
+  BITE_SEPARATION_PROFILES,
   ORAL_PROCESSING_PROFILES,
   HANDLING_CAPABILITIES,
   FOOD_HANDLING_CONTRACT,
@@ -55,10 +56,21 @@ function settings(overrides = {}) {
     feedingApproach: "mixed",
     handlingCapabilities: {
       smallSoftPieces: false,
+      gradedBite: false,
       structuredChew: false,
     },
     ...overrides,
   };
+}
+
+function auditedLegacyFingerNames() {
+  return [
+    ...RECIPE_CONTRACT_GROUPS.fingerLowResistance,
+    ...RECIPE_CONTRACT_GROUPS.fingerEasySoft,
+    ...RECIPE_CONTRACT_GROUPS.fingerEasyChew,
+    ...RECIPE_CONTRACT_GROUPS.fingerEasyStructured,
+    ...RECIPE_CONTRACT_GROUPS.fingerEasyLater,
+  ];
 }
 
 test("HANDLING: Beikostform ist Präferenz mit migrationssicherem mixed-Fallback", () => {
@@ -88,26 +100,63 @@ test("HANDLING: feedingApproach sortiert nur Präferenzen und entfernt keine sic
   ]);
 });
 
-test("HANDLING: alle 103 Laufzeitrezepte sind explizit und genau einmal migriert", () => {
+test("HANDLING: alle 105 Laufzeitrezepte sind explizit und genau einmal migriert", () => {
   const runtimeNames = runtimeRecipeNames();
   const contractNames = Object.keys(RECIPE_HANDLING_CONTRACT);
   const grouped = Object.values(RECIPE_CONTRACT_GROUPS).flat();
-  assert.equal(runtimeNames.length, 103);
-  assert.equal(contractNames.length, 103);
-  assert.equal(new Set(grouped).size, 103, "Contract-Gruppen dürfen sich nicht überlappen");
+  assert.equal(runtimeNames.length, 105);
+  assert.equal(contractNames.length, 105);
+  assert.equal(new Set(grouped).size, 105, "Contract-Gruppen dürfen sich nicht überlappen");
   assert.deepEqual([...contractNames].sort(), [...runtimeNames].sort());
   assert.deepEqual([...grouped].sort(), [...runtimeNames].sort());
 });
 
-test("HANDLING: Auditmatrix bleibt 87 ohne Extra-Gate und 16 bewusst später", () => {
+test("HANDLING: bestehende 103er Auditmatrix bleibt erhalten und zwei graded-bite-Fälle kommen explizit hinzu", () => {
   const entries = Object.values(RECIPE_HANDLING_CONTRACT);
   assert.equal(entries.filter((entry) => !entry.laterKind).length, 87);
   assert.equal(entries.filter((entry) => entry.laterKind === "oral-capability").length, 4);
   assert.equal(entries.filter((entry) => entry.laterKind === "handling-capability").length, 3);
   assert.equal(entries.filter((entry) => entry.laterKind === "soft-orientation").length, 9);
+  assert.equal(entries.filter((entry) => entry.laterKind === "bite-capability").length, 1);
+  assert.equal(entries.filter((entry) => entry.laterKind === "bite-oral-capability").length, 1);
 });
 
-test("ORAL: genau vier Rezepte verlangen strukturiertes Kauen", () => {
+test("BITE: bestehende 41 greifbare Fingerfoods bleiben 13 low-resistance, 28 easy-bite und 0 graded-bite", () => {
+  const legacyNames = auditedLegacyFingerNames();
+  const fingerEntries = legacyNames.map((name) => [name, RECIPE_HANDLING_CONTRACT[name]]);
+  assert.equal(fingerEntries.length, 41);
+  assert.equal(
+    fingerEntries.filter(([, entry]) => entry.biteSeparation === BITE_SEPARATION_PROFILES.LOW_RESISTANCE_SEPARATE).length,
+    13,
+  );
+  assert.equal(
+    fingerEntries.filter(([, entry]) => entry.biteSeparation === BITE_SEPARATION_PROFILES.EASY_BITE_SEPARATE).length,
+    28,
+  );
+  assert.equal(
+    fingerEntries.filter(([, entry]) => entry.biteSeparation === BITE_SEPARATION_PROFILES.GRADED_BITE_REQUIRED).length,
+    0,
+  );
+});
+
+test("ORAL: bestehende 41er Matrix ist 18 soft-breakdown, 19 easy-chew und 4 structured-chew", () => {
+  const entries = auditedLegacyFingerNames().map((name) => RECIPE_HANDLING_CONTRACT[name]);
+  assert.equal(entries.filter((entry) => entry.oralProcessing === ORAL_PROCESSING_PROFILES.SOFT_BREAKDOWN).length, 18);
+  assert.equal(entries.filter((entry) => entry.oralProcessing === ORAL_PROCESSING_PROFILES.EASY_CHEW).length, 19);
+  assert.equal(entries.filter((entry) => entry.oralProcessing === ORAL_PROCESSING_PROFILES.STRUCTURED_CHEW_REQUIRED).length, 4);
+  assert.equal(RECIPE_HANDLING_CONTRACT["Omelettstreifen"].oralProcessing, ORAL_PROCESSING_PROFILES.SOFT_BREAKDOWN);
+  assert.equal(RECIPE_HANDLING_CONTRACT["Geflügel-Gemüse-Hafer-Bällchen"].oralProcessing, ORAL_PROCESSING_PROFILES.SOFT_BREAKDOWN);
+  assert.equal(RECIPE_HANDLING_CONTRACT["Obst-Hafer-Pancakes"].oralProcessing, ORAL_PROCESSING_PROFILES.EASY_CHEW);
+});
+
+test("ORAL: easy-chew ist post-separation und die alte Mischsemantik ist kein Oral-Profil mehr", () => {
+  assert.equal(ORAL_PROCESSING_PROFILES.EASY_CHEW, "easy-chew");
+  assert.equal(ORAL_PROCESSING_PROFILES.EASY_BITE_SEPARATE, undefined);
+  assert.equal(RECIPE_HANDLING_CONTRACT["Obst-Hafer-Pancakes"].oralProcessing, ORAL_PROCESSING_PROFILES.EASY_CHEW);
+  assert.equal(RECIPE_HANDLING_CONTRACT["Omelettstreifen"].biteSeparation, BITE_SEPARATION_PROFILES.LOW_RESISTANCE_SEPARATE);
+});
+
+test("BITE/ORAL: vier bisherige strukturierte Rezepte bleiben bite-seitig easy und verlangen nur structured-chew", () => {
   const expected = [
     "Rind-Hafer-Bällchen",
     "Baby-Bananenbrot",
@@ -115,37 +164,141 @@ test("ORAL: genau vier Rezepte verlangen strukturiertes Kauen", () => {
     "Huhn-Gemüse-Muffins",
   ].sort();
   const actual = Object.entries(RECIPE_HANDLING_CONTRACT)
-    .filter(([, entry]) => entry.oralRequiredCapability === HANDLING_CAPABILITIES.STRUCTURED_CHEW)
+    .filter(([, entry]) =>
+      entry.oralRequiredCapability === HANDLING_CAPABILITIES.STRUCTURED_CHEW &&
+      entry.biteSeparation === BITE_SEPARATION_PROFILES.EASY_BITE_SEPARATE
+    )
     .map(([name]) => name)
     .sort();
   assert.deepEqual(actual, expected);
   for (const name of expected) {
     const entry = RECIPE_HANDLING_CONTRACT[name];
+    assert.equal(entry.biteSeparation, BITE_SEPARATION_PROFILES.EASY_BITE_SEPARATE, name);
+    assert.equal(entry.biteRequiredCapability, undefined, name);
     assert.equal(entry.oralProcessing, ORAL_PROCESSING_PROFILES.STRUCTURED_CHEW_REQUIRED, name);
-    assert.deepEqual([...entry.modes], [HANDLING_MODES.FINGER_GRASPABLE], name);
+    assert.equal(entry.oralRequiredCapability, HANDLING_CAPABILITIES.STRUCTURED_CHEW, name);
   }
 });
 
-test("ORAL: structured-chew bleibt gesperrt bis genau diese Fähigkeit bestätigt ist", () => {
+test("BITE: graded-bite ist eine eigenständige beobachtete Capability", () => {
+  const synthetic = {
+    "Formstabiler Test-Bite": {
+      modes: [HANDLING_MODES.FINGER_GRASPABLE],
+      biteSeparation: BITE_SEPARATION_PROFILES.GRADED_BITE_REQUIRED,
+      biteRequiredCapability: HANDLING_CAPABILITIES.GRADED_BITE,
+      oralProcessing: ORAL_PROCESSING_PROFILES.EASY_CHEW,
+    },
+  };
+  const recipe = { name: "Formstabiler Test-Bite" };
+  const blocked = recipeHandlingEligibility(recipe, settings(), synthetic);
+  assert.deepEqual(blocked.eligibleModes, []);
+  assert.deepEqual(blocked.blockedReasons, ["bite-separation-requirement"]);
+  assert.equal(blocked.biteCapabilitySatisfied, false);
+
+  const ready = recipeHandlingEligibility(
+    recipe,
+    settings({ handlingCapabilities: { smallSoftPieces: false, gradedBite: true, structuredChew: false } }),
+    synthetic,
+  );
+  assert.deepEqual(ready.eligibleModes, [HANDLING_MODES.FINGER_GRASPABLE]);
+  assert.equal(ready.biteCapabilitySatisfied, true);
+});
+
+test("BITE/ORAL: graded-bite und structured-chew entsperren sich nicht gegenseitig", () => {
+  const synthetic = {
+    "Zwei Capabilities": {
+      modes: [HANDLING_MODES.FINGER_GRASPABLE],
+      biteSeparation: BITE_SEPARATION_PROFILES.GRADED_BITE_REQUIRED,
+      biteRequiredCapability: HANDLING_CAPABILITIES.GRADED_BITE,
+      oralProcessing: ORAL_PROCESSING_PROFILES.STRUCTURED_CHEW_REQUIRED,
+      oralRequiredCapability: HANDLING_CAPABILITIES.STRUCTURED_CHEW,
+    },
+  };
+  const recipe = { name: "Zwei Capabilities" };
+  assert.deepEqual(
+    recipeHandlingEligibility(recipe, settings(), synthetic).blockedReasons,
+    ["bite-separation-requirement", "oral-processing-requirement"],
+  );
+  assert.deepEqual(
+    recipeHandlingEligibility(
+      recipe,
+      settings({ handlingCapabilities: { smallSoftPieces: false, gradedBite: true, structuredChew: false } }),
+      synthetic,
+    ).blockedReasons,
+    ["oral-processing-requirement"],
+  );
+  assert.deepEqual(
+    recipeHandlingEligibility(
+      recipe,
+      settings({ handlingCapabilities: { smallSoftPieces: false, gradedBite: false, structuredChew: true } }),
+      synthetic,
+    ).blockedReasons,
+    ["bite-separation-requirement"],
+  );
+});
+
+test("BITE/ORAL: Pizza Wrap ist graded plus easy-chew; Chicken Fajita Wrap graded plus structured-chew", () => {
+  const pizza = RECIPE_HANDLING_CONTRACT["Pizza Wrap"];
+  assert.equal(pizza.biteSeparation, BITE_SEPARATION_PROFILES.GRADED_BITE_REQUIRED);
+  assert.equal(pizza.biteRequiredCapability, HANDLING_CAPABILITIES.GRADED_BITE);
+  assert.equal(pizza.oralProcessing, ORAL_PROCESSING_PROFILES.EASY_CHEW);
+  assert.equal(pizza.oralRequiredCapability, undefined);
+  assert.match(pizza.servingRequirement, /harte, trockene oder spröde Ränder vermeiden/i);
+
+  const chicken = RECIPE_HANDLING_CONTRACT["Chicken Fajita Wrap"];
+  assert.equal(chicken.biteSeparation, BITE_SEPARATION_PROFILES.GRADED_BITE_REQUIRED);
+  assert.equal(chicken.biteRequiredCapability, HANDLING_CAPABILITIES.GRADED_BITE);
+  assert.equal(chicken.oralProcessing, ORAL_PROCESSING_PROFILES.STRUCTURED_CHEW_REQUIRED);
+  assert.equal(chicken.oralRequiredCapability, HANDLING_CAPABILITIES.STRUCTURED_CHEW);
+  assert.match(chicken.servingRequirement, /Hühnerfasern/i);
+
+  assert.deepEqual(
+    recipeHandlingEligibility({ name: "Pizza Wrap" }, settings(), RECIPE_HANDLING_CONTRACT).blockedReasons,
+    ["bite-separation-requirement"],
+  );
+  assert.deepEqual(
+    recipeHandlingEligibility(
+      { name: "Pizza Wrap" },
+      settings({ handlingCapabilities: { smallSoftPieces: false, gradedBite: true, structuredChew: false } }),
+      RECIPE_HANDLING_CONTRACT,
+    ).blockedReasons,
+    [],
+  );
+  assert.deepEqual(
+    recipeHandlingEligibility({ name: "Chicken Fajita Wrap" }, settings(), RECIPE_HANDLING_CONTRACT).blockedReasons,
+    ["bite-separation-requirement", "oral-processing-requirement"],
+  );
+  assert.deepEqual(
+    recipeHandlingEligibility(
+      { name: "Chicken Fajita Wrap" },
+      settings({ handlingCapabilities: { smallSoftPieces: false, gradedBite: true, structuredChew: true } }),
+      RECIPE_HANDLING_CONTRACT,
+    ).blockedReasons,
+    [],
+  );
+});
+
+test("BITE/ORAL: Baby-Bananenbrot hängt nur am post-separation structured-chew-Gate", () => {
   const recipe = { name: "Baby-Bananenbrot", stage: 3 };
   const blocked = recipeHandlingEligibility(recipe, settings(), RECIPE_HANDLING_CONTRACT);
   assert.deepEqual(blocked.eligibleModes, []);
   assert.deepEqual(blocked.blockedReasons, ["oral-processing-requirement"]);
-  assert.equal(blocked.oralProcessing, ORAL_PROCESSING_PROFILES.STRUCTURED_CHEW_REQUIRED);
 
-  const wrongCapability = recipeHandlingEligibility(
+  const gradedOnly = recipeHandlingEligibility(
     recipe,
-    settings({ handlingCapabilities: { smallSoftPieces: true, structuredChew: false } }),
+    settings({ handlingCapabilities: { smallSoftPieces: false, gradedBite: true, structuredChew: false } }),
     RECIPE_HANDLING_CONTRACT,
   );
-  assert.deepEqual(wrongCapability.eligibleModes, []);
+  assert.deepEqual(gradedOnly.eligibleModes, []);
+  assert.deepEqual(gradedOnly.blockedReasons, ["oral-processing-requirement"]);
 
   const ready = recipeHandlingEligibility(
     recipe,
-    settings({ handlingCapabilities: { smallSoftPieces: false, structuredChew: true } }),
+    settings({ handlingCapabilities: { smallSoftPieces: false, gradedBite: false, structuredChew: true } }),
     RECIPE_HANDLING_CONTRACT,
   );
   assert.deepEqual(ready.eligibleModes, [HANDLING_MODES.FINGER_GRASPABLE]);
+  assert.deepEqual(ready.blockedReasons, []);
 });
 
 test("HANDLING: genau drei Nockerl verlangen small-soft-pieces und bleiben oral soft-breakdown", () => {
@@ -163,6 +316,7 @@ test("HANDLING: genau drei Nockerl verlangen small-soft-pieces und bleiben oral 
   assert.deepEqual(actual, expected);
   for (const name of expected) {
     const entry = RECIPE_HANDLING_CONTRACT[name];
+    assert.equal(entry.biteSeparation, undefined, name);
     assert.equal(entry.oralProcessing, ORAL_PROCESSING_PROFILES.SOFT_BREAKDOWN, name);
     assert.deepEqual([...entry.modes], [HANDLING_MODES.FINGER_SMALL_SOFT], name);
   }
@@ -170,14 +324,11 @@ test("HANDLING: genau drei Nockerl verlangen small-soft-pieces und bleiben oral 
 
 test("HANDLING: Nockerl werden nur durch small-soft-pieces freigeschaltet", () => {
   const recipe = { name: "Huhn-Zucchini-Nockerl", stage: 3 };
-  assert.deepEqual(
-    recipeHandlingEligibility(recipe, settings(), RECIPE_HANDLING_CONTRACT).eligibleModes,
-    [],
-  );
+  assert.deepEqual(recipeHandlingEligibility(recipe, settings(), RECIPE_HANDLING_CONTRACT).eligibleModes, []);
   assert.deepEqual(
     recipeHandlingEligibility(
       recipe,
-      settings({ handlingCapabilities: { smallSoftPieces: false, structuredChew: true } }),
+      settings({ handlingCapabilities: { smallSoftPieces: false, gradedBite: true, structuredChew: true } }),
       RECIPE_HANDLING_CONTRACT,
     ).eligibleModes,
     [],
@@ -185,14 +336,14 @@ test("HANDLING: Nockerl werden nur durch small-soft-pieces freigeschaltet", () =
   assert.deepEqual(
     recipeHandlingEligibility(
       recipe,
-      settings({ handlingCapabilities: { smallSoftPieces: true, structuredChew: false } }),
+      settings({ handlingCapabilities: { smallSoftPieces: true, gradedBite: false, structuredChew: false } }),
       RECIPE_HANDLING_CONTRACT,
     ).eligibleModes,
     [HANDLING_MODES.FINGER_SMALL_SOFT],
   );
 });
 
-test("HANDLING: neun Formfälle bleiben soft-orientation statt künstlicher Oral-Capability", () => {
+test("HANDLING: neun Formfälle bleiben soft-orientation statt künstlicher Capability", () => {
   const expected = [
     "Gemüse-Nudel-Sauce",
     "Baby-Linsen-Bolognese",
@@ -211,6 +362,7 @@ test("HANDLING: neun Formfälle bleiben soft-orientation statt künstlicher Oral
   assert.deepEqual(actual, expected);
   for (const name of expected) {
     const entry = RECIPE_HANDLING_CONTRACT[name];
+    assert.equal(entry.biteRequiredCapability, undefined, name);
     assert.equal(entry.oralRequiredCapability, undefined, name);
   }
 });
@@ -224,7 +376,7 @@ test("HANDLING: weich-stückige kanonische Löffelformen hängen an Textur, nich
   assert.deepEqual(ready.eligibleModes, [HANDLING_MODES.SPOON_SOFT_LUMPY]);
 });
 
-test("HANDLING: frühe Referenzfälle und neu geprüfte weiche Formen verlieren die historische Stage-Sperre", () => {
+test("HANDLING: frühe Referenzfälle verlieren die historische Stage-Sperre", () => {
   for (const name of [
     "Obst-Hafer-Pancakes",
     "Omelettstreifen",
@@ -254,40 +406,45 @@ test("HANDLING: synthetisches unmigriertes Rezept behält explizit den Legacy-St
 });
 
 test("HANDLING: Karotte kann früh parallel Löffel- und greifbare Form anbieten", () => {
-  const result = foodHandlingEligibility(
-    "karotte",
-    settings(),
-    FOOD_HANDLING_CONTRACT,
-  );
+  const result = foodHandlingEligibility("karotte", settings(), FOOD_HANDLING_CONTRACT);
   assert.equal(result.migrated, true);
   assert.ok(result.eligibleModes.includes(HANDLING_MODES.SPOON_SMOOTH));
   assert.ok(result.eligibleModes.includes(HANDLING_MODES.SPOON_MASHED));
   assert.ok(result.eligibleModes.includes(HANDLING_MODES.FINGER_GRASPABLE));
 });
 
-test("HANDLING: Capability-Fallback ist migrationssicher false/false", () => {
+test("HANDLING: Capability-Fallback ist migrationssicher false/false/false", () => {
   const target = {};
   assert.deepEqual(normalizeHandlingCapabilities(target), {
     smallSoftPieces: false,
+    gradedBite: false,
     structuredChew: false,
   });
   assert.deepEqual(target.handlingCapabilities, {
     smallSoftPieces: false,
+    gradedBite: false,
     structuredChew: false,
   });
 });
 
-test("SAFETY: Bananenbrot bleibt trotz späterer Capability bei klebrig-teigiger Krume ausgeschlossen", () => {
+test("SAFETY: Bananenbrot bleibt trotz Capability bei klebrig-teigiger Krume ausgeschlossen", () => {
   const contract = RECIPE_HANDLING_CONTRACT["Baby-Bananenbrot"];
   assert.match(contract.servingRequirement, /nicht klebrig, teigig oder ballend/i);
   assert.match(contract.servingRequirement, /nicht anbieten/i);
   assert.match(contract.noteOverride, /vollständig auskühlen/i);
 });
 
-test("FORM: Zucchini-Omelett hat wieder eine eindeutige kanonische breite Streifenform", () => {
+test("FORM: Zucchini-Omelett hat eine eindeutige kanonische breite Streifenform", () => {
   const contract = RECIPE_HANDLING_CONTRACT["Zucchini-Omelett"];
   assert.match(contract.noteOverride, /breite, gut greifbare Streifen/i);
   assert.match(contract.noteOverride, /Kleine Stücke sind eine separate/i);
+});
+
+test("FORM: Hummus-Sticks definieren weich mechanisch statt als Kochmethode", () => {
+  const contract = RECIPE_HANDLING_CONTRACT["Hummus mit weichen Gemüsesticks"];
+  assert.match(contract.servingRequirement, /mechanisch weich/i);
+  assert.match(contract.servingRequirement, /roh oder gegart/i);
+  assert.doesNotMatch(contract.servingRequirement, /Gemüsesticks müssen gegart/i);
 });
 
 test("HANDLING: Steuerlogik parst keine safeForm-/note-Freitexte", () => {

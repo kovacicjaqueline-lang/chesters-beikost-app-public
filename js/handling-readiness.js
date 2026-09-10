@@ -4,8 +4,9 @@
  * Handling-Readiness-Policy.
  *
  * Löffelkost und geeignetes Fingerfood sind parallele Darreichungswege.
- * Handling und orale Verarbeitung bleiben getrennte Dimensionen; weder
- * Fingerfood noch structured-chew werden aus textureStage oder Alter abgeleitet.
+ * Handling, Bissabtrennung und orale Verarbeitung bleiben getrennte Dimensionen;
+ * weder Fingerfood noch graded-bite noch structured-chew werden aus
+ * textureStage, Alter oder einer anderen Capability abgeleitet.
  */
 
 function normalizeFeedingApproach(value) {
@@ -26,6 +27,13 @@ function handlingCapabilitySatisfied(capability, settings = {}) {
   if (!capability) return true;
   if (capability === "small-soft-pieces")
     return settings?.handlingCapabilities?.smallSoftPieces === true;
+  return false;
+}
+
+function biteCapabilitySatisfied(capability, settings = {}) {
+  if (!capability) return true;
+  if (capability === "graded-bite")
+    return settings?.handlingCapabilities?.gradedBite === true;
   return false;
 }
 
@@ -102,6 +110,9 @@ function handlingEligibility(contract, settings = {}) {
       migrated: false,
       eligibleModes: [],
       preferredModes: [],
+      biteSeparation: "",
+      biteRequiredCapability: "",
+      biteCapabilitySatisfied: true,
       oralProcessing: "",
       oralRequiredCapability: "",
       oralCapabilitySatisfied: true,
@@ -110,15 +121,18 @@ function handlingEligibility(contract, settings = {}) {
   }
 
   let eligibleModes = eligibleHandlingModes(contract, settings);
+  let biteRequiredCapability = String(contract.biteRequiredCapability || "");
+  let biteReady = biteCapabilitySatisfied(biteRequiredCapability, settings);
   let oralRequiredCapability = String(contract.oralRequiredCapability || "");
   let oralReady = oralCapabilitySatisfied(oralRequiredCapability, settings);
   let blockedReasons = [];
 
-  if (contract.modes?.length && !eligibleModes.length)
+  if (contract.modes?.length && !eligibleModes.length) {
     blockedReasons.push("handling-requirement");
-  if (eligibleModes.length && !oralReady) {
-    eligibleModes = [];
-    blockedReasons.push("oral-processing-requirement");
+  } else if (eligibleModes.length) {
+    if (!biteReady) blockedReasons.push("bite-separation-requirement");
+    if (!oralReady) blockedReasons.push("oral-processing-requirement");
+    if (!biteReady || !oralReady) eligibleModes = [];
   }
 
   return {
@@ -129,6 +143,9 @@ function handlingEligibility(contract, settings = {}) {
       settings.feedingApproach,
       settings.textureStage,
     ),
+    biteSeparation: String(contract.biteSeparation || ""),
+    biteRequiredCapability,
+    biteCapabilitySatisfied: biteReady,
     oralProcessing: String(contract.oralProcessing || ""),
     oralRequiredCapability,
     oralCapabilitySatisfied: oralReady,
@@ -264,6 +281,8 @@ function mergeRecipeHandlingState(recipeState, settings = {}, contractMap = null
     handlingMigrated: false,
     handlingModes: [],
     preferredHandlingModes: [],
+    biteSeparation: "",
+    biteRequiredCapability: "",
     oralProcessing: "",
     oralRequiredCapability: "",
   };
@@ -272,14 +291,23 @@ function mergeRecipeHandlingState(recipeState, settings = {}, contractMap = null
     (item) => !String(item || "").startsWith("Konsistenz:"),
   );
   if (!handling.eligibleModes.length) {
-    if (handling.blockedReasons.includes("oral-processing-requirement"))
+    let capabilityReason = false;
+    if (handling.blockedReasons.includes("bite-separation-requirement")) {
+      requirementMissing.push("Bissabtrennung: gezieltes Abtrennen eines passenden Bissens noch nicht bestätigt");
+      capabilityReason = true;
+    }
+    if (handling.blockedReasons.includes("oral-processing-requirement")) {
       requirementMissing.push("Orale Verarbeitung: strukturiertes Kauen noch nicht bestätigt");
-    else if (
-      contract?.requiredCapabilities?.["finger-small-soft"] === "small-soft-pieces"
-    )
-      requirementMissing.push("Darreichungsform: kleine weiche Stücke noch nicht bestätigt");
-    else
-      requirementMissing.push("Darreichungsform: aktuell noch nicht passend");
+      capabilityReason = true;
+    }
+    if (!capabilityReason) {
+      if (
+        contract?.requiredCapabilities?.["finger-small-soft"] === "small-soft-pieces"
+      )
+        requirementMissing.push("Darreichungsform: kleine weiche Stücke noch nicht bestätigt");
+      else
+        requirementMissing.push("Darreichungsform: aktuell noch nicht passend");
+    }
   }
 
   let ingredientMissing = [...(recipeState.ingredientMissing || [])];
@@ -295,6 +323,8 @@ function mergeRecipeHandlingState(recipeState, settings = {}, contractMap = null
     handlingMigrated: true,
     handlingModes: handling.eligibleModes,
     preferredHandlingModes: handling.preferredModes,
+    biteSeparation: handling.biteSeparation,
+    biteRequiredCapability: handling.biteRequiredCapability,
     oralProcessing: handling.oralProcessing,
     oralRequiredCapability: handling.oralRequiredCapability,
     laterKind: contract?.laterKind || "",
@@ -340,6 +370,7 @@ function handlingPreparationOptions(foodOrId, settings = {}, contractMap = null)
 function normalizeHandlingCapabilities(settings = {}) {
   settings.handlingCapabilities = {
     smallSoftPieces: settings?.handlingCapabilities?.smallSoftPieces === true,
+    gradedBite: settings?.handlingCapabilities?.gradedBite === true,
     structuredChew: settings?.handlingCapabilities?.structuredChew === true,
   };
   return settings.handlingCapabilities;
@@ -369,13 +400,16 @@ function ensureFeedingApproachControl() {
     capabilityField.id = "handlingCapabilitiesField";
     capabilityField.innerHTML = `<label>Aktuelle Essfähigkeiten</label>
       <label class="check-row"><input type="checkbox" id="smallSoftPiecesCapability"> Kleine weiche Stücke gezielt aufnehmen und sicher zum Mund führen</label>
+      <label class="check-row"><input type="checkbox" id="gradedBiteCapability"> Mein Kind kann bei einem weichen, aber formstabilen Stück gezielt einen passenden Bissen abtrennen.</label>
       <label class="check-row"><input type="checkbox" id="structuredChewCapability"> Strukturierte weiche Bissen sicher im Mund bewegen und wiederholt zerkleinern</label>
-      <div class="small" style="margin-top:5px">Nur bestätigen, wenn die Fähigkeit tatsächlich beobachtet wurde. Die Auswahl ist keine Altersstufe.</div>`;
+      <div class="small" style="margin-top:5px">Nur bestätigen, wenn die Fähigkeit tatsächlich beobachtet wurde. Die Auswahl ist keine Altersstufe; Zähne sind keine Voraussetzung.</div>`;
     field.insertAdjacentElement("afterend", capabilityField);
   }
   let smallPieces = document.getElementById("smallSoftPiecesCapability");
+  let gradedBite = document.getElementById("gradedBiteCapability");
   let structuredChew = document.getElementById("structuredChewCapability");
   if (smallPieces) smallPieces.checked = state.settings.handlingCapabilities.smallSoftPieces;
+  if (gradedBite) gradedBite.checked = state.settings.handlingCapabilities.gradedBite;
   if (structuredChew) structuredChew.checked = state.settings.handlingCapabilities.structuredChew;
 }
 
@@ -631,6 +665,7 @@ function installHandlingReadinessRuntime() {
       state.settings.feedingApproach = normalizeFeedingApproach(selected);
       state.settings.handlingCapabilities = {
         smallSoftPieces: document.getElementById("smallSoftPiecesCapability")?.checked === true,
+        gradedBite: document.getElementById("gradedBiteCapability")?.checked === true,
         structuredChew: document.getElementById("structuredChewCapability")?.checked === true,
       };
       return typeof originalSave === "function"
@@ -664,6 +699,7 @@ if (typeof module !== "undefined" && module.exports) {
     handlingModeFamily,
     handlingModeCapability,
     handlingCapabilitySatisfied,
+    biteCapabilitySatisfied,
     oralCapabilitySatisfied,
     handlingModeTextureAllowed,
     eligibleHandlingModes,

@@ -317,9 +317,11 @@ const RECIPE_ICON_PATHS = Object.freeze({
 
 const RECIPE_RUNTIME_ICON_ALIASES = Object.freeze({
   "Bananen-Ei-Pancakes": RECIPE_ICON_PATHS["Buchweizen-Bananen-Pancakes"],
+  "Pizza Wrap": "assets/illustrations-v2/recipes/pizza-wrap.svg",
   "Huhn-Zucchini-Nockerl": RECIPE_ICON_PATHS["Gemüse-Fleisch-Nockerl"],
   "Rind-Karotten-Nockerl": "assets/illustrations-v2/recipes/rind-karotten-nockerl.svg",
-  "Linsen-Süßkartoffel-Nockerl": "assets/illustrations-v2/recipes/linsen-suesskartoffel-nockerl.svg"
+  "Linsen-Süßkartoffel-Nockerl": "assets/illustrations-v2/recipes/linsen-suesskartoffel-nockerl.svg",
+  "Chicken Fajita Wrap": "assets/illustrations-v2/recipes/chicken-fajita-wrap.svg"
 });
 
 function foodIllustrationPath(f){

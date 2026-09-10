@@ -1390,20 +1390,18 @@ const RECIPES = [
     "name": "Hummus mit weichen Gemüsesticks",
     "category": "balls",
     "requires": [
-      "Kichererbse",
-      "Sesam",
-      "Gurke"
+      "Kichererbse"
     ],
-    "alternatives": [
-      [
-        "Kichererbse",
-        "Gurke"
-      ]
+    "oneOf": [
+      "Gurke",
+      "Karotte",
+      "Zucchini",
+      "Süßkartoffel"
     ],
     "stage": 3,
     "batch": "3 kleine Portionen",
-    "ingredients": "weich gekochte Kichererbsen, optional Tahin, Wasser, sehr weiche Gemüsesticks",
-    "note": "Kichererbsen sehr glatt pürieren. Tahin nur nach eingeführtem Sesam verwenden. Gemüse weich und sicher greifbar anbieten.",
+    "ingredients": "weich gekochte Kichererbsen, optional Tahin, Wasser und ein mechanisch weicher Gemüsestick nach Auswahl",
+    "note": "Kichererbsen sehr glatt pürieren. Tahin nur nach eingeführtem Sesam verwenden. Gurke, Karotte, Zucchini oder Süßkartoffel nur in einer konkret mechanisch weichen, sicher greifbaren Form ohne harte, zähe oder spröde Bissen anbieten.",
     "freeze": "Hummus gut einfrierbar",
     "pantryItems": [
       "Kichererbsen",

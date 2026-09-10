@@ -44,6 +44,22 @@ test("UI: vereinfachter Texture Coach nutzt keine Erfolgs-Schwelle und hält Fin
   assert.doesNotMatch(coach, /Test möglich/);
 });
 
+test("UI: Essfähigkeiten bleiben drei unabhängige beobachtete Controls", () => {
+  const handling = read("js/handling-readiness.js");
+  const settingsControl = functionSource(
+    handling,
+    "ensureFeedingApproachControl",
+    "textureCoachNextStep",
+  );
+
+  assert.match(settingsControl, /id="smallSoftPiecesCapability"/);
+  assert.match(settingsControl, /id="gradedBiteCapability"/);
+  assert.match(settingsControl, /id="structuredChewCapability"/);
+  assert.match(settingsControl, /Mein Kind kann bei einem weichen, aber formstabilen Stück gezielt einen passenden Bissen abtrennen\./);
+  assert.doesNotMatch(settingsControl, /halten oder abtrennen/);
+  assert.match(settingsControl, /Zähne sind keine Voraussetzung/);
+});
+
 test("UI: renderSettings übernimmt die zentralen Labels und beendet Sticky-Leerraum lokal", () => {
   const source = read("js/ui.js");
   const renderSettings = functionSource(source, "renderSettings", "renderAuditCore");

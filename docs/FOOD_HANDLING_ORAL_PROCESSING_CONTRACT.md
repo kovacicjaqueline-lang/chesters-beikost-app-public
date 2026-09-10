@@ -165,14 +165,14 @@ Die 13 `low-resistance-separate`-Fälle sind:
 
 Die übrigen 28 zuvor bestehenden zusammenhängenden Fingerfoods sind `easy-bite-separate`.
 
-Im aktuellen **105er Laufzeitkatalog** kommen zwei einzeln geprüfte neue graded-bite-Referenzrezepte hinzu:
+Im aktuellen **123er Laufzeitkatalog** kommen zu den bestehenden Karten 18 neue Form-/Texturrezepte sowie die zwei einzeln geprüften graded-bite-Referenzrezepte hinzu:
 
 | Rezept | Bite Separation | Bite-Capability | Oral Processing | Oral-Capability |
 | --- | --- | --- | --- | --- |
 | Pizza Wrap | `graded-bite-required` | `graded-bite` | `easy-chew` | keine |
 | Chicken Fajita Wrap | `graded-bite-required` | `graded-bite` | `structured-chew-required` | `structured-chew` |
 
-Damit bleibt die 41er Bestandsmatrix unverändert, während der aktuelle Runtime-Contract **105/105 Rezepte** explizit abdeckt. Die beiden Wrap-Einstufungen sind Einzelentscheidungen aus ihrer konkreten kanonischen Servierform und keine Kategorienregel.
+Damit bleibt die 41er Bestandsmatrix der zuvor bestehenden Fingerfoods unverändert, während der aktuelle Runtime-Contract **123/123 Rezepte** explizit abdeckt. Die Wrap-Einstufungen und die 18 neuen Form-/Textur-Einstufungen sind Einzelentscheidungen aus ihrer konkreten Servierform und keine Kategorienregeln.
 
 ## 6. Vier Fälle mit unabhängigem Structured-Chew-Gate
 

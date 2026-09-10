@@ -321,7 +321,25 @@ const RECIPE_RUNTIME_ICON_ALIASES = Object.freeze({
   "Huhn-Zucchini-Nockerl": RECIPE_ICON_PATHS["Gemüse-Fleisch-Nockerl"],
   "Rind-Karotten-Nockerl": "assets/illustrations-v2/recipes/rind-karotten-nockerl.svg",
   "Linsen-Süßkartoffel-Nockerl": "assets/illustrations-v2/recipes/linsen-suesskartoffel-nockerl.svg",
-  "Chicken Fajita Wrap": "assets/illustrations-v2/recipes/chicken-fajita-wrap.svg"
+  "Chicken Fajita Wrap": "assets/illustrations-v2/recipes/chicken-fajita-wrap.svg",
+  "Grießschnitten ohne Panade": "assets/illustrations-v2/recipes/griessschnitten-ohne-panade.svg",
+  "Apfel-Milchreisschnitten": "assets/illustrations-v2/recipes/apfel-milchreisschnitten.svg",
+  "Apfel-Bananen-Baked-Oatmeal": "assets/illustrations-v2/recipes/apfel-bananen-baked-oatmeal.svg",
+  "Weiche Apfel-Hafer-Riegel": "assets/illustrations-v2/recipes/weiche-apfel-hafer-riegel.svg",
+  "Bananen-French-Toast-Finger": "assets/illustrations-v2/recipes/bananen-french-toast-finger.svg",
+  "Karotten-Linsen-Aufstrich": "assets/illustrations-v2/recipes/karotten-linsen-aufstrich.svg",
+  "Weiße-Bohnen-Paprika-Aufstrich": "assets/illustrations-v2/recipes/weisse-bohnen-paprika-aufstrich.svg",
+  "Erbsen-Basilikum-Pesto ohne Salz": "assets/illustrations-v2/recipes/erbsen-basilikum-pesto-ohne-salz.svg",
+  "Gemüse-Kichererbsen-Couscous": "assets/illustrations-v2/recipes/gemuese-kichererbsen-couscous.svg",
+  "Gemüse-Couscous-Schnitten": "assets/illustrations-v2/recipes/gemuese-couscous-schnitten.svg",
+  "Bunte Gemüse-Nuggets": "assets/illustrations-v2/recipes/bunte-gemuese-nuggets.svg",
+  "Weiche Gemüse-Reis-Finger": "assets/illustrations-v2/recipes/weiche-gemuese-reis-finger.svg",
+  "Rote-Linsen-Gemüse-Shepherd’s-Pie": "assets/illustrations-v2/recipes/rote-linsen-gemuese-shepherds-pie.svg",
+  "Spinat-Zucchini-Lasagne": "assets/illustrations-v2/recipes/spinat-zucchini-lasagne.svg",
+  "Huhn-Spinat-Quinoa-Auflauf": "assets/illustrations-v2/recipes/huhn-spinat-quinoa-auflauf.svg",
+  "Lachs-Brokkoli-Kartoffel-Auflauf": "assets/illustrations-v2/recipes/lachs-brokkoli-kartoffel-auflauf.svg",
+  "Mildes Bohnen-Süßkartoffel-Chili": "assets/illustrations-v2/recipes/mildes-bohnen-suesskartoffel-chili.svg",
+  "Gefüllte Paprika mit Linsenreis": "assets/illustrations-v2/recipes/gefuellte-paprika-mit-linsenreis.svg"
 });
 
 function foodIllustrationPath(f){

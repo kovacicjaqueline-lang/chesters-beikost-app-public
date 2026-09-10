@@ -64,13 +64,18 @@ function settings(overrides = {}) {
 }
 
 function auditedLegacyFingerNames() {
+  const expandedNames = new Set([
+    "Grießschnitten ohne Panade", "Apfel-Milchreisschnitten", "Bananen-French-Toast-Finger",
+    "Gemüse-Couscous-Schnitten", "Bunte Gemüse-Nuggets", "Weiche Gemüse-Reis-Finger",
+    "Apfel-Bananen-Baked-Oatmeal", "Weiche Apfel-Hafer-Riegel",
+  ]);
   return [
     ...RECIPE_CONTRACT_GROUPS.fingerLowResistance,
     ...RECIPE_CONTRACT_GROUPS.fingerEasySoft,
     ...RECIPE_CONTRACT_GROUPS.fingerEasyChew,
     ...RECIPE_CONTRACT_GROUPS.fingerEasyStructured,
     ...RECIPE_CONTRACT_GROUPS.fingerEasyLater,
-  ];
+  ].filter((name) => !expandedNames.has(name));
 }
 
 test("HANDLING: Beikostform ist Präferenz mit migrationssicherem mixed-Fallback", () => {
@@ -100,23 +105,23 @@ test("HANDLING: feedingApproach sortiert nur Präferenzen und entfernt keine sic
   ]);
 });
 
-test("HANDLING: alle 105 Laufzeitrezepte sind explizit und genau einmal migriert", () => {
+test("HANDLING: alle 123 Laufzeitrezepte sind explizit und genau einmal migriert", () => {
   const runtimeNames = runtimeRecipeNames();
   const contractNames = Object.keys(RECIPE_HANDLING_CONTRACT);
   const grouped = Object.values(RECIPE_CONTRACT_GROUPS).flat();
-  assert.equal(runtimeNames.length, 105);
-  assert.equal(contractNames.length, 105);
-  assert.equal(new Set(grouped).size, 105, "Contract-Gruppen dürfen sich nicht überlappen");
+  assert.equal(runtimeNames.length, 123);
+  assert.equal(contractNames.length, 123);
+  assert.equal(new Set(grouped).size, 123, "Contract-Gruppen dürfen sich nicht überlappen");
   assert.deepEqual([...contractNames].sort(), [...runtimeNames].sort());
   assert.deepEqual([...grouped].sort(), [...runtimeNames].sort());
 });
 
 test("HANDLING: bestehende 103er Auditmatrix bleibt erhalten und zwei graded-bite-Fälle kommen explizit hinzu", () => {
   const entries = Object.values(RECIPE_HANDLING_CONTRACT);
-  assert.equal(entries.filter((entry) => !entry.laterKind).length, 87);
+  assert.equal(entries.filter((entry) => !entry.laterKind).length, 98);
   assert.equal(entries.filter((entry) => entry.laterKind === "oral-capability").length, 4);
   assert.equal(entries.filter((entry) => entry.laterKind === "handling-capability").length, 3);
-  assert.equal(entries.filter((entry) => entry.laterKind === "soft-orientation").length, 9);
+  assert.equal(entries.filter((entry) => entry.laterKind === "soft-orientation").length, 16);
   assert.equal(entries.filter((entry) => entry.laterKind === "bite-capability").length, 1);
   assert.equal(entries.filter((entry) => entry.laterKind === "bite-oral-capability").length, 1);
 });
@@ -343,7 +348,7 @@ test("HANDLING: Nockerl werden nur durch small-soft-pieces freigeschaltet", () =
   );
 });
 
-test("HANDLING: neun Formfälle bleiben soft-orientation statt künstlicher Capability", () => {
+test("HANDLING: weich-stückige Formfälle bleiben soft-orientation statt künstlicher Capability", () => {
   const expected = [
     "Gemüse-Nudel-Sauce",
     "Baby-Linsen-Bolognese",
@@ -354,6 +359,13 @@ test("HANDLING: neun Formfälle bleiben soft-orientation statt künstlicher Capa
     "Ei-Champignon-Cups",
     "Tinola-inspiriert",
     "Sayote-Huhn-Reis",
+    "Gemüse-Kichererbsen-Couscous",
+    "Rote-Linsen-Gemüse-Shepherd’s-Pie",
+    "Spinat-Zucchini-Lasagne",
+    "Huhn-Spinat-Quinoa-Auflauf",
+    "Lachs-Brokkoli-Kartoffel-Auflauf",
+    "Mildes Bohnen-Süßkartoffel-Chili",
+    "Gefüllte Paprika mit Linsenreis",
   ].sort();
   const actual = Object.entries(RECIPE_HANDLING_CONTRACT)
     .filter(([, entry]) => entry.laterKind === "soft-orientation")

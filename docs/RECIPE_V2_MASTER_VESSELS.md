@@ -11,7 +11,7 @@ Ausgangsstand dieser Festlegung ist `main` bei Commit `e580c66f08fdb0ce7853f491b
 | Master-Gefäß | Referenzrezept | Verbindliches Referenz-Asset | Referenz-Blob auf dem Ausgangsstand |
 | --- | --- | --- | --- |
 | **Master-Teller** | Omelettstreifen | `assets/illustrations-v2/recipes/omelettstreifen.svg` | `ea67bef6bd6e66f70d77e48c3064e2b02a2857c8` |
-| **Master-Schale** | Obst-Haferbrei | `assets/illustrations-v2/recipes/obst-haferbrei.svg` | `a839883201831aa02ff49b94a0f26338858de946` |
+| **Master-Schale** | Obst-Haferbrei | `assets/illustrations-v2/recipes/obst-haferbrei.svg` | `7d42e25d743f6b5e5bb452d2616583cbcd1ae226` |
 | **Master-Topf** | Arroz-caldo-inspiriert | `assets/illustrations-v2/recipes/arroz-caldo-inspiriert.svg` | `7c3152f48329de4eb761468b641d4e8768ebe844` |
 
 `Arroz-caldo-inspiriert` ist dabei ausdrücklich und bewusst die Referenz für den **Master-Topf**; der Topf ist keine bloße Bestandsausnahme.

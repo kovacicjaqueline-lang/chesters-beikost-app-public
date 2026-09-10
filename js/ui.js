@@ -1478,7 +1478,7 @@ function bind() {
     document.getElementById("confirmResetData").onclick = async () => {
       await createSnapshot("vor Zurücksetzen");
       state=clone(DEFAULT); state.backupMeta.chesterContextSeeded=true;
-      await save(); closeGeneric(); renderAll(); renderStorageStatus();
+      await save(); closeGeneric(); renderCurrentView(); renderStorageStatus();
       showToast("Beikostdaten zurückgesetzt.");
     };
   };

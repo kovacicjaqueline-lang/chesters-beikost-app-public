@@ -239,7 +239,7 @@ async function handleBackupImport(file) {
     let pack=await validateBackup(await file.text());
     openGeneric("Backup prüfen",backupPreviewHtml(pack));
     document.getElementById("cancelBackupRestore").onclick=closeGeneric;
-    document.getElementById("confirmBackupRestore").onclick=async()=>{ await createSnapshot("vor Wiederherstellung"); state=migrateState(pack.payload); await save(); closeGeneric(); renderAll(); renderStorageStatus(); showToast("Backup wiederhergestellt."); };
+    document.getElementById("confirmBackupRestore").onclick=async()=>{ await createSnapshot("vor Wiederherstellung"); state=migrateState(pack.payload); await save(); closeGeneric(); renderCurrentView(); renderStorageStatus(); showToast("Backup wiederhergestellt."); };
   } catch(error) {
     showStorageError(error.message || "Datei konnte nicht importiert werden.");
     document.getElementById("storageError")?.scrollIntoView({ block: "nearest", behavior: "smooth" });

@@ -381,7 +381,6 @@ body.mobile-foundation #genericModal .sheet {
     if (document.documentElement.dataset.mobileMealEditorScrollGuard === "true") return;
     document.documentElement.dataset.mobileMealEditorScrollGuard = "true";
     let snapshot = null;
-    let releaseTimer = 0;
 
     function captureSnapshot(field) {
       if (field?.id !== "mealSelectorSearch") return null;
@@ -409,11 +408,6 @@ body.mobile-foundation #genericModal .sheet {
       queueMicrotask(restoreSnapshot);
       setTimeout(restoreSnapshot, 0);
       requestAnimationFrame(restoreSnapshot);
-      clearTimeout(releaseTimer);
-      releaseTimer = setTimeout(() => {
-        restoreSnapshot();
-        snapshot = null;
-      }, 120);
     }
 
     document.addEventListener("keydown", (event) => {
@@ -439,7 +433,7 @@ body.mobile-foundation #genericModal .sheet {
 
     document.addEventListener("focusout", (event) => {
       if (event.target?.id !== "mealSelectorSearch" || snapshot?.field !== event.target) return;
-      clearTimeout(releaseTimer);
+      restoreSnapshot();
       snapshot = null;
     }, true);
   }

@@ -101,11 +101,22 @@ async function configurePlanner(page, planOffsetDays) {
 }
 
 async function todayMealFoods(page, meal) {
-  const payloads = await page.locator("#todayCard .homeLog[data-plan]").evaluateAll((buttons) =>
+  const payloads = await page.locator("#todayCard .logMeal[data-plan]").evaluateAll((buttons) =>
     buttons.map((entry) => JSON.parse(decodeURIComponent(entry.dataset.plan || ""))),
   );
   const payload = payloads.find((entry) => entry.meal === meal);
   return canonical(payload?.foodIds || []);
+}
+
+async function openSwapAction(page, scope, date, meal) {
+  const selector = `.randomizeMeal[data-random-date="${date}"][data-random-meal="${meal}"]`;
+  const details = page.locator(`${scope} details.meal-plan-actions`).filter({
+    has: page.locator(selector),
+  }).first();
+  await details.locator(":scope > summary").click();
+  const button = details.locator(selector);
+  await button.waitFor();
+  return button;
 }
 
 const server = await startStaticServer();
@@ -122,15 +133,18 @@ try {
   const page = await context.newPage();
   await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => !!window.__beikostTest?.buildDays && !!window.__plannerRandomSwap);
+  await page.waitForFunction(() => {
+    const persisted = window.__beikostTest.getState().backupMeta?.storagePersisted;
+    return persisted && persisted !== "unknown" && window.__plannerPoliciesReady === true && window.__plannerKeepTrackingInstalled === true;
+  });
 
   const today = await configurePlanner(page, 0);
   const targetKey = `${today}|lunch`;
-  const todayButton = page.locator(`.today-randomize-meal[data-random-date="${today}"][data-random-meal="lunch"]`);
-  await todayButton.waitFor();
-  assert.equal(await todayButton.innerText(), "↻ Tauschen", "Heute muss den expliziten Tausch-Button zeigen");
+  const todayButton = await openSwapAction(page, "#todayCard", today, "lunch");
+  assert.equal(await todayButton.innerText(), "↻ Tauschen", "Heute muss den gemeinsamen Tausch-Button unter Plan ändern zeigen");
 
   const planButton = page.locator(`#blockPlan .randomizeMeal[data-random-date="${today}"][data-random-meal="lunch"]`);
-  assert.equal(await planButton.count(), 1, "derselbe Slot muss auch im Wochenplan einen Tausch-Button haben");
+  assert.equal(await planButton.count(), 1, "derselbe Slot muss auch im Wochenplan einen Tausch-Button unter Plan ändern haben");
 
   const before = await visiblePlan(page);
   assert.equal(before[targetKey]?.length, 1, "heutiges Mittagessen muss im sichtbaren Wochenplan genau einmal offen geplant sein");
@@ -144,6 +158,24 @@ try {
   }, { key: targetKey, previous: previousTarget });
 
   assert.match(await page.locator("#toastText").innerText(), /restliche Wochenplan bleibt unverändert/i);
+  const targetInternalPin = await page.evaluate((key) => {
+    const lock = window.__beikostTest.getState().planLocks?.[key];
+    return { pinned: !!lock?.randomSwapPinned, target: !!lock?.randomSwapTarget };
+  }, targetKey);
+  assert.deepEqual(targetInternalPin, { pinned: true, target: true }, "Tauschen behält seinen internen Stabilisierungssnapshot");
+
+  await page.locator('nav button[data-view="plan"]').click();
+  const targetDayButton = page.locator(`#planWeekOverview .plan-week-day[data-plan-date="${today}"]`);
+  await targetDayButton.click();
+  const targetLockButton = page.locator(`#blockPlan .meal-lock[data-lock-date="${today}"][data-lock-meal="lunch"]`);
+  await targetLockButton.waitFor();
+  assert.equal(await targetLockButton.evaluate((node) => node.classList.contains("unlocked")), true, "Random-Swap-Pin erscheint nicht als bewusstes Behalten");
+  assert.equal(await targetLockButton.getAttribute("aria-label"), "Mahlzeit bei automatischer Neuplanung behalten");
+  assert.equal(
+    await targetLockButton.evaluate((node) => node.closest(".mealbox")?.querySelectorAll(".lock-label").length ?? -1),
+    0,
+    "Interner Random-Swap-Pin bekommt keine Schutzbeschriftung",
+  );
 
   const after = await visiblePlan(page);
   assert.equal(after[targetKey]?.length, 1, "getauschter Slot muss im sichtbaren Wochenplan genau einmal offen bleiben");
@@ -157,14 +189,14 @@ try {
     assert.ok(before[key], `Tausch darf keinen zusätzlichen sichtbaren Plan-Slot erzeugen: ${key}`);
   }
 
+  await page.locator('nav button[data-view="home"]').click();
   const shiftedToday = await configurePlanner(page, 1);
   const shiftedTargetKey = `${shiftedToday}|lunch`;
   const visibleBeforeTodaySwap = await visiblePlan(page);
   const previousTodayFoods = await todayMealFoods(page, "lunch");
   assert.ok(previousTodayFoods, "Heute muss auch bei ab morgen sichtbarem Wochenplan ein Mittagessen enthalten");
 
-  const shiftedTodayButton = page.locator(`.today-randomize-meal[data-random-date="${shiftedToday}"][data-random-meal="lunch"]`);
-  await shiftedTodayButton.waitFor();
+  const shiftedTodayButton = await openSwapAction(page, "#todayCard", shiftedToday, "lunch");
   await shiftedTodayButton.click();
   await page.waitForFunction(({ key, previous }) => {
     const lock = window.__beikostTest.getState().planLocks?.[key];

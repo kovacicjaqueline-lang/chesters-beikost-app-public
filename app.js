@@ -672,7 +672,7 @@ function installFoodPolicyRuntime() {
     let result = await originalBootstrapStorage();
     if (pruneIneligibleAutomaticPlanState(state)) {
       await save();
-      renderAll();
+      renderCurrentView();
     }
     return result;
   };
@@ -772,7 +772,7 @@ function startBeikostApp() {
   if (versionNode) versionNode.textContent = APP_VERSION;
 
   bind();
-  renderAll();
+  renderCurrentView();
   bootstrapStorage();
   if (navigator.serviceWorker && location.protocol.startsWith("http"))
     window.addEventListener("load", () =>

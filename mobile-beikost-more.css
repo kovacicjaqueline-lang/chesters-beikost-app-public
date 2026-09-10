@@ -1,0 +1,520 @@
+/* Mobile-First Beikost + Mehr
+ * Ausschließlich auf der bestehenden Mobile-Foundation aufbauende, view-spezifische Styles.
+ */
+
+body.mobile-foundation #foods,
+body.mobile-foundation #more {
+  padding-bottom: 8px;
+}
+
+/* Beikost: Segmentwechsel bleibt der primäre Einstieg. */
+body.mobile-foundation #foods .catalog-switch {
+  position: sticky;
+  top: 0;
+  z-index: 9;
+  margin: -14px -16px 12px;
+  padding: 12px 16px 10px;
+  background: rgba(244, 239, 231, .96);
+  border-bottom: 1px solid rgba(221, 211, 198, .78);
+  backdrop-filter: blur(12px);
+}
+
+body.mobile-foundation #foods .catalog-switch button {
+  min-height: 44px;
+  border-radius: 14px;
+  box-shadow: none;
+}
+
+body.mobile-foundation #foods #foodsCatalogSection,
+body.mobile-foundation #foods #recipesSection {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+body.mobile-foundation #foods .food-header {
+  align-items: flex-start;
+  padding: 2px 0 8px;
+}
+
+body.mobile-foundation #foods .food-header h2 {
+  margin-bottom: 3px;
+  font-size: 23px;
+}
+
+body.mobile-foundation #foods .food-head-actions {
+  justify-content: flex-end;
+}
+
+body.mobile-foundation #foods .food-head-actions .btn {
+  min-height: 44px;
+}
+
+/* Suche bleibt beim Scrollen des Katalogs schnell erreichbar. */
+body.mobile-foundation #foods .mobile-catalog-search {
+  position: sticky;
+  top: 57px;
+  z-index: 8;
+  margin: 0 -4px 8px;
+  padding: 8px 4px 6px;
+  background: rgba(244, 239, 231, .97);
+  backdrop-filter: blur(12px);
+}
+
+body.mobile-foundation #foods .mobile-catalog-search label {
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+body.mobile-foundation #foods .mobile-catalog-search input {
+  min-height: 46px;
+  border-radius: 14px;
+  background: var(--card);
+}
+
+/* Wenige Primärfilter; seltenere Filter liegen in einer sekundären Oberfläche. */
+body.mobile-foundation #foods .mobile-filter-group {
+  display: block;
+  margin: 0 0 10px;
+  overflow: visible;
+  padding: 0;
+}
+
+body.mobile-foundation #foods .mobile-filter-primary {
+  margin: 0;
+  padding: 2px 0 7px;
+}
+
+body.mobile-foundation #foods .mobile-filter-primary button {
+  min-height: 42px;
+  box-shadow: none;
+}
+
+body.mobile-foundation #foods .mobile-filter-secondary {
+  margin: 0;
+  border-top: 1px solid var(--line);
+}
+
+body.mobile-foundation #foods .mobile-filter-secondary > summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  list-style: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+body.mobile-foundation #foods .mobile-filter-secondary > summary::-webkit-details-marker {
+  display: none;
+}
+
+body.mobile-foundation #foods .mobile-filter-secondary > summary::after {
+  content: "⌄";
+  color: var(--muted);
+  font-size: 14px;
+}
+
+body.mobile-foundation #foods .mobile-filter-secondary[open] > summary::after {
+  transform: rotate(180deg);
+}
+
+body.mobile-foundation #foods .mobile-filter-secondary-list {
+  margin: 0;
+  padding: 0 0 9px;
+}
+
+/* Lebensmittel sind mobile Rows statt Einzelkarten. */
+body.mobile-foundation #foods #foodList {
+  border-top: 1px solid var(--line);
+}
+
+body.mobile-foundation #foods .foodcard.mobile-food-row {
+  margin: 0;
+  padding: 9px 0;
+  border: 0;
+  border-top: 1px solid rgba(221, 211, 198, .72);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+body.mobile-foundation #foods #foodList > .foodcard.mobile-food-row:first-child,
+body.mobile-foundation #foods .followup-section + .foodcard.mobile-food-row {
+  border-top: 0;
+}
+
+body.mobile-foundation #foods .foodcard.mobile-food-row > .row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  gap: 8px;
+  align-items: center;
+  min-height: 54px;
+}
+
+body.mobile-foundation #foods .foodcard.mobile-food-row.reorderable > .row {
+  grid-template-columns: auto minmax(0, 1fr) 44px;
+}
+
+body.mobile-foundation #foods .foodcard.mobile-food-row .foodtitle {
+  gap: 10px;
+  flex-wrap: nowrap;
+  min-width: 0;
+  font-size: 15px;
+  line-height: 1.25;
+}
+
+body.mobile-foundation #foods .foodcard.mobile-food-row .food-emoji {
+  --icon-food: 42px;
+  flex: 0 0 42px;
+  width: 42px;
+  min-width: 42px;
+  height: 42px;
+}
+
+body.mobile-foundation #foods .foodcard.mobile-food-row .foodmeta {
+  margin: 2px 0 0 52px;
+  line-height: 1.3;
+}
+
+body.mobile-foundation #foods .foodcard.mobile-food-row .inactive-note {
+  margin-left: 52px;
+}
+
+body.mobile-foundation #foods .foodcard.mobile-food-row.inactive {
+  opacity: .72;
+}
+
+body.mobile-foundation #foods .food-row-chevron {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 29px;
+  font-weight: 450;
+  line-height: 1;
+}
+
+/* Wiedervorlagen sind konkrete Aufgaben und bleiben bewusst hervorgehoben. */
+body.mobile-foundation #foods .followup-section {
+  margin: 0 0 12px;
+  padding: 12px;
+  border-radius: 16px;
+  background: var(--accent2);
+}
+
+body.mobile-foundation #foods .followup-section-head h3 {
+  margin-bottom: 2px;
+}
+
+body.mobile-foundation #foods .mobile-followup-food-card {
+  margin: 9px 0 0;
+  border: 0;
+  background: rgba(255, 253, 249, .78);
+  box-shadow: none;
+}
+
+/* Rezepte dürfen visuell bleiben: Illustration stärker, Metadaten ruhiger. */
+body.mobile-foundation #foods #recipesDetails > summary {
+  padding: 2px 0 10px;
+}
+
+body.mobile-foundation #foods .recipe-filter-field {
+  margin-bottom: 8px;
+}
+
+body.mobile-foundation #foods .recipe-filter-field > label {
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+body.mobile-foundation #foods .recipe-card-v2 {
+  margin: 0 0 12px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--card);
+  box-shadow: none;
+  overflow: hidden;
+}
+
+body.mobile-foundation #foods .recipe-card-v2 > summary {
+  padding: 10px;
+  list-style: none;
+  cursor: pointer;
+}
+
+body.mobile-foundation #foods .recipe-card-v2 > summary::-webkit-details-marker {
+  display: none;
+}
+
+body.mobile-foundation #foods .recipe-summary-grid {
+  gap: 10px;
+  align-items: center;
+}
+
+body.mobile-foundation #foods .recipe-heading-with-icon {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  min-width: 0;
+}
+
+body.mobile-foundation #foods .recipe-heading-with-icon .recipe-icon,
+body.mobile-foundation #foods .recipe-heading-with-icon img,
+body.mobile-foundation #foods .recipe-heading-with-icon svg {
+  width: 88px;
+  min-width: 88px;
+  height: 88px;
+  object-fit: contain;
+}
+
+body.mobile-foundation #foods .recipe-heading-with-icon b {
+  font-size: 16px;
+  line-height: 1.25;
+}
+
+body.mobile-foundation #foods .recipe-type-text {
+  margin-top: 4px;
+}
+
+body.mobile-foundation #foods .recipe-tech-text {
+  display: none;
+}
+
+body.mobile-foundation #foods .recipe-summary-end {
+  align-self: center;
+}
+
+body.mobile-foundation #foods .recipe-chevron {
+  color: var(--muted);
+}
+
+body.mobile-foundation #foods .recipe-body-v2 {
+  padding: 2px 14px 14px;
+  border-top: 0;
+}
+
+body.mobile-foundation #foods .recipe-open-section {
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+
+body.mobile-foundation #foods .recipe-open-section h3 {
+  margin-bottom: 4px;
+  font-size: 14px;
+}
+
+/* Food-Details verwenden den vorhandenen Inhalt als echten Vollbild-Detail-Screen. */
+body.mobile-foundation #genericModal.mobile-food-detail-screen {
+  align-items: stretch;
+  background: var(--bg);
+}
+
+body.mobile-foundation #genericModal.mobile-food-detail-screen .sheet {
+  width: min(100%, 720px);
+  height: 100dvh;
+  max-height: none;
+  margin: 0 auto;
+  padding: calc(8px + env(safe-area-inset-top)) 16px calc(18px + env(safe-area-inset-bottom));
+  border-radius: 0;
+  background: var(--bg);
+  box-shadow: none;
+}
+
+body.mobile-foundation #genericModal.mobile-food-detail-screen .sheethead {
+  top: calc(-8px - env(safe-area-inset-top));
+  margin: 0 -16px;
+  padding: calc(8px + env(safe-area-inset-top)) 16px 10px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(244, 239, 231, .97);
+  backdrop-filter: blur(12px);
+}
+
+body.mobile-foundation #genericModal.mobile-food-detail-screen .sheethead h2 {
+  margin: 0;
+}
+
+/* Mehr: gruppierte Navigation statt Dashboard-/Accordion-Stapel. */
+body.mobile-foundation #more .more-nav-screen[hidden],
+body.mobile-foundation #more .more-panel-screen[hidden],
+body.mobile-foundation #more .mobile-more-destination[hidden] {
+  display: none !important;
+}
+
+body.mobile-foundation #more .more-nav-group {
+  margin: 0 0 18px;
+}
+
+body.mobile-foundation #more .more-nav-group h2 {
+  margin: 0 0 7px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+body.mobile-foundation #more .more-nav-list {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--card);
+}
+
+body.mobile-foundation #more .more-nav-row {
+  width: 100%;
+  min-height: 62px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 28px;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 0;
+  border-top: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+}
+
+body.mobile-foundation #more .more-nav-row:first-child {
+  border-top: 0;
+}
+
+body.mobile-foundation #more .more-nav-row:active {
+  background: var(--accent2);
+}
+
+body.mobile-foundation #more .more-nav-row b,
+body.mobile-foundation #more .more-nav-row small {
+  display: block;
+}
+
+body.mobile-foundation #more .more-nav-row b {
+  font-size: 15px;
+  line-height: 1.25;
+}
+
+body.mobile-foundation #more .more-nav-row small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+body.mobile-foundation #more .more-nav-chevron {
+  justify-self: end;
+  color: var(--muted);
+  font-size: 26px;
+  font-weight: 450;
+}
+
+body.mobile-foundation #more .more-panel-header {
+  position: sticky;
+  top: 0;
+  z-index: 8;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  margin: -14px -16px 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(244, 239, 231, .97);
+  backdrop-filter: blur(12px);
+}
+
+body.mobile-foundation #more .more-panel-header h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+body.mobile-foundation #more .more-back-button {
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 32px;
+  line-height: 1;
+}
+
+body.mobile-foundation #more .more-panel-host > .mobile-more-destination {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+body.mobile-foundation #more .more-panel-host > .collapsible-card > .panel-details {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+body.mobile-foundation #more .more-panel-host > .collapsible-card > .panel-details > summary {
+  display: none;
+}
+
+body.mobile-foundation #more .more-panel-host > .collapsible-card > .panel-details > .panel-body {
+  padding: 0;
+  border-top: 0;
+}
+
+body.mobile-foundation #more #allergenSection > .eyebrow,
+body.mobile-foundation #more #allergenSection > h3 {
+  display: none;
+}
+
+body.mobile-foundation #more #allergenSection #allergenModule {
+  margin-top: 2px;
+}
+
+body.mobile-foundation #more .settings-group,
+body.mobile-foundation #more .help-topic,
+body.mobile-foundation #more .all-allergens,
+body.mobile-foundation #more .version-details {
+  border-color: var(--line);
+}
+
+@media (max-width: 420px) {
+  body.mobile-foundation #foods .food-header {
+    display: block;
+  }
+
+  body.mobile-foundation #foods .food-head-actions {
+    justify-content: flex-start;
+    margin-top: 8px;
+  }
+
+  body.mobile-foundation #foods .recipe-heading-with-icon {
+    grid-template-columns: 76px minmax(0, 1fr);
+  }
+
+  body.mobile-foundation #foods .recipe-heading-with-icon .recipe-icon,
+  body.mobile-foundation #foods .recipe-heading-with-icon img,
+  body.mobile-foundation #foods .recipe-heading-with-icon svg {
+    width: 76px;
+    min-width: 76px;
+    height: 76px;
+  }
+}

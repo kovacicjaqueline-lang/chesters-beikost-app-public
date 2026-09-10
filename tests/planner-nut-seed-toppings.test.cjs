@@ -18,6 +18,7 @@ function makeFood(id, name, category, overrides = {}) {
     active: true,
     meals: ["breakfast", "lunch", "dinner"],
     allergenGroup: "",
+    safeForm: "",
     ...overrides,
   };
 }
@@ -47,19 +48,30 @@ const FAMILY_FOODS = [
     allergenFamily: "sesam",
     priority: 13,
   }),
+  makeFood("pecannuss", "Pecannuss", "Nuss", {
+    allergenGroup: "Schalenfrüchte",
+    priority: 14,
+  }),
+  makeFood("maroni", "Maroni", "Nuss", { priority: 15 }),
   makeFood("hafer", "Hafer", "Getreide/Stärke", { priority: 2 }),
   makeFood("banane", "Banane", "Obst", { priority: 3 }),
   makeFood("apfel", "Apfel", "Obst", { priority: 4 }),
   makeFood("naturjoghurt", "Naturjoghurt", "Milchprodukt", { allergenGroup: "Milch", priority: 5 }),
 ];
 
-test("Nuss/Samen: Mus- und Pastenform wird nur innerhalb derselben Familie bevorzugt", () => {
+test("Nuss/Samen: strukturierte Eignung erweitert die Abdeckung, vorhandene Mus-/Pasten-FOODs bleiben bevorzugt", () => {
   const peanut = FAMILY_FOODS.find((food) => food.id === "erdnuss");
   const sesame = FAMILY_FOODS.find((food) => food.id === "sesam");
+  const pecan = FAMILY_FOODS.find((food) => food.id === "pecannuss");
+  const maroni = FAMILY_FOODS.find((food) => food.id === "maroni");
   assert.equal(policy.plannerNutSeedPreferredToppingForm(peanut, FAMILY_FOODS)?.id, "erdnussmus");
   assert.equal(policy.plannerNutSeedPreferredToppingForm(sesame, FAMILY_FOODS)?.id, "tahin");
-  assert.equal(policy.plannerNutSeedToppingForm(peanut), false);
+  assert.equal(policy.plannerNutSeedPreferredToppingForm(pecan, FAMILY_FOODS)?.id, "pecannuss");
+  assert.equal(policy.plannerNutSeedToppingForm(peanut), true);
+  assert.equal(policy.plannerNutSeedToppingForm(sesame), true);
   assert.equal(policy.plannerNutSeedToppingForm(FAMILY_FOODS.find((food) => food.id === "erdnussmus")), true);
+  assert.equal(policy.plannerNutSeedToppingForm(pecan), true);
+  assert.equal(policy.plannerNutSeedToppingForm(maroni), false);
 });
 
 test("Nuss/Samen: frühe bekannte Wiederholung bleibt Sample statt normalem Fokus", () => {
@@ -86,8 +98,8 @@ test("Nussmus-Topping: nur Obst+Getreide-Porridge ist ein passender Rezeptkandid
 test("Nussmus-Topping: Rezeptzutaten müssen bekannt/auto-geeignet sein und das Sample bleibt außerhalb der Rezeptidentität", () => {
   const meal = {
     meal: "breakfast", active: true,
-    foodIds: ["hafer", "erdnussmus"], baseFoodIds: ["hafer"],
-    sampleFoodIds: ["erdnussmus"], type: "Allergen wiederholen",
+    foodIds: ["hafer", "erdnuss"], baseFoodIds: ["hafer"],
+    sampleFoodIds: ["erdnuss"], type: "Allergen wiederholen",
   };
   const recipes = [
     { name: "Obst-Getreide-Brei", category: "porridge", requires: ["Hafer", "Banane"] },
@@ -96,7 +108,7 @@ test("Nussmus-Topping: Rezeptzutaten müssen bekannt/auto-geeignet sein und das 
   global.plannerProactiveRecipeNameVariants = (recipe) => [recipe.requires || []];
   try {
     const candidates = policy.plannerNutSeedToppingRecipeCandidates(
-      meal, "erdnussmus", recipes, FAMILY_FOODS,
+      meal, "erdnuss", recipes, FAMILY_FOODS,
       () => true,
       (name) => name !== "Naturjoghurt",
       () => true,
@@ -106,7 +118,7 @@ test("Nussmus-Topping: Rezeptzutaten müssen bekannt/auto-geeignet sein und das 
     assert.equal(candidates.length, 1);
     assert.equal(candidates[0].recipe.name, "Obst-Getreide-Brei");
     assert.deepEqual(Array.from(candidates[0].ids), ["banane", "hafer"]);
-    assert.equal(candidates[0].ids.includes("erdnussmus"), false);
+    assert.equal(candidates[0].ids.includes("erdnuss"), false);
     assert.deepEqual(Array.from(candidates[0].addedIds), ["banane"]);
   } finally {
     delete global.plannerProactiveRecipeNameVariants;
@@ -164,11 +176,11 @@ function runtimeHarness() {
       meals: [{
         meal: "breakfast",
         active: true,
-        focusId: "erdnussmus",
-        foodIds: ["hafer", "erdnussmus"],
+        focusId: "erdnuss",
+        foodIds: ["hafer", "erdnuss"],
         baseFoodIds: ["hafer"],
-        sampleFoodIds: ["erdnussmus"],
-        foodRoles: { hafer: "base", erdnussmus: "sample" },
+        sampleFoodIds: ["erdnuss"],
+        foodRoles: { hafer: "base", erdnuss: "sample" },
         optionalAddons: [],
         inventoryFoodIds: [],
         recipeName: "",
@@ -241,20 +253,20 @@ test("Runtime: alte automatische Nuss-/Samen-Hauptfokusse werden ungültig, echt
     baseFoodIds: ["hafer"], sampleFoodIds: [], type: "bekannt",
   }, context.state.foods), true);
   assert.equal(context.plannerAutomaticLockRoleViolation({
-    mode: "auto", focusId: "erdnussmus", foodIds: ["hafer", "erdnussmus"],
-    baseFoodIds: ["hafer"], sampleFoodIds: ["erdnussmus"], type: "Allergen wiederholen",
+    mode: "auto", focusId: "erdnuss", foodIds: ["hafer", "erdnuss"],
+    baseFoodIds: ["hafer"], sampleFoodIds: ["erdnuss"], type: "Allergen wiederholen",
   }, context.state.foods), false);
 });
 
-test("Runtime: Erdnussmus-Sample wird als Topping auf eindeutigen Obst-Getreide-Brei übernommen und bleibt protokollierbares Sample", () => {
+test("Runtime: geeignetes Erdnuss-Sample wird als Topping auf eindeutigen Obst-Getreide-Brei übernommen", () => {
   const context = runtimeHarness();
   const meal = context.buildDay("2026-08-19", 0, { recipePlannedUse: new Map() }).meals[0];
   assert.equal(meal.recipeName, "Obst-Getreide-Brei");
-  assert.deepEqual(Array.from(meal.foodIds).sort(), ["banane", "erdnussmus", "hafer"]);
+  assert.deepEqual(Array.from(meal.foodIds).sort(), ["banane", "erdnuss", "hafer"]);
   assert.deepEqual(Array.from(meal.baseFoodIds).sort(), ["banane", "hafer"]);
-  assert.deepEqual(Array.from(meal.sampleFoodIds), ["erdnussmus"]);
-  assert.equal(meal.foodRoles.erdnussmus, "sample");
+  assert.deepEqual(Array.from(meal.sampleFoodIds), ["erdnuss"]);
+  assert.equal(meal.foodRoles.erdnuss, "sample");
   assert.equal(meal.type, "Allergen wiederholen");
   assert.equal(meal.__amountsReapplied, true);
-  assert.match(meal.note, /Erdnussmus als Kostproben-Topping zum Obst-Getreide-Brei/);
+  assert.match(meal.note, /Erdnuss als Kostproben-Topping zum Obst-Getreide-Brei/);
 });

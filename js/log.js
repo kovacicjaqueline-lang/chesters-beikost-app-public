@@ -123,12 +123,17 @@ function editLogEntry(id) {
 
 function logFoodCandidates(query) {
   let q = normalizeName(query);
-  let pool = state.foods.filter((f) => f.active && !selectedLogFoods.has(f.id));
+  let pool = state.foods.filter((f) => f.active);
   if (q)
     return pool
       .filter((f) => foodSearchMatches(f, q))
-      .sort((a, b) => foodSearchScore(a, q) - foodSearchScore(b, q) || a.name.localeCompare(b.name, "de"))
+      .sort((a, b) =>
+        Number(selectedLogFoods.has(b.id)) - Number(selectedLogFoods.has(a.id)) ||
+        foodSearchScore(a, q) - foodSearchScore(b, q) ||
+        a.name.localeCompare(b.name, "de"),
+      )
       .slice(0, 10);
+  let selected = [...selectedLogFoods].map(food).filter((f) => f && f.active);
   let upcomingIds = prepDemand().map((item) => item.foodId);
   let recentIds = state.logs
     .slice()
@@ -138,9 +143,9 @@ function logFoodCandidates(query) {
     .map(food)
     .filter((f) => f && f.active && !selectedLogFoods.has(f.id));
   let remainder = pool
-    .filter((f) => !ranked.some((item) => item.id === f.id))
+    .filter((f) => !selectedLogFoods.has(f.id) && !ranked.some((item) => item.id === f.id))
     .sort((a, b) => Number(inventoryPortions(b.id) > 0) - Number(inventoryPortions(a.id) > 0) || a.priority - b.priority);
-  return [...ranked, ...remainder].slice(0, 6);
+  return [...selected, ...ranked, ...remainder].slice(0, Math.max(6, selected.length));
 }
 
 function logRecipeSearchScore(recipe, query) {
@@ -270,6 +275,7 @@ function openLog(plan) {
     recipeName: "", recipeInventoryId: "", entryType: "food", foodOutcomes: {},
   };
   let legacyEntryType = String(input.entryType || "");
+  let originalDate = String(input.date || today());
   let originalMeal = String(input.meal || "");
   let mealContext = plannedLogContext(input);
   if (!mealContext && !input.editId) input.meal = "";
@@ -281,7 +287,10 @@ function openLog(plan) {
   pendingLog.entryType = pendingLog.editId ? (legacyEntryType || "food") : "food";
   pendingLog.__mealContext = mealContext;
   pendingLog.__legacyEntryType = legacyEntryType;
+  pendingLog.__originalDate = originalDate;
   pendingLog.__originalMeal = originalMeal;
+  pendingLog.__fromPlan = !!plan && !input.editId && mealContext;
+  pendingLog.__contextEditing = false;
   pendingLog.__legacyTextureUnknown = !!pendingLog.editId && logTextureStage(plan) === null && logPositiveOutcome(plan, outcomeForFood);
   pendingLog.__recipeQuery = "";
   pendingLog.__recipeChoice = pendingLog.__recipeChoice || null;
@@ -317,20 +326,35 @@ function updateConditionalQuestions() {
 function logFoodResultsHtml() {
   return logFoodCandidates(logFoodQuery).map((f) => {
     let stock = inventoryPortions(f.id);
+    let selected = selectedLogFoods.has(f.id);
     let meta = `${foodCategoryLabel(f.category)} · ${displayStatus(f)}${stock ? ` · ${stock} im Vorrat` : ""}`;
-    return `<button class="live-result addLogFoodResult log-food-result" data-food="${f.id}" aria-label="${esc(f.name)} hinzufügen, ${esc(meta)}"><span class="log-result-emoji" aria-hidden="true">${foodEmoji(f)}</span><span class="grow log-result-copy"><b class="log-result-name">${esc(f.name)}</b><span class="small log-result-meta">${esc(meta)}</span></span><span class="log-result-add" aria-hidden="true">＋</span></button>`;
+    return `<button class="live-result addLogFoodResult log-food-result ${selected ? "selected" : ""}" data-food="${f.id}" aria-label="${esc(f.name)} ${selected ? "entfernen" : "hinzufügen"}, ${esc(meta)}"><span class="log-result-emoji" aria-hidden="true">${foodEmoji(f)}</span><span class="grow log-result-copy"><b class="log-result-name">${esc(f.name)}</b><span class="small log-result-meta">${esc(meta)}</span></span><span class="log-result-add" aria-hidden="true">${selected ? "✓" : "＋"}</span></button>`;
   }).join("");
 }
 function logRecipeResultsHtml(query = pendingLog?.__recipeQuery || "") {
   if (!normalizeName(query)) return "";
   let recipes = logRecipeCandidates(query);
   if (!recipes.length) return '<div class="small">Kein passendes Rezept gefunden.</div>';
-  return recipes.map((recipe) => `<button type="button" class="live-result selectLogRecipeResult log-food-result" data-recipe="${esc(recipe.name)}" aria-label="${esc(recipe.name)} auswählen"><span class="grow log-result-copy"><b class="log-result-name">${esc(recipe.name)}</b><span class="small log-result-meta">Rezept und tatsächliche Zutaten übernehmen</span></span><span class="log-result-add" aria-hidden="true">＋</span></button>`).join("");
+  return recipes.map((recipe) => `<button type="button" class="live-result selectLogRecipeResult" data-recipe="${esc(recipe.name)}" aria-label="${esc(recipe.name)} auswählen"><span class="grow log-result-copy"><b class="log-result-name">${esc(recipe.name)}</b><span class="small log-result-meta">Rezept und tatsächliche Zutaten übernehmen</span></span><span class="log-result-add" aria-hidden="true">＋</span></button>`).join("");
 }
 
+function removeLogFoodSelection(id) {
+  let p = pendingLog;
+  selectedLogFoods.delete(id);
+  selectedInventoryFoods.delete(id);
+  p.sampleFoodIds = (p.sampleFoodIds || []).filter((foodId) => foodId !== id);
+  p.baseFoodIds = (p.baseFoodIds || []).filter((foodId) => foodId !== id);
+  delete p.foodOutcomes[id];
+  if (p.focusId === id) p.focusId = [...selectedLogFoods][0] || "";
+}
 function addLogFoodFromResult(id) {
   captureLogDraft();
   let p = pendingLog;
+  if (selectedLogFoods.has(id)) {
+    removeLogFoodSelection(id);
+    renderLogForm();
+    return;
+  }
   let item = food(id);
   selectedLogFoods.add(id);
   let learning = !item || rank(item) < 2;
@@ -445,16 +469,23 @@ function renderLogForm() {
   p.baseFoodIds = [...new Set((p.baseFoodIds || []).filter((id) => mainIds.includes(id)))];
   if (!p.baseFoodIds.length) p.baseFoodIds = [...mainIds];
   document.getElementById("logTitle").textContent = p.editId ? "Essen bearbeiten" : "Essen eintragen";
-  document.getElementById("logSubtitle").textContent = `${nice(p.date, true)}${p.__mealContext ? ` · ${mealName(p.meal)}` : ""}`;
+  let subtitle = document.getElementById("logSubtitle");
+  if (subtitle) { subtitle.textContent = ""; subtitle.hidden = true; }
   let stockedSelected = selected.filter((f) => inventoryPortions(f.id) > 0);
   selectedInventoryFoods = new Set([...selectedInventoryFoods].filter((id) => stockedSelected.some((f) => f.id === id)));
   let recipeItem = selectedRecipeInventoryId ? state.inventory.find((item) => item.id === selectedRecipeInventoryId) : null;
   let outcomeOptions = [["eaten", "Gegessen"], ["tried", "Probiert"], ["not_accepted", "Abgelehnt"], ["reaction", "Reaktion"], ["not_offered", "Nicht angeboten"]];
   let mainDefault = mainIds.map((id) => p.foodOutcomes[id]).find(Boolean) || "eaten";
   let focusOutcome = p.foodOutcomes[p.focusId] || sampleIds.map((id) => p.foodOutcomes[id]).find(Boolean) || mainDefault || "tried";
-  let mainBlock = mainIds.length ? `<div class="field"><label>${mainIds.length === 1 ? "Lebensmittel bewerten" : "Mahlzeit bewerten"}</label><div class="grouped-outcome"><div><b>${mainIds.map((id) => esc(food(id)?.name || id)).join(" + ")}</b><span>${mainIds.length === 1 ? "Ergebnis" : "gemeinsam bewertet"}</span></div><select id="mainOutcome">${outcomeOptions.map(([value, title]) => `<option value="${value}" ${mainDefault === value ? "selected" : ""}>${title}</option>`).join("")}</select></div>${mainIds.length > 1 ? `<details class="individual-rating"><summary>Zutaten einzeln bewerten</summary><label class="toggleline compact-toggle"><input class="ds-toggle-input" type="checkbox" id="individualRatings" ${p.individualRatings ? "checked" : ""}><span class="toggle-copy"><b>Einzelne Ergebnisse verwenden</b><span class="small">Nur bei relevanten Unterschieden nötig.</span></span><span class="toggle-state" aria-hidden="true"></span></label><div id="individualOutcomeRows" style="display:${p.individualRatings ? "block" : "none"}">${mainIds.map((id) => `<div class="food-outcome-row"><div class="food-outcome-name"><b>${esc(food(id)?.name || id)}</b><span>Bestandteil</span></div><select data-individual-result="${id}">${outcomeOptions.map(([value, title]) => `<option value="${value}" ${(p.foodOutcomes[id] || mainDefault) === value ? "selected" : ""}>${title}</option>`).join("")}</select><span></span></div>`).join("")}</div></details>` : ""}</div>` : "";
+  let individualRows = mainIds.map((id) => `<div class="food-outcome-row"><div class="food-outcome-name"><b>${esc(food(id)?.name || id)}</b><span>Bestandteil</span></div><select data-individual-result="${id}">${outcomeOptions.map(([value, title]) => `<option value="${value}" ${(p.foodOutcomes[id] || mainDefault) === value ? "selected" : ""}>${title}</option>`).join("")}</select><span></span></div>`).join("");
+  let mainBlock = mainIds.length ? `<div class="field"><label>${mainIds.length === 1 ? "Lebensmittel bewerten" : "Mahlzeit bewerten"}</label>${mainIds.length > 1 && p.individualRatings ? `<div class="sample-outcome-list">${individualRows}</div><div class="individual-rating"><button class="text-button" id="toggleIndividualRatings" type="button">Gemeinsam bewerten</button></div>` : `<div class="grouped-outcome"><div><b>${mainIds.map((id) => esc(food(id)?.name || id)).join(" + ")}</b><span>${mainIds.length === 1 ? "Ergebnis" : "gemeinsam bewertet"}</span></div><select id="mainOutcome">${outcomeOptions.map(([value, title]) => `<option value="${value}" ${mainDefault === value ? "selected" : ""}>${title}</option>`).join("")}</select></div>${mainIds.length > 1 ? `<div class="individual-rating"><button class="text-button" id="toggleIndividualRatings" type="button">Zutaten einzeln bewerten ›</button></div>` : ""}`}</div>` : "";
   let sampleBlock = sampleIds.length ? `<div class="field"><label>Einführung und Wiederholung</label><div class="sample-outcome-list">${sampleIds.map((id) => `<div class="food-outcome-row"><div class="food-outcome-name"><b>${esc(food(id)?.name || id)}</b><span>${esc(logLearningLabel(id))}</span></div><select data-sample-result="${id}">${outcomeOptions.map(([value, title]) => `<option value="${value}" ${(p.foodOutcomes[id] || "tried") === value ? "selected" : ""}>${title}</option>`).join("")}</select><button class="iconbtn" data-remove-log-food="${id}" aria-label="${esc(food(id)?.name || id)} entfernen">×</button></div>`).join("")}</div></div>` : "";
-  let mealContext = p.__mealContext ? `<div class="field"><label>Geplante Mahlzeit</label><div class="selected-target"><b>${esc(mealName(p.meal))}</b><div class="small">Wird automatisch aus dem Plan übernommen.</div></div></div>` : "";
+  let mealOptions = ["breakfast", "lunch", "snack", "dinner"].map((meal) => `<option value="${meal}" ${p.meal === meal ? "selected" : ""}>${esc(mealName(meal))}</option>`).join("");
+  let contextChanged = p.date !== p.__originalDate || p.meal !== p.__originalMeal;
+  let contextHint = p.__fromPlan && !contextChanged ? '<div class="small">aus dem Plan</div>' : "";
+  let logContext = p.__mealContext
+    ? `<div class="field" style="margin-bottom:10px"><div class="row"><div class="grow"><b>${esc(nice(p.date, true))} · ${esc(mealName(p.meal))}</b>${contextHint}</div><button class="text-button" id="editLogContext" type="button" aria-expanded="${p.__contextEditing ? "true" : "false"}">${p.__contextEditing ? "Fertig" : "Ändern"}</button></div><div id="logContextFields" style="display:${p.__contextEditing ? "block" : "none"};margin-top:10px"><div class="grid2"><div class="field"><label>Datum</label><input type="date" id="logDate" value="${p.date}"></div><div class="field"><label>Mahlzeit</label><select id="logMeal">${mealOptions}</select></div></div></div></div>`
+    : `<div class="log-date-grid"><div class="field"><label>Datum</label><input type="date" id="logDate" value="${p.date}"></div></div>`;
   let freeRecipePicker = !p.editId && !p.__mealContext ? `<div class="field log-recipe-picker"><label>Rezept auswählen (optional)</label><input id="logRecipeSearch" value="${esc(p.__recipeQuery || "")}" placeholder="Rezeptnamen eingeben" autocomplete="off"><div class="small log-recipe-results-label">${p.__recipeQuery ? "Suchergebnisse" : "Rezeptnamen eingeben"}</div><div class="log-recipe-results">${logRecipeResultsHtml(p.__recipeQuery || "")}</div></div>` : "";
   let freeRecipe = !p.editId && !p.__mealContext && p.recipeName ? recipeByName(p.recipeName) : null;
   if (freeRecipe && !p.__recipeChoice) {
@@ -466,23 +497,26 @@ function renderLogForm() {
   let textureValue = p.__textureValue !== undefined ? p.__textureValue : (currentTexture || "");
 
   document.getElementById("logForm").innerHTML = `
-    <div class="${p.__mealContext ? "grid2" : ""} log-date-grid"><div class="field"><label>Datum</label><input type="date" id="logDate" value="${p.date}"></div>${mealContext}</div>
+    ${logContext}
     ${freeRecipePicker}
     ${p.recipeName ? `<div class="selected-target"><div class="row"><b class="grow">${esc(p.recipeName)}</b>${!p.editId && !p.__mealContext ? '<button class="iconbtn" id="clearLogRecipe" type="button" aria-label="Rezeptzuordnung entfernen">×</button>' : ""}</div><div class="small">Bekannte Bestandteile gemeinsam, Einführungen und Wiederholungen separat bewerten.</div></div>` : ""}
     ${freeRecipeChoice}
     ${mainBlock}${sampleBlock}
-    <div class="field log-food-picker"><label>Lebensmittel hinzufügen</label><input id="logFoodSearch" value="${esc(logFoodQuery)}" placeholder="Tippen und Treffer auswählen" autocomplete="off"><div class="field-error-message" id="logFoodError" style="display:none"></div><button class="btn secondary smallbtn log-add-custom-food" id="addCustomLogFood" type="button">Eigenes Lebensmittel hinzufügen</button><div class="small log-food-results-label">${logFoodQuery ? "Suchergebnisse" : "Vorschläge aus Plan und Verlauf"}</div><div class="log-food-results">${logFoodResultsHtml()}</div></div>
+    <div class="field log-food-picker"><label>Lebensmittel hinzufügen</label><input id="logFoodSearch" value="${esc(logFoodQuery)}" placeholder="Tippen und Treffer auswählen" autocomplete="off"><div class="field-error-message" id="logFoodError" style="display:none"></div><button class="text-button" id="addCustomLogFood" type="button">+ Eigenes Lebensmittel</button><div class="small log-food-results-label">${logFoodQuery ? "Suchergebnisse" : "Vorschläge aus Plan und Verlauf"}</div><div class="log-food-results">${logFoodResultsHtml()}</div></div>
     <div class="field"><label>Gesamtmenge in g (optional)</label><input id="logAmount" type="number" min="0" step="1" inputmode="decimal" value="${esc(p.amount || "")}" placeholder="z. B. 5"></div>
     <div class="field"><label>Konsistenz</label><select id="logTexture"><option value="">Bitte auswählen</option>${[1, 2, 3, 4].map((n) => `<option value="${n}" ${String(textureValue) === String(n) ? "selected" : ""}>Stufe ${n} – ${esc(textureName(n))}</option>`).join("")}</select><div class="small" style="margin-top:5px">Bei „Probiert“ oder „Gegessen“ erforderlich. Bei Ablehnung, Reaktion oder „Nicht angeboten“ optional; alte Einträge ohne dokumentierte Konsistenz bleiben unverändert.</div></div>
     ${conditionalQuestionsHtml(focusOutcome)}
     <details class="accordion"><summary>Notiz ergänzen</summary><div class="field"><label>Notiz oder Reaktion</label><textarea id="logNote">${esc(p.note || "")}</textarea></div></details>
     ${!p.editId && recipeItem ? `<div class="field"><label>Aus dem Rezeptvorrat verwendet</label><label class="toggleline"><input class="ds-toggle-input" type="checkbox" id="useRecipeInventory" checked><span class="toggle-copy"><b>1 ${esc(recipeItem.size || "Portion")} ${esc(recipeItem.recipeName)}</b><span class="small">Eingefroren am ${shortDate(recipeItem.frozenDate)}</span></span><span class="toggle-state" aria-hidden="true"></span></label></div>` : ""}
     ${!p.editId && !recipeItem && stockedSelected.length ? `<div class="field"><label>Aus dem Gefriervorrat verwendet</label><div class="chips">${stockedSelected.map((f) => `<label class="chip toggle-chip"><input class="ds-toggle-input" type="checkbox" data-inventory-food="${f.id}" ${selectedInventoryFoods.has(f.id) ? "checked" : ""}><span>1 Portion ${esc(f.name)} <small>(${inventoryPortions(f.id)} vorhanden)</small></span></label>`).join("")}</div></div>` : ""}
-    <div class="sticky-form-actions"><div class="ds-actionbar"><button class="btn secondary" id="cancelLog" type="button">Abbrechen</button><button class="btn" id="saveLog">${p.editId ? "Änderungen speichern" : "Speichern"}</button></div><div class="small" style="margin-top:5px">Lebensmittelrollen und getrennte Bewertungen bleiben beim Bearbeiten erhalten.</div></div>`;
+    <div class="sticky-form-actions"><div class="ds-actionbar"><button class="btn secondary" id="cancelLog" type="button">Abbrechen</button><button class="btn" id="saveLog">${p.editId ? "Änderungen speichern" : "Speichern"}</button></div></div>`;
   document.querySelectorAll("#logForm select").forEach((select) => select.addEventListener("change", updateConditionalQuestions));
+  document.getElementById("logTexture")?.addEventListener("change", clearLogTextureValidation);
   document.getElementById("logDate").onchange = (event) => requestLogDateChange(event.target.value, p.date);
-  document.getElementById("individualRatings")?.addEventListener("change", (event) => { p.individualRatings = event.target.checked; document.getElementById("individualOutcomeRows").style.display = event.target.checked ? "block" : "none"; });
-  document.querySelectorAll("[data-remove-log-food]").forEach((button) => button.onclick = () => { captureLogDraft(); let id = button.dataset.removeLogFood; selectedLogFoods.delete(id); selectedInventoryFoods.delete(id); p.sampleFoodIds = (p.sampleFoodIds || []).filter((x) => x !== id); p.baseFoodIds = (p.baseFoodIds || []).filter((x) => x !== id); delete p.foodOutcomes[id]; renderLogForm(); });
+  document.getElementById("editLogContext")?.addEventListener("click", () => { p.__contextEditing = !p.__contextEditing; renderLogForm(); });
+  document.getElementById("logMeal")?.addEventListener("change", (event) => { captureLogDraft(); p.meal = event.target.value; p.__contextEditing = true; renderLogForm(); });
+  document.getElementById("toggleIndividualRatings")?.addEventListener("click", () => { captureLogDraft(); p.individualRatings = !p.individualRatings; renderLogForm(); });
+  document.querySelectorAll("[data-remove-log-food]").forEach((button) => button.onclick = () => { captureLogDraft(); removeLogFoodSelection(button.dataset.removeLogFood); renderLogForm(); });
   document.getElementById("logRecipeSearch")?.addEventListener("input", renderLogRecipeResults);
   document.getElementById("clearLogRecipe")?.addEventListener("click", () => { captureLogDraft(); p.recipeName = ""; p.__recipeQuery = ""; p.__recipeChoice = null; selectedRecipeInventoryId = ""; renderLogForm(); });
   document.getElementById("logFoodSearch").oninput = (event) => {
@@ -515,6 +549,7 @@ function captureLogDraft(options = {}) {
   if (!pendingLog) return;
   let value = (id) => document.getElementById(id)?.value;
   if (!options.skipDate && value("logDate")) pendingLog.date = value("logDate");
+  if (pendingLog.__mealContext && value("logMeal")) pendingLog.meal = value("logMeal");
   pendingLog.amount = value("logAmount") || "";
   pendingLog.__textureValue = value("logTexture") ?? pendingLog.__textureValue ?? "";
   if (pendingLog.__textureValue) {
@@ -525,7 +560,6 @@ function captureLogDraft(options = {}) {
     pendingLog.textureKnown = false;
   }
   pendingLog.note = value("logNote") || "";
-  pendingLog.individualRatings = !!document.getElementById("individualRatings")?.checked;
   if (document.getElementById("mainOutcome")) {
     let sampleIds = new Set(pendingLog.sampleFoodIds || []);
     for (let id of [...selectedLogFoods].filter((x) => !sampleIds.has(x))) pendingLog.foodOutcomes[id] = document.getElementById("mainOutcome").value;
@@ -534,6 +568,29 @@ function captureLogDraft(options = {}) {
   document.querySelectorAll("[data-sample-result]").forEach((select) => pendingLog.foodOutcomes[select.dataset.sampleResult] = select.value);
   pendingLog.rejectionStrength = document.querySelector('input[name="rejectionStrength"]:checked')?.value || pendingLog.rejectionStrength || "";
   pendingLog.notOfferedReason = document.querySelector('input[name="notOfferedReason"]:checked')?.value || pendingLog.notOfferedReason || "";
+}
+
+function clearLogTextureValidation() {
+  let textureField = document.getElementById("logTexture")?.closest(".field");
+  textureField?.classList.remove("field-error");
+  textureField?.querySelector(".unified-texture-error")?.remove();
+}
+
+function requestLogTextureSelection() {
+  let select = document.getElementById("logTexture");
+  if (!select) return;
+  select.scrollIntoView({ block: "center", inline: "nearest" });
+  if (typeof select.showPicker === "function") {
+    try {
+      select.showPicker();
+      return;
+    } catch {}
+  }
+  try {
+    select.focus({ preventScroll: true });
+  } catch {
+    select.focus();
+  }
 }
 
 function saveLog() {
@@ -565,7 +622,7 @@ function saveLog() {
   let sampleIds = [...new Set((pendingLog.sampleFoodIds || []).filter((id) => ids.includes(id)))];
   let mainIds = ids.filter((id) => !sampleIds.includes(id));
   let mainOutcome = document.getElementById("mainOutcome")?.value || "eaten";
-  let individual = !!document.getElementById("individualRatings")?.checked;
+  let individual = !!pendingLog.individualRatings;
   let foodOutcomes = {};
   for (let id of mainIds) foodOutcomes[id] = individual ? (document.querySelector(`[data-individual-result="${id}"]`)?.value || mainOutcome) : mainOutcome;
   for (let id of sampleIds) foodOutcomes[id] = document.querySelector(`[data-sample-result="${id}"]`)?.value || pendingLog.foodOutcomes?.[id] || "tried";
@@ -588,7 +645,7 @@ function saveLog() {
   if (textureRequired) {
     textureField?.classList.add("field-error");
     textureField?.insertAdjacentHTML("beforeend", '<div class="field-error-message unified-texture-error">Bitte die tatsächlich angebotene Konsistenz auswählen.</div>');
-    document.getElementById("logTexture")?.focus();
+    requestLogTextureSelection();
     return;
   }
 
@@ -596,7 +653,7 @@ function saveLog() {
   let newLog = {
     id: pendingLog.editId || `${Date.now()}-${Math.random().toString(36).slice(2)}`,
     date: document.getElementById("logDate").value,
-    meal: pendingLog.editId
+    meal: pendingLog.editId && pendingLog.__legacyEntryType === "sample"
       ? String(pendingLog.__originalMeal ?? pendingLog.meal ?? "")
       : (pendingLog.__mealContext ? String(pendingLog.meal || "") : ""),
     foodIds: ids,
@@ -654,13 +711,7 @@ function saveLog() {
   let affectedFoodIds = new Set([...(oldLog?.foodIds || []), ...ids]);
   for (let foodId of affectedFoodIds) rebuildFoodConsequences(foodId);
 
-  save(); closeLog(); renderAll(); showView("more");
-  let details = document.getElementById("logDetails");
-  if (details) details.open = true;
-  requestAnimationFrame(() => {
-    let entry = document.querySelector(`[data-log="${newLog.id}"]`);
-    (entry || document.getElementById("logSection"))?.scrollIntoView({ behavior: "smooth", block: "start" });
-  });
+  save(); closeLog(); renderAll();
   let inventoryMessage = consumedNames.length ? ` · ${consumedNames.length} Vorratsportion${consumedNames.length === 1 ? "" : "en"} abgezogen` : "";
   showToast(`${isEdit ? "Eintrag geändert" : "Eintrag gespeichert"}${inventoryMessage}.`, () => {
     state = stateBefore; save(); renderAll();

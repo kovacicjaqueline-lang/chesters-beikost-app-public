@@ -74,7 +74,7 @@ function loadEffectiveIconRuntime() {
   return {
     foodPaths: clonePlain(context.__icons.FOOD_ICON_PATHS),
     recipePaths: clonePlain(context.__icons.RECIPE_ICON_PATHS),
-    runtimeRecipePaths: clonePlain(context.__icons.RECIPE_RUNTIME_ICON_ALIASES),
+    recipeAliases: clonePlain(context.__icons.RECIPE_RUNTIME_ICON_ALIASES),
     runtimeFoods: clonePlain(context.__foods),
     foodIllustrationPath: context.__foodPath,
   };
@@ -115,7 +115,7 @@ test("aktive FOOD-/Recipe-Mappings zeigen auf existente V2-Assets", () => {
     assert.match(relativePath, /^assets\/illustrations-v2\/recipes\/[^/]+\.svg$/, `${name}: Recipe-Mapping außerhalb Recipe-V2`);
     assert.ok(fs.existsSync(path.join(ROOT, relativePath)), `${name}: Recipe-Asset fehlt: ${relativePath}`);
   }
-  for (const [name, relativePath] of Object.entries(runtime.runtimeRecipePaths)) {
+  for (const [name, relativePath] of Object.entries(runtime.recipeAliases)) {
     assert.match(relativePath, /^assets\/illustrations-v2\/recipes\/[^/]+\.svg$/, `${name}: Runtime-Recipe-Mapping außerhalb Recipe-V2`);
     assert.ok(fs.existsSync(path.join(ROOT, relativePath)), `${name}: Runtime-Recipe-Asset fehlt: ${relativePath}`);
   }
@@ -128,9 +128,19 @@ test("aktive FOOD-/Recipe-Mappings zeigen auf existente V2-Assets", () => {
 
   const activeRecipeNames = recipes.filter((recipe) => recipe.active !== false).map((recipe) => recipe.name).sort((a, b) => a.localeCompare(b, "de"));
   assert.deepEqual(Object.keys(runtime.recipePaths).sort((a, b) => a.localeCompare(b, "de")), activeRecipeNames, "RECIPE_ICON_PATHS enthält verwaiste oder fehlende aktive Mapping-Schlüssel");
-  assert.equal(runtime.runtimeRecipePaths["Pizza Wrap"], "assets/illustrations-v2/recipes/pizza-wrap.svg");
-  assert.equal(runtime.runtimeRecipePaths["Chicken Fajita Wrap"], "assets/illustrations-v2/recipes/chicken-fajita-wrap.svg");
-  assert.notEqual(runtime.runtimeRecipePaths["Pizza Wrap"], runtime.runtimeRecipePaths["Chicken Fajita Wrap"]);
+  assert.equal(runtime.recipeAliases["Pizza Wrap"], "assets/illustrations-v2/recipes/pizza-wrap.svg");
+  assert.equal(runtime.recipeAliases["Chicken Fajita Wrap"], "assets/illustrations-v2/recipes/chicken-fajita-wrap.svg");
+  assert.notEqual(runtime.recipeAliases["Pizza Wrap"], runtime.recipeAliases["Chicken Fajita Wrap"]);
+});
+
+test("Runtime-Nockerl-Aliase lösen alle drei gesplitteten Rezepte eindeutig auf", () => {
+  const names = ["Huhn-Zucchini-Nockerl", "Rind-Karotten-Nockerl", "Linsen-Süßkartoffel-Nockerl"];
+  const paths = names.map((name) => runtime.recipeAliases[name]);
+  for (let index = 0; index < names.length; index += 1) {
+    assert.match(paths[index] || "", /^assets\/illustrations-v2\/recipes\/[^/]+\.svg$/, `${names[index]}: Runtime-Icon fehlt`);
+    assert.ok(fs.existsSync(path.join(ROOT, paths[index])), `${names[index]}: Runtime-Asset fehlt`);
+  }
+  assert.equal(new Set(paths).size, names.length, "die drei Nockerl-Runtime-Rezepte müssen drei unterschiedliche Motive verwenden");
 });
 
 test("Runtime-FOODs: keine dokumentierten V2-Soll/Ist-Gaps bleiben offen", () => {
@@ -162,8 +172,8 @@ test("V2-Mappings, Dateibestand und Service-Worker-Precache sind exakt deckungsg
   const referenced = [...new Set([
     ...Object.values(runtime.foodPaths),
     ...Object.values(runtime.recipePaths),
-    ...Object.values(runtime.runtimeRecipePaths),
-  ].map(normalizeRepoPath))].sort();
+    ...Object.values(runtime.recipeAliases),
+  ])].map(normalizeRepoPath).sort();
   assert.deepEqual(allAssets, referenced, "unreferenzierte V2-Assets oder Mapping auf nicht vorhandene V2-Datei");
 
   const precached = [...new Set([...corePrecacheFiles, ...runtimeRecipePrecache])]

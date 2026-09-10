@@ -87,8 +87,21 @@
 
   globalScope.__plannerRolloverCascade = API;
 
-  // Die Review-Fixes müssen vor app.js und vor nachgelagerten UI-Dekoratoren laufen.
-  // Beim normalen Parser-Start lädt document.write das Zusatzmodul synchron.
+  // Die gemeinsame Kartenpräsentation wird zuerst installiert. Die nachfolgende
+  // Rollover-Review-Schicht bindet dadurch ihre bestehende „Auf morgen“-Semantik
+  // an die bereits vereinheitlichten Today-/Plan-Buttons statt an veraltetes DOM.
+  const mealCardSrc = "js/meal-card-unification.js?v=10.1.26";
+  if (document.readyState === "loading") {
+    document.write(`<script src="${mealCardSrc}"></scr` + `ipt>`);
+  } else {
+    let script = document.createElement("script");
+    script.src = mealCardSrc;
+    script.async = false;
+    document.head.appendChild(script);
+  }
+
+  // Die Review-Fixes müssen weiterhin vor app.js und vor dem Tauschen-Dekorator
+  // laufen, damit bestehende Planner-/Rollover-Semantik unverändert bleibt.
   const reviewFixSrc = "js/planner-log-rollover-review-fixes.js?v=10.1.26";
   if (document.readyState === "loading") {
     document.write(`<script src="${reviewFixSrc}"></scr` + `ipt>`);
@@ -99,6 +112,8 @@
     document.head.appendChild(script);
   }
 
+  // Tauschen kommt zuletzt: Es erweitert denselben renderMealCore-Pfad, den
+  // sowohl der Wochenplan als auch „Heute“ bereits gemeinsam verwenden.
   const randomSwapSrc = "js/planner-random-swap.js?v=10.1.26";
   if (document.readyState === "loading") {
     document.write(`<script src="${randomSwapSrc}"></scr` + `ipt>`);
@@ -107,5 +122,29 @@
     script.src = randomSwapSrc;
     script.async = false;
     document.head.appendChild(script);
+  }
+
+  // „Zutat fehlt“ baut bewusst auf dem bereits installierten Tauschen-/Kartenpfad
+  // auf und kommt deshalb unmittelbar danach. So bleibt die bestehende Planner-
+  // Semantik unangetastet und die neue Aktion ergänzt nur die Verfügbarkeit.
+  const missingIngredientSrc = "js/planner-missing-ingredient.js?v=10.1.26";
+  if (document.readyState === "loading") {
+    document.write(`<script src="${missingIngredientSrc}"></scr` + `ipt>`);
+  } else {
+    let script = document.createElement("script");
+    script.src = missingIngredientSrc;
+    script.async = false;
+    document.head.appendChild(script);
+  }
+
+  // app.js und nachgelagerte Planner-Schichten ersetzen einzelne Planner-Funktionen
+  // noch während des Parserlaufs. Nach Abschluss aller synchronen Skripte werden
+  // deshalb die Availability-Wrapper genau einmal auf die endgültige Runtime gelegt.
+  const finalizeMissingIngredientPolicies = () =>
+    globalScope.__plannerMissingIngredient?.installAvailabilityPolicies?.();
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", finalizeMissingIngredientPolicies, { once: true });
+  } else {
+    setTimeout(finalizeMissingIngredientPolicies, 0);
   }
 })(typeof globalThis !== "undefined" ? globalThis : this);

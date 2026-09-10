@@ -36,6 +36,23 @@ function renderAll() {
   if (document.getElementById("auditList")) renderAudit();
   renderStorageStatus();
 }
+function renderView(id) {
+  if (id === "home") renderHome();
+  else if (id === "plan") renderPlan();
+  else if (id === "prep") renderPrep();
+  else if (id === "foods") renderFoods();
+  else if (id === "more") {
+    renderLogs();
+    renderStatistics();
+    renderAllergenModule();
+    renderSettings();
+    if (document.getElementById("auditList")) renderAudit();
+    renderStorageStatus();
+  }
+}
+function renderCurrentView() {
+  renderView(document.querySelector(".view.active")?.id || "home");
+}
 function textureSuccessCount(stage = Number(state.settings.textureStage)) {
   return new Set(
     state.logs
@@ -1055,6 +1072,7 @@ function renderMeal(day, meal) {
 
 function renderPlan() {
   renderPlanCore();
+  globalThis.MobileUiLifecycle?.afterRender("plan");
   let summary = document.getElementById("planLockSummary");
   let amountLabel = AMOUNT_LEVELS[currentAmountLevel()]?.label || "";
   let compactAmount = compactPlanAmountLabel(amountLabel);
@@ -1082,6 +1100,7 @@ function renderHome() {
   if (button) {
     button.onclick = (event) => { event.preventDefault(); openLog(null); };
   }
+  globalThis.MobileUiLifecycle?.afterRender("home");
 }
 
 function renderSettings() {
@@ -1167,7 +1186,9 @@ function showView(id) {
   document
     .querySelectorAll("nav button")
     .forEach((b) => b.classList.toggle("active", b.dataset.view === id));
+  renderView(id);
   window.scrollTo({ top: 0, behavior: "smooth" });
+  globalThis.MobileUiLifecycle?.afterViewChange(id, previous);
 }
 function existingFoodWithName(name) {
   let normalized = normalizeName(name);

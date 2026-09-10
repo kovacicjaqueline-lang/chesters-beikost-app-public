@@ -61,18 +61,35 @@ async function createSnapshot(reason = "automatisch") {
 }
 let saveQueue = Promise.resolve();
 let indexedDbUnavailable = false;
+const IDB_RECOVERY_PENDING_KEY = `${KEY}-idb-recovery-pending`;
+function pendingIdbRecoveryState() {
+  try {
+    if (localStorage.getItem(IDB_RECOVERY_PENDING_KEY) !== "1") return null;
+    let raw = localStorage.getItem(KEY);
+    return raw ? migrateState(JSON.parse(raw)) : null;
+  } catch (_) {
+    return null;
+  }
+}
 function save(options = {}) {
   let snapshot = clone(state);
   snapshot.schemaVersion = SCHEMA_VERSION;
   snapshot.appVersion = APP_VERSION;
   // Mirror for migration and emergency recovery; IndexedDB remains the primary store when available.
-  try { localStorage.setItem(KEY, JSON.stringify(snapshot)); } catch (_) {}
+  let localBackupWritten = false;
+  try {
+    localStorage.setItem(KEY, JSON.stringify(snapshot));
+    localBackupWritten = true;
+  } catch (_) {}
   if (indexedDbUnavailable || !globalThis.indexedDB) return Promise.resolve();
   saveQueue = saveQueue.then(async () => {
     if (options.snapshotReason) await createSnapshot(options.snapshotReason);
     await idbPut(STATE_RECORD, snapshot);
   }).catch((error) => {
     indexedDbUnavailable = true;
+    if (localBackupWritten) {
+      try { localStorage.setItem(IDB_RECOVERY_PENDING_KEY, "1"); } catch (_) {}
+    }
     state.backupMeta.storagePersisted = "unavailable";
     if (!/denied|not available|nicht verfügbar|SecurityError/i.test(String(error))) {
       console.error("Speichern in IndexedDB fehlgeschlagen", error);
@@ -94,18 +111,55 @@ function load() {
     return clone(DEFAULT);
   }
 }
+
+/* PLAN-FROM-TODAY START */
+function isIsoCalendarDate(value) {
+  let match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || ""));
+  if (!match) return false;
+  let year = Number(match[1]), month = Number(match[2]), day = Number(match[3]);
+  if (month < 1 || month > 12 || day < 1) return false;
+  let leapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  let daysInMonth = [31, leapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  return day <= daysInMonth[month - 1];
+}
+function syncPlanFromToToday(data = state, currentDate = today()) {
+  if (!data?.settings || !isIsoCalendarDate(currentDate)) return false;
+  let planFrom = String(data.settings.planFrom || "");
+  if (isIsoCalendarDate(planFrom) && planFrom >= currentDate) return false;
+  data.settings.planFrom = currentDate;
+  return true;
+}
+async function syncPlanFromOnAppOpen() {
+  if (!syncPlanFromToToday()) return false;
+  await save();
+  renderAll();
+  return true;
+}
+function installPlanFromVisibilitySync(doc) {
+  if (!doc?.addEventListener) return false;
+  doc.addEventListener("visibilitychange", () => {
+    if (doc.visibilityState === "visible") void syncPlanFromOnAppOpen();
+  });
+  return true;
+}
+/* PLAN-FROM-TODAY END */
+
 async function bootstrapStorage() {
+  let recoveryState = pendingIdbRecoveryState();
   let idbState = await idbGet(STATE_RECORD).catch(() => null);
-  if (idbState) {
+  if (idbState && !recoveryState) {
     state = migrateState(idbState);
   } else {
-    state = migrateState(state);
+    state = recoveryState || migrateState(state);
     state.backupMeta.migratedAt = new Date().toISOString();
-    await idbPut(STATE_RECORD, clone(state)).catch(() => {});
+    let wroteState = await idbPut(STATE_RECORD, clone(state)).then(() => true).catch(() => false);
     // Keep the old localStorage record until the database can be read back successfully.
-    let check = await idbGet(STATE_RECORD).catch(() => null);
+    let check = wroteState ? await idbGet(STATE_RECORD).catch(() => null) : null;
     if (check) {
-      try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (_) {}
+      try {
+        localStorage.setItem(KEY, JSON.stringify(state));
+        if (recoveryState) localStorage.removeItem(IDB_RECOVERY_PENDING_KEY);
+      } catch (_) {}
     }
   }
   if (navigator.storage?.persist) {
@@ -114,10 +168,10 @@ async function bootstrapStorage() {
       state.backupMeta.storagePersisted = granted ? "granted" : "denied";
     } catch (_) { state.backupMeta.storagePersisted = "unavailable"; }
   } else state.backupMeta.storagePersisted = "unavailable";
-  if (!state.settings.planFrom) state.settings.planFrom = today();
+  syncPlanFromToToday();
   await save();
-  renderAll();
-  renderStorageStatus();
+  globalThis.installRecipeV2ComponentRuntime?.();
+  renderCurrentView();
 }
 
 function showStorageError(message) {
@@ -202,3 +256,5 @@ async function openSnapshots() {
     document.getElementById("confirmSnapshotRestore").onclick=async()=>{ await createSnapshot("vor Zwischenstand-Wiederherstellung"); state=migrateState(snap.state); await save(); closeGeneric(); renderAll(); showToast("Zwischenstand wiederhergestellt."); };
   });
 }
+
+if (typeof document !== "undefined") installPlanFromVisibilitySync(document);

@@ -142,11 +142,13 @@ test("PLAN-08 review: genau ein freigeschaltetes exaktes Rezept darf ein sonst s
 test("PLAN-08 review: erster sichtbarer Render erfolgt erst nach vollständiger Browser-Policy-Kette", () => {
   let domReady = null;
   let renders = 0;
+  let fullRenders = 0;
   const appended = [];
   const body = { style: { visibility: "" } };
   const context = {
     console: { error: () => {} },
-    renderAll: () => { renders += 1; },
+    renderAll: () => { fullRenders += 1; },
+    renderCurrentView: () => { renders += 1; },
     normalizeName: (value) => String(value || "").toLowerCase(),
   };
   context.window = context;
@@ -177,6 +179,8 @@ test("PLAN-08 review: erster sichtbarer Render erfolgt erst nach vollständiger 
         if (script.src.includes("planner-proactive-recipe")) context.installPlannerProactiveRecipeRuntime = () => true;
         if (script.src.includes("planner-food-role-stability")) context.installPlannerFoodRoleStabilityRuntime = () => true;
         if (script.src.includes("planner-quality-rotation")) context.installPlannerQualityRotationRuntime = () => true;
+        if (script.src.includes("planner-introduction-policy")) context.installPlannerIntroductionPolicyRuntime = () => true;
+        if (script.src.includes("planner-allergen-maintenance")) context.PlannerAllergenMaintenance = {};
         if (script.src.includes("food-handling")) {
           context.FOOD_HANDLING_CONTRACT = {};
           context.RECIPE_HANDLING_CONTRACT = {};
@@ -192,6 +196,7 @@ test("PLAN-08 review: erster sichtbarer Render erfolgt erst nach vollständiger 
   vm.runInContext(utilsSource, context);
   assert.equal(body.style.visibility, "hidden");
   assert.equal(renders, 0);
+  assert.equal(fullRenders, 0);
   assert.equal(context.__plannerPoliciesReady, false);
   assert.equal(typeof domReady, "function");
 
@@ -207,11 +212,14 @@ test("PLAN-08 review: erster sichtbarer Render erfolgt erst nach vollständiger 
     `js/planner-proactive-recipe.js?v=${appVersion}`,
     `js/planner-food-role-stability.js?v=${appVersion}`,
     `js/planner-quality-rotation.js?v=${appVersion}`,
+    `js/planner-introduction-policy.js?v=${appVersion}`,
+    `js/planner-allergen-maintenance.js?v=${appVersion}`,
     `data/food-handling.js?v=${appVersion}`,
     `js/handling-readiness.js?v=${appVersion}`,
   ]);
   assert.equal(context.__handlingReadinessReady, true);
   assert.equal(context.__plannerPoliciesReady, true);
   assert.equal(renders, 1);
+  assert.equal(fullRenders, 0);
   assert.equal(body.style.visibility, "");
 });

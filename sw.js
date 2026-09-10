@@ -163,6 +163,11 @@ const UI_PRECACHE = [
   "./js/mobile-beikost-more.js?v=10.1.26",
 ];
 
+const RECIPE_RUNTIME_PRECACHE = [
+  "./assets/illustrations-v2/recipes/pizza-wrap.svg",
+  "./assets/illustrations-v2/recipes/chicken-fajita-wrap.svg",
+];
+
 self.addEventListener("install", (event) => {
   event.waitUntil((async () => {
     const requiredPrecache = [
@@ -174,6 +179,7 @@ self.addEventListener("install", (event) => {
         ...UI_PRECACHE,
         ...PHASE_READINESS_PRECACHE,
         ...PLAN_CHECK_PRECACHE,
+        ...RECIPE_RUNTIME_PRECACHE,
       ]),
     ];
     const cache = await caches.open(CACHE);

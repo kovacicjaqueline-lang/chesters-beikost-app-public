@@ -1,11 +1,12 @@
 "use strict";
 
 /*
- * Strukturierter FOOD-/Rezept-Handling- und Oral-Processing-Contract.
+ * Strukturierter FOOD-/Rezept-Handling-, Bite-Separation- und Oral-Processing-Contract.
  *
- * Handling, orale Verarbeitung, Safety und Altersorientierung bleiben getrennte
- * Dimensionen. Die Rezeptmigration basiert auf der Einzelprüfung aller 103
- * Laufzeitrezepte; aus Kategorien werden keine Gruppenregeln abgeleitet.
+ * Handling, Bissabtrennung, orale Verarbeitung, Safety und Altersorientierung
+ * bleiben getrennte Dimensionen. Die Rezeptmigration basiert auf
+ * Einzelentscheidungen; aus Kategorien, Alter oder stage werden keine
+ * Capability-Regeln abgeleitet.
  */
 
 const HANDLING_MODES = Object.freeze({
@@ -16,14 +17,21 @@ const HANDLING_MODES = Object.freeze({
   FINGER_SMALL_SOFT: "finger-small-soft",
 });
 
+const BITE_SEPARATION_PROFILES = Object.freeze({
+  LOW_RESISTANCE_SEPARATE: "low-resistance-separate",
+  EASY_BITE_SEPARATE: "easy-bite-separate",
+  GRADED_BITE_REQUIRED: "graded-bite-required",
+});
+
 const ORAL_PROCESSING_PROFILES = Object.freeze({
   SOFT_BREAKDOWN: "soft-breakdown",
-  EASY_BITE_SEPARATE: "easy-bite-separate",
+  EASY_CHEW: "easy-chew",
   STRUCTURED_CHEW_REQUIRED: "structured-chew-required",
 });
 
 const HANDLING_CAPABILITIES = Object.freeze({
   SMALL_SOFT_PIECES: "small-soft-pieces",
+  GRADED_BITE: "graded-bite",
   STRUCTURED_CHEW: "structured-chew",
 });
 
@@ -39,49 +47,59 @@ const FOOD_HANDLING_CONTRACT = Object.freeze({
 });
 
 const RECIPE_CONTRACT_GROUPS = Object.freeze({
-  fingerEasy: Object.freeze([
+  fingerLowResistance: Object.freeze([
+    "Lachs-Kartoffel-Bällchen",
+    "Rote-Linsen-Gemüsebällchen",
+    "Tofu-Brokkoli-Bällchen",
+    "Brokkoli-Kartoffel-Taler",
+    "Kichererbsen-Kürbis-Taler",
+    "Süßkartoffel-Hirse-Sticks",
+    "Omelettstreifen",
+    "Zucchini-Omelett",
+    "Bangus-Kartoffel-Taler",
+    "Paprika-Omelettstreifen",
+    "Süßkartoffel-Linsen-Taler",
+    "Gebackene Saba-Banane",
+    "Bananen-Ei-Pancakes"
+  ]),
+  fingerEasySoft: Object.freeze([
+    "Geflügel-Gemüse-Hafer-Bällchen",
+    "Rote-Linsen-Bratlinge",
+    "Polenta-Zucchini-Sticks",
+    "Süßkartoffel-Linsen-Muffins",
+    "Fleisch-Gemüse-Bällchen"
+  ]),
+  fingerEasyChew: Object.freeze([
     "Obst-Hafer-Pancakes",
     "Birne-Hirse-Pancakes",
     "Gemüse-Hafer-Pancakes",
     "Zucchini-Hafer-Pancakes",
     "Ube-Bananen-Pancakes",
-    "Geflügel-Gemüse-Hafer-Bällchen",
-    "Lachs-Kartoffel-Bällchen",
-    "Rote-Linsen-Gemüsebällchen",
-    "Tofu-Brokkoli-Bällchen",
-    "Brokkoli-Kartoffel-Taler",
     "Zucchini-Hafer-Puffer",
-    "Kichererbsen-Kürbis-Taler",
-    "Rote-Linsen-Bratlinge",
-    "Polenta-Zucchini-Sticks",
-    "Süßkartoffel-Hirse-Sticks",
-    "Omelettstreifen",
-    "Zucchini-Omelett",
-    "Bangus-Kartoffel-Taler",
     "Obst-Hafer-Muffins",
     "Gemüse-Hafer-Muffins",
     "Kürbis-Hirse-Muffins",
     "Kichererbsenmehl-Zucchini-Taler",
     "Eier-Finger",
-    "Paprika-Omelettstreifen",
     "Hummus mit weichen Gemüsesticks",
     "Buchweizen-Bananen-Pancakes",
-    "Süßkartoffel-Linsen-Taler",
-    "Gebackene Saba-Banane",
     "Bananen-Joghurt-Hafer-Pancakes",
     "Obst-Joghurt-Hafer-Ofenbites",
     "Zucchini-Joghurt-Hafer-Bites",
     "Joghurt-Hafer-Waffeln",
-    "Gemüse-Joghurt-Mini-Muffins",
-    "Süßkartoffel-Linsen-Muffins",
-    "Fleisch-Gemüse-Bällchen",
-    "Bananen-Ei-Pancakes"
+    "Gemüse-Joghurt-Mini-Muffins"
   ]),
-  structuredChew: Object.freeze([
+  fingerEasyStructured: Object.freeze([
     "Rind-Hafer-Bällchen",
     "Baby-Bananenbrot",
     "Weiche Joghurt-Fladen",
     "Huhn-Gemüse-Muffins"
+  ]),
+  fingerGradedEasyChew: Object.freeze([
+    "Pizza Wrap"
+  ]),
+  fingerGradedStructured: Object.freeze([
+    "Chicken Fajita Wrap"
   ]),
   spoonSmoothMash: Object.freeze([
     "Obst-Haferbrei",
@@ -162,19 +180,26 @@ const RECIPE_CONTRACT_GROUPS = Object.freeze({
 
 const RECIPE_CONTRACT_OVERRIDES = Object.freeze({
   "Rind-Hafer-Bällchen": Object.freeze({
-    servingRequirement: "Sehr weich, saftig und flach oder länglich anbieten; keine runden festen Kugeln und keine harte Kruste. Erst anbieten, wenn strukturierte weiche Bissen sicher im Mund positioniert und wiederholt zerkleinert werden.",
+    servingRequirement: "Sehr weich, saftig und flach oder länglich anbieten; keine runden festen Kugeln und keine harte Kruste. Der abgetrennte Bissen bleibt strukturiert und muss anschließend sicher im Mund positioniert und wiederholt zerkleinert werden können.",
   }),
   "Geflügel-Gemüse-Hafer-Bällchen": Object.freeze({
     servingRequirement: "Flach oder länglich und eher dünn formen, vollständig durchgaren und saftig halten. Der abgetrennte Bissen muss weich auseinanderfallen; besonders die Pute-Karotte-Variante darf innen nicht kompakt oder federnd bleiben.",
     noteOverride: "Kleine flache oder längliche und eher dünne Stücke statt fester runder Kugeln formen. Vollständig durchgaren, saftig halten und harte Kruste vermeiden. Vor dem Servieren prüfen, dass der abgetrennte Bissen weich auseinanderfällt und innen nicht kompakt oder federnd bleibt.",
   }),
   "Baby-Bananenbrot": Object.freeze({
-    servingRequirement: "Vollständig durchbacken und vollständig auskühlen lassen. Die Krume darf nicht klebrig, teigig oder ballend sein; eine solche Charge nicht anbieten. In gut greifbare Stücke schneiden und erst bei sicherem strukturiertem Kauen anbieten.",
+    servingRequirement: "Vollständig durchbacken und vollständig auskühlen lassen. Die Krume darf nicht klebrig, teigig oder ballend sein; eine solche Charge nicht anbieten. In weiche, gut greifbare Stücke schneiden und erst bei sicherem strukturiertem Kauen anbieten.",
     noteOverride: "Zu einem weichen Teig verrühren und vollständig durchbacken. Ohne Zucker, Honig und Salz. Vollständig auskühlen lassen und in gut greifbare Stücke schneiden. Die Krume muss durchgebacken sein und darf nicht klebrig, teigig oder ballend sein; andernfalls nicht anbieten.",
   }),
   "Zucchini-Omelett": Object.freeze({
     servingRequirement: "Vollständig durchgaren, weich halten und als kanonische Fingerfood-Form in breite, gut greifbare Streifen schneiden.",
     noteOverride: "Ei und fein geriebene Zucchini vollständig durchgaren, weich halten und in breite, gut greifbare Streifen schneiden. Kleine Stücke sind eine separate spätere Handlingform und nicht die kanonische Servierform.",
+  }),
+  "Eier-Finger": Object.freeze({
+    servingRequirement: "Ei vollständig durchgaren und in gut greifbare längliche oder geviertelte Stücke schneiden. Frisch anbieten; nicht unnötig austrocknen oder gummiartig werden lassen.",
+    noteOverride: "Ei vollständig durchgaren, schälen und in gut greifbare längliche oder geviertelte Stücke schneiden. Frisch anbieten, nicht unnötig austrocknen lassen und nicht einfrieren.",
+  }),
+  "Hummus mit weichen Gemüsesticks": Object.freeze({
+    servingRequirement: "Hummus glatt anbieten. Die Gemüsesticks müssen in der konkret angebotenen Form mechanisch weich, sicher greifbar und frei von harten, zähen oder spröden Bissen sein; roh oder gegart ist beides möglich, wenn die konkrete Form diese Anforderung erfüllt.",
   }),
   "Tinola-inspiriert": Object.freeze({
     servingRequirement: "Huhn vollständig garen und sehr fein zerpflücken oder zerkleinern; Sayote sehr weich garen und als kleine weiche Stückchen in der Löffelmahlzeit belassen.",
@@ -188,11 +213,11 @@ const RECIPE_CONTRACT_OVERRIDES = Object.freeze({
     servingRequirement: "Vollständig durchbacken und weich halten; Champignons sehr fein und weich vorbereiten. Die Cup-Form bleibt die kanonische Form; keine harte oder trockene Kruste.",
   }),
   "Weiche Joghurt-Fladen": Object.freeze({
-    servingRequirement: "Vollständig, aber weich durchbacken; die Mitte darf nicht roh, klebrig oder teigig bleiben und es darf keine harte Kruste entstehen. Erst bei sicherem strukturiertem Kauen anbieten.",
+    servingRequirement: "Vollständig, aber weich durchbacken; die Mitte darf nicht roh, klebrig oder teigig bleiben und es darf keine harte Kruste entstehen. Der abgetrennte Bissen bleibt zusammenhängend und verlangt anschließend sicheres strukturiertes Kauen.",
     noteOverride: "Kleine flache Portionen vollständig, aber weich durchbacken. Die Mitte muss vollständig durchgegart und darf nicht klebrig oder teigig sein; keine harte oder dunkle Kruste.",
   }),
   "Huhn-Gemüse-Muffins": Object.freeze({
-    servingRequirement: "Vollständig durchbacken, innen saftig halten und harte Kruste vermeiden. Die Hühnerfasern bleiben Teil des abgetrennten Bissens; erst bei sicherem strukturiertem Kauen anbieten.",
+    servingRequirement: "Vollständig durchbacken, innen saftig halten und harte Kruste vermeiden. Die Hühnerfasern bleiben Teil des abgetrennten Bissens und verlangen anschließend sicheres strukturiertes Kauen.",
     noteOverride: "Kleine Muffins vollständig durchbacken und innen saftig halten; keine harte Kruste. Vor dem Servieren prüfen, dass die Krume vollständig durchgegart und nicht klebrig-teigig ist.",
   }),
   "Fleisch-Gemüse-Bällchen": Object.freeze({
@@ -208,35 +233,56 @@ const RECIPE_CONTRACT_OVERRIDES = Object.freeze({
   "Linsen-Süßkartoffel-Nockerl": Object.freeze({
     servingRequirement: "Als kleine einzelne, längliche und sehr weiche Nockerl anbieten. Ein aufgeschnittenes Nockerl darf nicht klebrig-gummiartig oder kompakt-elastisch sein; kleine weiche Stücke erst bei bestätigter passender Handhabung.",
   }),
+  "Pizza Wrap": Object.freeze({
+    servingRequirement: "Als zusammenhängenden, leicht gepressten Wrap mit weicher Füllung anbieten. Gemüse fein schneiden und weich garen, Käse schmelzen lassen und den Wrap nur so weit erwärmen, dass er formstabil bleibt; harte, trockene oder spröde Ränder vermeiden. In gut greifbare, beherrschbare Abschnitte schneiden.",
+  }),
+  "Chicken Fajita Wrap": Object.freeze({
+    servingRequirement: "Huhn vollständig durchgaren und zart halten, Paprika und Zwiebel weich garen. Mit Naturjoghurt in eine weiche Tortilla füllen, eng rollen und in gut greifbare, beherrschbare Abschnitte schneiden. Keine harte oder ausgetrocknete Tortilla anbieten; der abgetrennte Bissen enthält weiterhin Hühnerfasern und verlangt strukturiertes Kauen.",
+  }),
 });
 
-function freezeRecipeContract(modes, oralProcessing, extra = {}) {
+function freezeRecipeContract(modes, biteSeparation, oralProcessing, extra = {}) {
   return Object.freeze({
     modes: Object.freeze([...modes]),
+    ...(biteSeparation ? { biteSeparation } : {}),
     oralProcessing,
     ...extra,
   });
 }
 
 const recipeContractEntries = [];
-function addRecipeContractGroup(names, modes, oralProcessing, extra = {}) {
+function addRecipeContractGroup(names, modes, biteSeparation, oralProcessing, extra = {}) {
   for (const name of names) {
     const override = RECIPE_CONTRACT_OVERRIDES[name] || {};
     recipeContractEntries.push([
       name,
-      freezeRecipeContract(modes, oralProcessing, { ...extra, ...override }),
+      freezeRecipeContract(modes, biteSeparation, oralProcessing, { ...extra, ...override }),
     ]);
   }
 }
 
 addRecipeContractGroup(
-  RECIPE_CONTRACT_GROUPS.fingerEasy,
+  RECIPE_CONTRACT_GROUPS.fingerLowResistance,
   [HANDLING_MODES.FINGER_GRASPABLE],
-  ORAL_PROCESSING_PROFILES.EASY_BITE_SEPARATE,
+  BITE_SEPARATION_PROFILES.LOW_RESISTANCE_SEPARATE,
+  ORAL_PROCESSING_PROFILES.SOFT_BREAKDOWN,
 );
 addRecipeContractGroup(
-  RECIPE_CONTRACT_GROUPS.structuredChew,
+  RECIPE_CONTRACT_GROUPS.fingerEasySoft,
   [HANDLING_MODES.FINGER_GRASPABLE],
+  BITE_SEPARATION_PROFILES.EASY_BITE_SEPARATE,
+  ORAL_PROCESSING_PROFILES.SOFT_BREAKDOWN,
+);
+addRecipeContractGroup(
+  RECIPE_CONTRACT_GROUPS.fingerEasyChew,
+  [HANDLING_MODES.FINGER_GRASPABLE],
+  BITE_SEPARATION_PROFILES.EASY_BITE_SEPARATE,
+  ORAL_PROCESSING_PROFILES.EASY_CHEW,
+);
+addRecipeContractGroup(
+  RECIPE_CONTRACT_GROUPS.fingerEasyStructured,
+  [HANDLING_MODES.FINGER_GRASPABLE],
+  BITE_SEPARATION_PROFILES.EASY_BITE_SEPARATE,
   ORAL_PROCESSING_PROFILES.STRUCTURED_CHEW_REQUIRED,
   {
     oralRequiredCapability: HANDLING_CAPABILITIES.STRUCTURED_CHEW,
@@ -244,35 +290,62 @@ addRecipeContractGroup(
   },
 );
 addRecipeContractGroup(
+  RECIPE_CONTRACT_GROUPS.fingerGradedEasyChew,
+  [HANDLING_MODES.FINGER_GRASPABLE],
+  BITE_SEPARATION_PROFILES.GRADED_BITE_REQUIRED,
+  ORAL_PROCESSING_PROFILES.EASY_CHEW,
+  {
+    biteRequiredCapability: HANDLING_CAPABILITIES.GRADED_BITE,
+    laterKind: "bite-capability",
+  },
+);
+addRecipeContractGroup(
+  RECIPE_CONTRACT_GROUPS.fingerGradedStructured,
+  [HANDLING_MODES.FINGER_GRASPABLE],
+  BITE_SEPARATION_PROFILES.GRADED_BITE_REQUIRED,
+  ORAL_PROCESSING_PROFILES.STRUCTURED_CHEW_REQUIRED,
+  {
+    biteRequiredCapability: HANDLING_CAPABILITIES.GRADED_BITE,
+    oralRequiredCapability: HANDLING_CAPABILITIES.STRUCTURED_CHEW,
+    laterKind: "bite-oral-capability",
+  },
+);
+addRecipeContractGroup(
   RECIPE_CONTRACT_GROUPS.spoonSmoothMash,
   [HANDLING_MODES.SPOON_SMOOTH, HANDLING_MODES.SPOON_MASHED],
+  "",
   ORAL_PROCESSING_PROFILES.SOFT_BREAKDOWN,
 );
 addRecipeContractGroup(
   RECIPE_CONTRACT_GROUPS.spoonSoftLumpyLater,
   [HANDLING_MODES.SPOON_SOFT_LUMPY],
+  "",
   ORAL_PROCESSING_PROFILES.SOFT_BREAKDOWN,
   { laterKind: "soft-orientation" },
 );
 addRecipeContractGroup(
   RECIPE_CONTRACT_GROUPS.spoonMash,
   [HANDLING_MODES.SPOON_MASHED],
+  "",
   ORAL_PROCESSING_PROFILES.SOFT_BREAKDOWN,
 );
 addRecipeContractGroup(
   RECIPE_CONTRACT_GROUPS.spoonMashLumpy,
   [HANDLING_MODES.SPOON_MASHED, HANDLING_MODES.SPOON_SOFT_LUMPY],
+  "",
   ORAL_PROCESSING_PROFILES.SOFT_BREAKDOWN,
 );
 addRecipeContractGroup(
   RECIPE_CONTRACT_GROUPS.fingerEasyLater,
   [HANDLING_MODES.FINGER_GRASPABLE],
-  ORAL_PROCESSING_PROFILES.EASY_BITE_SEPARATE,
+  BITE_SEPARATION_PROFILES.EASY_BITE_SEPARATE,
+  ORAL_PROCESSING_PROFILES.EASY_CHEW,
   { laterKind: "soft-orientation" },
 );
 addRecipeContractGroup(
   RECIPE_CONTRACT_GROUPS.fingerSmallSoft,
   [HANDLING_MODES.FINGER_SMALL_SOFT],
+  "",
   ORAL_PROCESSING_PROFILES.SOFT_BREAKDOWN,
   {
     requiredCapabilities: Object.freeze({
@@ -289,6 +362,7 @@ const RECIPE_HANDLING_CONTRACT = Object.freeze(
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     HANDLING_MODES,
+    BITE_SEPARATION_PROFILES,
     ORAL_PROCESSING_PROFILES,
     HANDLING_CAPABILITIES,
     FOOD_HANDLING_CONTRACT,

@@ -24,9 +24,9 @@ function loadCatalog() {
   return { before, after, guidance };
 }
 
-test("recipe quantities: runtime catalog has 103 unique recipes after Nockerl split", () => {
+test("recipe quantities: runtime catalog has 105 unique recipes after Nockerl split and wrap additions", () => {
   const { after } = loadCatalog();
-  assert.equal(after.length, 103);
+  assert.equal(after.length, 105);
   const names = after.map((recipe) => recipe.name);
   assert.equal(new Set(names).size, names.length);
   assert.equal(names.includes("Gemüse-Fleisch-Nockerl"), false);
@@ -34,6 +34,8 @@ test("recipe quantities: runtime catalog has 103 unique recipes after Nockerl sp
     "Huhn-Zucchini-Nockerl",
     "Rind-Karotten-Nockerl",
     "Linsen-Süßkartoffel-Nockerl",
+    "Pizza Wrap",
+    "Chicken Fajita Wrap",
   ]) assert.equal(names.includes(name), true, `${name} fehlt`);
 });
 
@@ -47,20 +49,34 @@ test("recipe quantities: every runtime recipe has explicit researched quantity g
   for (const recipe of after) {
     assert.equal(recipe.ingredients, guidance[recipe.name][0], `${recipe.name}: ingredients mismatch`);
     assert.match(recipe.ingredients, /\d/, `${recipe.name}: keine numerische Mengenangabe`);
-    assert.equal(recipe.quantityGuidanceRevision, "2026-08-20", `${recipe.name}: Revision fehlt`);
+    assert.equal(recipe.quantityGuidanceRevision, "2026-08-22", `${recipe.name}: Revision fehlt`);
   }
 });
 
-test("recipe age guidance: recommendations are soft 6/7-month orientation only", () => {
+test("recipe age guidance: nur vorhandene Quellenalter werden als Orientierung gespeichert", () => {
   const { after } = loadCatalog();
   for (const recipe of after) {
-    assert.ok([6, 7].includes(recipe.minMonths), `${recipe.name}: unerwartete minMonths ${recipe.minMonths}`);
+    if (recipe.minMonths == null) {
+      assert.equal(recipe.ageGuidanceKind, undefined, `${recipe.name}: ohne Quellenalter keine Orientierungssemantik`);
+      continue;
+    }
+    assert.ok(Number(recipe.minMonths) >= Number(recipe.hardMinMonths || 0), `${recipe.name}: Orientierung unter hardMinMonths`);
     assert.equal(recipe.ageGuidanceKind, "orientation", `${recipe.name}: keine Orientierungssemantik`);
   }
   assert.equal(after.find((r) => r.name === "Bananen-Ei-Pancakes").minMonths, 6);
   assert.equal(after.find((r) => r.name === "Obst-Hafer-Muffins").minMonths, 7);
   assert.equal(after.find((r) => r.name === "Joghurt-Hafer-Waffeln").minMonths, 7);
   assert.equal(after.find((r) => r.name === "Fleisch-Gemüse-Bällchen").minMonths, 7);
+
+  const pizza = after.find((r) => r.name === "Pizza Wrap");
+  assert.equal(pizza.minMonths, undefined, "Pizza Wrap erhält ohne rezeptbezogene Altersquelle keine erfundene Monatsorientierung");
+  assert.equal(pizza.ageGuidanceKind, undefined);
+  assert.equal(pizza.hardMinMonths, undefined);
+
+  const chicken = after.find((r) => r.name === "Chicken Fajita Wrap");
+  assert.equal(chicken.minMonths, 12, "Chicken Fajita Wrap übernimmt die NHS-Altersorientierung");
+  assert.equal(chicken.ageGuidanceKind, "orientation");
+  assert.equal(chicken.hardMinMonths, undefined);
 });
 
 test("recipe age guidance: existing hardMinMonths are never lowered or rewritten", () => {
@@ -74,6 +90,21 @@ test("recipe age guidance: existing hardMinMonths are never lowered or rewritten
       `${recipe.name}: hardMinMonths wurde verändert`,
     );
   }
+});
+
+test("graded-bite wraps: Pizza nutzt keine erfundene Butterbohnen-Identität und Chicken bleibt echte Wrap-Form", () => {
+  const { after } = loadCatalog();
+  const pizza = after.find((r) => r.name === "Pizza Wrap");
+  assert.deepEqual(pizza.requires, ["Weizen", "Tomate", "Käse"]);
+  assert.deepEqual(pizza.oneOf, ["Champignon", "Paprika", "Zucchini"]);
+  assert.equal(pizza.requires.includes("Weiße Bohnen"), false);
+  assert.doesNotMatch(pizza.ingredients, /Butterbohn/i);
+  assert.match(pizza.note, /nicht knusprig oder hart toasten/i);
+
+  const chicken = after.find((r) => r.name === "Chicken Fajita Wrap");
+  assert.deepEqual(chicken.requires, ["Huhn", "Paprika", "Zwiebel", "Knoblauch", "Weizen", "Naturjoghurt"]);
+  assert.match(chicken.note, /eng aufrollen/i);
+  assert.match(chicken.note, /vollständig durchgegart/i);
 });
 
 test("Nockerl split: ambiguous aggregate legacy names are not assigned to a concrete recipe", () => {

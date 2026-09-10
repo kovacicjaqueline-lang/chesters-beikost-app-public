@@ -24,9 +24,9 @@ function loadCatalog() {
   return { before, after, guidance };
 }
 
-test("recipe quantities: runtime catalog has 105 unique recipes after Nockerl split and wrap additions", () => {
+test("recipe quantities: runtime catalog has 123 unique recipes after Nockerl split, wrap and form additions", () => {
   const { after } = loadCatalog();
-  assert.equal(after.length, 105);
+  assert.equal(after.length, 123);
   const names = after.map((recipe) => recipe.name);
   assert.equal(new Set(names).size, names.length);
   assert.equal(names.includes("Gemüse-Fleisch-Nockerl"), false);

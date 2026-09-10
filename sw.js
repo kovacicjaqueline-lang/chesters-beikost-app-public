@@ -166,6 +166,24 @@ const UI_PRECACHE = [
 const RECIPE_RUNTIME_PRECACHE = [
   "./assets/illustrations-v2/recipes/pizza-wrap.svg",
   "./assets/illustrations-v2/recipes/chicken-fajita-wrap.svg",
+  "./assets/illustrations-v2/recipes/griessschnitten-ohne-panade.svg",
+  "./assets/illustrations-v2/recipes/apfel-milchreisschnitten.svg",
+  "./assets/illustrations-v2/recipes/apfel-bananen-baked-oatmeal.svg",
+  "./assets/illustrations-v2/recipes/weiche-apfel-hafer-riegel.svg",
+  "./assets/illustrations-v2/recipes/bananen-french-toast-finger.svg",
+  "./assets/illustrations-v2/recipes/karotten-linsen-aufstrich.svg",
+  "./assets/illustrations-v2/recipes/weisse-bohnen-paprika-aufstrich.svg",
+  "./assets/illustrations-v2/recipes/erbsen-basilikum-pesto-ohne-salz.svg",
+  "./assets/illustrations-v2/recipes/gemuese-kichererbsen-couscous.svg",
+  "./assets/illustrations-v2/recipes/gemuese-couscous-schnitten.svg",
+  "./assets/illustrations-v2/recipes/bunte-gemuese-nuggets.svg",
+  "./assets/illustrations-v2/recipes/weiche-gemuese-reis-finger.svg",
+  "./assets/illustrations-v2/recipes/rote-linsen-gemuese-shepherds-pie.svg",
+  "./assets/illustrations-v2/recipes/spinat-zucchini-lasagne.svg",
+  "./assets/illustrations-v2/recipes/huhn-spinat-quinoa-auflauf.svg",
+  "./assets/illustrations-v2/recipes/lachs-brokkoli-kartoffel-auflauf.svg",
+  "./assets/illustrations-v2/recipes/mildes-bohnen-suesskartoffel-chili.svg",
+  "./assets/illustrations-v2/recipes/gefuellte-paprika-mit-linsenreis.svg",
 ];
 
 self.addEventListener("install", (event) => {

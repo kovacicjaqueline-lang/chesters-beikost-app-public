@@ -127,7 +127,7 @@ Der gezielte Recheck der **41 zuvor bestehenden** zusammenhängenden `finger-gra
 - 28 × `easy-bite-separate`
 - 0 × `graded-bite-required`
 
-Im aktuellen **105er Laufzeitkatalog** kommen zwei individuell geprüfte graded-bite-Referenzfälle hinzu:
+Im aktuellen **123er Laufzeitkatalog** kommen zu den bestehenden Karten 18 neue Form-/Texturrezepte sowie zwei individuell geprüfte graded-bite-Referenzfälle hinzu:
 
 - `Pizza Wrap`: `graded-bite-required` + `easy-chew`, nur `graded-bite`;
 - `Chicken Fajita Wrap`: `graded-bite-required` + `structured-chew-required`, `graded-bite` + `structured-chew`.
@@ -190,18 +190,18 @@ Wichtig:
 - keine Capability entsperrt eine andere;
 - Zähne sind kein Capability-Gate.
 
-## 7. Vollmigration der 105 Laufzeitrezepte
+## 7. Vollmigration der 123 Laufzeitrezepte
 
-Der Contract enthält genau **105 Rezeptnamen** und muss exakt mit dem normalisierten Laufzeitkatalog übereinstimmen.
+Der Contract enthält genau **123 Rezeptnamen** und muss exakt mit dem normalisierten Laufzeitkatalog übereinstimmen.
 
-Die bestehende 103er Later-Matrix bleibt erhalten und wird um die zwei neuen graded-bite-Referenzfälle ergänzt:
+Die bestehende Later-Matrix bleibt erhalten und wird um die zwei neuen graded-bite-Referenzfälle sowie die 18 neuen Form-/Texturrezepte ergänzt:
 
 | Gruppe | Anzahl | technische Wirkung |
 | --- | ---: | --- |
-| kein zusätzliches späteres Gate | 87 | expliziter Handling-/Bite-/Oral-Contract |
+| kein zusätzliches späteres Gate | 98 | expliziter Handling-/Bite-/Oral-Contract |
 | `structured-chew` | 4 | harte beobachtete orale Capability; Bite-Separation bleibt `easy-bite-separate` |
 | `small-soft-pieces` | 3 | harte beobachtete Handling-Capability |
-| weiche spätere Formorientierung | 9 | keine neue Capability; Form/`minMonths`-Orientierung bleibt erhalten |
+| weiche spätere Formorientierung | 16 | keine neue Capability; Form/`minMonths`-Orientierung bleibt erhalten |
 | `graded-bite` | 1 | `Pizza Wrap`: harte beobachtete Bite-Capability |
 | `graded-bite` + `structured-chew` | 1 | `Chicken Fajita Wrap`: zwei unabhängige harte Capabilities |
 | offen | 0 | – |
@@ -313,9 +313,9 @@ Dasselbe Prinzip gilt für harte Krusten, kompakt-federnde Bällchen oder gummia
 
 Mindestens abzusichern:
 
-1. 105 Runtime-Rezepte = 105 Contract-Einträge;
+1. 123 Runtime-Rezepte = 123 Contract-Einträge;
 2. keine Doppelzuordnung;
-3. bestehende 103er Later-Matrix 87 / 4 / 3 / 9 plus zwei explizite graded-bite-Referenzfälle;
+3. bestehende Matrix 98 / 4 / 3 / 16 plus zwei explizite graded-bite-Referenzfälle;
 4. 41 zuvor bestehende `finger-graspable` = 13 low-resistance / 28 easy-bite / 0 graded-bite;
 5. jeder `finger-graspable`-Contract hat Bite Separation;
 6. vier Bestands-Einzelprüfungen verlangen `structured-chew`, bleiben Bite-seitig aber `easy-bite-separate`;

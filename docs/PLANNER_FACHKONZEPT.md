@@ -617,7 +617,7 @@ Der gezielte Recheck der 41 zuvor bestehenden zusammenhängenden `finger-graspab
 - 28 × `easy-bite-separate`;
 - 0 × `graded-bite-required`.
 
-Im aktuellen **105er Laufzeitkatalog** kommen zwei einzeln geprüfte neue graded-bite-Referenzfälle hinzu:
+Im aktuellen **123er Laufzeitkatalog** kommen zu den bestehenden Karten 18 neue Form-/Texturrezepte sowie zwei einzeln geprüfte graded-bite-Referenzfälle hinzu:
 
 - `Pizza Wrap`: `graded-bite-required` + `easy-chew`, verlangt nur `graded-bite`;
 - `Chicken Fajita Wrap`: `graded-bite-required` + `structured-chew-required`, verlangt `graded-bite` und `structured-chew`.
@@ -651,7 +651,7 @@ Die vollständige österreichische `seasonMonths`-Matrix und die Nuss-/Samen-Rol
 
 Für PHASE-TRANSITION besteht kein offener Soll/Ist-Gap mehr. Der read-only Readiness-Core, seine strukturierte Planner-Einbindung und die sichtbare Phase-Readiness-UX sind auf `main` integriert. Die bestehende bewusste Nutzerbestätigung bleibt der einzige Weg zum tatsächlichen Phasenwechsel; Alter, Grammwerte, Loganzahl, Phasendauer und Textur sind weiterhin keine Readiness-Schwellen.
 
-Für den Handling-/Bite-/Oral-Bereich besteht im Integrations-PR keine offene Gruppenmigration mehr: alle **105 Laufzeitrezepte** sind explizit im Contract vertreten. Die bestehende 103er Auditmatrix bleibt erhalten, die 41 zuvor bestehenden zusammenhängenden Fingerfoods wurden gezielt für Bite Separation nachgeprüft und die zwei neuen Wrap-Rezepte sind separat als graded-bite-Referenzfälle klassifiziert. Neue FOODs/Rezepte benötigen weiterhin ihre eigene explizite Einzelklassifikation gemäß `AGENTS.md`.
+Für den Handling-/Bite-/Oral-Bereich besteht im Integrations-PR keine offene Gruppenmigration mehr: alle **123 Laufzeitrezepte** sind explizit im Contract vertreten. Die 41 zuvor bestehenden zusammenhängenden Fingerfoods bleiben als historische Vergleichsmatrix erhalten; die zwei Wrap-Rezepte und 18 neuen Form-/Texturrezepte sind separat anhand ihrer konkreten Servierform klassifiziert. Neue FOODs/Rezepte benötigen weiterhin ihre eigene explizite Einzelklassifikation gemäß `AGENTS.md`.
 
 Weitere offene FOOD-Datenfragen werden separat im FOOD-Fachregel-Track geklärt und dürfen nicht als implizite Planner-Regel erfunden werden.
 
@@ -697,7 +697,7 @@ Weitere offene FOOD-Datenfragen werden separat im FOOD-Fachregel-Track geklärt 
 - `presentationMode` bleibt additiv und persistiert nur, wenn es strukturiert gesetzt wurde;
 - PLAN-08-Auswahl, Rollen und Rezeptidentität bleiben durch Handling unverändert;
 - Handling-/Bite-/Oral-Contract und -Runtime stehen vor finalem sichtbaren Render sowie beim ersten Offline-Start zur Verfügung;
-- 105 Laufzeitrezepte bleiben 105 expliziten Contract-Einträgen zugeordnet;
+- 123 Laufzeitrezepte bleiben 123 expliziten Contract-Einträgen zugeordnet;
 - 41 zuvor bestehende `finger-graspable`-Rezepte bleiben explizit 13 `low-resistance-separate` / 28 `easy-bite-separate` / 0 `graded-bite-required` zugeordnet;
 - `Pizza Wrap` verlangt `graded-bite` + `easy-chew`, `Chicken Fajita Wrap` verlangt `graded-bite` + `structured-chew`;
 - `graded-bite` bleibt als eigenständige Capability technisch prüfbar und darf nicht aus Alter, Zähnen, Rezeptkategorie oder `structured-chew` abgeleitet werden;

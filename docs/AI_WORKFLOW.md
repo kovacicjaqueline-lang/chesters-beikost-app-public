@@ -34,7 +34,7 @@ Eine erneute fachliche Freigabe ist nötig, wenn neue Produktsemantik, Sicherhei
 
 ## Neue FOODs und Rezepte: Pflichtcheck
 
-Bei jedem neuen kanonischen FOOD oder neuen Laufzeitrezept gehört die Vollständigkeitsprüfung zum selben Auftrag. Vor Abschluss müssen mindestens gemeinsam vorhanden sein:
+Bei jedem neuen kanonischen FOOD oder neuen Laufzeitrezept gehört die Vollständigkeitsprüfung zum selben Auftrag. Vor Abschluss müssen mindestens gemeinsam vorhanden sein:\n\n- ein im Rahmen des Auftrags neu generiertes, eigenes Bild: Food-V2-Asset für ein neues FOOD bzw. Recipe-V2-Asset für ein neues Rezept; vorhandene Kategorie-, Generic- oder Legacy-Bilder ersetzen diese Pflicht nicht;
 
 - vollständige fachliche Stammdaten und Safety-/Zubereitungsangaben;
 - individuelle Handling-Einordnung;

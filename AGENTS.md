@@ -119,7 +119,7 @@ Die Details stehen in den oben gerouteten Fachdocs; folgende Leitplanken gelten 
 - Custom-Lebensmittel müssen fachlich dieselbe Mahlzeiteneignung wie reguläre Lebensmittel ihrer Kategorie erhalten.
 - Automatische Snacks bleiben grundsätzlich rezeptgetrieben; in Familienkost darf zusätzlich bereits bekanntes, geeignetes Obst als eng begrenzter Einzel-Snack geplant werden. Daraus kein allgemeines `FOOD.meals = snack`-Modell ableiten.
 - Einen Eignungsfehler nicht durch neue Pairing-/Kombinations-Sonderregeln kaschieren, wenn die Primärursache in den Eingangsdaten oder Gates liegt.
-- Ein neues kanonisches FOOD bzw. Laufzeitrezept ist erst vollständig, wenn die im Pflichtcheck von `docs/AI_WORKFLOW.md` geforderten Stammdaten, Handling-/Oral-Einordnung, erforderliche Serving-/Safety-Guidance, V2-Icon-Zuordnung/Precache und Regressionen vollständig sind.
+- Bei jeder Erweiterung des Lebensmittel- oder Rezeptbestands muss im selben Auftrag ein eigenes passendes Bild generiert und als Food-V2- bzw. Recipe-V2-Asset eingebunden werden. Ein neuer Datensatz ohne neu erzeugtes eigenes Bild ist nicht vollständig.\n- Ein neues kanonisches FOOD bzw. Laufzeitrezept ist erst vollständig, wenn die im Pflichtcheck von `docs/AI_WORKFLOW.md` geforderten Stammdaten, Handling-/Oral-Einordnung, erforderliche Serving-/Safety-Guidance, das neu generierte eigene V2-Bild, V2-Icon-Zuordnung/Precache und Regressionen vollständig sind.
 - Die bestehende Semantik von `Neu planen` gegenüber `Sichtbare Woche vollständig neu planen` nicht nebenbei neu definieren; bei Änderungen zuerst tatsächlichen Code, Tests und `docs/PLANNER_FACHKONZEPT.md` prüfen.
 - Lebensmittel-, Rezept-, Planner-, Persistenz- und Icon/Asset-Pfade bei Datensatzänderungen konsistent halten.
 

@@ -4,12 +4,12 @@ Diese Leitlinie gilt verbindlich für neue und überarbeitete FOOD-Illustratione
 
 ## Vollständigkeitsregel für neue FOODs und Rezepte
 
-Ein neues kanonisches FOOD oder ein neues Laufzeitrezept ist erst vollständig, wenn gleichzeitig ein eigenes V2-Icon vorhanden ist.
+Bei jeder Erweiterung des Lebensmittel- oder Rezeptbestands muss im selben Auftrag ein passendes eigenes Bild generiert werden. Ein neues kanonisches FOOD oder ein neues Laufzeitrezept ist erst vollständig, wenn dieses neu generierte eigene V2-Asset eingebunden und eindeutig zugeordnet ist.
 
 Verbindlich für neue Datensätze:
 
-- neues FOOD -> eigenes Food-V2-Asset;
-- neues Rezept -> eigenes Recipe-V2-Asset;
+- neues FOOD -> eigenes, neu generiertes Food-V2-Asset;
+- neues Rezept -> eigenes, neu generiertes Recipe-V2-Asset;
 - eindeutige zentrale Icon-Zuordnung;
 - erforderlicher Service-Worker-Precache;
 - passende Icon-Regressionen bzw. `npm run verify:icons` im vorgesehenen Testscope.

@@ -10,6 +10,7 @@ const LEGACY_RECIPE_DIR = path.join(ROOT, "assets", "illustrations", "recipes");
 const V2_RECIPE_DIR = path.join(ROOT, "assets", "illustrations-v2", "recipes");
 const ICON_SOURCE = fs.readFileSync(path.join(ROOT, "js", "icons.js"), "utf8");
 const SW_CORE = fs.readFileSync(path.join(ROOT, "sw-core.js"), "utf8");
+const SW_RUNTIME = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
 
 function sourceFiles(dir = ROOT) {
   const ignoredDirs = new Set([".git", "node_modules", "assets", "docs"]);
@@ -42,6 +43,11 @@ test("aktive Recipe-Mappings decken den V2-Bestand exakt ab und sind offline pre
 
   const mappedPaths = [...block[1].matchAll(/:\s*"(assets\/illustrations-v2\/recipes\/[^\"]+\.svg)"/g)]
     .map((match) => match[1]);
+  const runtimeBlock = ICON_SOURCE.match(/const RECIPE_RUNTIME_ICON_ALIASES\s*=\s*Object\.freeze\(\{([\s\S]*?)\}\);/);
+  assert.ok(runtimeBlock, "RECIPE_RUNTIME_ICON_ALIASES fehlt");
+  const runtimeMappedPaths = [...runtimeBlock[1].matchAll(/:\s*"(assets\/illustrations-v2\/recipes\/[^\"]+\.svg)"/g)]
+    .map((match) => match[1]);
+  mappedPaths.push(...runtimeMappedPaths);
   assert.ok(mappedPaths.length > 0, "keine aktiven Recipe-V2-Mappings gefunden");
   assert.equal(new Set(mappedPaths).size, mappedPaths.length, "doppelte Recipe-V2-Mappings");
 
@@ -53,6 +59,9 @@ test("aktive Recipe-Mappings decken den V2-Bestand exakt ab und sind offline pre
   assert.deepEqual([...mappedPaths].sort(), v2Paths, "V2-Recipe-Bestand und aktive Mappings weichen voneinander ab");
   for (const relativePath of mappedPaths) {
     assert.ok(fs.existsSync(path.join(ROOT, relativePath)), `${relativePath}: Asset fehlt`);
-    assert.ok(SW_CORE.includes(`\"./${relativePath}\"`), `${relativePath}: Offline-Precache fehlt`);
+    assert.ok(
+      SW_CORE.includes(`\"./${relativePath}\"`) || SW_RUNTIME.includes(`\"./${relativePath}\"`),
+      `${relativePath}: Offline-Precache fehlt`,
+    );
   }
 });

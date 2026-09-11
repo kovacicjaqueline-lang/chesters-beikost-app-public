@@ -132,7 +132,7 @@ function syncPlanFromToToday(data = state, currentDate = today()) {
 async function syncPlanFromOnAppOpen() {
   if (!syncPlanFromToToday()) return false;
   await save();
-  renderAll();
+  renderCurrentView();
   return true;
 }
 function installPlanFromVisibilitySync(doc) {

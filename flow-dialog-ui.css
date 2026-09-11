@@ -156,13 +156,6 @@
 #logModal.flow-dialog .log-recipe-results {
   max-height: none;
   overflow: visible;
-  padding-bottom: calc(118px + env(safe-area-inset-bottom));
-}
-
-#genericModal.flow-dialog .selector-results .selector-row,
-#logModal.flow-dialog .log-food-results .selector-row,
-#logModal.flow-dialog .log-recipe-results .selector-row {
-  scroll-margin-block-end: calc(118px + env(safe-area-inset-bottom));
 }
 
 #genericModal.flow-dialog .flow-dialog-actions,

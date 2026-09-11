@@ -156,6 +156,7 @@
 #logModal.flow-dialog .log-recipe-results {
   max-height: none;
   overflow: visible;
+  padding-bottom: calc(118px + env(safe-area-inset-bottom));
 }
 
 #genericModal.flow-dialog .flow-dialog-actions,

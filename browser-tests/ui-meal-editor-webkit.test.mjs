@@ -77,9 +77,9 @@ async function clickSelectorRow(page, selector) {
   const row = page.locator(selector);
   await row.waitFor();
   // The shared dialog footer is intentionally sticky; WebKit can report a visible
-  // result as covered during the pointer hit-test. This helper tests selection state,
-  // while dialog geometry is covered by the dedicated FLOW-C regression.
-  await row.click({ force: true });
+  // result as covered during the pointer hit-test. Invoke the concrete button handler
+  // directly here; dialog geometry is covered by the dedicated FLOW-C regression.
+  await row.evaluate((element) => element.click());
 }
 
 const widths = [320, 375, 390];

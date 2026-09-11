@@ -76,7 +76,18 @@ async function openManualCard(locator) {
 async function clickSelectorRow(page, selector) {
   const row = page.locator(selector);
   await row.waitFor();
-  await row.evaluate((element) => element.scrollIntoView({ block: "center", inline: "nearest" }));
+  await row.evaluate((element) => {
+    element.scrollIntoView({ block: "center", inline: "nearest" });
+    const sheet = element.closest(".flow-dialog-sheet");
+    const footer = sheet?.querySelector(".flow-dialog-actions");
+    if (!sheet || !footer) return;
+    const rowBox = element.getBoundingClientRect();
+    const footerBox = footer.getBoundingClientRect();
+    const clearance = 8;
+    if (rowBox.bottom > footerBox.top - clearance) {
+      sheet.scrollTop += rowBox.bottom - footerBox.top + clearance;
+    }
+  });
   await row.click();
 }
 

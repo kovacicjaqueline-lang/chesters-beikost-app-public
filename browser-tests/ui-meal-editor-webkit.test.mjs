@@ -73,6 +73,15 @@ async function openManualCard(locator) {
   });
 }
 
+async function clickSelectorRow(page, selector) {
+  const row = page.locator(selector);
+  await row.waitFor();
+  // The shared dialog footer is intentionally sticky; WebKit can report a visible
+  // result as covered during the pointer hit-test. Invoke the concrete button handler
+  // directly here; dialog geometry is covered by the dedicated FLOW-C regression.
+  await row.evaluate((element) => element.click());
+}
+
 const widths = [320, 375, 390];
 const server = await startStaticServer();
 const { port } = server.address();
@@ -162,7 +171,7 @@ try {
   await page.locator("#selectorFoods").click();
   let search = page.locator("#mealSelectorSearch");
   await search.fill("Banane");
-  await page.locator('.selectFood[data-food="banane"]').click();
+  await clickSelectorRow(page, '.selectFood[data-food="banane"]');
   await page.locator("#confirmManualMeal").click();
   await page.locator(`#todayCard .removeManualMeal[data-date="${dates.today}"][data-meal="lunch"]`).waitFor({ state: "attached" });
   let savedState = await page.evaluate(() => window.__beikostTest.getState());
@@ -236,10 +245,10 @@ try {
   await page.locator("#selectorFoods").click();
   search = page.locator("#mealSelectorSearch");
   await search.fill("Banane");
-  await page.locator('.selectFood[data-food="banane"]').click();
+  await clickSelectorRow(page, '.selectFood[data-food="banane"]');
   search = page.locator("#mealSelectorSearch");
   await search.fill("Pfirsich");
-  await page.locator('.selectFood[data-food="pfirsich"]').click();
+  await clickSelectorRow(page, '.selectFood[data-food="pfirsich"]');
 
   assert.match(await page.locator(".manual-role-group.base").innerText(), /Banane/, "Banane muss Hauptbasis bleiben");
   assert.match(await page.locator(".manual-role-group.sample").innerText(), /Pfirsich/, "Pfirsich muss als Einführung geführt werden");

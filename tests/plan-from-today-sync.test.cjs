@@ -18,6 +18,7 @@ function loadHelpers(overrides = {}) {
     today: () => '2026-08-24',
     save: async () => {},
     renderAll: () => {},
+    renderCurrentView: () => {},
     ...overrides,
   };
   vm.runInNewContext(
@@ -77,7 +78,7 @@ test('erneutes Öffnen speichert und rendert nur wenn das Datum nachgezogen wurd
   const { context, syncPlanFromOnAppOpen } = loadHelpers({
     state: { settings: { planFrom: '2026-08-22' } },
     save: async () => { saves += 1; },
-    renderAll: () => { renders += 1; },
+    renderCurrentView: () => { renders += 1; },
   });
 
   assert.equal(await syncPlanFromOnAppOpen(), true);
@@ -107,7 +108,7 @@ test('visibilitychange synchronisiert erst beim tatsächlichen Sichtbarwerden', 
   const { context, installPlanFromVisibilitySync } = loadHelpers({
     state: { settings: { planFrom: '2026-08-22' } },
     save: async () => { saves += 1; },
-    renderAll: () => { renders += 1; },
+    renderCurrentView: () => { renders += 1; },
   });
 
   assert.equal(installPlanFromVisibilitySync(fakeDocument), true);

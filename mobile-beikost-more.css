@@ -14,9 +14,9 @@ body.mobile-foundation #foods .catalog-switch {
   z-index: 9;
   margin: -14px -16px 12px;
   padding: 12px 16px 10px;
-  background: rgba(244, 239, 231, .96);
+  background: rgb(244, 239, 231);
   border-bottom: 1px solid rgba(221, 211, 198, .78);
-  backdrop-filter: blur(12px);
+  backdrop-filter: none;
 }
 
 body.mobile-foundation #foods .catalog-switch button {
@@ -60,8 +60,8 @@ body.mobile-foundation #foods .mobile-catalog-search {
   z-index: 8;
   margin: 0 -4px 8px;
   padding: 8px 4px 6px;
-  background: rgba(244, 239, 231, .97);
-  backdrop-filter: blur(12px);
+  background: rgb(244, 239, 231);
+  backdrop-filter: none;
 }
 
 body.mobile-foundation #foods .mobile-catalog-search label {
@@ -340,8 +340,8 @@ body.mobile-foundation #genericModal.mobile-food-detail-screen .sheethead {
   margin: 0 -16px;
   padding: calc(8px + env(safe-area-inset-top)) 16px 10px;
   border-bottom: 1px solid var(--line);
-  background: rgba(244, 239, 231, .97);
-  backdrop-filter: blur(12px);
+  background: rgb(244, 239, 231);
+  backdrop-filter: none;
 }
 
 body.mobile-foundation #genericModal.mobile-food-detail-screen .sheethead h2 {
@@ -433,8 +433,8 @@ body.mobile-foundation #more .more-panel-header {
   margin: -14px -16px 12px;
   padding: 10px 16px;
   border-bottom: 1px solid var(--line);
-  background: rgba(244, 239, 231, .97);
-  backdrop-filter: blur(12px);
+  background: rgb(244, 239, 231);
+  backdrop-filter: none;
 }
 
 body.mobile-foundation #more .more-panel-header h2 {

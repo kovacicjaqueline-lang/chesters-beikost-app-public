@@ -115,9 +115,10 @@ body.mobile-foundation .app-header {
   min-height: 58px;
   padding: calc(7px + env(safe-area-inset-top)) 16px 8px;
   border-bottom: 1px solid var(--line);
-  background: rgba(247, 243, 234, .96);
+  /* Die App-Bar muss den scrollenden main-Inhalt vollständig abdecken. */
+  background: rgb(247, 243, 234);
   box-shadow: none;
-  backdrop-filter: blur(12px);
+  backdrop-filter: none;
 }
 
 body.mobile-foundation .app-bar-copy {

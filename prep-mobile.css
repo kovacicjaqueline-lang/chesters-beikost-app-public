@@ -49,9 +49,9 @@ body.mobile-foundation #prep .prep-segments {
   padding: 4px;
   border: 1px solid var(--line);
   border-radius: 14px;
-  background: rgba(255, 253, 248, .96);
+  background: rgb(255, 253, 248);
   box-shadow: 0 5px 16px rgba(63, 49, 34, .06);
-  backdrop-filter: blur(12px);
+  backdrop-filter: none;
 }
 
 body.mobile-foundation #prep .prep-segments button {

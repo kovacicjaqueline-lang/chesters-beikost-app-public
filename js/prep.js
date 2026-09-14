@@ -501,7 +501,8 @@ function renderPrepCore() {
       }),
   );
 
-  let availableRecipes = recipeStates().filter((r) => r.unlocked).slice(0, 6);
+  let allRecipeStates = recipeStates();
+  let availableRecipes = allRecipeStates.filter((r) => r.unlocked).slice(0, 6);
   document.getElementById("cookNow").innerHTML = availableRecipes.length
     ? availableRecipes
         .map(
@@ -520,7 +521,7 @@ function renderPrepCore() {
     }, 80);
   };
 
-  let freezerStates = recipeStates().filter((r) => r.freezable);
+  let freezerStates = allRecipeStates.filter((r) => r.freezable);
   let freezerReady = freezerStates.filter((r) => r.unlocked).slice(0, 5);
   let freezerAlmost = freezerStates
     .filter((r) => r.almost)
@@ -649,7 +650,7 @@ function renderPrepCore() {
   }
   if (search) search.value = recipeQuery;
   let q = normalizeName(recipeQuery);
-  let rs = recipeStates().filter((r) => {
+  let rs = allRecipeStates.filter((r) => {
     let categoryMatch =
       recipeFilter === "available"
         ? r.unlocked
@@ -682,10 +683,9 @@ function renderPrepCore() {
         : "passend zu Filter und Suche";
     countBox.textContent = `${rs.length} Rezept${rs.length === 1 ? "" : "e"} · ${context}`;
   }
-  let allRecipeStatesForEmpty = recipeStates();
   let recipeEmptyMode = q || recipeFilter !== "available"
     ? "reset"
-    : allRecipeStatesForEmpty.some((item) => item.almost)
+    : allRecipeStates.some((item) => item.almost)
       ? "almost"
       : "all";
   let recipeEmptyLabel = recipeEmptyMode === "reset"

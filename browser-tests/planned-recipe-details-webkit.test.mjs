@@ -102,6 +102,7 @@ async function seedRecipeMeal(page, recipeName, foodIds, textureStage = 3) {
 async function assertRecipeTitleLayout(page, locator, widths = [320, 375, 390]) {
   for (const width of widths) {
     await page.setViewportSize({ width, height: 844 });
+    await locator.waitFor({ state: "visible" });
     const box = await locator.boundingBox();
     assert.ok(box, `Rezepttitel muss bei ${width}px sichtbar sein`);
     assert.ok(box.height >= 44, `Rezepttitel muss bei ${width}px mindestens 44px hoch sein`);

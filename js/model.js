@@ -40,12 +40,27 @@ function recipeStructuredFoodSearchTerms(recipe) {
 }
 if (typeof RECIPES !== "undefined" && typeof FOOD_DB !== "undefined") canonicalizeRecipeFoodLabels(RECIPES, FOOD_DB);
 
+let logsForCache = new WeakMap();
 function logsFor(id) {
-  return state.logs
-    .filter((l) => (l.foodIds || []).includes(id))
-    .sort((a, b) =>
-      (a.date + a.createdAt).localeCompare(b.date + b.createdAt),
-    );
+  let logs = Array.isArray(state.logs) ? state.logs : [];
+  let cached = logsForCache.get(logs);
+  if (cached?.length !== logs.length) {
+    let byFoodId = new Map();
+    for (let log of logs) {
+      for (let foodId of new Set(log.foodIds || [])) {
+        if (!byFoodId.has(foodId)) byFoodId.set(foodId, []);
+        byFoodId.get(foodId).push(log);
+      }
+    }
+    for (let entries of byFoodId.values()) {
+      entries.sort((a, b) =>
+        (a.date + a.createdAt).localeCompare(b.date + b.createdAt),
+      );
+    }
+    cached = { length: logs.length, byFoodId };
+    logsForCache.set(logs, cached);
+  }
+  return cached.byFoodId.get(id) || [];
 }
 function outcomeForFood(log, id) {
   if (log.foodOutcomes && log.foodOutcomes[id]) return log.foodOutcomes[id];

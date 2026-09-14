@@ -883,11 +883,8 @@
 
   bootstrapStorage = async function plannerAwareBootstrapStorage() {
     let result = await baseBootstrapStorage();
-    CORE.upgradePlannerLinking(state);
     plannerStorageReady = true;
     plannerLastSeenDay = today();
-    await save();
-    renderCurrentView();
     scheduleRolloverPrompt();
     return result;
   };

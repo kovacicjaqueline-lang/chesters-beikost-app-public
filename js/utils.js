@@ -75,9 +75,31 @@ function foodNameMatches(f, query) {
   if (!q || !f) return false;
   return normalizeName(f.name) === q || foodAliasTerms(f).some((alias) => normalizeName(alias) === q);
 }
+let foodLookupCache = new WeakMap();
+function foodLookupFor(foods) {
+  let pool = Array.isArray(foods) ? foods : [];
+  let cached = foodLookupCache.get(pool);
+  if (cached?.length === pool.length) return cached;
+  let byId = new Map(), byName = new Map();
+  for (let item of pool) {
+    if (!item) continue;
+    if (item.id && !byId.has(item.id)) byId.set(item.id, item);
+    for (let term of [item.name, ...foodAliasTerms(item)]) {
+      let normalized = normalizeName(term);
+      if (normalized && !byName.has(normalized)) byName.set(normalized, item);
+    }
+  }
+  cached = { length: pool.length, byId, byName };
+  foodLookupCache.set(pool, cached);
+  return cached;
+}
+function invalidateFoodLookupCache(foods = typeof state !== "undefined" ? state?.foods : null) {
+  if (Array.isArray(foods)) foodLookupCache.delete(foods);
+}
 function foodByName(name, foods = state.foods) {
   let pool = foods || [];
-  let direct = pool.find((f) => foodNameMatches(f, name));
+  let lookup = foodLookupFor(pool);
+  let direct = lookup.byName.get(normalizeName(name));
   if (direct) return direct;
 
   // Historische zusammengesetzte Labels wie „Nudeln/Pasta“ sind nur dann ein
@@ -88,7 +110,7 @@ function foodByName(name, foods = state.foods) {
     .map((term) => term.trim())
     .filter(Boolean);
   if (terms.length < 2) return null;
-  let matches = terms.map((term) => pool.find((f) => foodNameMatches(f, term)) || null);
+  let matches = terms.map((term) => lookup.byName.get(normalizeName(term)) || null);
   if (matches.some((item) => !item)) return null;
   return new Set(matches.map((item) => item.id)).size === 1 ? matches[0] : null;
 }
@@ -120,7 +142,7 @@ function foodSearchMatches(f, query) {
   return Number.isFinite(foodSearchScore(f, query));
 }
 function food(id) {
-  return state.foods.find((f) => f.id === id);
+  return foodLookupFor(state.foods).byId.get(id);
 }
 
 // Planner-Mahlzeiteneignung wird als eigene Policy-Schicht nach app.js geladen.

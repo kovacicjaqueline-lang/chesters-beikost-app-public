@@ -5,17 +5,34 @@
  * Technische Basis: V9.2R; fachliches Verhalten unverändert zu V9.2.
  */
 
+let openDbPromise = null;
 function openDb() {
-  return new Promise((resolve, reject) => {
+  if (openDbPromise) return openDbPromise;
+  openDbPromise = new Promise((resolve, reject) => {
     if (!window.indexedDB) return reject(new Error("IndexedDB nicht verfügbar"));
     let request = indexedDB.open(DB_NAME, DB_VERSION);
     request.onupgradeneeded = () => {
       let db = request.result;
       if (!db.objectStoreNames.contains(DB_STORE)) db.createObjectStore(DB_STORE);
     };
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error || new Error("Datenbankfehler"));
+    request.onsuccess = () => {
+      let db = request.result;
+      let discard = () => {
+        if (openDbPromise) openDbPromise = null;
+      };
+      db.onversionchange = () => {
+        db.close();
+        discard();
+      };
+      db.onclose = discard;
+      resolve(db);
+    };
+    request.onerror = () => {
+      openDbPromise = null;
+      reject(request.error || new Error("Datenbankfehler"));
+    };
   });
+  return openDbPromise;
 }
 async function idbGet(key) {
   let db = await openDb();
@@ -24,7 +41,6 @@ async function idbGet(key) {
     let req = tx.objectStore(DB_STORE).get(key);
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
-    tx.oncomplete = () => db.close();
   });
 }
 async function idbPut(key, value) {
@@ -32,8 +48,8 @@ async function idbPut(key, value) {
   return new Promise((resolve, reject) => {
     let tx = db.transaction(DB_STORE, "readwrite");
     tx.objectStore(DB_STORE).put(value, key);
-    tx.oncomplete = () => { db.close(); resolve(true); };
-    tx.onerror = () => { db.close(); reject(tx.error); };
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => reject(tx.error);
   });
 }
 function stateSummary(data = state) {
@@ -72,6 +88,7 @@ function pendingIdbRecoveryState() {
   }
 }
 function save(options = {}) {
+  if (typeof invalidateFoodLookupCache === "function") invalidateFoodLookupCache();
   let snapshot = clone(state);
   snapshot.schemaVersion = SCHEMA_VERSION;
   snapshot.appVersion = APP_VERSION;

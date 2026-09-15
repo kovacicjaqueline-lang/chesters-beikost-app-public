@@ -176,298 +176,247 @@
   padding: 8px 0;
 }
 
-/* Recipe-V2 Brei-Icons: sichtbare Hauptausdehnung auf 80 % des 128×128-Canvas
- * normalisieren und die sichtbare Bounding Box mittig ausrichten. Die eingebetteten
- * PNG-Motive bleiben unverändert; nur ihre Darstellung im bestehenden Icon-Viewport
- * wird skaliert und versetzt. */
+/* Recipe-V2-Bilder verwenden ausnahmslos den stabilen zentrierten Transform-Mechanismus.
+ * Bereits passende Motive behalten über die Defaultwerte ihre natürliche Darstellung;
+ * nur normalisierte Assets überschreiben die drei Variablen weiter unten. */
 .illustration-icon--recipe {
   position: relative;
   overflow: hidden;
 }
 
-/* Recipe-V2 Pancakes: die sichtbare Hauptausdehnung auf 100 px des 128×128-
- * Canvas vereinheitlichen und im Kreis zentrieren. Die Skalierung erfolgt per
- * transform am bereits zentrierten Bild. Absolute width/left/top-Werte lassen
- * Safari die SVGs im kleinen Flex-Viewport nach rechts/unten aus dem Kreis schieben. */
-.illustration-icon--recipe > .illustration-icon__asset[src*="/recipes/"][src*="pancakes"] {
+/* Die Skalierung erfolgt per Transform am bereits zentrierten Bild. Absolute
+ * width/left/top-Werte lassen Safari die SVGs im kleinen Flex-Viewport nach
+ * rechts/unten aus dem Kreis schieben. */
+.illustration-icon--recipe > .illustration-icon__asset[src*="/recipes/"] {
   width: 100%;
   height: 100%;
-  transform: translate(var(--recipe-pancakes-shift-x, 0), var(--recipe-pancakes-shift-y, 0)) scale(var(--recipe-pancakes-scale, 1));
+  transform: translate(var(--recipe-circle-shift-x, 0), var(--recipe-circle-shift-y, 0)) scale(var(--recipe-circle-scale, 1));
   transform-origin: center;
 }
 
 .illustration-icon__asset[src*="/recipes/bananen-joghurt-hafer-pancakes.svg"] {
-  --recipe-pancakes-scale: 0.854701;
-  --recipe-pancakes-shift-x: -1.669%;
-  --recipe-pancakes-shift-y: -0.668%;
+  --recipe-circle-scale: 0.854701;
+  --recipe-circle-shift-x: -1.669%;
+  --recipe-circle-shift-y: -0.668%;
 }
 .illustration-icon__asset[src*="/recipes/birne-hirse-pancakes.svg"] {
-  --recipe-pancakes-scale: 0.970874;
-  --recipe-pancakes-shift-x: -1.896%;
-  --recipe-pancakes-shift-y: -1.517%;
+  --recipe-circle-scale: 0.970874;
+  --recipe-circle-shift-x: -1.896%;
+  --recipe-circle-shift-y: -1.517%;
 }
 .illustration-icon__asset[src*="/recipes/buchweizen-bananen-pancakes.svg"] {
-  --recipe-pancakes-scale: 1.020408;
-  --recipe-pancakes-shift-x: 0%;
-  --recipe-pancakes-shift-y: -0.797%;
+  --recipe-circle-scale: 1.020408;
+  --recipe-circle-shift-x: 0%;
+  --recipe-circle-shift-y: -0.797%;
 }
 .illustration-icon__asset[src*="/recipes/gemuese-hafer-pancakes.svg"] {
-  --recipe-pancakes-scale: 0.826446;
-  --recipe-pancakes-shift-x: -0.969%;
-  --recipe-pancakes-shift-y: -2.583%;
+  --recipe-circle-scale: 0.826446;
+  --recipe-circle-shift-x: -0.969%;
+  --recipe-circle-shift-y: -2.583%;
 }
 .illustration-icon__asset[src*="/recipes/obst-hafer-pancakes.svg"] {
-  --recipe-pancakes-scale: 1.176471;
-  --recipe-pancakes-shift-x: -0.459%;
-  --recipe-pancakes-shift-y: -3.217%;
+  --recipe-circle-scale: 1.176471;
+  --recipe-circle-shift-x: -0.459%;
+  --recipe-circle-shift-y: -3.217%;
 }
 .illustration-icon__asset[src*="/recipes/ube-bananen-pancakes.svg"] {
-  --recipe-pancakes-scale: 1.086957;
-  --recipe-pancakes-shift-x: 0%;
-  --recipe-pancakes-shift-y: -4.671%;
+  --recipe-circle-scale: 1.086957;
+  --recipe-circle-shift-x: 0%;
+  --recipe-circle-shift-y: -4.671%;
 }
 .illustration-icon__asset[src*="/recipes/zucchini-hafer-pancakes.svg"] {
-  --recipe-pancakes-scale: 0.900901;
-  --recipe-pancakes-shift-x: 0.352%;
-  --recipe-pancakes-shift-y: -2.111%;
-}
-
-.illustration-icon--recipe > .illustration-icon__asset[src*="/recipes/"][src*="brei"] {
-  position: absolute;
-  left: var(--recipe-brei-left, 0);
-  top: var(--recipe-brei-top, 0);
-  width: var(--recipe-brei-size, 100%);
-  height: var(--recipe-brei-size, 100%);
-  max-width: none;
+  --recipe-circle-scale: 0.900901;
+  --recipe-circle-shift-x: 0.352%;
+  --recipe-circle-shift-y: -2.111%;
 }
 
 .illustration-icon__asset[src*="/recipes/apfel-hirse-brei-mit-mandelmus.svg"] {
-  --recipe-brei-size: 101.386%;
-  --recipe-brei-left: -1.089%;
-  --recipe-brei-top: -0.693%;
+  --recipe-circle-scale: 1.013860;
+  --recipe-circle-shift-x: -0.396%;
+  --recipe-circle-shift-y: -0.000%;
 }
 .illustration-icon__asset[src*="/recipes/bananen-haferbrei-mit-erdnussmus.svg"] {
-  --recipe-brei-size: 99.417%;
-  --recipe-brei-left: 0.680%;
-  --recipe-brei-top: 0.680%;
+  --recipe-circle-scale: 0.994170;
+  --recipe-circle-shift-x: 0.388%;
+  --recipe-circle-shift-y: 0.388%;
 }
 .illustration-icon__asset[src*="/recipes/buttermilch-griess-obstbrei.svg"] {
-  --recipe-brei-size: 113.778%;
-  --recipe-brei-left: -6.889%;
-  --recipe-brei-top: -7.778%;
+  --recipe-circle-scale: 1.137780;
+  --recipe-circle-shift-x: 0.000%;
+  --recipe-circle-shift-y: -0.889%;
 }
 .illustration-icon__asset[src*="/recipes/buttermilch-hafer-obstbrei.svg"] {
-  --recipe-brei-size: 116.364%;
-  --recipe-brei-left: -8.182%;
-  --recipe-brei-top: -8.636%;
+  --recipe-circle-scale: 1.163640;
+  --recipe-circle-shift-x: 0.000%;
+  --recipe-circle-shift-y: -0.454%;
 }
 .illustration-icon__asset[src*="/recipes/buttermilch-hirse-obstbrei.svg"] {
-  --recipe-brei-size: 115.056%;
-  --recipe-brei-left: -7.978%;
-  --recipe-brei-top: -7.528%;
+  --recipe-circle-scale: 1.150560;
+  --recipe-circle-shift-x: -0.450%;
+  --recipe-circle-shift-y: 0.000%;
 }
 .illustration-icon__asset[src*="/recipes/karotte-suesskartoffel-brei.svg"] {
-  --recipe-brei-size: 129.620%;
-  --recipe-brei-left: -16.329%;
-  --recipe-brei-top: -15.823%;
+  --recipe-circle-scale: 1.296200;
+  --recipe-circle-shift-x: -1.519%;
+  --recipe-circle-shift-y: -1.013%;
 }
 .illustration-icon__asset[src*="/recipes/karotten-hirse-brei-mit-tahin.svg"] {
-  --recipe-brei-size: 131.282%;
-  --recipe-brei-left: -14.615%;
-  --recipe-brei-top: -16.154%;
+  --recipe-circle-scale: 1.312820;
+  --recipe-circle-shift-x: 1.026%;
+  --recipe-circle-shift-y: -0.513%;
 }
 .illustration-icon__asset[src*="/recipes/karotten-polenta-brei.svg"] {
-  --recipe-brei-size: 170.667%;
-  --recipe-brei-left: -35.333%;
-  --recipe-brei-top: -38.000%;
+  --recipe-circle-scale: 1.706670;
+  --recipe-circle-shift-x: 0.000%;
+  --recipe-circle-shift-y: -2.667%;
 }
 .illustration-icon__asset[src*="/recipes/kuerbis-hafer-brei.svg"] {
-  --recipe-brei-size: 152.836%;
-  --recipe-brei-left: -27.015%;
-  --recipe-brei-top: -27.015%;
+  --recipe-circle-scale: 1.528360;
+  --recipe-circle-shift-x: -0.597%;
+  --recipe-circle-shift-y: -0.597%;
 }
 .illustration-icon__asset[src*="/recipes/milch-getreide-brei.svg"] {
-  --recipe-brei-size: 222.609%;
-  --recipe-brei-left: -61.304%;
-  --recipe-brei-top: -59.565%;
+  --recipe-circle-scale: 2.226090;
+  --recipe-circle-shift-x: 0.001%;
+  --recipe-circle-shift-y: 1.740%;
 }
 .illustration-icon__asset[src*="/recipes/monggo-kalabasa-brei.svg"] {
-  --recipe-brei-size: 200.784%;
-  --recipe-brei-left: -51.176%;
-  --recipe-brei-top: -51.176%;
+  --recipe-circle-scale: 2.007840;
+  --recipe-circle-shift-x: -0.784%;
+  --recipe-circle-shift-y: -0.784%;
 }
 .illustration-icon__asset[src*="/recipes/monggo-suesskartoffel-brei.svg"] {
-  --recipe-brei-size: 182.857%;
-  --recipe-brei-left: -41.429%;
-  --recipe-brei-top: -42.857%;
+  --recipe-circle-scale: 1.828570;
+  --recipe-circle-shift-x: -0.001%;
+  --recipe-circle-shift-y: -1.428%;
 }
 .illustration-icon__asset[src*="/recipes/obst-buchweizenbrei.svg"] {
-  --recipe-brei-size: 204.800%;
-  --recipe-brei-left: -50.800%;
-  --recipe-brei-top: -54.800%;
+  --recipe-circle-scale: 2.048000;
+  --recipe-circle-shift-x: 1.600%;
+  --recipe-circle-shift-y: -2.400%;
 }
 .illustration-icon__asset[src*="/recipes/obst-griessbrei.svg"] {
-  --recipe-brei-size: 173.559%;
-  --recipe-brei-left: -36.102%;
-  --recipe-brei-top: -37.458%;
+  --recipe-circle-scale: 1.735590;
+  --recipe-circle-shift-x: 0.678%;
+  --recipe-circle-shift-y: -0.678%;
 }
 .illustration-icon__asset[src*="/recipes/obst-haferbrei.svg"] {
-  --recipe-brei-size: 102.400%;
-  --recipe-brei-left: -1.200%;
-  --recipe-brei-top: -0.800%;
+  --recipe-circle-scale: 1.024000;
+  --recipe-circle-shift-x: 0.000%;
+  --recipe-circle-shift-y: 0.400%;
 }
 .illustration-icon__asset[src*="/recipes/obst-hirsebrei.svg"] {
-  --recipe-brei-size: 200.784%;
-  --recipe-brei-left: -49.608%;
-  --recipe-brei-top: -53.529%;
+  --recipe-circle-scale: 2.007840;
+  --recipe-circle-shift-x: 0.784%;
+  --recipe-circle-shift-y: -3.137%;
 }
 .illustration-icon__asset[src*="/recipes/obst-polentabrei.svg"] {
-  --recipe-brei-size: 182.857%;
-  --recipe-brei-left: -40.000%;
-  --recipe-brei-top: -42.857%;
+  --recipe-circle-scale: 1.828570;
+  --recipe-circle-shift-x: 1.428%;
+  --recipe-circle-shift-y: -1.428%;
 }
 .illustration-icon__asset[src*="/recipes/obst-quinoabrei.svg"] {
-  --recipe-brei-size: 157.538%;
-  --recipe-brei-left: -29.385%;
-  --recipe-brei-top: -33.077%;
+  --recipe-circle-scale: 1.575380;
+  --recipe-circle-shift-x: -0.616%;
+  --recipe-circle-shift-y: -4.308%;
 }
 .illustration-icon__asset[src*="/recipes/obst-reisbrei.svg"] {
-  --recipe-brei-size: 193.208%;
-  --recipe-brei-left: -45.849%;
-  --recipe-brei-top: -46.604%;
+  --recipe-circle-scale: 1.932080;
+  --recipe-circle-shift-x: 0.755%;
+  --recipe-circle-shift-y: 0.000%;
 }
 .illustration-icon__asset[src*="/recipes/suesskartoffel-rote-linsen-brei.svg"] {
-  --recipe-brei-size: 213.333%;
-  --recipe-brei-left: -56.667%;
-  --recipe-brei-top: -64.167%;
+  --recipe-circle-scale: 2.133330;
+  --recipe-circle-shift-x: -0.001%;
+  --recipe-circle-shift-y: -7.501%;
 }
 .illustration-icon__asset[src*="/recipes/tilapia-reis-brei.svg"] {
-  --recipe-brei-size: 196.923%;
-  --recipe-brei-left: -48.462%;
-  --recipe-brei-top: -50.000%;
+  --recipe-circle-scale: 1.969230;
+  --recipe-circle-shift-x: -0.001%;
+  --recipe-circle-shift-y: -1.538%;
 }
 .illustration-icon__asset[src*="/recipes/ube-hafer-brei.svg"] {
-  --recipe-brei-size: 186.182%;
-  --recipe-brei-left: -43.818%;
-  --recipe-brei-top: -45.273%;
+  --recipe-circle-scale: 1.861820;
+  --recipe-circle-shift-x: -0.727%;
+  --recipe-circle-shift-y: -2.182%;
 }
 .illustration-icon__asset[src*="/recipes/zucchini-kartoffel-brei.svg"] {
-  --recipe-brei-size: 193.208%;
-  --recipe-brei-left: -45.849%;
-  --recipe-brei-top: -51.887%;
+  --recipe-circle-scale: 1.932080;
+  --recipe-circle-shift-x: 0.755%;
+  --recipe-circle-shift-y: -5.283%;
 }
 .illustration-icon__asset[src*="/recipes/zucchini-quinoa-brei.svg"] {
-  --recipe-brei-size: 213.333%;
-  --recipe-brei-left: -56.667%;
-  --recipe-brei-top: -67.500%;
-}
-
-/* Recipe-V2 Stampf-Icons: dieselbe 80-%-Normalisierung wie bei den Breien. */
-.illustration-icon--recipe > .illustration-icon__asset[src*="/recipes/"][src*="stampf"] {
-  position: absolute;
-  left: var(--recipe-stampf-left, 0);
-  top: var(--recipe-stampf-top, 0);
-  width: var(--recipe-stampf-size, 100%);
-  height: var(--recipe-stampf-size, 100%);
-  max-width: none;
+  --recipe-circle-scale: 2.133330;
+  --recipe-circle-shift-x: -0.001%;
+  --recipe-circle-shift-y: -10.834%;
 }
 
 .illustration-icon__asset[src*="/recipes/bohnen-kartoffel-stampf.svg"] {
-  --recipe-stampf-size: 102.400%;
-  --recipe-stampf-left: -1.200%;
-  --recipe-stampf-top: -0.800%;
+  --recipe-circle-scale: 1.024000;
+  --recipe-circle-shift-x: 0.000%;
+  --recipe-circle-shift-y: 0.400%;
 }
 .illustration-icon__asset[src*="/recipes/brokkoli-kartoffel-stampf.svg"] {
-  --recipe-stampf-size: 121.905%;
-  --recipe-stampf-left: -10.952%;
-  --recipe-stampf-top: -11.905%;
+  --recipe-circle-scale: 1.219050;
+  --recipe-circle-shift-x: 0.000%;
+  --recipe-circle-shift-y: -0.953%;
 }
 .illustration-icon__asset[src*="/recipes/erbsen-kartoffel-stampf.svg"] {
-  --recipe-stampf-size: 99.417%;
-  --recipe-stampf-left: -0.097%;
-  --recipe-stampf-top: -0.097%;
+  --recipe-circle-scale: 0.994170;
+  --recipe-circle-shift-x: -0.389%;
+  --recipe-circle-shift-y: -0.389%;
 }
 .illustration-icon__asset[src*="/recipes/karfiol-kartoffel-stampf.svg"] {
-  --recipe-stampf-size: 111.304%;
-  --recipe-stampf-left: -5.652%;
-  --recipe-stampf-top: -5.652%;
+  --recipe-circle-scale: 1.113040;
+  --recipe-circle-shift-x: 0.000%;
+  --recipe-circle-shift-y: 0.000%;
 }
 .illustration-icon__asset[src*="/recipes/lachs-suesskartoffel-stampf.svg"] {
-  --recipe-stampf-size: 124.878%;
-  --recipe-stampf-left: -12.439%;
-  --recipe-stampf-top: -13.902%;
+  --recipe-circle-scale: 1.248780;
+  --recipe-circle-shift-x: 0.000%;
+  --recipe-circle-shift-y: -1.463%;
 }
 
 /* Recipe-V2 Bällchen: nur die drei im optischen Review klar zu kleinen, kompakten
  * Motive werden auf die sichtbare Breite der kleineren bereits passenden Familien-
  * Referenz vergrößert. Daraus folgt kein allgemeiner Prozent-Zielwert für Recipes. */
-.illustration-icon--recipe > .illustration-icon__asset[src*="/recipes/lachs-kartoffel-baellchen.svg"],
-.illustration-icon--recipe > .illustration-icon__asset[src*="/recipes/rote-linsen-gemuesebaellchen.svg"],
-.illustration-icon--recipe > .illustration-icon__asset[src*="/recipes/tofu-brokkoli-baellchen.svg"] {
-  position: absolute;
-  left: var(--recipe-baellchen-left, 0);
-  top: var(--recipe-baellchen-top, 0);
-  width: var(--recipe-baellchen-size, 100%);
-  height: var(--recipe-baellchen-size, 100%);
-  max-width: none;
-}
-
 .illustration-icon__asset[src*="/recipes/lachs-kartoffel-baellchen.svg"] {
-  --recipe-baellchen-size: 126.582%;
-  --recipe-baellchen-left: -13.786%;
-  --recipe-baellchen-top: -13.786%;
+  --recipe-circle-scale: 1.265820;
+  --recipe-circle-shift-x: -0.495%;
+  --recipe-circle-shift-y: -0.495%;
 }
 .illustration-icon__asset[src*="/recipes/rote-linsen-gemuesebaellchen.svg"] {
-  --recipe-baellchen-size: 107.527%;
-  --recipe-baellchen-left: -3.343%;
-  --recipe-baellchen-top: -5.864%;
+  --recipe-circle-scale: 1.075270;
+  --recipe-circle-shift-x: 0.420%;
+  --recipe-circle-shift-y: -2.101%;
 }
 .illustration-icon__asset[src*="/recipes/tofu-brokkoli-baellchen.svg"] {
-  --recipe-baellchen-size: 116.279%;
-  --recipe-baellchen-left: -8.140%;
-  --recipe-baellchen-top: -12.227%;
+  --recipe-circle-scale: 1.162790;
+  --recipe-circle-shift-x: -0.001%;
+  --recipe-circle-shift-y: -4.088%;
 }
 
 /* Recipe-V2 Lugaw: Huhn-Lugaw bleibt als bereits passende Familienreferenz unverändert.
  * Nur die beiden deutlich kleineren kompakten Schüssel-Motive werden auf dieselbe
  * sichtbare Breite angeglichen und anhand ihrer Alpha-Bounding-Box zentriert. */
-.illustration-icon--recipe > .illustration-icon__asset[src*="/recipes/kuerbis-lugaw.svg"],
-.illustration-icon--recipe > .illustration-icon__asset[src*="/recipes/lugaw-basis.svg"] {
-  position: absolute;
-  left: var(--recipe-lugaw-left, 0);
-  top: var(--recipe-lugaw-top, 0);
-  width: var(--recipe-lugaw-size, 100%);
-  height: var(--recipe-lugaw-size, 100%);
-  max-width: none;
-}
-
 .illustration-icon__asset[src*="/recipes/kuerbis-lugaw.svg"] {
-  --recipe-lugaw-size: 167.273%;
-  --recipe-lugaw-left: -34.261%;
-  --recipe-lugaw-top: -36.250%;
+  --recipe-circle-scale: 1.672730;
+  --recipe-circle-shift-x: -0.624%;
+  --recipe-circle-shift-y: -2.613%;
 }
 .illustration-icon__asset[src*="/recipes/lugaw-basis.svg"] {
-  --recipe-lugaw-size: 121.053%;
-  --recipe-lugaw-left: -10.526%;
-  --recipe-lugaw-top: -10.033%;
+  --recipe-circle-scale: 1.210530;
+  --recipe-circle-shift-x: 0.000%;
+  --recipe-circle-shift-y: 0.493%;
 }
 
 /* Recipe-V2 Omelett: die beiden bereits großen Motive bleiben unverändert. Nur das
  * deutlich zu kleine Paprika-Omelett wird an die kleinere gute Familienreferenz
  * Zucchini-Omelett (109 px sichtbare Breite) angeglichen und zentriert. */
-.illustration-icon--recipe > .illustration-icon__asset[src*="/recipes/paprika-omelettstreifen.svg"] {
-  position: absolute;
-  left: var(--recipe-omelett-left, 0);
-  top: var(--recipe-omelett-top, 0);
-  width: var(--recipe-omelett-size, 100%);
-  height: var(--recipe-omelett-size, 100%);
-  max-width: none;
-}
-
 .illustration-icon__asset[src*="/recipes/paprika-omelettstreifen.svg"] {
-  --recipe-omelett-size: 170.313%;
-  --recipe-omelett-left: -35.156%;
-  --recipe-omelett-top: -35.822%;
+  --recipe-circle-scale: 1.703130;
+  --recipe-circle-shift-x: 0.000%;
+  --recipe-circle-shift-y: -0.666%;
 }
 
 /* UI-08 Review: Der Wochenplan-Kopf bleibt eine einzelne Karte. Planbasis und

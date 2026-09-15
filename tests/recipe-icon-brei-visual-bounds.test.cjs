@@ -162,11 +162,10 @@ function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function cssGeometry(css, id, family) {
+function cssGeometry(css, id) {
   const selector = `\\.illustration-icon__asset\\[src\\*="/recipes/${escapeRegExp(id)}\\.svg"\\]`;
   const blocks = Array.from(css.matchAll(new RegExp(`${selector}\\s*\\{([\\s\\S]*?)\\}`, "g")));
-  const variablePrefix = `--recipe-${family}-`;
-  const numericScaleDeclaration = new RegExp(`${escapeRegExp(variablePrefix)}(?:size|scale):\\s*-?[0-9.]+%?`);
+  const numericScaleDeclaration = /--recipe-circle-scale:\s*-?[0-9.]+/;
   const block = blocks.find((candidate) => numericScaleDeclaration.test(candidate[1]));
   assert.ok(block, `${id}: CSS-Normalisierung fehlt`);
 
@@ -176,35 +175,19 @@ function cssGeometry(css, id, family) {
     return Number(match[1]);
   }
 
-  if (family === "pancakes") {
-    return {
-      scale: numeric(`${variablePrefix}scale`),
-      shiftXPx: numeric(`${variablePrefix}shift-x`, "%") * 128 / 100,
-      shiftYPx: numeric(`${variablePrefix}shift-y`, "%") * 128 / 100,
-    };
-  }
-
   return {
-    scale: numeric(`${variablePrefix}size`, "%") / 100,
-    leftPx: numeric(`${variablePrefix}left`, "%") * 128 / 100,
-    topPx: numeric(`${variablePrefix}top`, "%") * 128 / 100,
+    scale: numeric("--recipe-circle-scale"),
+    shiftXPx: numeric("--recipe-circle-shift-x", "%") * 128 / 100,
+    shiftYPx: numeric("--recipe-circle-shift-y", "%") * 128 / 100,
   };
 }
 
 function renderedBounds(source, geometry) {
-  if (geometry.shiftXPx !== undefined) {
-    return {
-      minX: 64 + (source.minX - 64) * geometry.scale + geometry.shiftXPx,
-      minY: 64 + (source.minY - 64) * geometry.scale + geometry.shiftYPx,
-      maxX: 64 + (source.maxX - 64) * geometry.scale + geometry.shiftXPx,
-      maxY: 64 + (source.maxY - 64) * geometry.scale + geometry.shiftYPx,
-    };
-  }
   return {
-    minX: geometry.leftPx + source.minX * geometry.scale,
-    minY: geometry.topPx + source.minY * geometry.scale,
-    maxX: geometry.leftPx + source.maxX * geometry.scale,
-    maxY: geometry.topPx + source.maxY * geometry.scale,
+    minX: 64 + (source.minX - 64) * geometry.scale + geometry.shiftXPx,
+    minY: 64 + (source.minY - 64) * geometry.scale + geometry.shiftYPx,
+    maxX: 64 + (source.maxX - 64) * geometry.scale + geometry.shiftXPx,
+    maxY: 64 + (source.maxY - 64) * geometry.scale + geometry.shiftYPx,
   };
 }
 
@@ -228,10 +211,29 @@ function assertCssNormalizedFamily(css, family, expectedCount) {
 
   for (const name of files) {
     const source = measure(path.join(RECIPE_DIR, name));
-    const geometry = cssGeometry(css, source.id, family);
+    const geometry = cssGeometry(css, source.id);
     assertMargins(source.id, renderedBounds(source, geometry));
   }
 }
+
+test("Recipe-V2 Normalisierung verwendet keine absolute Größen- oder Positionslogik mehr", () => {
+  const css = fs.readFileSync(CSS_FILE, "utf8");
+  assert.match(
+    css,
+    /\.illustration-icon--recipe > \.illustration-icon__asset\[src\*="\/recipes\/"\]\s*\{[\s\S]*?transform:\s*translate\(var\(--recipe-circle-shift-x, 0\), var\(--recipe-circle-shift-y, 0\)\) scale\(var\(--recipe-circle-scale, 1\)\);/,
+    "alle Recipe-V2-Assets müssen im bestehenden Kreis aus der Mitte transformiert werden",
+  );
+  assert.doesNotMatch(
+    css,
+    /\.illustration-icon--recipe > \.illustration-icon__asset\[src\*="\/recipes\/"\]\[src\*=/,
+    "der Transform-Mechanismus darf nicht mehr je Recipe-Familie unterschiedlich sein",
+  );
+  assert.doesNotMatch(
+    css,
+    /--recipe-(?:pancakes|brei|stampf|baellchen|lugaw|omelett)-(?:size|left|top|scale|shift)/,
+    "keine Recipe-Familie darf die Safari-anfällige absolute Normalisierung behalten",
+  );
+});
 
 function assertRawFamilyMargins(family, expectedCount) {
   const files = fs.readdirSync(RECIPE_DIR)
@@ -264,7 +266,7 @@ test("Recipe-V2 Pancakes: sichtbare Motive werden im Kreis einheitlich zentriert
 
   for (const name of files) {
     const source = measure(path.join(RECIPE_DIR, name));
-    const geometry = cssGeometry(css, source.id, "pancakes");
+    const geometry = cssGeometry(css, source.id);
     const bounds = renderedBounds(source, geometry);
     assertMargins(source.id, bounds);
     const renderedWidth = bounds.maxX - bounds.minX;
@@ -307,7 +309,7 @@ test("Recipe-V2 Bällchen: nur klar zu kleine kompakte Motive werden familienbez
       continue;
     }
 
-    const geometry = cssGeometry(css, source.id, "baellchen");
+    const geometry = cssGeometry(css, source.id);
     const bounds = renderedBounds(source, geometry);
     assertMargins(source.id, bounds);
     const renderedWidth = bounds.maxX - bounds.minX;
@@ -339,7 +341,7 @@ test("Recipe-V2 Lugaw: nur die zwei zu kleinen Schüssel-Motive werden an Huhn-L
       continue;
     }
 
-    const geometry = cssGeometry(css, source.id, "lugaw");
+    const geometry = cssGeometry(css, source.id);
     const bounds = renderedBounds(source, geometry);
     assertMargins(source.id, bounds);
     const renderedWidth = bounds.maxX - bounds.minX;
@@ -369,7 +371,7 @@ test("Recipe-V2 Omelett: nur das klar zu kleine Paprika-Motiv wird an die kleine
       continue;
     }
 
-    const geometry = cssGeometry(css, source.id, "omelett");
+    const geometry = cssGeometry(css, source.id);
     const bounds = renderedBounds(source, geometry);
     assertMargins(source.id, bounds);
     const renderedWidth = bounds.maxX - bounds.minX;

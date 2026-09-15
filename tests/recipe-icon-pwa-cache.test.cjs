@@ -40,11 +40,14 @@ test("graded-bite-Wraps haben eigene Recipe-V2-Assets und werden beim ersten Off
   assert.notEqual(expected["Pizza Wrap"], expected["Chicken Fajita Wrap"]);
 });
 
-test("der frisch gecachte Stylesheet enthält die Recipe-V2-Brei-Normalisierung", () => {
-  assert.match(recipeCss, /\.illustration-icon--recipe > \.illustration-icon__asset\[src\*="\/recipes\/"\]\[src\*="brei"\]/);
+test("der frisch gecachte Stylesheet enthält die zentrierte Recipe-V2-Brei-Normalisierung", () => {
   assert.match(
     recipeCss,
-    /\.illustration-icon__asset\[src\*="\/recipes\/milch-getreide-brei\.svg"\]\s*\{[\s\S]*?--recipe-brei-size:\s*[0-9.]+%;/,
+    /\.illustration-icon--recipe > \.illustration-icon__asset\[src\*="\/recipes\/"\]\s*\{[\s\S]*?transform:\s*translate\(var\(--recipe-circle-shift-x, 0\), var\(--recipe-circle-shift-y, 0\)\) scale\(var\(--recipe-circle-scale, 1\)\);/,
+  );
+  assert.match(
+    recipeCss,
+    /\.illustration-icon__asset\[src\*="\/recipes\/milch-getreide-brei\.svg"\]\s*\{[\s\S]*?--recipe-circle-scale:\s*[0-9.]+;/,
   );
 });
 

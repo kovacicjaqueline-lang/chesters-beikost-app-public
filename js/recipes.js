@@ -680,13 +680,18 @@ function renderAllergenModule() {
   document.querySelectorAll(".planAllergen").forEach((button)=>button.onclick=()=>openAllergenSchedule(button.dataset.food));
 }
 
-function recipeStates() {
+function computeRecipeStates() {
   return recipeStatesCore().map((recipe) => {
     let hintParts = [];
     if (recipe.hardMinMonths) hintParts.push(`Frühestens ab etwa ${recipe.hardMinMonths} Monaten`);
     if (recipe.minMonths && Number(recipe.minMonths) > Number(recipe.hardMinMonths || 0)) hintParts.push(`Orientierung ab etwa ${recipe.minMonths} Monaten`);
     return { ...recipe, ageHint: hintParts.join(" · ") };
   });
+}
+function recipeStates() {
+  return typeof memoizeViewRenderValue === "function"
+    ? memoizeViewRenderValue("recipeStates", computeRecipeStates)
+    : computeRecipeStates();
 }
 function renderRecipeCard(r) {
   let optionParts = [];

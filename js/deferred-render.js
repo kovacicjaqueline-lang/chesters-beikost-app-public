@@ -1,8 +1,8 @@
 "use strict";
 
-/* Sichtbare UI-Reaktion vor teuren Voll-Rendern
+/* Sichtbare UI-Reaktion vor teuren Voll- und View-Rendern
  * State-Mutation und Persistenz bleiben synchron im auslösenden Event-Pfad.
- * Nur renderAll() wird hinter die nächste Render-Gelegenheit verschoben.
+ * Teure Renderarbeit wird hinter die nächste Render-Gelegenheit verschoben.
  */
 
 let deferredRenderAllPending = false;
@@ -11,6 +11,9 @@ let deferredRenderScopeDepth = 0;
 let deferredRenderScopeBase = null;
 let deferredRenderScopeRequested = false;
 let deferredRenderScopeCallbacks = [];
+let deferredViewRenderPending = false;
+let deferredViewRenderId = "";
+let deferredViewRenderCallback = null;
 const deferredRenderClickTargets = new WeakSet();
 
 function afterNextPaint(callback) {
@@ -34,6 +37,27 @@ function renderAllAfterNextPaint(afterRender = null) {
     if (typeof renderAll === "function") renderAll();
     callbacks.forEach((callback) => callback());
   });
+}
+
+function renderViewAfterNextPaint(viewId, callback) {
+  if (typeof callback !== "function") return;
+  deferredViewRenderId = String(viewId || "");
+  deferredViewRenderCallback = callback;
+  if (deferredViewRenderPending) return;
+  deferredViewRenderPending = true;
+  afterNextPaint(() => {
+    deferredViewRenderPending = false;
+    let id = deferredViewRenderId;
+    let render = deferredViewRenderCallback;
+    deferredViewRenderId = "";
+    deferredViewRenderCallback = null;
+    if (typeof render === "function") render(id);
+  });
+}
+
+function cancelDeferredViewRender() {
+  deferredViewRenderId = "";
+  deferredViewRenderCallback = null;
 }
 
 function beginDeferredFullRender() {

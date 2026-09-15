@@ -108,7 +108,8 @@
     const dates = new Set();
     if (typeof prepDemand !== "function" || typeof prepAdvice !== "function") return dates;
     try {
-      for (const demand of prepDemand()) {
+      const demands = typeof viewRenderPrepDemand === "function" ? viewRenderPrepDemand() : prepDemand();
+      for (const demand of demands) {
         const item = food(demand.foodId);
         const advice = item ? prepAdvice(item, demand) : null;
         if (!advice || advice.covered || advice.mode === "Frisch") continue;

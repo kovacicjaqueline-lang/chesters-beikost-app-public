@@ -242,7 +242,7 @@
 
   function recipeReservations() {
     const reservations = new Map();
-    const days = buildDays(
+    const days = (typeof viewRenderBuildDays === "function" ? viewRenderBuildDays : buildDays)(
       state.settings.planFrom && state.settings.planFrom >= today() ? state.settings.planFrom : today(),
       7,
     );
@@ -271,7 +271,8 @@
   function decorateInventory() {
     const list = document.getElementById("inventoryList");
     if (!list) return;
-    const demandByFood = new Map(prepDemand().map((item) => [item.foodId, item]));
+    const demands = typeof viewRenderPrepDemand === "function" ? viewRenderPrepDemand() : prepDemand();
+    const demandByFood = new Map(demands.map((item) => [item.foodId, item]));
     const reservations = recipeReservations();
     const inv = state.inventory
       .slice()

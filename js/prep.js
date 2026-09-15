@@ -126,9 +126,16 @@ function freshMealText(f) {
   return f.safeForm || "Bei der Mahlzeit passend vorbereiten; keine eigene kleine Kochmenge nötig.";
 }
 function prepDemand() {
+  return typeof memoizeViewRenderValue === "function"
+    ? memoizeViewRenderValue("prepDemand", computePrepDemand)
+    : computePrepDemand();
+}
+function computePrepDemand() {
   let from = state.settings.planFrom || today();
   if (from < today()) from = today();
-  let days = buildDays(from, 7);
+  let days = typeof viewRenderBuildDays === "function"
+    ? viewRenderBuildDays(from, 7)
+    : buildDays(from, 7);
   let map = new Map();
   days.forEach((day) =>
     day.meals.forEach((meal) => {
@@ -206,7 +213,8 @@ function prepAdvice(f, demand) {
   return {mode:missingGrams?"Nach Bedarf":"Vorrat reicht",covered:missingGrams===0,headline:missingGrams?(f.prep||"Eine normale Kochmenge vorbereiten"):"Durch Vorrat gedeckt",recommendation:f.safeForm||"Altersgerecht weich zubereiten.",form:"Überschuss flexibel portionieren.",details:`${formatPrepNumber(requiredGrams)} g geplant, ${formatPrepNumber(availableGrams)} g vorhanden, ${formatPrepNumber(missingGrams)} g fehlen.`,available,missing,availableGrams,requiredGrams,missingGrams,inventorySize:standardPrepPortionSizeForFood(f),inventoryNote:"",inventoryPortions:4};
 }
 function prepItems() {
-  return prepDemand()
+  let demands = typeof viewRenderPrepDemand === "function" ? viewRenderPrepDemand() : prepDemand();
+  return demands
     .map((demand) => {
       let f = food(demand.foodId);
       return f ? { f, demand, advice: prepAdvice(f, demand) } : null;
@@ -229,7 +237,7 @@ function shoppingQuantity(f) {
   return "1 Einheit";
 }
 function shoppingItems() {
-  let demands = prepDemand();
+  let demands = typeof viewRenderPrepDemand === "function" ? viewRenderPrepDemand() : prepDemand();
   let requiredGrams = new Map(demands.map((demand) => [demand.foodId, demand.requiredGrams]));
   return demands.map((d)=>food(d.foodId)).filter(Boolean).filter((f)=>f.id!=="rapsoel" && inventoryGrams(f.id) < (requiredGrams.get(f.id)||0));
 }
@@ -383,7 +391,7 @@ function renderPrepCore() {
       freshAtMealFood(x.f) &&
       x.demand.requiredGrams > x.demand.reservedGrams,
   );
-  let days = buildDays(
+  let days = (typeof viewRenderBuildDays === "function" ? viewRenderBuildDays : buildDays)(
     state.settings.planFrom && state.settings.planFrom >= today()
       ? state.settings.planFrom
       : today(),
@@ -501,7 +509,7 @@ function renderPrepCore() {
       }),
   );
 
-  let allRecipeStates = recipeStates();
+  let allRecipeStates = typeof viewRenderRecipeStates === "function" ? viewRenderRecipeStates() : recipeStates();
   let availableRecipes = allRecipeStates.filter((r) => r.unlocked).slice(0, 6);
   document.getElementById("cookNow").innerHTML = availableRecipes.length
     ? availableRecipes
@@ -724,18 +732,21 @@ function recipeIngredientReady(name) {
 }
 
 function renderPrep() {
-  renderPrepCore();
-  let shoppingBox = document.getElementById("shoppingList");
-  let hints = Object.values(state.shoppingHints || {}).filter((hint) => hint.status === "needed" && food(hint.foodId));
-  if (shoppingBox && hints.length) {
-    shoppingBox.insertAdjacentHTML("afterbegin", `<div class="shopping-followups"><div class="small shopping-followup-title">Nicht angebotene Lebensmittel</div>${hints.map((hint) => { let f = food(hint.foodId); return `<label class="shopping-row shopping-priority"><input class="ds-toggle-input" type="checkbox" data-shopping-hint="${f.id}"><div><b>${esc(f.name)}</b><div class="small">Zutat nicht verfügbar · nach Kauf wieder einplanen</div></div><span class="shopping-toggle" aria-hidden="true"></span></label>`; }).join("")}</div>`);
-    document.querySelectorAll("[data-shopping-hint]").forEach((checkbox) => checkbox.onchange = () => {
-      if (!checkbox.checked) return;
-      let id = checkbox.dataset.shoppingHint;
-      state.shoppingHints[id].status = "available"; state.pantry[id] = true;
-      scheduleFollowUp(id, today(), state.followUps?.[id]?.meal || "lunch", "not_offered", "no_opportunity");
-      save(); renderAll(); showToast(`${food(id)?.name || "Zutat"} ist vorhanden und wird wieder eingeplant.`);
-    });
-  }
-  globalThis.MobileUiLifecycle?.afterRender("prep");
+  let render = () => {
+    renderPrepCore();
+    let shoppingBox = document.getElementById("shoppingList");
+    let hints = Object.values(state.shoppingHints || {}).filter((hint) => hint.status === "needed" && food(hint.foodId));
+    if (shoppingBox && hints.length) {
+      shoppingBox.insertAdjacentHTML("afterbegin", `<div class="shopping-followups"><div class="small shopping-followup-title">Nicht angebotene Lebensmittel</div>${hints.map((hint) => { let f = food(hint.foodId); return `<label class="shopping-row shopping-priority"><input class="ds-toggle-input" type="checkbox" data-shopping-hint="${f.id}"><div><b>${esc(f.name)}</b><div class="small">Zutat nicht verfügbar · nach Kauf wieder einplanen</div></div><span class="shopping-toggle" aria-hidden="true"></span></label>`; }).join("")}</div>`);
+      document.querySelectorAll("[data-shopping-hint]").forEach((checkbox) => checkbox.onchange = () => {
+        if (!checkbox.checked) return;
+        let id = checkbox.dataset.shoppingHint;
+        state.shoppingHints[id].status = "available"; state.pantry[id] = true;
+        scheduleFollowUp(id, today(), state.followUps?.[id]?.meal || "lunch", "not_offered", "no_opportunity");
+        save(); renderAll(); showToast(`${food(id)?.name || "Zutat"} ist vorhanden und wird wieder eingeplant.`);
+      });
+    }
+    globalThis.MobileUiLifecycle?.afterRender("prep");
+  };
+  return typeof withViewRenderCycle === "function" ? withViewRenderCycle("prep", render) : render();
 }

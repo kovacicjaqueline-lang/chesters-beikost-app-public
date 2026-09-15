@@ -186,52 +186,50 @@
 }
 
 /* Recipe-V2 Pancakes: die sichtbare Hauptausdehnung auf 100 px des 128×128-
- * Canvas vereinheitlichen und im Kreis zentrieren. Die Pancake-Motive haben
- * unterschiedlich große transparente Ränder; ohne diese Darstellung bleiben
- * einzelne Bilder sichtbar zu klein oder sitzen zu weit unten. */
+ * Canvas vereinheitlichen und im Kreis zentrieren. Die Skalierung erfolgt per
+ * transform am bereits zentrierten Bild. Absolute width/left/top-Werte lassen
+ * Safari die SVGs im kleinen Flex-Viewport nach rechts/unten aus dem Kreis schieben. */
 .illustration-icon--recipe > .illustration-icon__asset[src*="/recipes/"][src*="pancakes"] {
-  position: absolute;
-  left: var(--recipe-pancakes-left, 0);
-  top: var(--recipe-pancakes-top, 0);
-  width: var(--recipe-pancakes-size, 100%);
-  height: var(--recipe-pancakes-size, 100%);
-  max-width: none;
+  width: 100%;
+  height: 100%;
+  transform: translate(var(--recipe-pancakes-shift-x, 0), var(--recipe-pancakes-shift-y, 0)) scale(var(--recipe-pancakes-scale, 1));
+  transform-origin: center;
 }
 
 .illustration-icon__asset[src*="/recipes/bananen-joghurt-hafer-pancakes.svg"] {
-  --recipe-pancakes-size: 85.470%;
-  --recipe-pancakes-left: 5.596%;
-  --recipe-pancakes-top: 6.597%;
+  --recipe-pancakes-scale: 0.854701;
+  --recipe-pancakes-shift-x: -1.669%;
+  --recipe-pancakes-shift-y: -0.668%;
 }
 .illustration-icon__asset[src*="/recipes/birne-hirse-pancakes.svg"] {
-  --recipe-pancakes-size: 97.087%;
-  --recipe-pancakes-left: -0.440%;
-  --recipe-pancakes-top: -0.061%;
+  --recipe-pancakes-scale: 0.970874;
+  --recipe-pancakes-shift-x: -1.896%;
+  --recipe-pancakes-shift-y: -1.517%;
 }
 .illustration-icon__asset[src*="/recipes/buchweizen-bananen-pancakes.svg"] {
-  --recipe-pancakes-size: 102.041%;
-  --recipe-pancakes-left: -1.020%;
-  --recipe-pancakes-top: -1.818%;
+  --recipe-pancakes-scale: 1.020408;
+  --recipe-pancakes-shift-x: 0%;
+  --recipe-pancakes-shift-y: -0.797%;
 }
 .illustration-icon__asset[src*="/recipes/gemuese-hafer-pancakes.svg"] {
-  --recipe-pancakes-size: 82.645%;
-  --recipe-pancakes-left: 7.709%;
-  --recipe-pancakes-top: 6.095%;
+  --recipe-pancakes-scale: 0.826446;
+  --recipe-pancakes-shift-x: -0.969%;
+  --recipe-pancakes-shift-y: -2.583%;
 }
 .illustration-icon__asset[src*="/recipes/obst-hafer-pancakes.svg"] {
-  --recipe-pancakes-size: 117.647%;
-  --recipe-pancakes-left: -9.283%;
-  --recipe-pancakes-top: -12.040%;
+  --recipe-pancakes-scale: 1.176471;
+  --recipe-pancakes-shift-x: -0.459%;
+  --recipe-pancakes-shift-y: -3.217%;
 }
 .illustration-icon__asset[src*="/recipes/ube-bananen-pancakes.svg"] {
-  --recipe-pancakes-size: 108.696%;
-  --recipe-pancakes-left: -4.348%;
-  --recipe-pancakes-top: -9.018%;
+  --recipe-pancakes-scale: 1.086957;
+  --recipe-pancakes-shift-x: 0%;
+  --recipe-pancakes-shift-y: -4.671%;
 }
 .illustration-icon__asset[src*="/recipes/zucchini-hafer-pancakes.svg"] {
-  --recipe-pancakes-size: 90.090%;
-  --recipe-pancakes-left: 5.307%;
-  --recipe-pancakes-top: 3.195%;
+  --recipe-pancakes-scale: 0.900901;
+  --recipe-pancakes-shift-x: 0.352%;
+  --recipe-pancakes-shift-y: -2.111%;
 }
 
 .illustration-icon--recipe > .illustration-icon__asset[src*="/recipes/"][src*="brei"] {

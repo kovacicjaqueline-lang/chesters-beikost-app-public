@@ -166,24 +166,40 @@ function cssGeometry(css, id, family) {
   const selector = `\\.illustration-icon__asset\\[src\\*="/recipes/${escapeRegExp(id)}\\.svg"\\]`;
   const blocks = Array.from(css.matchAll(new RegExp(`${selector}\\s*\\{([\\s\\S]*?)\\}`, "g")));
   const variablePrefix = `--recipe-${family}-`;
-  const numericSizeDeclaration = new RegExp(`${escapeRegExp(variablePrefix)}size:\\s*-?[0-9.]+%`);
-  const block = blocks.find((candidate) => numericSizeDeclaration.test(candidate[1]));
+  const numericScaleDeclaration = new RegExp(`${escapeRegExp(variablePrefix)}(?:size|scale):\\s*-?[0-9.]+%?`);
+  const block = blocks.find((candidate) => numericScaleDeclaration.test(candidate[1]));
   assert.ok(block, `${id}: CSS-Normalisierung fehlt`);
 
-  function percent(variable) {
-    const match = block[1].match(new RegExp(`${escapeRegExp(variable)}:\\s*(-?[0-9.]+)%`));
+  function numeric(variable, suffix = "") {
+    const match = block[1].match(new RegExp(`${escapeRegExp(variable)}:\\s*(-?[0-9.]+)${suffix}`));
     assert.ok(match, `${id}: ${variable} fehlt`);
     return Number(match[1]);
   }
 
+  if (family === "pancakes") {
+    return {
+      scale: numeric(`${variablePrefix}scale`),
+      shiftXPx: numeric(`${variablePrefix}shift-x`, "%") * 128 / 100,
+      shiftYPx: numeric(`${variablePrefix}shift-y`, "%") * 128 / 100,
+    };
+  }
+
   return {
-    scale: percent(`${variablePrefix}size`) / 100,
-    leftPx: percent(`${variablePrefix}left`) * 128 / 100,
-    topPx: percent(`${variablePrefix}top`) * 128 / 100,
+    scale: numeric(`${variablePrefix}size`, "%") / 100,
+    leftPx: numeric(`${variablePrefix}left`, "%") * 128 / 100,
+    topPx: numeric(`${variablePrefix}top`, "%") * 128 / 100,
   };
 }
 
 function renderedBounds(source, geometry) {
+  if (geometry.shiftXPx !== undefined) {
+    return {
+      minX: 64 + (source.minX - 64) * geometry.scale + geometry.shiftXPx,
+      minY: 64 + (source.minY - 64) * geometry.scale + geometry.shiftYPx,
+      maxX: 64 + (source.maxX - 64) * geometry.scale + geometry.shiftXPx,
+      maxY: 64 + (source.maxY - 64) * geometry.scale + geometry.shiftYPx,
+    };
+  }
   return {
     minX: geometry.leftPx + source.minX * geometry.scale,
     minY: geometry.topPx + source.minY * geometry.scale,

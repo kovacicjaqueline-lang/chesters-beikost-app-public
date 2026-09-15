@@ -304,6 +304,10 @@
     syncGroupedFilterVisibility();
   });
   root.MobileUiLifecycle.onRender("prep", syncGroupedFilterVisibility);
+  root.MobileUiLifecycle.onRender("more", () => {
+    installMoreNavigation();
+    root.__mobileMoreShowMenu?.();
+  });
   root.MobileUiLifecycle.onViewChange(({ viewId }) => {
     if (viewId !== "more") return;
     installMoreNavigation();

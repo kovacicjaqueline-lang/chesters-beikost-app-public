@@ -98,6 +98,7 @@ function renderView(id) {
     renderSettings();
     if (document.getElementById("auditList")) renderAudit();
     renderStorageStatus();
+    globalThis.MobileUiLifecycle?.afterRender("more");
   }
 }
 function renderCurrentView() {
@@ -1240,13 +1241,13 @@ function showView(id) {
   document
     .querySelectorAll("nav button")
     .forEach((b) => b.classList.toggle("active", b.dataset.view === id));
+  globalThis.MobileUiLifecycle?.afterViewChange(id, previous);
   let finishViewChange = () => {
     let view = document.getElementById(id);
     if (!view?.classList.contains("active")) return;
     try {
       renderView(id);
       window.scrollTo({ top: 0, behavior: "smooth" });
-      globalThis.MobileUiLifecycle?.afterViewChange(id, previous);
     } finally {
       view.removeAttribute("aria-busy");
     }

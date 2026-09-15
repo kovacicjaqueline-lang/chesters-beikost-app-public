@@ -98,6 +98,7 @@ try {
     document.querySelector('nav button[data-view="plan"]')?.click();
     const immediate = {
       active: document.getElementById("plan")?.classList.contains("active") || false,
+      appBarTitle: document.getElementById("appBarTitle")?.textContent || "",
       busy: document.getElementById("plan")?.getAttribute("aria-busy"),
       renderCalls: window.__planRenderCalls,
     };
@@ -105,7 +106,7 @@ try {
   });
   assert.deepEqual(
     planTransition.immediate,
-    { active: true, busy: "true", renderCalls: 0 },
+    { active: true, appBarTitle: "Plan", busy: "true", renderCalls: 0 },
     "Der Zieltab muss synchron sichtbar werden, ohne den teuren Render im Klick-Task auszuführen",
   );
   assert.deepEqual(

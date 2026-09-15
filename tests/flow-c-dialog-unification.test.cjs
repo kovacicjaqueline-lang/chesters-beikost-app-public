@@ -13,7 +13,7 @@ const logSource = fs.readFileSync(path.join(root, "js", "log.js"), "utf8");
 const sw = fs.readFileSync(path.join(root, "sw.js"), "utf8");
 
 test("FLOW-C lädt eine zentrale Dialog-UI nach den bestehenden Basisstyles und vor app.js", () => {
-  const mainCss = index.indexOf('ui-meal-editor-footer.css?v=10.1.26');
+  const mainCss = index.search(/ui-meal-editor-footer\.css\?v=[^"']+/);
   const flowCss = index.indexOf('flow-dialog-ui.css?v=10.1.26');
   const flowRuntime = index.indexOf('js/flow-dialog-ui.js?v=10.1.26');
   const app = index.indexOf('app.js?v=10.1.26');

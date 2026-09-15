@@ -133,10 +133,11 @@ const PLAN_CHECK_PRECACHE = [
 ];
 
 // Zusätzliche UI-/Flow-Dateien, die nicht im statischen FILES-Stamm von sw-core.js liegen.
-// Dateien, die index.html mit ?v=10.1.26 lädt, werden unter exakt derselben URL precached.
-// Dadurch überschreibt ein Service-Worker-Update auch einen bereits vorhandenen direkten
-// Query-Cachetreffer und liefert die aktuelle UI-/Flow-Runtime beim nächsten Start.
+// Dateien, die index.html versioniert lädt, werden unter exakt derselben URL precached.
+// Der bisherige CSS-Schlüssel bleibt für einen Update-Zyklus dabei: Bereits geöffnete
+// PWA-Clients mit dem alten index.html erhalten beim nächsten Start trotzdem den Fix.
 const UI_PRECACHE = [
+  "./ui-meal-editor-footer.css?v=10.1.26-circle-r2",
   "./ui-meal-editor-footer.css?v=10.1.26",
   "./flow-dialog-ui.css?v=10.1.26",
   "./catalog-navigation.css",

@@ -31,11 +31,26 @@ test("Icon-Rendergrößen: FOOD-Katalog verwendet nur dort 32px", () => {
   );
 });
 
-test("Icon-Rendergrößen: FOOD-Detail bleibt 96px", () => {
+test("Icon-Rendergrößen: FOOD-Detail behält 96px ohne konkurrierende Inline-Größe", () => {
   assert.match(
+    catalogNavigation,
+    /\.food-detail-hero\s*\{[^}]*--food-detail-icon-size\s*:\s*96px\s*;[^}]*grid-template-columns\s*:\s*minmax\(0,\s*1fr\)\s*var\(--food-detail-icon-size\)\s*;[^}]*min-height\s*:\s*var\(--food-detail-icon-size\)\s*;[^}]*\}/s,
+    "FOOD-Detailhero muss den zentralen 96px-Detailtoken verwenden",
+  );
+  assert.match(
+    catalogNavigation,
+    /\.food-detail-hero-icon\s*\{[^}]*--icon-food\s*:\s*var\(--food-detail-icon-size\)\s*;[^}]*width\s*:\s*var\(--food-detail-icon-size\)\s*;[^}]*height\s*:\s*var\(--food-detail-icon-size\)\s*;[^}]*\}/s,
+    "FOOD-Detailicon muss seine Größe ausschließlich vom Detailtoken beziehen",
+  );
+  assert.doesNotMatch(
     foodsJs,
-    /food-detail-hero-icon[^\n]*--icon-food:96px;width:96px;height:96px/,
-    "FOOD-Detailhero muss bei 96px bleiben",
+    /food-detail-hero[^>]*style=/,
+    "FOOD-Detailhero darf keine konkurrierende Inline-Größe mehr tragen",
+  );
+  assert.doesNotMatch(
+    foodsJs,
+    /food-detail-hero-icon[^>]*style=/,
+    "FOOD-Detailicon darf keine konkurrierende Inline-Größe mehr tragen",
   );
 });
 

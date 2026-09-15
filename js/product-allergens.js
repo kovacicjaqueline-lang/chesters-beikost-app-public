@@ -288,7 +288,10 @@ if (typeof renderView === "function") {
   const productAllergenBaseRenderView = renderView;
   renderView = function renderViewWithProductAllergens(id) {
     let result = productAllergenBaseRenderView(id);
-    if (id === "more") renderProductAllergenCard();
+    if (id === "more") {
+      renderProductAllergenCard();
+      globalThis.MobileUiLifecycle?.afterRender("more");
+    }
     return result;
   };
 }

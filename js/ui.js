@@ -98,7 +98,6 @@ function renderView(id) {
     renderSettings();
     if (document.getElementById("auditList")) renderAudit();
     renderStorageStatus();
-    globalThis.MobileUiLifecycle?.afterRender("more");
   }
 }
 function renderCurrentView() {

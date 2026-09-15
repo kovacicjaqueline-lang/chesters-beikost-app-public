@@ -185,6 +185,55 @@
   overflow: hidden;
 }
 
+/* Recipe-V2 Pancakes: die sichtbare Hauptausdehnung auf 100 px des 128×128-
+ * Canvas vereinheitlichen und im Kreis zentrieren. Die Pancake-Motive haben
+ * unterschiedlich große transparente Ränder; ohne diese Darstellung bleiben
+ * einzelne Bilder sichtbar zu klein oder sitzen zu weit unten. */
+.illustration-icon--recipe > .illustration-icon__asset[src*="/recipes/"][src*="pancakes"] {
+  position: absolute;
+  left: var(--recipe-pancakes-left, 0);
+  top: var(--recipe-pancakes-top, 0);
+  width: var(--recipe-pancakes-size, 100%);
+  height: var(--recipe-pancakes-size, 100%);
+  max-width: none;
+}
+
+.illustration-icon__asset[src*="/recipes/bananen-joghurt-hafer-pancakes.svg"] {
+  --recipe-pancakes-size: 85.470%;
+  --recipe-pancakes-left: 5.596%;
+  --recipe-pancakes-top: 6.597%;
+}
+.illustration-icon__asset[src*="/recipes/birne-hirse-pancakes.svg"] {
+  --recipe-pancakes-size: 97.087%;
+  --recipe-pancakes-left: -0.440%;
+  --recipe-pancakes-top: -0.061%;
+}
+.illustration-icon__asset[src*="/recipes/buchweizen-bananen-pancakes.svg"] {
+  --recipe-pancakes-size: 102.041%;
+  --recipe-pancakes-left: -1.020%;
+  --recipe-pancakes-top: -1.818%;
+}
+.illustration-icon__asset[src*="/recipes/gemuese-hafer-pancakes.svg"] {
+  --recipe-pancakes-size: 82.645%;
+  --recipe-pancakes-left: 7.709%;
+  --recipe-pancakes-top: 6.095%;
+}
+.illustration-icon__asset[src*="/recipes/obst-hafer-pancakes.svg"] {
+  --recipe-pancakes-size: 117.647%;
+  --recipe-pancakes-left: -9.283%;
+  --recipe-pancakes-top: -12.040%;
+}
+.illustration-icon__asset[src*="/recipes/ube-bananen-pancakes.svg"] {
+  --recipe-pancakes-size: 108.696%;
+  --recipe-pancakes-left: -4.348%;
+  --recipe-pancakes-top: -9.018%;
+}
+.illustration-icon__asset[src*="/recipes/zucchini-hafer-pancakes.svg"] {
+  --recipe-pancakes-size: 90.090%;
+  --recipe-pancakes-left: 5.307%;
+  --recipe-pancakes-top: 3.195%;
+}
+
 .illustration-icon--recipe > .illustration-icon__asset[src*="/recipes/"][src*="brei"] {
   position: absolute;
   left: var(--recipe-brei-left, 0);

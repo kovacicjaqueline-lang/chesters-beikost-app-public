@@ -141,6 +141,10 @@ try {
   assert.equal(recipePresentation.techMetaVisible, false, "sekundäre technische Rezept-Metadaten sollen in der Übersicht reduziert sein");
 
   await page.locator('nav button[data-view="more"]').click();
+  await page.waitForFunction(() =>
+    document.querySelectorAll("#moreNavScreen .more-nav-group > h2").length === 3 &&
+    !document.getElementById("more")?.hasAttribute("aria-busy"),
+  );
   const groupLabels = await page.locator("#moreNavScreen .more-nav-group > h2").allTextContents();
   assert.deepEqual(groupLabels, ["Verlauf", "Beikost", "App"], "Mehr soll als gruppierte Navigationsliste aufgebaut sein");
   assert.equal(await page.locator("#moreNavScreen .more-nav-row").count(), 9, "Mehr soll die bestehenden Ziele als kompakte Rows anbieten");

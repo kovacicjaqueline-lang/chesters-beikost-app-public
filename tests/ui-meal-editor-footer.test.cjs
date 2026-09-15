@@ -12,12 +12,14 @@ const workflow = fs.readFileSync(
   'utf8',
 );
 
-test('Mahlzeit-Editor lädt den isolierten Footer-Fix nach dem Hauptstylesheet mit derselben Asset-Version', () => {
+test('Mahlzeit-Editor lädt den isolierten Footer-Fix nach dem Hauptstylesheet mit eigenem Cache-Schlüssel', () => {
   const match = html.match(
     /styles\.css\?v=([^"']+)[^]*ui-meal-editor-footer\.css\?v=([^"']+)/,
   );
   assert.ok(match, 'beide Stylesheets müssen in der richtigen Reihenfolge geladen werden');
-  assert.equal(match[1], match[2]);
+  assert.notEqual(match[1], match[2], 'der Footer-Fix muss separat cache-bustbar sein');
+  assert.equal(match[2], '10.1.26-circle-r2');
+  assert.ok(serviceWorker.includes(`"./ui-meal-editor-footer.css?v=${match[2]}"`));
 });
 
 test('Mahlzeit-Editor nutzt auf iPhone den nativen Sheet-Scroll statt eines inneren Fokus-Scrollcontainers', () => {

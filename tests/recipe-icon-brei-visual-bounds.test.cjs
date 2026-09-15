@@ -225,6 +225,11 @@ test("Recipe-V2 Normalisierung verwendet keine absolute Größen- oder Positions
   );
   assert.doesNotMatch(
     css,
+    /\.illustration-icon--recipe > \.illustration-icon__asset\[src\*="\/recipes\/"\]\[src\*=/,
+    "der Transform-Mechanismus darf nicht mehr je Recipe-Familie unterschiedlich sein",
+  );
+  assert.doesNotMatch(
+    css,
     /--recipe-(?:pancakes|brei|stampf|baellchen|lugaw|omelett)-(?:size|left|top|scale|shift)/,
     "keine Recipe-Familie darf die Safari-anfällige absolute Normalisierung behalten",
   );

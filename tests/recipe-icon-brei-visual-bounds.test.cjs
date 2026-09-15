@@ -239,10 +239,24 @@ test("Recipe-V2 Stampf-Icons: Mindest-Rand bleibt nach visueller Normalisierung 
   assertCssNormalizedFamily(css, "stampf", EXPECTED_STAMPF_COUNT);
 });
 
-test("Recipe-V2 Pancakes: Originalgrößen bleiben erhalten und erfüllen die Rand-Toleranz", () => {
+test("Recipe-V2 Pancakes: sichtbare Motive werden im Kreis einheitlich zentriert", () => {
   const css = fs.readFileSync(CSS_FILE, "utf8");
-  assert.doesNotMatch(css, /--recipe-pancakes-(?:size|left|top)/, "Pancakes dürfen nicht pauschal auf einen Prozent-Zielwert normalisiert werden");
-  assertRawFamilyMargins("pancakes", EXPECTED_PANCAKES_COUNT);
+  const files = fs.readdirSync(RECIPE_DIR)
+    .filter((name) => name.endsWith(".svg") && name.includes("pancakes"))
+    .sort();
+  assert.equal(files.length, EXPECTED_PANCAKES_COUNT, "pancakes: Icon-Bestand hat sich geändert; Prüfung gezielt nachziehen");
+
+  for (const name of files) {
+    const source = measure(path.join(RECIPE_DIR, name));
+    const geometry = cssGeometry(css, source.id, "pancakes");
+    const bounds = renderedBounds(source, geometry);
+    assertMargins(source.id, bounds);
+    const renderedWidth = bounds.maxX - bounds.minX;
+    assert.ok(
+      renderedWidth >= 99.9 && renderedWidth <= 100.1,
+      `${source.id}: sichtbare Zielbreite ${renderedWidth.toFixed(2)} px liegt nicht bei der geprüften Pancake-Familienreferenz von 100 px`,
+    );
+  }
 });
 
 test("Recipe-V2 Taler: Originalgrößen bleiben erhalten und erfüllen die Rand-Toleranz", () => {

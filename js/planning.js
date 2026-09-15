@@ -535,7 +535,7 @@ function knownCandidate(meal, on, ctx, exclude = []) {
 }
 function recipeStockCandidate(meal, on, ctx) {
   if (!state.settings.preferInventoryInPlan) return null;
-  let states = recipeStates()
+  let states = (typeof viewRenderRecipeStates === "function" ? viewRenderRecipeStates() : recipeStates())
     .filter(
       (r) =>
         r.unlocked &&
@@ -556,7 +556,7 @@ function recipeStockCandidate(meal, on, ctx) {
   return states[0] || null;
 }
 function snackRecipeCandidate(on, ctx) {
-  let candidates = recipeStates()
+  let candidates = (typeof viewRenderRecipeStates === "function" ? viewRenderRecipeStates() : recipeStates())
     .filter((r) =>
       r.unlocked &&
       recipeSuitableForMeal(r, "snack") &&

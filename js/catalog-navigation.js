@@ -131,7 +131,8 @@
     if (search) search.value = recipeQuery;
 
     const query = normalizeName(recipeQuery);
-    const recipes = recipeStates().filter((recipe) => {
+    const allRecipeStates = typeof viewRenderRecipeStates === "function" ? viewRenderRecipeStates() : recipeStates();
+    const recipes = allRecipeStates.filter((recipe) => {
       if (!recipeCatalogCategoryMatches(recipe)) return false;
       if (!query) return true;
       const fullSearchText = typeof recipeSearchText === "function" ? recipeSearchText(recipe) : "";
@@ -148,7 +149,6 @@
       countBox.textContent = `${recipes.length} Rezept${recipes.length === 1 ? "" : "e"} · ${context}`;
     }
 
-    const allRecipeStates = recipeStates();
     const emptyMode = query || recipeFilter !== "available"
       ? "reset"
       : allRecipeStates.some((item) => item.almost)
@@ -579,7 +579,7 @@ body.mobile-foundation #genericModal .sheet {
 
     const on = today();
     const age = monthsOld(on);
-    const day = buildDays(on, 1)[0];
+    const day = (typeof viewRenderBuildDays === "function" ? viewRenderBuildDays : buildDays)(on, 1)[0];
     const active = day.meals.filter((meal) => meal.active && meal.focusId);
     const openMeals = active.filter((meal) => !mealIsCompleted(on, meal.meal));
     const focusMeal = openMeals[0] || null;
@@ -588,7 +588,7 @@ body.mobile-foundation #genericModal .sheet {
     if (!active.length) {
       for (let offset = 1; offset <= 45; offset++) {
         const candidateDate = addDays(on, offset);
-        const candidateDay = buildDays(candidateDate, 1, false)[0];
+        const candidateDay = (typeof viewRenderBuildDays === "function" ? viewRenderBuildDays : buildDays)(candidateDate, 1, false)[0];
         if (candidateDay.meals.some((meal) => meal.active && meal.focusId)) {
           nextPlanned = candidateDate;
           break;
@@ -683,7 +683,7 @@ body.mobile-foundation #genericModal .sheet {
   function renderContextRecipe(focusMeal) {
     const card = document.getElementById("recipePreviewCard");
     if (!card) return;
-    const all = recipeStates();
+    const all = typeof viewRenderRecipeStates === "function" ? viewRenderRecipeStates() : recipeStates();
     const recipe = focusMeal ? all.find((item) => item.unlocked && recipeMatchesFocus(item, focusMeal)) : null;
     card.className = `today-recipe-card${recipe ? "" : " today-recipe-empty"}`;
     card.style.display = "block";

@@ -24,6 +24,56 @@ function showToast(message, undoFn = null) {
   toast.classList.add("show");
   toastTimer = setTimeout(() => toast.classList.remove("show"), 5500);
 }
+let activeViewRenderCycle = null;
+function withViewRenderCycle(viewId, callback) {
+  if (typeof callback !== "function") return;
+  if (activeViewRenderCycle) return callback();
+  activeViewRenderCycle = {
+    viewId,
+    memo: new Map(),
+    days: new Map(),
+    recipeStatesReady: false,
+    recipeStates: null,
+    prepDemandReady: false,
+    prepDemand: null,
+  };
+  try {
+    return callback();
+  } finally {
+    activeViewRenderCycle = null;
+  }
+}
+function memoizeViewRenderValue(key, callback) {
+  if (!activeViewRenderCycle) return callback();
+  if (!activeViewRenderCycle.memo.has(key)) {
+    activeViewRenderCycle.memo.set(key, callback());
+  }
+  return activeViewRenderCycle.memo.get(key);
+}
+function viewRenderBuildDays(from, n = 7, applyAutoLocks = true) {
+  if (!activeViewRenderCycle) return buildDays(from, n, applyAutoLocks);
+  let key = `${String(from)}|${Number(n)}|${applyAutoLocks !== false}`;
+  if (!activeViewRenderCycle.days.has(key)) {
+    activeViewRenderCycle.days.set(key, buildDays(from, n, applyAutoLocks));
+  }
+  return activeViewRenderCycle.days.get(key);
+}
+function viewRenderRecipeStates() {
+  if (!activeViewRenderCycle) return recipeStates();
+  if (!activeViewRenderCycle.recipeStatesReady) {
+    activeViewRenderCycle.recipeStates = recipeStates();
+    activeViewRenderCycle.recipeStatesReady = true;
+  }
+  return activeViewRenderCycle.recipeStates;
+}
+function viewRenderPrepDemand() {
+  if (!activeViewRenderCycle) return prepDemand();
+  if (!activeViewRenderCycle.prepDemandReady) {
+    activeViewRenderCycle.prepDemand = prepDemand();
+    activeViewRenderCycle.prepDemandReady = true;
+  }
+  return activeViewRenderCycle.prepDemand;
+}
 function renderAll() {
   renderHome();
   renderPlan();
@@ -188,13 +238,13 @@ function renderHomeCore() {
     tried = typeof learnedCountIdentities === "function" ? learnedCountIdentities().length : learned.length,
     target = Number(state.settings.targetFoods) || 100,
     pct = Math.min(100, tried / target * 100), on = today(), age = monthsOld(on),
-    day = buildDays(on, 1)[0], active = day.meals.filter((m) => m.active && m.focusId);
+    day = viewRenderBuildDays(on, 1)[0], active = day.meals.filter((m) => m.active && m.focusId);
   let openMeals = active.filter((m) => !mealIsCompleted(on, m.meal));
   let nextPlanned = null;
   if (!active.length) {
     for (let offset = 1; offset <= 45; offset++) {
       let candidateDate = addDays(on, offset);
-      let candidateDay = buildDays(candidateDate, 1, false)[0];
+      let candidateDay = viewRenderBuildDays(candidateDate, 1, false)[0];
       if (candidateDay.meals.some((m) => m.active && m.focusId)) { nextPlanned = candidateDate; break; }
     }
   }
@@ -254,7 +304,7 @@ function renderHomeCore() {
   if (due) progressFacts.push(`${due} Allergene fällig`);
   document.getElementById("progressCard").innerHTML = `<div class="row"><div class="grow"><h3 style="margin-bottom:2px">${tried} von ${target} kennengelernt</h3><div class="small">${learned.slice(0,4).map((f) => f.name).join(", ")}${learned.length > 4 ? ` + ${learned.length-4} weitere` : ""}</div></div><b class="progress-percent">${Math.round(pct)} %</b></div><div class="progress"><span style="width:${pct}%"></span></div>${progressFacts.length ? `<div class="small progress-facts">${progressFacts.join(" · ")}</div>` : ""}`;
 
-  let allRecipeStates = recipeStates();
+  let allRecipeStates = viewRenderRecipeStates();
   let unlocked = allRecipeStates.filter((r) => r.unlocked).slice(0, 3);
   let almost = allRecipeStates
     .filter((r) => !r.unlocked)
@@ -435,7 +485,7 @@ function planDisplayDays(from, count = 7) {
   }
   if (firstFutureIndex >= 0) {
     let futureFrom = addDays(from, firstFutureIndex);
-    let futureDays = buildDays(futureFrom, count - firstFutureIndex);
+    let futureDays = viewRenderBuildDays(futureFrom, count - firstFutureIndex);
     futureDays.forEach((day, offset) => { day.index = firstFutureIndex + offset; });
     result.push(...futureDays);
   }
@@ -1071,36 +1121,40 @@ function renderMeal(day, meal) {
 }
 
 function renderPlan() {
-  renderPlanCore();
-  globalThis.MobileUiLifecycle?.afterRender("plan");
-  let summary = document.getElementById("planLockSummary");
-  let amountLabel = AMOUNT_LEVELS[currentAmountLevel()]?.label || "";
-  let compactAmount = compactPlanAmountLabel(amountLabel);
-  let defaults = document.getElementById("planDefaults");
-  if (summary && !defaults) {
-    summary.insertAdjacentHTML(
-      "afterend",
-      '<div class="plan-defaults plan-defaults-compact" id="planDefaults"></div>',
-    );
-    defaults = document.getElementById("planDefaults");
-  }
-  if (defaults) {
-    defaults.classList.add("plan-defaults-compact");
-    defaults.innerHTML =
-      `<span class="plan-defaults-line"><b>${esc(PHASES[currentPhase()].label)}</b> · ${esc(compactAmount)} · ${esc(textureName())}</span>`;
-  }
-  document.querySelectorAll("#blockPlan .day-card .status-chips .pill").forEach((pill) => {
-    if ([phaseText(), amountLabel, textureText()].includes((pill.textContent || "").trim())) pill.remove();
+  return withViewRenderCycle("plan", () => {
+    renderPlanCore();
+    globalThis.MobileUiLifecycle?.afterRender("plan");
+    let summary = document.getElementById("planLockSummary");
+    let amountLabel = AMOUNT_LEVELS[currentAmountLevel()]?.label || "";
+    let compactAmount = compactPlanAmountLabel(amountLabel);
+    let defaults = document.getElementById("planDefaults");
+    if (summary && !defaults) {
+      summary.insertAdjacentHTML(
+        "afterend",
+        '<div class="plan-defaults plan-defaults-compact" id="planDefaults"></div>',
+      );
+      defaults = document.getElementById("planDefaults");
+    }
+    if (defaults) {
+      defaults.classList.add("plan-defaults-compact");
+      defaults.innerHTML =
+        `<span class="plan-defaults-line"><b>${esc(PHASES[currentPhase()].label)}</b> · ${esc(compactAmount)} · ${esc(textureName())}</span>`;
+    }
+    document.querySelectorAll("#blockPlan .day-card .status-chips .pill").forEach((pill) => {
+      if ([phaseText(), amountLabel, textureText()].includes((pill.textContent || "").trim())) pill.remove();
+    });
   });
 }
 
 function renderHome() {
-  renderHomeCore();
-  let button = document.getElementById("homeAddEntry");
-  if (button) {
-    button.onclick = (event) => { event.preventDefault(); openLog(null); };
-  }
-  globalThis.MobileUiLifecycle?.afterRender("home");
+  return withViewRenderCycle("home", () => {
+    renderHomeCore();
+    let button = document.getElementById("homeAddEntry");
+    if (button) {
+      button.onclick = (event) => { event.preventDefault(); openLog(null); };
+    }
+    globalThis.MobileUiLifecycle?.afterRender("home");
+  });
 }
 
 function renderSettings() {
@@ -1178,17 +1232,32 @@ function showView(id) {
   }
   if (previous === "foods" && id !== "foods" && foodReorderMode) {
     foodReorderMode = false;
-    renderFoods();
   }
+  document.querySelectorAll('.view[aria-busy="true"]').forEach((view) => view.removeAttribute("aria-busy"));
   document
     .querySelectorAll(".view")
     .forEach((v) => v.classList.toggle("active", v.id === id));
   document
     .querySelectorAll("nav button")
     .forEach((b) => b.classList.toggle("active", b.dataset.view === id));
-  renderView(id);
-  window.scrollTo({ top: 0, behavior: "smooth" });
   globalThis.MobileUiLifecycle?.afterViewChange(id, previous);
+  let finishViewChange = () => {
+    let view = document.getElementById(id);
+    if (!view?.classList.contains("active")) return;
+    try {
+      renderView(id);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } finally {
+      view.removeAttribute("aria-busy");
+    }
+  };
+  if (previous === id || typeof renderViewAfterNextPaint !== "function") {
+    if (typeof cancelDeferredViewRender === "function") cancelDeferredViewRender();
+    finishViewChange();
+    return;
+  }
+  document.getElementById(id)?.setAttribute("aria-busy", "true");
+  renderViewAfterNextPaint(id, finishViewChange);
 }
 function existingFoodWithName(name) {
   let normalized = normalizeName(name);

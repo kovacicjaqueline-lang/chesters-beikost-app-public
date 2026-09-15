@@ -81,17 +81,88 @@ try {
   assert.equal(startup.prepChildren, 0, "Der unsichtbare Prep-Tab darf beim Start noch nicht vollständig gerendert werden");
   assert.equal(startup.logChildren, 0, "Der unsichtbare Mehr-/Protokoll-Tab darf beim Start noch nicht vollständig gerendert werden");
 
-  await page.locator('nav button[data-view="plan"]').click();
+  const planTransition = await page.evaluate(async () => {
+    const originalRenderPlan = renderPlan;
+    window.__planRenderCalls = 0;
+    renderPlan = function measuredRenderPlan(...args) {
+      window.__planRenderCalls += 1;
+      return originalRenderPlan.apply(this, args);
+    };
+    window.__restoreMeasuredRenderPlan = () => { renderPlan = originalRenderPlan; };
+    const beforeRenderOpportunity = new Promise((resolve) => {
+      requestAnimationFrame(() => resolve({
+        active: document.getElementById("plan")?.classList.contains("active") || false,
+        renderCalls: window.__planRenderCalls,
+      }));
+    });
+    document.querySelector('nav button[data-view="plan"]')?.click();
+    const immediate = {
+      active: document.getElementById("plan")?.classList.contains("active") || false,
+      appBarTitle: document.getElementById("appBarTitle")?.textContent || "",
+      busy: document.getElementById("plan")?.getAttribute("aria-busy"),
+      renderCalls: window.__planRenderCalls,
+    };
+    return { immediate, beforeRenderOpportunity: await beforeRenderOpportunity };
+  });
+  assert.deepEqual(
+    planTransition.immediate,
+    { active: true, appBarTitle: "Plan", busy: "true", renderCalls: 0 },
+    "Der Zieltab muss synchron sichtbar werden, ohne den teuren Render im Klick-Task auszuführen",
+  );
+  assert.deepEqual(
+    planTransition.beforeRenderOpportunity,
+    { active: true, renderCalls: 0 },
+    "Vor dem Plan-Render muss der Browser eine Render-Gelegenheit mit aktivem Zieltab erhalten",
+  );
   await page.waitForFunction(() =>
     (document.getElementById("blockPlan")?.childElementCount || 0) > 0 &&
-    !!document.getElementById("planWeekOverview"),
+    !!document.getElementById("planWeekOverview") &&
+    !document.getElementById("plan")?.hasAttribute("aria-busy"),
   );
+  assert.equal(await page.evaluate(() => window.__planRenderCalls), 1, "Der Tabwechsel darf den Plan genau einmal rendern");
+  await page.evaluate(() => window.__restoreMeasuredRenderPlan?.());
   assert.ok(await page.locator("#plan.view.active").count(), "Plan muss erst nach Navigation aktiv und gerendert sein");
   assert.equal(await page.locator("#planWeekOverview .plan-week-day").count(), 7, "Der erste Plan-Render baut die Mobile-Woche auf");
   assert.equal(await page.locator("#prepNow > *").count(), 0, "Plan-Navigation darf den versteckten Prep-Bereich nicht mitrendern");
 
-  await page.locator('nav button[data-view="foods"]').click();
-  await page.waitForFunction(() => (document.getElementById("foodList")?.childElementCount || 0) > 0);
+  const rapidTransition = await page.evaluate(() => {
+    const originalRenderPrep = renderPrep;
+    const originalRenderFoods = renderFoods;
+    window.__rapidTabRenderCalls = { prep: 0, foods: 0 };
+    renderPrep = function measuredRenderPrep(...args) {
+      window.__rapidTabRenderCalls.prep += 1;
+      return originalRenderPrep.apply(this, args);
+    };
+    renderFoods = function measuredRenderFoods(...args) {
+      window.__rapidTabRenderCalls.foods += 1;
+      return originalRenderFoods.apply(this, args);
+    };
+    window.__restoreRapidTabRenders = () => {
+      renderPrep = originalRenderPrep;
+      renderFoods = originalRenderFoods;
+    };
+    document.querySelector('nav button[data-view="prep"]')?.click();
+    document.querySelector('nav button[data-view="foods"]')?.click();
+    return {
+      active: document.getElementById("foods")?.classList.contains("active") || false,
+      prepChildren: document.getElementById("prepNow")?.childElementCount || 0,
+    };
+  });
+  assert.deepEqual(
+    rapidTransition,
+    { active: true, prepChildren: 0 },
+    "Ein überholter Zwischentab darf weder sichtbar bleiben noch synchron gerendert werden",
+  );
+  await page.waitForFunction(() =>
+    (document.getElementById("foodList")?.childElementCount || 0) > 0 &&
+    !document.getElementById("foods")?.hasAttribute("aria-busy"),
+  );
+  assert.deepEqual(
+    await page.evaluate(() => window.__rapidTabRenderCalls),
+    { prep: 0, foods: 1 },
+    "Schnelle Mehrfachnavigation muss ausschließlich den letzten Zieltab rendern",
+  );
+  await page.evaluate(() => window.__restoreRapidTabRenders?.());
   assert.ok(await page.locator("#foods.view.active").count(), "Lebensmittel muss nach Navigation aktiv sein");
   assert.equal(await page.locator("#prepNow > *").count(), 0, "Lebensmittel-Navigation darf den versteckten Prep-Bereich nicht mitrendern");
 

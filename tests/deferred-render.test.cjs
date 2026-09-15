@@ -75,4 +75,26 @@ function createHarness({ withAnimationFrame = true } = {}) {
   assert.deepEqual(h.events, ["render"]);
 }
 
+{
+  const h = createHarness();
+  const renderedViews = [];
+  h.sandbox.renderViewAfterNextPaint("plan", (id) => renderedViews.push(id));
+  h.sandbox.renderViewAfterNextPaint("prep", (id) => renderedViews.push(id));
+
+  assert.equal(h.raf.length, 1, "Schnelle Tabwechsel müssen in einer Paint-Gelegenheit gebündelt werden");
+  h.raf.shift()();
+  h.timers.shift()();
+  assert.deepEqual(renderedViews, ["prep"], "Nur der zuletzt angeforderte Tab darf gerendert werden");
+}
+
+{
+  const h = createHarness();
+  const renderedViews = [];
+  h.sandbox.renderViewAfterNextPaint("plan", (id) => renderedViews.push(id));
+  h.sandbox.cancelDeferredViewRender();
+  h.raf.shift()();
+  h.timers.shift()();
+  assert.deepEqual(renderedViews, [], "Ein synchron übernommener Render muss den geplanten View-Render verwerfen");
+}
+
 console.log("Deferred full-render scheduling regression passed.");

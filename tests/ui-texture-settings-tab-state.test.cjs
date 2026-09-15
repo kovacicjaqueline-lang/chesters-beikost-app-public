@@ -83,7 +83,11 @@ test("UI: Haupttab-Wechsel behält Filter, Suchen und normale Accordions in der 
   assert.doesNotMatch(showView, /resetMoreTransientUi\(/);
   assert.match(showView, /\.entry-chooser/);
   assert.match(showView, /foodReorderMode = false/);
-  assert.match(showView, /renderFoods\(\)/);
+  assert.doesNotMatch(
+    showView,
+    /renderFoods\(\)/,
+    "der ausgeblendete Lebensmittel-Tab wird beim Verlassen des Sortiermodus erst beim nächsten Öffnen neu gerendert",
+  );
   assert.match(showView, /window\.scrollTo/);
 });
 

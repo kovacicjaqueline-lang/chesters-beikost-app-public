@@ -99,7 +99,44 @@ test("Prep berechnet den vollständigen Rezeptstatus nur einmal pro Render", () 
   const end = source.indexOf("\nfunction recipeIngredientReady", start);
   const body = source.slice(start, end);
   assert.equal((body.match(/recipeStates\(\)/g) || []).length, 1);
-  assert.match(body, /let allRecipeStates = recipeStates\(\)/);
+  assert.match(body, /viewRenderRecipeStates\(\)/);
+});
+
+test("ein View-Renderzyklus teilt identische Planner-, Rezept- und Prep-Berechnungen", () => {
+  let buildCalls = 0;
+  let recipeCalls = 0;
+  let prepCalls = 0;
+  const context = {
+    console,
+    buildDays: (...args) => { buildCalls += 1; return args; },
+    recipeStates: () => { recipeCalls += 1; return []; },
+    prepDemand: () => { prepCalls += 1; return []; },
+  };
+  vm.createContext(context);
+  vm.runInContext(read("js/ui.js"), context);
+
+  context.withViewRenderCycle("prep", () => {
+    assert.strictEqual(context.viewRenderBuildDays("2026-02-01", 7), context.viewRenderBuildDays("2026-02-01", 7));
+    assert.strictEqual(context.viewRenderRecipeStates(), context.viewRenderRecipeStates());
+    assert.strictEqual(context.viewRenderPrepDemand(), context.viewRenderPrepDemand());
+  });
+
+  assert.equal(buildCalls, 1);
+  assert.equal(recipeCalls, 1);
+  assert.equal(prepCalls, 1);
+  context.viewRenderBuildDays("2026-02-01", 7);
+  context.viewRenderRecipeStates();
+  context.viewRenderPrepDemand();
+  assert.equal(buildCalls, 2, "der Cache darf nicht über den Renderzyklus hinaus leben");
+  assert.equal(recipeCalls, 2, "Rezeptstatus muss nach dem Renderzyklus wieder frisch berechnet werden");
+  assert.equal(prepCalls, 2, "Prep-Bedarf muss nach dem Renderzyklus wieder frisch berechnet werden");
+});
+
+test("Rezeptstatus und Prep-Bedarf nutzen den zentralen View-Rendercache", () => {
+  const recipes = read("js/recipes.js");
+  const prep = read("js/prep.js");
+  assert.match(recipes, /memoizeViewRenderValue\("recipeStates", computeRecipeStates\)/);
+  assert.match(prep, /memoizeViewRenderValue\("prepDemand", computePrepDemand\)/);
 });
 
 test("Planner-Boot wiederholt den bereits in migrateState erfolgten Save und Render nicht", () => {

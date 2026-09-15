@@ -40,6 +40,7 @@ test("Mobile-Integrationen verwenden gemeinsame Lifecycle-Hooks statt Render-/Vi
   const planMobile = read("js/plan-mobile-ui.js");
   const prepMobile = read("js/prep-mobile.js");
   const beikostMore = read("js/mobile-beikost-more.js");
+  const productAllergens = read("js/product-allergens.js");
 
   assert.ok(index.indexOf("js/mobile-ui-lifecycle.js") < index.indexOf("js/deferred-render.js"));
   assert.match(sw, /\.\/js\/mobile-ui-lifecycle\.js\?v=10\.1\.26/);
@@ -57,6 +58,8 @@ test("Mobile-Integrationen verwenden gemeinsame Lifecycle-Hooks statt Render-/Vi
   assert.match(catalog, /MobileUiLifecycle\.onViewChange/);
   assert.doesNotMatch(catalog, /mobileFoundationShowView|mobileFoundationRenderHome/);
   assert.match(beikostMore, /MobileUiLifecycle\.onRender\("foods"/);
+  assert.match(beikostMore, /MobileUiLifecycle\.onRender\("more"/);
   assert.match(beikostMore, /MobileUiLifecycle\.onViewChange/);
   assert.doesNotMatch(beikostMore, /new MutationObserver|baseRenderFoods|renderFoods\s*=|baseShowView|showView\s*=/);
+  assert.match(productAllergens, /renderProductAllergenCard\(\);\s*globalThis\.MobileUiLifecycle\?\.afterRender\("more"\)/);
 });

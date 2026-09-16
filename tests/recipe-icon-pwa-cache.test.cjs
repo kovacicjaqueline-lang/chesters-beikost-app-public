@@ -24,6 +24,10 @@ test("Recipe-V2 sizing CSS wird unter exakt der in index.html verwendeten URL fr
     worker.includes(`"${cssUrl}"`),
     `sw.js muss ${cssUrl} direkt precachen, damit kein alter Query-Cachetreffer die Recipe-Icon-Skalierung überdeckt`,
   );
+  assert.ok(
+    worker.includes('"./ui-meal-editor-footer.css?v=10.1.26"'),
+    "der bisherige CSS-Schlüssel muss einen Update-Zyklus lang mit aktualisiert werden",
+  );
   assert.match(worker, /new Request\(url, \{ cache: "reload" \}\)/, "UI-Precache muss den HTTP-Cache umgehen");
 });
 

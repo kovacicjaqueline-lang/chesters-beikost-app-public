@@ -78,10 +78,16 @@ try {
   assert.ok(beforeSearch.includes("Milch-Getreide-Brei"), "Kontrollrezept muss vor der Suche im Alle-Filter vorhanden sein");
 
   assert.equal(
-    await page.locator(".recipe-filter-field > label").textContent(),
-    "Mahlzeit & Kategorie",
-    "Der Rezeptfilter muss Mahlzeiten und Kategorien gemeinsam benennen",
+    await page.locator(".recipe-meal-filter-field > label").textContent(),
+    "Mahlzeit",
+    "Die drei Mahlzeitenfilter brauchen eine eigene mobile Filterzeile",
   );
+  assert.equal(
+    await page.locator(".recipe-filter-field > label").textContent(),
+    "Kategorie",
+    "Die bestehende Kategoriezeile bleibt separat erhalten",
+  );
+  assert.equal(await page.locator("#recipeMealFilter").isVisible(), true, "Die Mahlzeitenfilterzeile muss sichtbar sein");
 
   await page.locator('[data-recipe-filter="breakfast"]').click();
   const breakfastRecipes = await recipeNames();

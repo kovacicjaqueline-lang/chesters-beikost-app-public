@@ -80,10 +80,23 @@ try {
 
   await page.evaluate(() => {
     window.__tabRenderCounts = { foods: 0 };
+    window.__tabRenderTrace = [];
     const baseRenderFoods = window.renderFoods;
+    const baseRenderView = window.renderView;
     window.renderFoods = function countedRenderFoods(...args) {
       window.__tabRenderCounts.foods += 1;
       return baseRenderFoods.apply(this, args);
+    };
+    window.renderView = function tracedRenderView(viewId, ...args) {
+      const id = String(viewId || "home");
+      window.__tabRenderTrace.push({
+        id,
+        cacheActive: typeof tabNavigationRenderActive === "undefined" ? null : tabNavigationRenderActive,
+        revision: typeof viewRenderRevision === "undefined" ? null : viewRenderRevision,
+        stored: typeof renderedViewSignatures === "undefined" ? null : (renderedViewSignatures.get(id) ?? null),
+        current: typeof currentViewRenderSignature === "function" ? currentViewRenderSignature(id) : null,
+      });
+      return baseRenderView.call(this, viewId, ...args);
     };
   });
 
@@ -93,7 +106,12 @@ try {
 
   await activateView(page, "more");
   await activateView(page, "foods");
-  const afterUnchangedRevisit = await page.evaluate(() => window.__tabRenderCounts.foods);
+  const revisitDiagnostic = await page.evaluate(() => ({
+    foods: window.__tabRenderCounts.foods,
+    trace: window.__tabRenderTrace,
+  }));
+  console.log(`[tab-cache-trace] ${JSON.stringify(revisitDiagnostic)}`);
+  const afterUnchangedRevisit = revisitDiagnostic.foods;
   assert.equal(
     afterUnchangedRevisit,
     afterFirstOpen,

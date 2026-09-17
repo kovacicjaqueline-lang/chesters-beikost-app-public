@@ -14,11 +14,93 @@ let deferredRenderScopeCallbacks = [];
 let deferredViewRenderPending = false;
 let deferredViewRenderId = "";
 let deferredViewRenderCallback = null;
+let deferredViewRenderUseCache = false;
 const deferredRenderClickTargets = new WeakSet();
 let deferredLogSuggestionRequest = 0;
 let deferredFoodDetailRequest = 0;
 let deferredAllergenPlanRequest = 0;
 let deferredRecipeDetailRequest = 0;
+let tabNavigationRenderActive = false;
+let tabNavigationMarkerInstalled = false;
+let viewRenderRevision = 0;
+let viewRenderCacheInstalled = false;
+const renderedViewSignatures = new Map();
+const cachedViewIds = ["home", "plan", "prep", "foods", "more"];
+
+function currentViewRenderSignature(viewId) {
+  let id = String(viewId || "home");
+  let transient = [];
+  if (id === "foods") {
+    transient.push(
+      typeof foodFilter === "undefined" ? "" : String(foodFilter),
+      typeof foodReorderMode === "undefined" ? "" : String(foodReorderMode),
+      document.getElementById("foodSearch")?.value || "",
+    );
+  } else if (id === "more") {
+    transient.push(
+      typeof statisticsRange === "undefined" ? "" : String(statisticsRange),
+      typeof recipeQuery === "undefined" ? "" : String(recipeQuery),
+      typeof recipeFilter === "undefined" ? "" : String(recipeFilter),
+      typeof logFoodQuery === "undefined" ? "" : String(logFoodQuery),
+    );
+  }
+  return `${viewRenderRevision}|${transient.join("|")}`;
+}
+
+function invalidateViewRenderCache() {
+  viewRenderRevision += 1;
+}
+
+function queueTabNavigationRenderEnd() {
+  let finish = () => { tabNavigationRenderActive = false; };
+  if (typeof setTimeout === "function") setTimeout(finish, 0);
+  else Promise.resolve().then(finish);
+}
+
+function installTabNavigationRenderMarker() {
+  if (tabNavigationMarkerInstalled) return;
+  document.addEventListener("click", (event) => {
+    if (!event.target?.closest?.("nav button[data-view]")) return;
+    tabNavigationRenderActive = true;
+    queueTabNavigationRenderEnd();
+  }, true);
+  tabNavigationMarkerInstalled = true;
+}
+
+function installViewRenderCache() {
+  if (viewRenderCacheInstalled || typeof renderView !== "function") return;
+
+  let baseRenderView = renderView;
+  renderView = function renderViewWithCache(viewId, ...args) {
+    let id = String(viewId || "home");
+    let signature = currentViewRenderSignature(id);
+    if (tabNavigationRenderActive && renderedViewSignatures.get(id) === signature) return;
+    let result = baseRenderView.call(this, viewId, ...args);
+    renderedViewSignatures.set(id, currentViewRenderSignature(id));
+    return result;
+  };
+
+  if (typeof save === "function") {
+    let baseSave = save;
+    save = function saveWithViewRenderInvalidation(...args) {
+      invalidateViewRenderCache();
+      return baseSave.apply(this, args);
+    };
+  }
+
+  if (typeof renderAll === "function") {
+    let baseRenderAll = renderAll;
+    renderAll = function renderAllWithViewRenderInvalidation(...args) {
+      invalidateViewRenderCache();
+      let result = baseRenderAll.apply(this, args);
+      cachedViewIds.forEach((id) => renderedViewSignatures.set(id, currentViewRenderSignature(id)));
+      return result;
+    };
+  }
+
+  installTabNavigationRenderMarker();
+  viewRenderCacheInstalled = true;
+}
 
 function afterNextPaint(callback) {
   if (typeof callback !== "function") return;
@@ -47,21 +129,32 @@ function renderViewAfterNextPaint(viewId, callback) {
   if (typeof callback !== "function") return;
   deferredViewRenderId = String(viewId || "");
   deferredViewRenderCallback = callback;
+  deferredViewRenderUseCache = tabNavigationRenderActive;
   if (deferredViewRenderPending) return;
   deferredViewRenderPending = true;
   afterNextPaint(() => {
     deferredViewRenderPending = false;
     let id = deferredViewRenderId;
     let render = deferredViewRenderCallback;
+    let useCache = deferredViewRenderUseCache;
     deferredViewRenderId = "";
     deferredViewRenderCallback = null;
-    if (typeof render === "function") render(id);
+    deferredViewRenderUseCache = false;
+    if (typeof render !== "function") return;
+    let previousTabNavigationRenderActive = tabNavigationRenderActive;
+    tabNavigationRenderActive = useCache;
+    try {
+      render(id);
+    } finally {
+      tabNavigationRenderActive = previousTabNavigationRenderActive;
+    }
   });
 }
 
 function cancelDeferredViewRender() {
   deferredViewRenderId = "";
   deferredViewRenderCallback = null;
+  deferredViewRenderUseCache = false;
 }
 
 function beginDeferredFullRender() {
@@ -195,6 +288,8 @@ function deferFullRenderForClick(button) {
 
 function installSaveUiLatencyFlows() {
   if (typeof document === "undefined") return;
+
+  installViewRenderCache();
 
   let genericBody = document.getElementById("genericBody");
   if (genericBody) {

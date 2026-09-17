@@ -48,6 +48,10 @@ async function waitForDeferredRender(page, before) {
   await page.waitForFunction((count) => window.__saveUiLatencyProbe.renderCalls > count, before);
 }
 
+async function waitForDeferredCurrentViewRender(page, before) {
+  await page.waitForFunction((count) => window.__saveUiLatencyProbe.currentViewRenderCalls > count, before);
+}
+
 const server = await startStaticServer();
 const { port } = server.address();
 const browser = await webkit.launch();
@@ -66,10 +70,15 @@ try {
 
   await page.evaluate(() => {
     const baseRenderAll = window.renderAll;
-    window.__saveUiLatencyProbe = { renderCalls: 0 };
+    const baseRenderCurrentView = window.renderCurrentView;
+    window.__saveUiLatencyProbe = { renderCalls: 0, currentViewRenderCalls: 0 };
     window.renderAll = function profiledRenderAll(...args) {
       window.__saveUiLatencyProbe.renderCalls += 1;
       return baseRenderAll.apply(this, args);
+    };
+    window.renderCurrentView = function profiledRenderCurrentView(...args) {
+      window.__saveUiLatencyProbe.currentViewRenderCalls += 1;
+      return baseRenderCurrentView.apply(this, args);
     };
   });
 
@@ -194,7 +203,7 @@ try {
   assert.equal(inventoryImmediate.inventoryCount, inventoryBefore + 1);
   await waitForDeferredRender(page, inventoryImmediate.before);
 
-  // Protokoll speichern: Save-Semantik ist synchron, Modal-Close ebenfalls; die aktuelle Ansicht bleibt erhalten.
+  // Protokoll speichern: Save-Semantik ist synchron, danach wird nur die aktuelle Ansicht neu gerendert.
   await page.evaluate(() => window.showView("home"));
   await page.evaluate(() => window.openLog(null));
   await page.waitForFunction(() => !!document.querySelector(".addLogFoodResult"));
@@ -206,10 +215,13 @@ try {
   const logsBefore = await page.evaluate(() => window.__beikostTest.getState().logs.length);
   const logImmediate = await page.evaluate(() => {
     const before = window.__saveUiLatencyProbe.renderCalls;
+    const beforeCurrentView = window.__saveUiLatencyProbe.currentViewRenderCalls;
     document.getElementById("saveLog").click();
     return {
       before,
       after: window.__saveUiLatencyProbe.renderCalls,
+      beforeCurrentView,
+      afterCurrentView: window.__saveUiLatencyProbe.currentViewRenderCalls,
       modalOpen: document.getElementById("logModal").classList.contains("open"),
       logCount: window.__beikostTest.getState().logs.length,
       homeVisible: document.getElementById("home").classList.contains("active"),
@@ -217,15 +229,21 @@ try {
     };
   });
   assert.equal(logImmediate.after, logImmediate.before, "Protokoll-Save darf nicht synchron voll rendern");
+  assert.equal(logImmediate.afterCurrentView, logImmediate.beforeCurrentView, "Protokoll-Save darf auch die aktuelle Ansicht nicht synchron rendern");
   assert.equal(logImmediate.modalOpen, false, "Protokoll-Modal muss sofort schließen");
-  assert.equal(logImmediate.logCount, logsBefore + 1, "Protokoll muss vor dem Voll-Render persistiert sein");
+  assert.equal(logImmediate.logCount, logsBefore + 1, "Protokoll muss vor dem gezielten View-Render persistiert sein");
   assert.equal(logImmediate.homeVisible, true, "Ausgangsansicht muss nach dem Speichern aktiv bleiben");
   assert.equal(logImmediate.moreVisible, false, "Speichern darf nicht automatisch in die Protokollansicht wechseln");
-  await waitForDeferredRender(page, logImmediate.before);
+  await waitForDeferredCurrentViewRender(page, logImmediate.beforeCurrentView);
+  assert.equal(
+    await page.evaluate(() => window.__saveUiLatencyProbe.renderCalls),
+    logImmediate.before,
+    "Protokoll-Save darf auch verzögert keinen Voll-Render der ganzen App auslösen",
+  );
   assert.equal(
     await page.evaluate(() => document.getElementById("home").classList.contains("active")),
     true,
-    "Ausgangsansicht muss auch nach dem verzögerten Voll-Render aktiv bleiben",
+    "Ausgangsansicht muss auch nach dem gezielten View-Render aktiv bleiben",
   );
 
   // Einstellungen: Toast/State werden im Klickpfad gesetzt, kompletter Re-Render folgt separat.

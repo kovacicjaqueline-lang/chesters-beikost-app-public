@@ -77,6 +77,61 @@ try {
   assert.ok(beforeSearch.includes("Obst-Hafer-Pancakes"), "Ei-Rezept muss vor der Suche im Alle-Filter vorhanden sein");
   assert.ok(beforeSearch.includes("Milch-Getreide-Brei"), "Kontrollrezept muss vor der Suche im Alle-Filter vorhanden sein");
 
+  assert.equal(
+    await page.locator(".recipe-meal-filter-field > label").textContent(),
+    "Mahlzeit",
+    "Die drei Mahlzeitenfilter brauchen eine eigene mobile Filterzeile",
+  );
+  assert.equal(
+    await page.locator(".recipe-filter-field > label").textContent(),
+    "Kategorie",
+    "Die bestehende Kategoriezeile bleibt separat erhalten",
+  );
+  assert.equal(await page.locator("#recipeMealFilter").isVisible(), true, "Die Mahlzeitenfilterzeile muss sichtbar sein");
+
+  await page.locator('[data-recipe-filter="breakfast"]').click();
+  const breakfastRecipes = await recipeNames();
+  assert.ok(
+    breakfastRecipes.includes("Obst-Hafer-Pancakes"),
+    "Frühstück muss Rezepte mit frühstückstauglichen FOOD-Zutaten enthalten",
+  );
+  assert.ok(
+    breakfastRecipes.includes("Milch-Getreide-Brei"),
+    "Frühstück muss auch variable Rezepte mit mindestens einer frühstückstauglichen Auswahl enthalten",
+  );
+  assert.equal(
+    breakfastRecipes.includes("Rind-Hafer-Bällchen"),
+    false,
+    "Frühstück darf Rezepte mit nicht frühstückstauglicher Pflichtzutat nicht enthalten",
+  );
+  assert.match(await page.locator("#recipeCount").textContent(), /Frühstück/);
+
+  await page.locator('[data-recipe-filter="main"]').click();
+  const mainMealRecipes = await recipeNames();
+  assert.ok(
+    mainMealRecipes.includes("Rind-Hafer-Bällchen"),
+    "Hauptmahlzeit muss Rezepte enthalten, deren Zutaten für Mittag oder Abend geeignet sind",
+  );
+  assert.ok(
+    mainMealRecipes.includes("Obst-Hafer-Pancakes"),
+    "Hauptmahlzeit bleibt absichtlich nicht exklusiv, wenn die FOOD-Zutaten auch dafür geeignet sind",
+  );
+  assert.match(await page.locator("#recipeCount").textContent(), /Hauptmahlzeit/);
+
+  await page.locator('[data-recipe-filter="snack"]').click();
+  const snackRecipes = await recipeNames();
+  assert.ok(
+    snackRecipes.includes("Weiche Apfel-Hafer-Riegel"),
+    "Snack bleibt rezeptgetrieben über den bestehenden Snack-Tag",
+  );
+  assert.equal(
+    snackRecipes.includes("Rind-Hafer-Bällchen"),
+    false,
+    "Snack darf nicht aus FOOD-Mahlzeiteneignung abgeleitet werden",
+  );
+  assert.match(await page.locator("#recipeCount").textContent(), /Snack/);
+
+  await page.locator('[data-recipe-filter="all"]').click();
   await search.fill("Ei");
   const afterEggSearch = await recipeNames();
 

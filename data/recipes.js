@@ -56,7 +56,7 @@ const RECIPES = [
     "stage": 2,
     "batch": "4–6 Mini-Pancakes",
     "ingredients": "2 EL weiche Birne, 2 EL gekochter Hirsebrei, 1 Ei",
-    "note": "Kleine flache Pancakes formen und vollständig durchgaren.",
+    "note": "Birne sehr fein zerdrücken und mit dem bereits weich gekochten Hirsebrei sowie dem Ei zu einem gleichmäßigen Teig verrühren. Kleine flache Pancakes formen und bei niedriger Hitze vollständig, aber weich durchgaren. Keine harte oder stark gebräunte Kruste entstehen lassen.",
     "freezable": true,
     "freezerNote": "Einzeln vorfrieren und danach gesammelt verpacken; portionsweise auftauen.",
     "searchAliases": [],
@@ -106,7 +106,7 @@ const RECIPES = [
     "stage": 3,
     "batch": "4–6 Mini-Pancakes",
     "ingredients": "2 EL fein geriebene, ausgedrückte Zucchini, 2 EL Haferflocken, 1 Ei",
-    "note": "Dünne weiche Pancakes vollständig durchgaren und passend zuschneiden.",
+    "note": "Geriebene Zucchini gut ausdrücken und mit Haferflocken und Ei zu einem gleichmäßigen Teig verrühren. Kleine dünne Pancakes bei niedriger Hitze vollständig, aber weich durchgaren und passend zuschneiden; keine harte Kruste entstehen lassen.",
     "freezable": true,
     "freezerNote": "Einzeln vorfrieren und danach gesammelt verpacken; portionsweise auftauen.",
     "searchAliases": [],
@@ -125,7 +125,7 @@ const RECIPES = [
     "stage": 3,
     "batch": "4–6 Mini-Pancakes",
     "ingredients": "2 EL vollständig gegarte Ube, ¼ Banane, 2 EL Haferflocken, 1 Ei",
-    "note": "Ube vollständig garen, fein zerdrücken und die Pancakes weich durchbacken.",
+    "note": "Ube vollständig weich garen und fein zerdrücken. Banane zerdrücken, mit Ube, Haferflocken und Ei zu einem gleichmäßigen Teig verrühren und kleine flache Pancakes vollständig, aber weich durchbacken.",
     "freezable": true,
     "freezerNote": "Einzeln vorfrieren und danach gesammelt verpacken; portionsweise auftauen.",
     "searchAliases": [],
@@ -142,7 +142,7 @@ const RECIPES = [
     "stage": 3,
     "batch": "8–10 kleine weiche Stücke",
     "ingredients": "100 g Faschiertes vom Rind, 2 EL feine Haferflocken, 1 Ei",
-    "note": "Kleine längliche oder flache Stücke formen und vollständig durchgaren. Keine harten Krusten oder runden festen Kugeln.",
+    "note": "Faschiertes mit Haferflocken und Ei gleichmäßig vermengen. Kleine längliche oder flache Stücke statt fester runder Kugeln formen und vollständig durchgaren. Saftig halten und keine harte Kruste entstehen lassen.",
     "freezable": true,
     "freezerNote": "Einzeln vorfrieren und danach gesammelt verpacken; portionsweise auftauen.",
     "searchAliases": [],
@@ -159,7 +159,7 @@ const RECIPES = [
     "stage": 3,
     "batch": "8–10 kleine weiche Stücke",
     "ingredients": "Geflügelfaschiertes, sehr fein vorbereitetes Gemüse und Hafer nach Variante",
-    "note": "Kleine flache oder längliche Stücke statt fester runder Kugeln formen. Vollständig durchgaren, saftig halten, harte Kruste vermeiden und vor dem Servieren auf leichte Zerdrückbarkeit prüfen.",
+    "note": "Geflügelfaschiertes mit dem sehr fein vorbereiteten Gemüse und Hafer gleichmäßig vermengen. Kleine flache oder längliche Stücke statt fester runder Kugeln formen, vollständig durchgaren, saftig halten und vor dem Servieren auf leichte Zerdrückbarkeit prüfen.",
     "freezable": true,
     "freezerNote": "Einzeln vorfrieren und danach gesammelt verpacken; portionsweise auftauen.",
     "alternatives": [
@@ -195,7 +195,7 @@ const RECIPES = [
     "stage": 3,
     "batch": "6–8 flache Taler",
     "ingredients": "50 g vollständig gegarter, grätenfreier Lachs, 100 g weiche Kartoffel",
-    "note": "Sehr sorgfältig entgräten, zerdrücken, flach formen und weich erwärmen oder backen.",
+    "note": "Lachs vollständig garen und sehr sorgfältig auf Gräten prüfen. Mit der sehr weichen Kartoffel fein zerdrücken, zu kleinen flachen Talern formen und nur so weit erwärmen oder backen, dass sie zusammenhalten und weich bleiben.",
     "freezable": true,
     "freezerNote": "Einzeln vorfrieren und danach gesammelt verpacken; portionsweise auftauen.",
     "searchAliases": [],
@@ -212,7 +212,7 @@ const RECIPES = [
     "stage": 3,
     "batch": "6–8 flache Stücke",
     "ingredients": "4 EL sehr weich gekochte rote Linsen, 2 EL Karottenpüree, 1 EL Haferflocken",
-    "note": "Flach formen und vollständig garen; nicht trocken oder krümelig anbieten.",
+    "note": "Sehr weich gekochte rote Linsen mit Karottenpüree und Haferflocken zu einer weichen Masse vermengen. Flache Stücke formen und vollständig garen; nicht trocken, krümelig oder hart werden lassen.",
     "freezable": true,
     "freezerNote": "Einzeln vorfrieren und danach gesammelt verpacken; portionsweise auftauen.",
     "searchAliases": [],
@@ -229,7 +229,7 @@ const RECIPES = [
     "stage": 3,
     "batch": "6–8 flache Stücke",
     "ingredients": "80 g Naturtofu, 3 EL sehr weicher Brokkoli, 1 EL Haferflocken",
-    "note": "Fein zerdrücken, flach formen und vollständig erhitzen; weich servieren.",
+    "note": "Naturtofu fein zerdrücken und mit sehr weichem, fein zerkleinertem Brokkoli sowie Haferflocken vermengen. Flache Stücke formen und vollständig erhitzen; weich und leicht zerdrückbar servieren.",
     "freezable": true,
     "freezerNote": "Einzeln vorfrieren und danach gesammelt verpacken; portionsweise auftauen.",
     "searchAliases": [],
@@ -245,7 +245,7 @@ const RECIPES = [
     "stage": 3,
     "batch": "6–8 Taler",
     "ingredients": "gleich viel sehr weicher Brokkoli und Kartoffel",
-    "note": "Zerdrücken, flach formen und nur leicht erwärmen oder weich backen.",
+    "note": "Brokkoli und Kartoffel vollständig weich garen und gemeinsam fein zerdrücken. Kleine flache Taler formen und nur leicht erwärmen oder weich backen, sodass sie zusammenhalten und sich weiterhin leicht zerdrücken lassen.",
     "freezable": true,
     "freezerNote": "Einzeln vorfrieren und danach gesammelt verpacken; portionsweise auftauen.",
     "searchAliases": [],
@@ -262,7 +262,7 @@ const RECIPES = [
     "stage": 3,
     "batch": "6 kleine Puffer",
     "ingredients": "3 EL fein geriebene Zucchini, 2 EL Haferflocken, 1 Ei",
-    "note": "Dünn und weich vollständig durchgaren; keine knusprige harte Kante.",
+    "note": "Geriebene Zucchini gut ausdrücken und mit Haferflocken und Ei zu einer gleichmäßigen Masse verrühren. Kleine dünne Puffer formen und vollständig, aber weich durchgaren; keine knusprige harte Kante entstehen lassen.",
     "freezable": true,
     "freezerNote": "Einzeln vorfrieren und danach gesammelt verpacken; portionsweise auftauen.",
     "searchAliases": [],
@@ -278,7 +278,7 @@ const RECIPES = [
     "stage": 3,
     "batch": "6–8 Taler",
     "ingredients": "4 EL sehr weiche Kichererbsen, 3 EL Kürbispüree",
-    "note": "Sehr fein zerdrücken, flach formen und weich garen; bei Bedarf etwas Hafer als Binder nur nach Einführung.",
+    "note": "Sehr weiche Kichererbsen fein zerdrücken und mit Kürbispüree zu einer weichen Masse vermengen. Bei Bedarf nur nach Einführung etwas Hafer als Binder einarbeiten. Kleine flache Taler formen und weich garen; nicht trocken oder hart werden lassen.",
     "freezable": true,
     "freezerNote": "Einzeln vorfrieren und danach gesammelt verpacken; portionsweise auftauen.",
     "searchAliases": [],
@@ -294,7 +294,7 @@ const RECIPES = [
     "stage": 3,
     "batch": "6–8 Taler",
     "ingredients": "5 EL sehr weich gekochte rote Linsen, 1–2 EL Haferflocken",
-    "note": "Flach formen und vollständig garen; weich und saftig statt trocken anbieten.",
+    "note": "Sehr weich gekochte rote Linsen fein zerdrücken und mit Haferflocken zu einer weichen, formbaren Masse vermengen. Kleine flache Taler formen und vollständig garen; weich und saftig statt trocken anbieten.",
     "freezable": true,
     "freezerNote": "Einzeln vorfrieren und danach gesammelt verpacken; portionsweise auftauen.",
     "searchAliases": [],
@@ -310,7 +310,7 @@ const RECIPES = [
     "stage": 3,
     "batch": "8 weiche Sticks",
     "ingredients": "dicke weiche Polenta und fein gegarte Zucchini",
-    "note": "In breite gut greifbare Sticks schneiden, weich lassen und eine harte oder trockene Kruste vermeiden.",
+    "note": "Polenta mit Wasser weich und dick kochen. Die fein gegarte Zucchini unterrühren, die Masse flach ausstreichen und vollständig auskühlen beziehungsweise fest werden lassen. In breite gut greifbare Sticks schneiden, weich servieren und eine harte oder trockene Kruste vermeiden.",
     "freeze": "gut einfrierbar",
     "pantryItems": [
       "Polenta"
@@ -342,7 +342,7 @@ const RECIPES = [
     "stage": 3,
     "batch": "6–8 weiche Sticks",
     "ingredients": "Süßkartoffelpüree und sehr weich gekochte Hirse",
-    "note": "Mischen, länglich formen und sanft garen; Konsistenz vor dem Servieren prüfen.",
+    "note": "Süßkartoffel vollständig weich garen und zu Püree zerdrücken. Mit der sehr weich gekochten Hirse vermengen, längliche Sticks formen und sanft garen beziehungsweise erwärmen, bis sie zusammenhalten. Vor dem Servieren auf leichte Zerdrückbarkeit prüfen.",
     "freezable": true,
     "freezerNote": "Einzeln vorfrieren und danach gesammelt verpacken; portionsweise auftauen.",
     "searchAliases": [],
@@ -357,7 +357,7 @@ const RECIPES = [
     "stage": 2,
     "batch": "1 kleine Portion",
     "ingredients": "1 Ei, bei Bedarf etwas Wasser",
-    "note": "Gut durchgaren, weich halten und in breite greifbare Streifen schneiden.",
+    "note": "Ei mit dem Wasser verrühren und bei niedriger Hitze vollständig stocken lassen. Das Omelett weich halten und in breite, gut greifbare Streifen schneiden.",
     "freezable": true,
     "freezerNote": "Einzeln vorfrieren und danach gesammelt verpacken; portionsweise auftauen.",
     "searchAliases": [],
@@ -373,7 +373,7 @@ const RECIPES = [
     "stage": 2,
     "batch": "1 kleine Portion",
     "ingredients": "1 Ei, 1–2 EL fein geriebene Zucchini",
-    "note": "Vollständig durchgaren und weich in Streifen oder kleine Stücke schneiden.",
+    "note": "Ei mit der fein geriebenen Zucchini verrühren und die Mischung bei niedriger Hitze vollständig stocken lassen. Das Omelett weich halten und in breite Streifen oder passende kleine Stücke schneiden.",
     "freezable": true,
     "freezerNote": "Einzeln vorfrieren und danach gesammelt verpacken; portionsweise auftauen.",
     "searchAliases": [],
@@ -429,7 +429,7 @@ const RECIPES = [
     "stage": 1,
     "batch": "1 Portion",
     "ingredients": "Hirseflocken, Wasser und eine bekannte weiche Obstsorte",
-    "note": "Hirseflocken weich kochen und mit einer bekannten Obstsorte kombinieren.",
+    "note": "Hirseflocken mit Wasser unter Rühren weich kochen. Eine bekannte weiche Obstsorte fein zerdrücken oder pürieren und erst anschließend unter den fertigen Brei rühren.",
     "generic": true,
     "searchAliases": []
   },
@@ -456,7 +456,7 @@ const RECIPES = [
     "stage": 1,
     "batch": "1 Portion",
     "ingredients": "feine Polenta, Wasser und eine bekannte weiche Obstsorte",
-    "note": "Polenta weich kochen und die Obstsorte danach untermischen.",
+    "note": "Polenta mit Wasser unter Rühren glatt und weich kochen. Eine bekannte weiche Obstsorte fein zerdrücken oder pürieren und anschließend unter den fertigen Brei rühren.",
     "generic": true,
     "searchAliases": []
   },
@@ -483,7 +483,7 @@ const RECIPES = [
     "stage": 1,
     "batch": "1 Portion",
     "ingredients": "sehr weich gekochter Reis oder Reisflocken und eine bekannte Obstsorte",
-    "note": "Sehr weich kochen, bei Bedarf pürieren und mit einer bekannten Obstsorte kombinieren.",
+    "note": "Reis oder Reisflocken mit Wasser sehr weich kochen. Je nach Konsistenzstufe fein pürieren oder zerdrücken und eine bekannte weiche Obstsorte fein vorbereitet unterrühren.",
     "generic": true,
     "searchAliases": []
   },
@@ -537,7 +537,7 @@ const RECIPES = [
     "stage": 1,
     "batch": "1 Portion",
     "ingredients": "Buchweizenflocken oder sehr weich gekochter Buchweizen und eine bekannte Obstsorte",
-    "note": "Weich kochen und mit einer bekannten Obstsorte kombinieren.",
+    "note": "Buchweizenflocken mit Wasser weich kochen beziehungsweise ganzen Buchweizen sehr weich garen. Je nach Konsistenzstufe fein pürieren oder zerdrücken und eine bekannte weiche Obstsorte unterrühren.",
     "generic": true,
     "searchAliases": []
   },
@@ -564,7 +564,7 @@ const RECIPES = [
     "stage": 1,
     "batch": "1 Portion",
     "ingredients": "Weizengrieß, Wasser und eine bekannte weiche Obstsorte",
-    "note": "Grieß glatt und weich kochen. Die bekannte Obstsorte danach untermischen.",
+    "note": "Weizengrieß mit Wasser unter Rühren glatt und weich kochen. Eine bekannte weiche Obstsorte fein zerdrücken oder pürieren und erst danach unter den fertigen Brei rühren.",
     "generic": true,
     "searchAliases": []
   },
@@ -631,7 +631,7 @@ const RECIPES = [
     "stage": 1,
     "batch": "1–3 kleine Portionen",
     "ingredients": "Kürbispüree, weich gekochter Hafer",
-    "note": "Herzhafte Kombination ohne Salz; Rapsöl kann nach dem Erwärmen optional ergänzt werden.",
+    "note": "Kürbis vollständig weich garen und zu Püree zerdrücken. Hafer mit Wasser weich kochen und mit dem Kürbispüree zu einer gleichmäßigen, löffelbaren Konsistenz verrühren. Ohne Salz anbieten; Rapsöl kann nach dem Erwärmen optional ergänzt werden.",
     "searchAliases": []
   },
   {
@@ -645,7 +645,7 @@ const RECIPES = [
     "stage": 3,
     "batch": "2–4 Portionen Sauce",
     "ingredients": "sehr weich gekochte Nudeln, Zucchini, geschälte gegarte Tomate",
-    "note": "Sauce ohne Salz und Zucker; Nudeln sehr weich und passend klein anbieten.",
+    "note": "Zucchini sehr weich garen und mit der geschälten gegarten Tomate zu einer feinen, saftigen Sauce pürieren oder zerdrücken. Nudeln separat sehr weich kochen, passend klein schneiden und mit der Sauce vermengen. Ohne Salz und Zucker zubereiten.",
     "freezable": true,
     "freezerNote": "Rasch abkühlen, in Mahlzeitenportionen einfrieren und vollständig durcherhitzen.",
     "searchAliases": []
@@ -661,7 +661,7 @@ const RECIPES = [
     "stage": 3,
     "batch": "3–4 Portionen Sauce",
     "ingredients": "rote Linsen, gegarte Tomate, sehr weiche Nudeln",
-    "note": "Linsen sehr weich kochen; Sauce saftig halten und ohne Salz zubereiten.",
+    "note": "Rote Linsen mit Wasser sehr weich kochen. Gegarte Tomate fein zerdrücken oder pürieren und mit den Linsen zu einer saftigen Sauce köcheln. Nudeln separat sehr weich garen, passend klein schneiden und mit der Sauce vermengen. Ohne Salz zubereiten.",
     "freezable": true,
     "freezerNote": "Rasch abkühlen, in Mahlzeitenportionen einfrieren und vollständig durcherhitzen.",
     "searchAliases": []
@@ -677,7 +677,7 @@ const RECIPES = [
     "stage": 1,
     "batch": "2–4 Portionen",
     "ingredients": "Reis, Wasser, vollständig gegartes Huhn",
-    "note": "Als sehr weichen Reisbrei kochen. Babyportion ohne Salz, Brühewürfel oder Fischsauce.",
+    "note": "Reis mit viel Wasser sehr weich und breiig kochen. Huhn separat vollständig durchgaren, sehr fein zerkleinern und unter den Reisbrei rühren. Babyportion ohne Salz, Brühewürfel oder Fischsauce anbieten.",
     "searchAliases": []
   },
   {
@@ -691,7 +691,7 @@ const RECIPES = [
     "stage": 1,
     "batch": "2–4 Portionen",
     "ingredients": "Reis, Wasser, Kürbis",
-    "note": "Sehr weich kochen und je nach Konsistenz pürieren oder zerdrücken.",
+    "note": "Reis mit Wasser sehr weich und breiig kochen. Kürbis vollständig weich garen, fein zerdrücken und unter den Reisbrei rühren. Je nach aktueller Konsistenzstufe zusätzlich pürieren oder grob zerdrücken.",
     "searchAliases": []
   },
   {
@@ -705,7 +705,7 @@ const RECIPES = [
     "stage": 1,
     "batch": "2–4 Portionen",
     "ingredients": "sehr weich gekochte Mungbohnen und Kürbis",
-    "note": "Mungbohnen sehr weich garen; Malunggay erst ergänzen, wenn separat kennengelernt.",
+    "note": "Mungbohnen mit Wasser sehr weich kochen. Kürbis vollständig weich garen, beides fein pürieren oder zerdrücken und zu einem löffelbaren Brei vermengen.",
     "searchAliases": []
   },
   {
@@ -720,7 +720,7 @@ const RECIPES = [
     "stage": 2,
     "batch": "2–4 Portionen",
     "ingredients": "Huhn, Sayote, kleine Menge Malunggay, Wasser",
-    "note": "Alles sehr weich garen; Babyportion ohne Salz, Brühewürfel und Fischsauce.",
+    "note": "Huhn vollständig durchgaren. Sayote sehr weich garen, Malunggay fein zerkleinern und gegen Ende kurz mitgaren. Alles mit Wasser zu einer weichen, milden Mischung verbinden und passend zur Konsistenzstufe zerkleinern. Babyportion ohne Salz, Brühewürfel und Fischsauce anbieten.",
     "searchAliases": []
   },
   {
@@ -735,7 +735,7 @@ const RECIPES = [
     "stage": 2,
     "batch": "2–4 Portionen",
     "ingredients": "Reis, Huhn, eine sehr kleine Menge Ingwer, Wasser",
-    "note": "Sehr mild und weich kochen; ohne Salz und Fertigbrühe.",
+    "note": "Reis mit Wasser sehr weich und breiig kochen. Huhn vollständig durchgaren, fein zerkleinern und mit der sehr kleinen Menge Ingwer unter den Reisbrei rühren. Sehr mild halten und ohne Salz oder Fertigbrühe anbieten.",
     "searchAliases": []
   },
   {
@@ -749,7 +749,7 @@ const RECIPES = [
     "stage": 2,
     "batch": "2–3 Portionen",
     "ingredients": "Kürbis und kleine Menge ungesüßte Kokosmilch",
-    "note": "Weich garen; Kokosmilch als Zutat und nicht als Getränk verwenden.",
+    "note": "Kürbis mit Wasser vollständig weich garen und fein zerdrücken. Ungesüßte Kokosmilch einrühren und kurz sanft erwärmen, bis eine weiche, löffelbare Konsistenz entsteht. Kokosmilch als Zutat und nicht als Getränk verwenden.",
     "searchAliases": []
   },
   {
@@ -763,7 +763,7 @@ const RECIPES = [
     "stage": 2,
     "batch": "1–2 Portionen",
     "ingredients": "vollständig gegarter grätenfreier Tilapia und sehr weicher Reis",
-    "note": "Fisch sorgfältig auf Gräten prüfen und mit weichem Reis zerdrücken.",
+    "note": "Reis mit Wasser sehr weich und breiig kochen. Tilapia vollständig garen, sorgfältig auf Gräten prüfen, fein zerpflücken und unter den Reis rühren. Je nach Konsistenzstufe fein zerdrücken oder pürieren.",
     "searchAliases": []
   },
   {
@@ -777,7 +777,7 @@ const RECIPES = [
     "stage": 3,
     "batch": "6 kleine Taler",
     "ingredients": "vollständig gegarter, äußerst sorgfältig entgräteter Bangus und Kartoffel",
-    "note": "Bangus hat viele feine Gräten: nur verwenden, wenn wirklich vollständig entgrätet; flach und weich formen.",
+    "note": "Bangus vollständig garen und äußerst sorgfältig von allen feinen Gräten befreien. Mit der sehr weichen Kartoffel fein zerdrücken und vermengen, kleine flache Taler formen und nur so weit erwärmen oder backen, dass sie zusammenhalten und weich bleiben.",
     "searchAliases": [],
     "skillRequirement": "Kann weiche kompakte Fingerfoodstücke sicher abbeißen und kauen. Das Stück muss zwischen zwei Fingern leicht zerdrückbar sein; nur aufrecht sitzend und direkt beaufsichtigt anbieten."
   },
@@ -791,7 +791,7 @@ const RECIPES = [
     "stage": 4,
     "batch": "6 Mini-Muffins",
     "ingredients": "Hafer, Ei und weiches Obst nach Auswahl",
-    "note": "Ohne Zucker oder Salz vollständig backen, innen saftig halten und keine harte Kruste entstehen lassen. Vor dem Servieren auf leichte Zerdrückbarkeit prüfen.",
+    "note": "Weiches Obst fein zerdrücken oder pürieren und mit fein gemahlenem Hafer sowie Ei zu einem gleichmäßigen Teig verrühren. In kleine Formen füllen und ohne Zucker oder Salz vollständig backen, innen saftig halten und keine harte Kruste entstehen lassen. Vor dem Servieren auf leichte Zerdrückbarkeit prüfen.",
     "freezable": true,
     "freezerNote": "Einzeln vorfrieren und danach gesammelt verpacken; portionsweise auftauen.",
     "oneOf": [
@@ -850,7 +850,7 @@ const RECIPES = [
     "stage": 4,
     "batch": "8 Mini-Muffins",
     "ingredients": "Hafer, Ei und sehr fein vorbereitetes Gemüse nach Auswahl",
-    "note": "Ohne Salz vollständig backen, innen saftig halten und keine harte Kruste entstehen lassen. Vor dem Servieren auf leichte Zerdrückbarkeit prüfen.",
+    "note": "Das gewählte Gemüse sehr weich garen und sehr fein vorbereiten. Mit fein gemahlenem Hafer und Ei zu einem gleichmäßigen Teig verrühren, in kleine Formen füllen und ohne Salz vollständig backen. Innen saftig halten, keine harte Kruste entstehen lassen und vor dem Servieren auf leichte Zerdrückbarkeit prüfen.",
     "freezable": true,
     "freezerNote": "Einzeln vorfrieren und portionsweise auftauen.",
     "tags": [
@@ -888,7 +888,7 @@ const RECIPES = [
     "stage": 4,
     "batch": "6 Mini-Muffins",
     "ingredients": "Kürbispüree, Hirseflocken, Ei",
-    "note": "Weich backen und vor dem Servieren auf eine saftige, leicht zerdrückbare Konsistenz prüfen.",
+    "note": "Kürbispüree mit Hirseflocken und Ei zu einem gleichmäßigen, feuchten Teig verrühren. In kleine Formen füllen und vollständig, aber weich backen. Vor dem Servieren auf eine saftige, leicht zerdrückbare Konsistenz prüfen.",
     "freezable": true,
     "freezerNote": "Einzeln vorfrieren und danach gesammelt verpacken; portionsweise auftauen.",
     "searchAliases": [],
@@ -974,7 +974,7 @@ const RECIPES = [
     "stage": 1,
     "batch": "1 kleine Portion",
     "ingredients": "weicher Haferbrei, reife Banane, wenig glattes Erdnussmus",
-    "note": "Nur nach sicherer Einführung von Erdnuss verwenden. Erdnussmus sehr glatt und dünn in den fertigen Brei einrühren.",
+    "note": "Hafer mit Wasser weich kochen. Banane fein zerdrücken und unter den fertigen Brei rühren. Nur nach sicherer Einführung von Erdnuss wenig glattes Erdnussmus vollständig und dünn in die fertige Portion einrühren.",
     "pantryItems": [
       "feine Haferflocken",
       "glattes Erdnussmus"
@@ -992,7 +992,7 @@ const RECIPES = [
     "stage": 1,
     "batch": "1 kleine Portion",
     "ingredients": "Karotten-Hirse-Brei, wenig glattes Tahin",
-    "note": "Nur nach sicherer Einführung von Sesam verwenden. Tahin glatt und sparsam in die servierte Portion rühren.",
+    "note": "Hirse mit Wasser weich kochen und mit sehr weich gegarter, fein zerdrückter Karotte zu einem glatten Brei verrühren. Nur nach sicherer Einführung von Sesam wenig glattes Tahin vollständig und sparsam in die servierte Portion einrühren.",
     "pantryItems": [
       "Hirseflocken",
       "Tahin"
@@ -1010,7 +1010,7 @@ const RECIPES = [
     "stage": 1,
     "batch": "1 kleine Portion",
     "ingredients": "Apfel-Hirse-Brei, wenig weißes Mandelmus",
-    "note": "Nur nach sicherer Einführung von Mandel verwenden. Mandelmus glatt in die fertige Portion einrühren.",
+    "note": "Hirse mit Wasser weich kochen und den weich gegarten Apfel fein zerdrücken oder pürieren und unterrühren. Nur nach sicherer Einführung von Mandel wenig weißes Mandelmus vollständig und glatt in die fertige Portion einrühren.",
     "pantryItems": [
       "Hirseflocken",
       "weißes Mandelmus"
@@ -1123,7 +1123,7 @@ const RECIPES = [
     "stage": 2,
     "batch": "4 Portionen",
     "ingredients": "Kürbis, rote Linsen, Wasser, optional milde Kräuter",
-    "note": "Alles sehr weich köcheln und je nach Stufe pürieren oder grob zerdrücken. Ohne Salz kochen.",
+    "note": "Rote Linsen und Kürbis mit Wasser sehr weich köcheln, bis beides vollständig zerfällt. Nach Konsistenzstufe fein pürieren oder grob zerdrücken; optional nur bereits bekannte milde Kräuter verwenden. Ohne Salz kochen.",
     "freeze": "gut einfrierbar",
     "freezable": true,
     "freezerNote": "Rasch abkühlen, in Mahlzeitenportionen einfrieren und vollständig durcherhitzen.",
@@ -1144,7 +1144,7 @@ const RECIPES = [
     "stage": 2,
     "batch": "6 kleine Portionen",
     "ingredients": "rote Linsen, Wasser, optional wenig Kurkuma",
-    "note": "Linsen sehr weich und cremig kochen. Für Babys mild halten und ohne Salz zubereiten.",
+    "note": "Rote Linsen mit Wasser sehr weich und cremig kochen und dabei regelmäßig umrühren. Optional nur wenig bereits eingeführte Kurkuma einrühren. Für Babys mild halten, ohne Salz zubereiten und bei Bedarf mit Wasser auf eine löffelbare Konsistenz verdünnen.",
     "freeze": "gut einfrierbar",
     "pantryItems": [
       "rote Linsen"
@@ -1164,7 +1164,7 @@ const RECIPES = [
     "stage": 2,
     "batch": "4 Portionen",
     "ingredients": "Huhn, Karotte, kleine Nudeln, Wasser",
-    "note": "Huhn vollständig durchgaren, Karotte und Nudeln sehr weich kochen und alles passend zerkleinern.",
+    "note": "Huhn vollständig durchgaren und fein zerkleinern. Karotte sehr weich garen und kleine Nudeln sehr weich kochen. Alles mit etwas Kochwasser zu einer saftigen, weichen Mischung verbinden und passend zur Konsistenzstufe weiter zerkleinern.",
     "freeze": "gut einfrierbar",
     "searchAliases": [],
     "freezable": true,
@@ -1181,7 +1181,7 @@ const RECIPES = [
     "stage": 2,
     "batch": "4 Portionen",
     "ingredients": "Huhn, Lauch, Kartoffel, Wasser",
-    "note": "Alles vollständig weich garen. Huhn fein zerkleinern und mit Gemüse sowie Kartoffel vermengen.",
+    "note": "Huhn vollständig durchgaren und fein zerkleinern. Lauch und Kartoffel mit Wasser vollständig weich garen. Alles zu einer weichen, saftigen Mischung vermengen und je nach Konsistenzstufe zerdrücken oder klein schneiden.",
     "freeze": "gut einfrierbar",
     "searchAliases": [],
     "freezable": true,
@@ -1362,7 +1362,7 @@ const RECIPES = [
     "stage": 3,
     "batch": "6–8 Streifen",
     "ingredients": "Ei, sehr fein geschnittene weich gegarte Paprika",
-    "note": "Omelett vollständig durchgaren, weich halten und in breite gut greifbare Streifen schneiden.",
+    "note": "Die weich gegarte Paprika sehr fein schneiden und mit dem Ei verrühren. Das Omelett vollständig durchgaren, weich halten und in breite gut greifbare Streifen schneiden.",
     "freeze": "kurzfristig einfrierbar",
     "freezable": true,
     "freezerNote": "Einzeln vorfrieren und danach gesammelt verpacken; portionsweise auftauen.",
@@ -1379,7 +1379,7 @@ const RECIPES = [
     "stage": 3,
     "batch": "6 kleine Cups",
     "ingredients": "Ei, fein gehackte weich gegarte Champignons",
-    "note": "In kleinen Formen vollständig durchbacken. Für Babys weich und ohne Salz zubereiten.",
+    "note": "Champignons weich garen, fein hacken und mit dem Ei verrühren. Die Mischung in kleine Formen füllen und vollständig durchbacken. Für Babys weich und ohne Salz zubereiten und vor dem Servieren auf eine leicht zerdrückbare Konsistenz prüfen.",
     "freeze": "gut einfrierbar",
     "freezable": true,
     "freezerNote": "Einzeln vorfrieren und danach gesammelt verpacken; portionsweise auftauen.",

@@ -52,6 +52,16 @@ async function activateView(page, viewId) {
   }, viewId);
 }
 
+async function waitForStorageBootstrap(page) {
+  await page.waitForFunction(() => {
+    const current = window.__beikostTest?.getState?.();
+    return !!current && current.backupMeta?.storagePersisted !== "unknown";
+  });
+  await page.evaluate(async () => {
+    if (typeof saveQueue !== "undefined") await saveQueue;
+  });
+}
+
 const server = await startStaticServer();
 const { port } = server.address();
 const browser = await webkit.launch();
@@ -66,6 +76,7 @@ try {
   const page = await context.newPage();
   await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "load" });
   await page.waitForFunction(() => !!window.__beikostTest?.getState && typeof window.renderFoods === "function");
+  await waitForStorageBootstrap(page);
 
   await page.evaluate(() => {
     window.__tabRenderCounts = { foods: 0 };

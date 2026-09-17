@@ -30,6 +30,57 @@
     );
   }
 
+  function recipeCatalogFoodMealEligible(label, meal) {
+    if (typeof FOOD_DB === "undefined" || typeof recipeFoodFromStructuredLabel !== "function") return false;
+    const item = recipeFoodFromStructuredLabel(label, FOOD_DB);
+    return !!item && Array.isArray(item.meals) && item.meals.includes(meal);
+  }
+
+  function recipeCatalogChoiceEligible(labels, meal) {
+    return !labels?.length || labels.some((label) => recipeCatalogFoodMealEligible(label, meal));
+  }
+
+  function recipeCatalogRequirementSetEligible(labels, meal) {
+    return (labels || []).every((label) => recipeCatalogFoodMealEligible(label, meal));
+  }
+
+  function recipeCatalogMealEligible(recipe, meal) {
+    const requirementSets = [
+      recipe?.requires || [],
+      ...(recipe?.alternatives || []),
+    ];
+    if (!requirementSets.some((labels) => recipeCatalogRequirementSetEligible(labels, meal))) return false;
+    if (!recipeCatalogChoiceEligible(recipe?.oneOf || [], meal)) return false;
+    if (!recipeCatalogChoiceEligible(recipe?.milkChoices || [], meal)) return false;
+    return true;
+  }
+
+  function recipeCatalogMainMealEligible(recipe) {
+    return recipeCatalogMealEligible(recipe, "lunch") || recipeCatalogMealEligible(recipe, "dinner");
+  }
+
+  function installRecipeMealFilters() {
+    const filterBar = document.getElementById("recipeFilter");
+    if (!filterBar || filterBar.querySelector('[data-recipe-filter="breakfast"]')) return;
+
+    const breakfast = document.createElement("button");
+    breakfast.type = "button";
+    breakfast.dataset.recipeFilter = "breakfast";
+    breakfast.textContent = "Frühstück";
+
+    const mainMeal = document.createElement("button");
+    mainMeal.type = "button";
+    mainMeal.dataset.recipeFilter = "main";
+    mainMeal.textContent = "Hauptmahlzeit";
+
+    const snack = filterBar.querySelector('[data-recipe-filter="snack"]');
+    if (snack) snack.before(breakfast, mainMeal);
+    else filterBar.append(breakfast, mainMeal);
+
+    const label = filterBar.closest(".recipe-filter-field")?.querySelector(":scope > label");
+    if (label) label.textContent = "Mahlzeit & Kategorie";
+  }
+
   function recipeCatalogSearchTerms(recipe) {
     const aliases = typeof recipeAliasValues === "function" ? recipeAliasValues(recipe) : [];
     const structuredTerms = recipeCatalogStructuredLabels(recipe).flatMap((label) => {
@@ -113,9 +164,13 @@
               ? !!recipe.freezable
               : recipeFilter === "philippines"
                 ? recipe.ph || recipe.category === "philippines"
-                : recipeFilter === "snack"
-                  ? (recipe.tags || []).some((tag) => normalizeName(tag) === "snack")
-                  : recipe.category === recipeFilter;
+                : recipeFilter === "breakfast"
+                  ? recipeCatalogMealEligible(recipe, "breakfast")
+                  : recipeFilter === "main"
+                    ? recipeCatalogMainMealEligible(recipe)
+                    : recipeFilter === "snack"
+                      ? (recipe.tags || []).some((tag) => normalizeName(tag) === "snack")
+                      : recipe.category === recipeFilter;
   }
 
   function renderRecipeCatalog() {
@@ -143,9 +198,13 @@
     if (countBox) {
       const context = recipeFilter === "almost"
         ? "es fehlen höchstens zwei Schritte"
-        : recipeFilter === "snack"
-          ? "Snack"
-          : "passend zu Filter und Suche";
+        : recipeFilter === "breakfast"
+          ? "Frühstück"
+          : recipeFilter === "main"
+            ? "Hauptmahlzeit"
+            : recipeFilter === "snack"
+              ? "Snack"
+              : "passend zu Filter und Suche";
       countBox.textContent = `${recipes.length} Rezept${recipes.length === 1 ? "" : "e"} · ${context}`;
     }
 
@@ -241,6 +300,7 @@
     auditRow.innerHTML = `<span class="statusdot ${ok ? "good" : "warn"}"></span><div><b>${ok ? "Geprüft" : "Prüfen"}:</b> Protokoll liegt unter Mehr; Rezepte liegen im gemeinsamen Lebensmittel-Tab</div>`;
   }
 
+  installRecipeMealFilters();
   installIngredientAwareRecipeSearch();
   installCatalogAwareViewRenderer();
 

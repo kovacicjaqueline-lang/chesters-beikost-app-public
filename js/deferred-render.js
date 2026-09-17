@@ -101,6 +101,80 @@ function runWithDeferredFullRender(callback, afterRender = null) {
   }
 }
 
+function runWithTargetedFullRender(callback, renderTarget, { wrapUndo = false } = {}) {
+  if (typeof callback !== "function") return;
+  if (typeof renderAll !== "function" || typeof renderTarget !== "function") return callback();
+  let baseRenderAll = renderAll;
+  let baseShowToast = wrapUndo && typeof showToast === "function" ? showToast : null;
+  renderAll = function renderTargetInsteadOfFullApp() {
+    return renderTarget();
+  };
+  if (baseShowToast) {
+    showToast = function showToastWithTargetedUndo(message, undoAction, ...args) {
+      let targetedUndo = typeof undoAction === "function"
+        ? () => runWithTargetedFullRender(undoAction, renderTarget)
+        : undoAction;
+      return baseShowToast.call(this, message, targetedUndo, ...args);
+    };
+  }
+  try {
+    return callback();
+  } finally {
+    renderAll = baseRenderAll;
+    if (baseShowToast) showToast = baseShowToast;
+  }
+}
+
+function wrapHandlerWithTargetedRender(element, handlerKey, renderTarget, options = {}) {
+  let baseHandler = element?.[handlerKey];
+  if (typeof baseHandler !== "function" || baseHandler.__targetedActionRender) return;
+  let targetedHandler = function targetedActionHandler(...args) {
+    return runWithTargetedFullRender(
+      () => baseHandler.apply(this, args),
+      renderTarget,
+      options,
+    );
+  };
+  targetedHandler.__targetedActionRender = true;
+  element[handlerKey] = targetedHandler;
+}
+
+function patchFoodDetailTargetedRenderHandlers() {
+  if (typeof renderCurrentView !== "function") return;
+  wrapHandlerWithTargetedRender(document.getElementById("foodDetailsPriority"), "onchange", renderCurrentView);
+  wrapHandlerWithTargetedRender(document.getElementById("foodDetailsStatus"), "onchange", renderCurrentView);
+  wrapHandlerWithTargetedRender(document.getElementById("foodDetailsTop"), "onclick", renderCurrentView);
+  wrapHandlerWithTargetedRender(document.getElementById("foodDetailsBottom"), "onclick", renderCurrentView);
+}
+
+function patchLogDeleteTargetedRenderHandlers() {
+  if (typeof renderCurrentView !== "function") return;
+  document.querySelectorAll(".deleteLog").forEach((button) => {
+    wrapHandlerWithTargetedRender(button, "onclick", renderCurrentView, { wrapUndo: true });
+  });
+}
+
+function installTargetedActionRendering() {
+  if (typeof showFoodInfo === "function") {
+    let baseShowFoodInfo = showFoodInfo;
+    showFoodInfo = function showFoodInfoWithTargetedRendering(...args) {
+      let result = baseShowFoodInfo.apply(this, args);
+      patchFoodDetailTargetedRenderHandlers();
+      return result;
+    };
+  }
+  if (typeof renderLogs === "function") {
+    let baseRenderLogs = renderLogs;
+    renderLogs = function renderLogsWithTargetedRendering(...args) {
+      let result = baseRenderLogs.apply(this, args);
+      patchLogDeleteTargetedRenderHandlers();
+      return result;
+    };
+  }
+  patchFoodDetailTargetedRenderHandlers();
+  patchLogDeleteTargetedRenderHandlers();
+}
+
 function queueDeferredFullRenderEnd() {
   let finish = () => endDeferredFullRender();
   if (typeof queueMicrotask === "function") queueMicrotask(finish);
@@ -170,6 +244,8 @@ function installSaveUiLatencyFlows() {
       }
     };
   }
+
+  installTargetedActionRendering();
 }
 
 if (typeof document !== "undefined") {

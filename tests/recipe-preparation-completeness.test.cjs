@@ -43,11 +43,7 @@ const INCOMPLETE_PREPARATIONS = Object.freeze([
 const TERSE_PREPARATIONS = Object.freeze([
   "Zucchini-Hafer-Pancakes",
   "Ube-Bananen-Pancakes",
-  "Lachs-Kartoffel-Bällchen",
-  "Brokkoli-Kartoffel-Taler",
-  "Kichererbsen-Kürbis-Taler",
   "Rote-Linsen-Bratlinge",
-  "Süßkartoffel-Hirse-Sticks",
   "Omelettstreifen",
   "Obst-Hirsebrei",
   "Obst-Polentabrei",
@@ -60,10 +56,14 @@ const TERSE_PREPARATIONS = Object.freeze([
   "Arroz-caldo-inspiriert",
   "Kalabasa mit Kokos",
   "Tilapia-Reis-Brei",
-  "Kürbis-Linsen-Suppe",
-  "Mildes Rote-Linsen-Dhal",
-  "Huhn-Karotte-Nudel-Topf",
-  "Huhn-Lauch-Kartoffel-Topf",
+  "Bananen-Joghurt-Hafer-Pancakes",
+  "Obst-Joghurt-Hafer-Ofenbites",
+  "Zucchini-Joghurt-Hafer-Bites",
+  "Joghurt-Hafer-Waffeln",
+  "Weiche Joghurt-Fladen",
+  "Gemüse-Joghurt-Mini-Muffins",
+  "Huhn-Gemüse-Muffins",
+  "Süßkartoffel-Linsen-Muffins",
 ]);
 
 const REQUIRED_NOTE_FRAGMENTS = Object.freeze({
@@ -87,6 +87,14 @@ const REQUIRED_NOTE_FRAGMENTS = Object.freeze({
   "Apfel-Hirse-Brei mit Mandelmus": [/Hirse/i, /Apfel/i, /Mandel/i],
   "Paprika-Omelettstreifen": [/Paprika/i, /Ei/i, /verrühr/i],
   "Ei-Champignon-Cups": [/Champignon/i, /Ei/i, /verrühr/i],
+  "Bananen-Joghurt-Hafer-Pancakes": [/Banane/i, /Naturjoghurt/i, /Hafer/i, /Ei/i, /verrühr/i],
+  "Obst-Joghurt-Hafer-Ofenbites": [/Obst/i, /Naturjoghurt/i, /Hafer/i, /Ei/i, /verrühr/i],
+  "Zucchini-Joghurt-Hafer-Bites": [/Zucchini/i, /Naturjoghurt/i, /Hafer/i, /Ei/i, /verrühr/i],
+  "Joghurt-Hafer-Waffeln": [/Naturjoghurt/i, /Hafer/i, /Ei/i, /verrühr/i],
+  "Weiche Joghurt-Fladen": [/Naturjoghurt/i, /Weizen|Grieß/i, /Ei/i, /verrühr/i],
+  "Gemüse-Joghurt-Mini-Muffins": [/Gemüse/i, /Naturjoghurt/i, /Hafer/i, /Ei/i, /verrühr/i],
+  "Huhn-Gemüse-Muffins": [/Huhn/i, /Gemüse/i, /Hafer/i, /Ei/i, /verrühr/i],
+  "Süßkartoffel-Linsen-Muffins": [/Süßkartoffel/i, /Linsen/i, /Hafer/i, /vermeng/i],
 });
 
 test("recipe preparation audit covers the full 123-recipe runtime catalog", () => {
@@ -116,6 +124,9 @@ test("recipe preparation completeness: the 23 terse recipes now contain reproduc
     assert.ok(recipe, `${name}: Rezept fehlt`);
     assert.ok(recipe.note.length >= 120, `${name}: Zubereitung bleibt zu knapp`);
     assert.ok((recipe.note.match(/[.!?](?:\s|$)/g) || []).length >= 2, `${name}: Zubereitung bleibt einschrittig`);
+    for (const fragment of REQUIRED_NOTE_FRAGMENTS[name] || []) {
+      assert.match(recipe.note, fragment, `${name}: Zubereitung ist weiter unvollständig (${fragment})`);
+    }
   }
 });
 

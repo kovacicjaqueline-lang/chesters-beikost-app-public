@@ -11,25 +11,48 @@ const RECIPES = [
   {
     "name": "Obst-Hafer-Pancakes",
     "category": "pancakes",
-    "requires": ["Hafer", "Ei"],
+    "requires": [
+      "Hafer",
+      "Ei"
+    ],
     "stage": 2,
     "batch": "4–6 Mini-Pancakes",
     "ingredients": "feine Haferflocken, Ei und eine sehr weiche bekannte Obstsorte nach Auswahl",
     "note": "Obst fein zerdrücken, mit Hafer und Ei zu einem dicken Teig mischen und kleine flache Pancakes bei niedriger Hitze vollständig, aber weich durchgaren. Keine harte oder stark gebräunte Kruste.",
     "freezable": true,
     "freezerNote": "Einzeln vorfrieren und danach gesammelt verpacken; portionsweise auftauen.",
-    "oneOf": ["Banane", "Apfel", "Mango"],
-    "legacyNames": ["Banane-Hafer-Pancakes", "Apfel-Hafer-Pancakes", "Mango-Hafer-Pancakes"],
-    "searchAliases": ["Banane-Hafer-Pancakes", "Apfel-Hafer-Pancakes", "Mango-Hafer-Pancakes"],
+    "oneOf": [
+      "Banane",
+      "Apfel",
+      "Mango"
+    ],
+    "legacyNames": [
+      "Banane-Hafer-Pancakes",
+      "Apfel-Hafer-Pancakes",
+      "Mango-Hafer-Pancakes"
+    ],
+    "searchAliases": [
+      "Banane-Hafer-Pancakes",
+      "Apfel-Hafer-Pancakes",
+      "Mango-Hafer-Pancakes"
+    ],
     "family": true,
     "familyLabel": "3 Obstvarianten",
-    "variantLabels": ["Banane", "Apfel", "Mango"],
+    "variantLabels": [
+      "Banane",
+      "Apfel",
+      "Mango"
+    ],
     "skillRequirement": "Kann weiche kompakte Fingerfoodstücke sicher abbeißen und kauen. Das Stück muss zwischen zwei Fingern leicht zerdrückbar sein; nur aufrecht sitzend und direkt beaufsichtigt anbieten."
   },
   {
     "name": "Birne-Hirse-Pancakes",
     "category": "pancakes",
-    "requires": ["Birne", "Hirse", "Ei"],
+    "requires": [
+      "Birne",
+      "Hirse",
+      "Ei"
+    ],
     "stage": 2,
     "batch": "4–6 Mini-Pancakes",
     "ingredients": "2 EL weiche Birne, 2 EL gekochter Hirsebrei, 1 Ei",
@@ -42,25 +65,44 @@ const RECIPES = [
   {
     "name": "Gemüse-Hafer-Pancakes",
     "category": "pancakes",
-    "requires": ["Hafer", "Ei"],
+    "requires": [
+      "Hafer",
+      "Ei"
+    ],
     "stage": 2,
     "batch": "4–6 Mini-Pancakes",
     "ingredients": "feine Haferflocken, Ei und sehr weich gegartes Gemüse nach Auswahl",
     "note": "Gemüse fein zerdrücken, mit Hafer und Ei mischen und kleine flache Pancakes vollständig, aber weich durchgaren. Keine harte Kruste.",
     "freezable": true,
     "freezerNote": "Einzeln vorfrieren und danach gesammelt verpacken; portionsweise auftauen.",
-    "oneOf": ["Kürbis", "Süßkartoffel"],
-    "legacyNames": ["Kürbis-Hafer-Pancakes", "Süßkartoffel-Pancakes"],
-    "searchAliases": ["Kürbis-Hafer-Pancakes", "Süßkartoffel-Pancakes"],
+    "oneOf": [
+      "Kürbis",
+      "Süßkartoffel"
+    ],
+    "legacyNames": [
+      "Kürbis-Hafer-Pancakes",
+      "Süßkartoffel-Pancakes"
+    ],
+    "searchAliases": [
+      "Kürbis-Hafer-Pancakes",
+      "Süßkartoffel-Pancakes"
+    ],
     "family": true,
     "familyLabel": "2 Gemüsevarianten",
-    "variantLabels": ["Kürbis", "Süßkartoffel"],
+    "variantLabels": [
+      "Kürbis",
+      "Süßkartoffel"
+    ],
     "skillRequirement": "Kann weiche kompakte Fingerfoodstücke sicher abbeißen und kauen. Das Stück muss zwischen zwei Fingern leicht zerdrückbar sein; nur aufrecht sitzend und direkt beaufsichtigt anbieten."
   },
   {
     "name": "Zucchini-Hafer-Pancakes",
     "category": "pancakes",
-    "requires": ["Zucchini", "Hafer", "Ei"],
+    "requires": [
+      "Zucchini",
+      "Hafer",
+      "Ei"
+    ],
     "stage": 3,
     "batch": "4–6 Mini-Pancakes",
     "ingredients": "2 EL fein geriebene, ausgedrückte Zucchini, 2 EL Haferflocken, 1 Ei",
@@ -74,7 +116,12 @@ const RECIPES = [
     "name": "Ube-Bananen-Pancakes",
     "category": "pancakes",
     "ph": true,
-    "requires": ["Ube (violette Yamswurzel)", "Banane", "Hafer", "Ei"],
+    "requires": [
+      "Ube (violette Yamswurzel)",
+      "Banane",
+      "Hafer",
+      "Ei"
+    ],
     "stage": 3,
     "batch": "4–6 Mini-Pancakes",
     "ingredients": "2 EL vollständig gegarte Ube, ¼ Banane, 2 EL Haferflocken, 1 Ei",
@@ -87,7 +134,11 @@ const RECIPES = [
   {
     "name": "Rind-Hafer-Bällchen",
     "category": "balls",
-    "requires": ["Rind", "Hafer", "Ei"],
+    "requires": [
+      "Rind",
+      "Hafer",
+      "Ei"
+    ],
     "stage": 3,
     "batch": "8–10 kleine weiche Stücke",
     "ingredients": "100 g Faschiertes vom Rind, 2 EL feine Haferflocken, 1 Ei",
@@ -100,29 +151,51 @@ const RECIPES = [
   {
     "name": "Geflügel-Gemüse-Hafer-Bällchen",
     "category": "balls",
-    "requires": ["Huhn", "Zucchini", "Hafer"],
+    "requires": [
+      "Huhn",
+      "Zucchini",
+      "Hafer"
+    ],
     "stage": 3,
     "batch": "8–10 kleine weiche Stücke",
     "ingredients": "Geflügelfaschiertes, sehr fein vorbereitetes Gemüse und Hafer nach Variante",
     "note": "Geflügelfaschiertes mit dem sehr fein vorbereiteten Gemüse und Hafer gleichmäßig vermengen. Kleine flache oder längliche Stücke statt fester runder Kugeln formen, vollständig durchgaren, saftig halten und vor dem Servieren auf leichte Zerdrückbarkeit prüfen.",
     "freezable": true,
     "freezerNote": "Einzeln vorfrieren und danach gesammelt verpacken; portionsweise auftauen.",
-    "alternatives": [["Pute", "Karotte", "Hafer"]],
-    "legacyNames": ["Huhn-Zucchini-Hafer-Bällchen", "Pute-Karotten-Bällchen"],
-    "searchAliases": ["Huhn-Zucchini-Hafer-Bällchen", "Pute-Karotten-Bällchen"],
+    "alternatives": [
+      [
+        "Pute",
+        "Karotte",
+        "Hafer"
+      ]
+    ],
+    "legacyNames": [
+      "Huhn-Zucchini-Hafer-Bällchen",
+      "Pute-Karotten-Bällchen"
+    ],
+    "searchAliases": [
+      "Huhn-Zucchini-Hafer-Bällchen",
+      "Pute-Karotten-Bällchen"
+    ],
     "family": true,
     "familyLabel": "2 Geflügelvarianten",
-    "variantLabels": ["Huhn + Zucchini", "Pute + Karotte"],
+    "variantLabels": [
+      "Huhn + Zucchini",
+      "Pute + Karotte"
+    ],
     "skillRequirement": "Kann weiche kompakte Fingerfoodstücke sicher abbeißen und kauen. Das Stück muss zwischen zwei Fingern leicht zerdrückbar sein; nur aufrecht sitzend und direkt beaufsichtigt anbieten."
   },
   {
     "name": "Lachs-Kartoffel-Bällchen",
     "category": "balls",
-    "requires": ["Lachs", "Kartoffel"],
+    "requires": [
+      "Lachs",
+      "Kartoffel"
+    ],
     "stage": 3,
     "batch": "6–8 flache Taler",
     "ingredients": "50 g vollständig gegarter, grätenfreier Lachs, 100 g weiche Kartoffel",
-    "note": "Sehr sorgfältig entgräten, zerdrücken, flach formen und weich erwärmen oder backen.",
+    "note": "Lachs vollständig garen und sehr sorgfältig auf Gräten prüfen. Mit der sehr weichen Kartoffel fein zerdrücken, zu kleinen flachen Talern formen und nur so weit erwärmen oder backen, dass sie zusammenhalten und weich bleiben.",
     "freezable": true,
     "freezerNote": "Einzeln vorfrieren und danach gesammelt verpacken; portionsweise auftauen.",
     "searchAliases": [],
@@ -131,7 +204,11 @@ const RECIPES = [
   {
     "name": "Rote-Linsen-Gemüsebällchen",
     "category": "balls",
-    "requires": ["Rote Linsen", "Karotte", "Hafer"],
+    "requires": [
+      "Rote Linsen",
+      "Karotte",
+      "Hafer"
+    ],
     "stage": 3,
     "batch": "6–8 flache Stücke",
     "ingredients": "4 EL sehr weich gekochte rote Linsen, 2 EL Karottenpüree, 1 EL Haferflocken",
@@ -144,7 +221,11 @@ const RECIPES = [
   {
     "name": "Tofu-Brokkoli-Bällchen",
     "category": "balls",
-    "requires": ["Tofu", "Brokkoli", "Hafer"],
+    "requires": [
+      "Tofu",
+      "Brokkoli",
+      "Hafer"
+    ],
     "stage": 3,
     "batch": "6–8 flache Stücke",
     "ingredients": "80 g Naturtofu, 3 EL sehr weicher Brokkoli, 1 EL Haferflocken",
@@ -157,11 +238,14 @@ const RECIPES = [
   {
     "name": "Brokkoli-Kartoffel-Taler",
     "category": "balls",
-    "requires": ["Brokkoli", "Kartoffel"],
+    "requires": [
+      "Brokkoli",
+      "Kartoffel"
+    ],
     "stage": 3,
     "batch": "6–8 Taler",
     "ingredients": "gleich viel sehr weicher Brokkoli und Kartoffel",
-    "note": "Zerdrücken, flach formen und nur leicht erwärmen oder weich backen.",
+    "note": "Brokkoli und Kartoffel vollständig weich garen und gemeinsam fein zerdrücken. Kleine flache Taler formen und nur leicht erwärmen oder weich backen, sodass sie zusammenhalten und sich weiterhin leicht zerdrücken lassen.",
     "freezable": true,
     "freezerNote": "Einzeln vorfrieren und danach gesammelt verpacken; portionsweise auftauen.",
     "searchAliases": [],
@@ -170,7 +254,11 @@ const RECIPES = [
   {
     "name": "Zucchini-Hafer-Puffer",
     "category": "balls",
-    "requires": ["Zucchini", "Hafer", "Ei"],
+    "requires": [
+      "Zucchini",
+      "Hafer",
+      "Ei"
+    ],
     "stage": 3,
     "batch": "6 kleine Puffer",
     "ingredients": "3 EL fein geriebene Zucchini, 2 EL Haferflocken, 1 Ei",
@@ -183,11 +271,14 @@ const RECIPES = [
   {
     "name": "Kichererbsen-Kürbis-Taler",
     "category": "balls",
-    "requires": ["Kichererbse", "Kürbis"],
+    "requires": [
+      "Kichererbse",
+      "Kürbis"
+    ],
     "stage": 3,
     "batch": "6–8 Taler",
     "ingredients": "4 EL sehr weiche Kichererbsen, 3 EL Kürbispüree",
-    "note": "Sehr fein zerdrücken, flach formen und weich garen; bei Bedarf etwas Hafer als Binder nur nach Einführung.",
+    "note": "Sehr weiche Kichererbsen fein zerdrücken und mit Kürbispüree zu einer weichen Masse vermengen. Bei Bedarf nur nach Einführung etwas Hafer als Binder einarbeiten. Kleine flache Taler formen und weich garen; nicht trocken oder hart werden lassen.",
     "freezable": true,
     "freezerNote": "Einzeln vorfrieren und danach gesammelt verpacken; portionsweise auftauen.",
     "searchAliases": [],
@@ -196,7 +287,10 @@ const RECIPES = [
   {
     "name": "Rote-Linsen-Bratlinge",
     "category": "balls",
-    "requires": ["Rote Linsen", "Hafer"],
+    "requires": [
+      "Rote Linsen",
+      "Hafer"
+    ],
     "stage": 3,
     "batch": "6–8 Taler",
     "ingredients": "5 EL sehr weich gekochte rote Linsen, 1–2 EL Haferflocken",
@@ -209,30 +303,46 @@ const RECIPES = [
   {
     "name": "Polenta-Zucchini-Sticks",
     "category": "balls",
-    "requires": ["Polenta", "Zucchini"],
+    "requires": [
+      "Polenta",
+      "Zucchini"
+    ],
     "stage": 3,
     "batch": "8 weiche Sticks",
     "ingredients": "dicke weiche Polenta und fein gegarte Zucchini",
     "note": "Polenta mit Wasser weich und dick kochen. Die fein gegarte Zucchini unterrühren, die Masse flach ausstreichen und vollständig auskühlen beziehungsweise fest werden lassen. In breite gut greifbare Sticks schneiden, weich servieren und eine harte oder trockene Kruste vermeiden.",
     "freeze": "gut einfrierbar",
-    "pantryItems": ["Polenta"],
+    "pantryItems": [
+      "Polenta"
+    ],
     "freezable": true,
     "freezerNote": "Einzeln vorfrieren und danach gesammelt verpacken; portionsweise auftauen.",
-    "legacyNames": ["Polenta-Gemüse-Sticks", "Polenta-Zucchini-Sticks"],
-    "searchAliases": ["Polenta-Gemüse-Sticks", "Polenta-Zucchini-Sticks"],
+    "legacyNames": [
+      "Polenta-Gemüse-Sticks",
+      "Polenta-Zucchini-Sticks"
+    ],
+    "searchAliases": [
+      "Polenta-Gemüse-Sticks",
+      "Polenta-Zucchini-Sticks"
+    ],
     "family": true,
     "familyLabel": "zusammengeführtes Grundrezept",
-    "variantLabels": ["Polenta + Zucchini"],
+    "variantLabels": [
+      "Polenta + Zucchini"
+    ],
     "skillRequirement": "Kann weiche kompakte Fingerfoodstücke sicher abbeißen und kauen. Das Stück muss zwischen zwei Fingern leicht zerdrückbar sein; nur aufrecht sitzend und direkt beaufsichtigt anbieten."
   },
   {
     "name": "Süßkartoffel-Hirse-Sticks",
     "category": "balls",
-    "requires": ["Süßkartoffel", "Hirse"],
+    "requires": [
+      "Süßkartoffel",
+      "Hirse"
+    ],
     "stage": 3,
     "batch": "6–8 weiche Sticks",
     "ingredients": "Süßkartoffelpüree und sehr weich gekochte Hirse",
-    "note": "Mischen, länglich formen und sanft garen; Konsistenz vor dem Servieren prüfen.",
+    "note": "Süßkartoffel vollständig weich garen und zu Püree zerdrücken. Mit der sehr weich gekochten Hirse vermengen, längliche Sticks formen und sanft garen beziehungsweise erwärmen, bis sie zusammenhalten. Vor dem Servieren auf leichte Zerdrückbarkeit prüfen.",
     "freezable": true,
     "freezerNote": "Einzeln vorfrieren und danach gesammelt verpacken; portionsweise auftauen.",
     "searchAliases": [],
@@ -241,7 +351,9 @@ const RECIPES = [
   {
     "name": "Omelettstreifen",
     "category": "balls",
-    "requires": ["Ei"],
+    "requires": [
+      "Ei"
+    ],
     "stage": 2,
     "batch": "1 kleine Portion",
     "ingredients": "1 Ei, bei Bedarf etwas Wasser",
@@ -254,7 +366,10 @@ const RECIPES = [
   {
     "name": "Zucchini-Omelett",
     "category": "balls",
-    "requires": ["Ei", "Zucchini"],
+    "requires": [
+      "Ei",
+      "Zucchini"
+    ],
     "stage": 2,
     "batch": "1 kleine Portion",
     "ingredients": "1 Ei, 1–2 EL fein geriebene Zucchini",
@@ -267,8 +382,23 @@ const RECIPES = [
   {
     "name": "Obst-Haferbrei",
     "category": "porridge",
-    "requires": ["Hafer"],
-    "oneOf": ["Apfel", "Birne", "Banane", "Mango", "Heidelbeere", "Pfirsich", "Pflaume", "Aprikose", "Erdbeere", "Himbeere", "Papaya", "Kaki"],
+    "requires": [
+      "Hafer"
+    ],
+    "oneOf": [
+      "Apfel",
+      "Birne",
+      "Banane",
+      "Mango",
+      "Heidelbeere",
+      "Pfirsich",
+      "Pflaume",
+      "Aprikose",
+      "Erdbeere",
+      "Himbeere",
+      "Papaya",
+      "Kaki"
+    ],
     "stage": 1,
     "batch": "1 Portion",
     "ingredients": "Haferflocken, Wasser und eine bekannte weiche Obstsorte",
@@ -279,8 +409,23 @@ const RECIPES = [
   {
     "name": "Obst-Hirsebrei",
     "category": "porridge",
-    "requires": ["Hirse"],
-    "oneOf": ["Apfel", "Birne", "Banane", "Mango", "Heidelbeere", "Pfirsich", "Pflaume", "Aprikose", "Erdbeere", "Himbeere", "Papaya", "Kaki"],
+    "requires": [
+      "Hirse"
+    ],
+    "oneOf": [
+      "Apfel",
+      "Birne",
+      "Banane",
+      "Mango",
+      "Heidelbeere",
+      "Pfirsich",
+      "Pflaume",
+      "Aprikose",
+      "Erdbeere",
+      "Himbeere",
+      "Papaya",
+      "Kaki"
+    ],
     "stage": 1,
     "batch": "1 Portion",
     "ingredients": "Hirseflocken, Wasser und eine bekannte weiche Obstsorte",
@@ -291,8 +436,23 @@ const RECIPES = [
   {
     "name": "Obst-Polentabrei",
     "category": "porridge",
-    "requires": ["Polenta"],
-    "oneOf": ["Apfel", "Birne", "Banane", "Mango", "Heidelbeere", "Pfirsich", "Pflaume", "Aprikose", "Erdbeere", "Himbeere", "Papaya", "Kaki"],
+    "requires": [
+      "Polenta"
+    ],
+    "oneOf": [
+      "Apfel",
+      "Birne",
+      "Banane",
+      "Mango",
+      "Heidelbeere",
+      "Pfirsich",
+      "Pflaume",
+      "Aprikose",
+      "Erdbeere",
+      "Himbeere",
+      "Papaya",
+      "Kaki"
+    ],
     "stage": 1,
     "batch": "1 Portion",
     "ingredients": "feine Polenta, Wasser und eine bekannte weiche Obstsorte",
@@ -303,8 +463,23 @@ const RECIPES = [
   {
     "name": "Obst-Reisbrei",
     "category": "porridge",
-    "requires": ["Reis"],
-    "oneOf": ["Apfel", "Birne", "Banane", "Mango", "Heidelbeere", "Pfirsich", "Pflaume", "Aprikose", "Erdbeere", "Himbeere", "Papaya", "Kaki"],
+    "requires": [
+      "Reis"
+    ],
+    "oneOf": [
+      "Apfel",
+      "Birne",
+      "Banane",
+      "Mango",
+      "Heidelbeere",
+      "Pfirsich",
+      "Pflaume",
+      "Aprikose",
+      "Erdbeere",
+      "Himbeere",
+      "Papaya",
+      "Kaki"
+    ],
     "stage": 1,
     "batch": "1 Portion",
     "ingredients": "sehr weich gekochter Reis oder Reisflocken und eine bekannte Obstsorte",
@@ -315,8 +490,23 @@ const RECIPES = [
   {
     "name": "Obst-Quinoabrei",
     "category": "porridge",
-    "requires": ["Quinoa"],
-    "oneOf": ["Apfel", "Birne", "Banane", "Mango", "Heidelbeere", "Pfirsich", "Pflaume", "Aprikose", "Erdbeere", "Himbeere", "Papaya", "Kaki"],
+    "requires": [
+      "Quinoa"
+    ],
+    "oneOf": [
+      "Apfel",
+      "Birne",
+      "Banane",
+      "Mango",
+      "Heidelbeere",
+      "Pfirsich",
+      "Pflaume",
+      "Aprikose",
+      "Erdbeere",
+      "Himbeere",
+      "Papaya",
+      "Kaki"
+    ],
     "stage": 1,
     "batch": "1 Portion",
     "ingredients": "sehr weich gekochter Quinoa und eine bekannte weiche Obstsorte",
@@ -327,8 +517,23 @@ const RECIPES = [
   {
     "name": "Obst-Buchweizenbrei",
     "category": "porridge",
-    "requires": ["Buchweizen"],
-    "oneOf": ["Apfel", "Birne", "Banane", "Mango", "Heidelbeere", "Pfirsich", "Pflaume", "Aprikose", "Erdbeere", "Himbeere", "Papaya", "Kaki"],
+    "requires": [
+      "Buchweizen"
+    ],
+    "oneOf": [
+      "Apfel",
+      "Birne",
+      "Banane",
+      "Mango",
+      "Heidelbeere",
+      "Pfirsich",
+      "Pflaume",
+      "Aprikose",
+      "Erdbeere",
+      "Himbeere",
+      "Papaya",
+      "Kaki"
+    ],
     "stage": 1,
     "batch": "1 Portion",
     "ingredients": "Buchweizenflocken oder sehr weich gekochter Buchweizen und eine bekannte Obstsorte",
@@ -339,8 +544,23 @@ const RECIPES = [
   {
     "name": "Obst-Grießbrei",
     "category": "porridge",
-    "requires": ["Weizen"],
-    "oneOf": ["Apfel", "Birne", "Banane", "Mango", "Heidelbeere", "Pfirsich", "Pflaume", "Aprikose", "Erdbeere", "Himbeere", "Papaya", "Kaki"],
+    "requires": [
+      "Weizen"
+    ],
+    "oneOf": [
+      "Apfel",
+      "Birne",
+      "Banane",
+      "Mango",
+      "Heidelbeere",
+      "Pfirsich",
+      "Pflaume",
+      "Aprikose",
+      "Erdbeere",
+      "Himbeere",
+      "Papaya",
+      "Kaki"
+    ],
     "stage": 1,
     "batch": "1 Portion",
     "ingredients": "Weizengrieß, Wasser und eine bekannte weiche Obstsorte",
@@ -352,8 +572,19 @@ const RECIPES = [
     "name": "Milch-Getreide-Brei",
     "category": "porridge",
     "requires": [],
-    "oneOf": ["Hafer", "Hirse", "Polenta", "Weizen", "Dinkel", "Buchweizen"],
-    "milkChoices": ["Kuhmilch", "Naturjoghurt", "Buttermilch"],
+    "oneOf": [
+      "Hafer",
+      "Hirse",
+      "Polenta",
+      "Weizen",
+      "Dinkel",
+      "Buchweizen"
+    ],
+    "milkChoices": [
+      "Kuhmilch",
+      "Naturjoghurt",
+      "Buttermilch"
+    ],
     "stage": 1,
     "minMonths": 6,
     "batch": "1 frische Portion",
@@ -362,14 +593,25 @@ const RECIPES = [
     "milkPorridge": true,
     "milkMeal": "full",
     "excludeMeat": true,
-    "searchAliases": ["Milchbrei", "Joghurt Getreide Brei", "Buttermilch Getreide Brei"],
+    "searchAliases": [
+      "Milchbrei",
+      "Joghurt Getreide Brei",
+      "Buttermilch Getreide Brei"
+    ],
     "hardMinMonths": 6
   },
   {
     "name": "Baby-Bananenbrot",
     "category": "baking",
-    "requires": ["Banane", "Ei"],
-    "oneOf": ["Hafer", "Dinkel", "Weizen"],
+    "requires": [
+      "Banane",
+      "Ei"
+    ],
+    "oneOf": [
+      "Hafer",
+      "Dinkel",
+      "Weizen"
+    ],
     "stage": 3,
     "batch": "1 kleine Kastenform",
     "ingredients": "2 sehr reife Bananen, 2 Eier, fein gemahlene Haferflocken oder Mehl; optional wenig Rapsöl",
@@ -382,7 +624,10 @@ const RECIPES = [
   {
     "name": "Kürbis-Hafer-Brei",
     "category": "porridge",
-    "requires": ["Kürbis", "Hafer"],
+    "requires": [
+      "Kürbis",
+      "Hafer"
+    ],
     "stage": 1,
     "batch": "1–3 kleine Portionen",
     "ingredients": "Kürbispüree, weich gekochter Hafer",
@@ -392,7 +637,11 @@ const RECIPES = [
   {
     "name": "Gemüse-Nudel-Sauce",
     "category": "porridge",
-    "requires": ["Nudeln/Pasta", "Zucchini", "Tomate"],
+    "requires": [
+      "Nudeln/Pasta",
+      "Zucchini",
+      "Tomate"
+    ],
     "stage": 3,
     "batch": "2–4 Portionen Sauce",
     "ingredients": "sehr weich gekochte Nudeln, Zucchini, geschälte gegarte Tomate",
@@ -404,7 +653,11 @@ const RECIPES = [
   {
     "name": "Baby-Linsen-Bolognese",
     "category": "porridge",
-    "requires": ["Rote Linsen", "Tomate", "Nudeln/Pasta"],
+    "requires": [
+      "Rote Linsen",
+      "Tomate",
+      "Nudeln/Pasta"
+    ],
     "stage": 3,
     "batch": "3–4 Portionen Sauce",
     "ingredients": "rote Linsen, gegarte Tomate, sehr weiche Nudeln",
@@ -417,7 +670,10 @@ const RECIPES = [
     "name": "Lugaw-Basis",
     "category": "philippines",
     "ph": true,
-    "requires": ["Reis", "Huhn"],
+    "requires": [
+      "Reis",
+      "Huhn"
+    ],
     "stage": 1,
     "batch": "2–4 Portionen",
     "ingredients": "Reis, Wasser, vollständig gegartes Huhn",
@@ -428,7 +684,10 @@ const RECIPES = [
     "name": "Kürbis-Lugaw",
     "category": "philippines",
     "ph": true,
-    "requires": ["Reis", "Kürbis"],
+    "requires": [
+      "Reis",
+      "Kürbis"
+    ],
     "stage": 1,
     "batch": "2–4 Portionen",
     "ingredients": "Reis, Wasser, Kürbis",
@@ -439,7 +698,10 @@ const RECIPES = [
     "name": "Monggo-Kalabasa-Brei",
     "category": "philippines",
     "ph": true,
-    "requires": ["Mungbohne", "Kürbis"],
+    "requires": [
+      "Mungbohne",
+      "Kürbis"
+    ],
     "stage": 1,
     "batch": "2–4 Portionen",
     "ingredients": "sehr weich gekochte Mungbohnen und Kürbis",
@@ -450,7 +712,11 @@ const RECIPES = [
     "name": "Tinola-inspiriert",
     "category": "philippines",
     "ph": true,
-    "requires": ["Huhn", "Sayote (Chayote)", "Malunggay (Moringablätter)"],
+    "requires": [
+      "Huhn",
+      "Sayote (Chayote)",
+      "Malunggay (Moringablätter)"
+    ],
     "stage": 2,
     "batch": "2–4 Portionen",
     "ingredients": "Huhn, Sayote, kleine Menge Malunggay, Wasser",
@@ -461,7 +727,11 @@ const RECIPES = [
     "name": "Arroz-caldo-inspiriert",
     "category": "philippines",
     "ph": true,
-    "requires": ["Reis", "Huhn", "Ingwer"],
+    "requires": [
+      "Reis",
+      "Huhn",
+      "Ingwer"
+    ],
     "stage": 2,
     "batch": "2–4 Portionen",
     "ingredients": "Reis, Huhn, eine sehr kleine Menge Ingwer, Wasser",
@@ -472,7 +742,10 @@ const RECIPES = [
     "name": "Kalabasa mit Kokos",
     "category": "philippines",
     "ph": true,
-    "requires": ["Kürbis", "Kokos"],
+    "requires": [
+      "Kürbis",
+      "Kokos"
+    ],
     "stage": 2,
     "batch": "2–3 Portionen",
     "ingredients": "Kürbis und kleine Menge ungesüßte Kokosmilch",
@@ -483,7 +756,10 @@ const RECIPES = [
     "name": "Tilapia-Reis-Brei",
     "category": "philippines",
     "ph": true,
-    "requires": ["Tilapia", "Reis"],
+    "requires": [
+      "Tilapia",
+      "Reis"
+    ],
     "stage": 2,
     "batch": "1–2 Portionen",
     "ingredients": "vollständig gegarter grätenfreier Tilapia und sehr weicher Reis",
@@ -494,7 +770,10 @@ const RECIPES = [
     "name": "Bangus-Kartoffel-Taler",
     "category": "philippines",
     "ph": true,
-    "requires": ["Bangus (Milkfish)", "Kartoffel"],
+    "requires": [
+      "Bangus (Milkfish)",
+      "Kartoffel"
+    ],
     "stage": 3,
     "batch": "6 kleine Taler",
     "ingredients": "vollständig gegarter, äußerst sorgfältig entgräteter Bangus und Kartoffel",
@@ -505,47 +784,107 @@ const RECIPES = [
   {
     "name": "Obst-Hafer-Muffins",
     "category": "baking",
-    "requires": ["Hafer", "Ei"],
+    "requires": [
+      "Hafer",
+      "Ei"
+    ],
     "stage": 4,
     "batch": "6 Mini-Muffins",
     "ingredients": "Hafer, Ei und weiches Obst nach Auswahl",
     "note": "Weiches Obst fein zerdrücken oder pürieren und mit fein gemahlenem Hafer sowie Ei zu einem gleichmäßigen Teig verrühren. In kleine Formen füllen und ohne Zucker oder Salz vollständig backen, innen saftig halten und keine harte Kruste entstehen lassen. Vor dem Servieren auf leichte Zerdrückbarkeit prüfen.",
     "freezable": true,
     "freezerNote": "Einzeln vorfrieren und danach gesammelt verpacken; portionsweise auftauen.",
-    "oneOf": ["Apfel", "Birne", "Banane", "Pfirsich", "Aprikose", "Pflaume", "Mango"],
-    "searchAliases": ["Bananen-Hafer-Muffins", "Obst-Hafer-Muffins", "Apfel Hafer Muffins", "Birne Hafer Muffins", "Banane Hafer Muffins", "Obst Muffins ohne Zucker"],
-    "tags": ["Snack", "Backen", "einfrierbar"],
+    "oneOf": [
+      "Apfel",
+      "Birne",
+      "Banane",
+      "Pfirsich",
+      "Aprikose",
+      "Pflaume",
+      "Mango"
+    ],
+    "searchAliases": [
+      "Bananen-Hafer-Muffins",
+      "Obst-Hafer-Muffins",
+      "Apfel Hafer Muffins",
+      "Birne Hafer Muffins",
+      "Banane Hafer Muffins",
+      "Obst Muffins ohne Zucker"
+    ],
+    "tags": [
+      "Snack",
+      "Backen",
+      "einfrierbar"
+    ],
     "minMonths": 10,
-    "legacyNames": ["Bananen-Hafer-Muffins", "Obst-Hafer-Muffins"],
+    "legacyNames": [
+      "Bananen-Hafer-Muffins",
+      "Obst-Hafer-Muffins"
+    ],
     "family": true,
     "familyLabel": "7 Obstvarianten",
-    "variantLabels": ["Apfel", "Birne", "Banane", "Pfirsich", "Aprikose", "Pflaume", "Mango"],
+    "variantLabels": [
+      "Apfel",
+      "Birne",
+      "Banane",
+      "Pfirsich",
+      "Aprikose",
+      "Pflaume",
+      "Mango"
+    ],
     "skillRequirement": "Kann weiche kompakte Fingerfoodstücke sicher abbeißen und kauen. Das Stück muss zwischen zwei Fingern leicht zerdrückbar sein; nur aufrecht sitzend und direkt beaufsichtigt anbieten."
   },
   {
     "name": "Gemüse-Hafer-Muffins",
     "category": "baking",
-    "requires": ["Hafer", "Ei"],
-    "oneOf": ["Zucchini", "Karotte", "Brokkoli", "Süßkartoffel"],
+    "requires": [
+      "Hafer",
+      "Ei"
+    ],
+    "oneOf": [
+      "Zucchini",
+      "Karotte",
+      "Brokkoli",
+      "Süßkartoffel"
+    ],
     "stage": 4,
     "batch": "8 Mini-Muffins",
     "ingredients": "Hafer, Ei und sehr fein vorbereitetes Gemüse nach Auswahl",
     "note": "Das gewählte Gemüse sehr weich garen und sehr fein vorbereiten. Mit fein gemahlenem Hafer und Ei zu einem gleichmäßigen Teig verrühren, in kleine Formen füllen und ohne Salz vollständig backen. Innen saftig halten, keine harte Kruste entstehen lassen und vor dem Servieren auf leichte Zerdrückbarkeit prüfen.",
     "freezable": true,
     "freezerNote": "Einzeln vorfrieren und portionsweise auftauen.",
-    "tags": ["Snack", "Backen", "einfrierbar"],
+    "tags": [
+      "Snack",
+      "Backen",
+      "einfrierbar"
+    ],
     "minMonths": 10,
-    "legacyNames": ["Zucchini-Hafer-Muffins", "Ei-Hafer-Gemüse-Muffins"],
-    "searchAliases": ["Zucchini-Hafer-Muffins", "Ei-Hafer-Gemüse-Muffins"],
+    "legacyNames": [
+      "Zucchini-Hafer-Muffins",
+      "Ei-Hafer-Gemüse-Muffins"
+    ],
+    "searchAliases": [
+      "Zucchini-Hafer-Muffins",
+      "Ei-Hafer-Gemüse-Muffins"
+    ],
     "family": true,
     "familyLabel": "4 Gemüsevarianten",
-    "variantLabels": ["Zucchini", "Karotte", "Brokkoli", "Süßkartoffel"],
+    "variantLabels": [
+      "Zucchini",
+      "Karotte",
+      "Brokkoli",
+      "Süßkartoffel"
+    ],
     "skillRequirement": "Kann weiche kompakte Fingerfoodstücke sicher abbeißen und kauen. Das Stück muss zwischen zwei Fingern leicht zerdrückbar sein; nur aufrecht sitzend und direkt beaufsichtigt anbieten."
   },
   {
     "name": "Kürbis-Hirse-Muffins",
     "category": "baking",
-    "requires": ["Kürbis", "Hirse", "Ei"],
+    "requires": [
+      "Kürbis",
+      "Hirse",
+      "Ei"
+    ],
     "stage": 4,
     "batch": "6 Mini-Muffins",
     "ingredients": "Kürbispüree, Hirseflocken, Ei",
@@ -558,45 +897,67 @@ const RECIPES = [
   {
     "name": "Karotten-Polenta-Brei",
     "category": "porridge",
-    "requires": ["Karotte", "Polenta"],
+    "requires": [
+      "Karotte",
+      "Polenta"
+    ],
     "stage": 1,
     "batch": "2–3 Portionen",
     "ingredients": "sehr weiche Karotte, fein gekochte Polenta, Wasser",
     "note": "Polenta weich kochen und mit Karottenpüree mischen. Rapsöl erst in die servierte Portion geben.",
-    "pantryItems": ["Polenta", "Rapsöl"],
+    "pantryItems": [
+      "Polenta",
+      "Rapsöl"
+    ],
     "searchAliases": []
   },
   {
     "name": "Süßkartoffel-Rote-Linsen-Brei",
     "category": "porridge",
-    "requires": ["Süßkartoffel", "Rote Linsen"],
+    "requires": [
+      "Süßkartoffel",
+      "Rote Linsen"
+    ],
     "stage": 1,
     "batch": "3–4 Portionen",
     "ingredients": "sehr weich gegarte Süßkartoffel, sehr weich gekochte rote Linsen, Wasser",
     "note": "Beides fein pürieren oder zerdrücken. Pur einfrieren; Öl erst nach dem Erwärmen ergänzen.",
-    "pantryItems": ["rote Linsen", "Rapsöl"],
+    "pantryItems": [
+      "rote Linsen",
+      "Rapsöl"
+    ],
     "searchAliases": []
   },
   {
     "name": "Zucchini-Quinoa-Brei",
     "category": "porridge",
-    "requires": ["Zucchini", "Quinoa"],
+    "requires": [
+      "Zucchini",
+      "Quinoa"
+    ],
     "stage": 2,
     "batch": "2–3 Portionen",
     "ingredients": "sehr weich gegarte Zucchini, sehr weich gekochter weißer Quinoa",
     "note": "Quinoa gründlich spülen, sehr weich kochen und für den Anfang mit Zucchini fein pürieren.",
-    "pantryItems": ["weißer Quinoa"],
+    "pantryItems": [
+      "weißer Quinoa"
+    ],
     "searchAliases": []
   },
   {
     "name": "Kichererbsenmehl-Zucchini-Taler",
     "category": "balls",
-    "requires": ["Kichererbse", "Zucchini"],
+    "requires": [
+      "Kichererbse",
+      "Zucchini"
+    ],
     "stage": 3,
     "batch": "6 kleine weiche Taler",
     "ingredients": "Kichererbsenmehl, fein geriebene Zucchini, Wasser",
     "note": "Zu einem weichen Teig verrühren, kleine flache Taler formen und vollständig durchgaren. Nicht trocken oder knusprig werden lassen.",
-    "pantryItems": ["Kichererbsenmehl"],
+    "pantryItems": [
+      "Kichererbsenmehl"
+    ],
     "freezable": true,
     "freezerNote": "Einzeln vorfrieren und danach gesammelt verpacken; portionsweise auftauen.",
     "searchAliases": [],
@@ -605,40 +966,64 @@ const RECIPES = [
   {
     "name": "Bananen-Haferbrei mit Erdnussmus",
     "category": "porridge",
-    "requires": ["Banane", "Hafer", "Erdnuss"],
+    "requires": [
+      "Banane",
+      "Hafer",
+      "Erdnuss"
+    ],
     "stage": 1,
     "batch": "1 kleine Portion",
     "ingredients": "weicher Haferbrei, reife Banane, wenig glattes Erdnussmus",
     "note": "Hafer mit Wasser weich kochen. Banane fein zerdrücken und unter den fertigen Brei rühren. Nur nach sicherer Einführung von Erdnuss wenig glattes Erdnussmus vollständig und dünn in die fertige Portion einrühren.",
-    "pantryItems": ["feine Haferflocken", "glattes Erdnussmus"],
+    "pantryItems": [
+      "feine Haferflocken",
+      "glattes Erdnussmus"
+    ],
     "searchAliases": []
   },
   {
     "name": "Karotten-Hirse-Brei mit Tahin",
     "category": "porridge",
-    "requires": ["Karotte", "Hirse", "Sesam"],
+    "requires": [
+      "Karotte",
+      "Hirse",
+      "Sesam"
+    ],
     "stage": 1,
     "batch": "1 kleine Portion",
     "ingredients": "Karotten-Hirse-Brei, wenig glattes Tahin",
     "note": "Hirse mit Wasser weich kochen und mit sehr weich gegarter, fein zerdrückter Karotte zu einem glatten Brei verrühren. Nur nach sicherer Einführung von Sesam wenig glattes Tahin vollständig und sparsam in die servierte Portion einrühren.",
-    "pantryItems": ["Hirseflocken", "Tahin"],
+    "pantryItems": [
+      "Hirseflocken",
+      "Tahin"
+    ],
     "searchAliases": []
   },
   {
     "name": "Apfel-Hirse-Brei mit Mandelmus",
     "category": "porridge",
-    "requires": ["Apfel", "Hirse", "Mandel"],
+    "requires": [
+      "Apfel",
+      "Hirse",
+      "Mandel"
+    ],
     "stage": 1,
     "batch": "1 kleine Portion",
     "ingredients": "Apfel-Hirse-Brei, wenig weißes Mandelmus",
     "note": "Hirse mit Wasser weich kochen und den weich gegarten Apfel fein zerdrücken oder pürieren und unterrühren. Nur nach sicherer Einführung von Mandel wenig weißes Mandelmus vollständig und glatt in die fertige Portion einrühren.",
-    "pantryItems": ["Hirseflocken", "weißes Mandelmus"],
+    "pantryItems": [
+      "Hirseflocken",
+      "weißes Mandelmus"
+    ],
     "searchAliases": []
   },
   {
     "name": "Apfel-Birnen-Kompott",
     "category": "porridge",
-    "requires": ["Apfel", "Birne"],
+    "requires": [
+      "Apfel",
+      "Birne"
+    ],
     "stage": 1,
     "batch": "4 kleine Portionen",
     "ingredients": "Apfel, Birne, wenig Wasser",
@@ -651,7 +1036,10 @@ const RECIPES = [
   {
     "name": "Karotte-Süßkartoffel-Brei",
     "category": "porridge",
-    "requires": ["Karotte", "Süßkartoffel"],
+    "requires": [
+      "Karotte",
+      "Süßkartoffel"
+    ],
     "stage": 1,
     "batch": "4–6 Portionen",
     "ingredients": "Karotte, Süßkartoffel, Wasser",
@@ -664,7 +1052,10 @@ const RECIPES = [
   {
     "name": "Brokkoli-Kartoffel-Stampf",
     "category": "porridge",
-    "requires": ["Brokkoli", "Kartoffel"],
+    "requires": [
+      "Brokkoli",
+      "Kartoffel"
+    ],
     "stage": 2,
     "batch": "3–4 Portionen",
     "ingredients": "Brokkoli, Kartoffel, Wasser",
@@ -677,7 +1068,10 @@ const RECIPES = [
   {
     "name": "Karfiol-Kartoffel-Stampf",
     "category": "porridge",
-    "requires": ["Karfiol", "Kartoffel"],
+    "requires": [
+      "Karfiol",
+      "Kartoffel"
+    ],
     "stage": 2,
     "batch": "3–4 Portionen",
     "ingredients": "Karfiol, Kartoffel, Wasser",
@@ -690,7 +1084,10 @@ const RECIPES = [
   {
     "name": "Zucchini-Kartoffel-Brei",
     "category": "porridge",
-    "requires": ["Zucchini", "Kartoffel"],
+    "requires": [
+      "Zucchini",
+      "Kartoffel"
+    ],
     "stage": 1,
     "batch": "3–4 Portionen",
     "ingredients": "Zucchini, Kartoffel",
@@ -703,7 +1100,10 @@ const RECIPES = [
   {
     "name": "Erbsen-Kartoffel-Stampf",
     "category": "porridge",
-    "requires": ["Erbsen (TK möglich)", "Kartoffel"],
+    "requires": [
+      "Erbsen (TK möglich)",
+      "Kartoffel"
+    ],
     "stage": 2,
     "batch": "3 Portionen",
     "ingredients": "Erbsen, Kartoffel, Wasser",
@@ -716,11 +1116,14 @@ const RECIPES = [
   {
     "name": "Kürbis-Linsen-Suppe",
     "category": "family",
-    "requires": ["Kürbis", "Rote Linsen"],
+    "requires": [
+      "Kürbis",
+      "Rote Linsen"
+    ],
     "stage": 2,
     "batch": "4 Portionen",
     "ingredients": "Kürbis, rote Linsen, Wasser, optional milde Kräuter",
-    "note": "Alles sehr weich köcheln und je nach Stufe pürieren oder grob zerdrücken. Ohne Salz kochen.",
+    "note": "Rote Linsen und Kürbis mit Wasser sehr weich köcheln, bis beides vollständig zerfällt. Nach Konsistenzstufe fein pürieren oder grob zerdrücken; optional nur bereits bekannte milde Kräuter verwenden. Ohne Salz kochen.",
     "freeze": "gut einfrierbar",
     "freezable": true,
     "freezerNote": "Rasch abkühlen, in Mahlzeitenportionen einfrieren und vollständig durcherhitzen.",
@@ -729,14 +1132,23 @@ const RECIPES = [
   {
     "name": "Mildes Rote-Linsen-Dhal",
     "category": "family",
-    "requires": ["Rote Linsen", "Kurkuma"],
-    "alternatives": [["Rote Linsen"]],
+    "requires": [
+      "Rote Linsen",
+      "Kurkuma"
+    ],
+    "alternatives": [
+      [
+        "Rote Linsen"
+      ]
+    ],
     "stage": 2,
     "batch": "6 kleine Portionen",
     "ingredients": "rote Linsen, Wasser, optional wenig Kurkuma",
-    "note": "Linsen sehr weich und cremig kochen. Für Babys mild halten und ohne Salz zubereiten.",
+    "note": "Rote Linsen mit Wasser sehr weich und cremig kochen und dabei regelmäßig umrühren. Optional nur wenig bereits eingeführte Kurkuma einrühren. Für Babys mild halten, ohne Salz zubereiten und bei Bedarf mit Wasser auf eine löffelbare Konsistenz verdünnen.",
     "freeze": "gut einfrierbar",
-    "pantryItems": ["rote Linsen"],
+    "pantryItems": [
+      "rote Linsen"
+    ],
     "freezable": true,
     "freezerNote": "Rasch abkühlen, in Mahlzeitenportionen einfrieren und vollständig durcherhitzen.",
     "searchAliases": []
@@ -744,11 +1156,15 @@ const RECIPES = [
   {
     "name": "Huhn-Karotte-Nudel-Topf",
     "category": "family",
-    "requires": ["Huhn", "Karotte", "Nudeln/Pasta"],
+    "requires": [
+      "Huhn",
+      "Karotte",
+      "Nudeln/Pasta"
+    ],
     "stage": 2,
     "batch": "4 Portionen",
     "ingredients": "Huhn, Karotte, kleine Nudeln, Wasser",
-    "note": "Huhn vollständig durchgaren, Karotte und Nudeln sehr weich kochen und alles passend zerkleinern.",
+    "note": "Huhn vollständig durchgaren und fein zerkleinern. Karotte sehr weich garen und kleine Nudeln sehr weich kochen. Alles mit etwas Kochwasser zu einer saftigen, weichen Mischung verbinden und passend zur Konsistenzstufe weiter zerkleinern.",
     "freeze": "gut einfrierbar",
     "searchAliases": [],
     "freezable": true,
@@ -757,11 +1173,15 @@ const RECIPES = [
   {
     "name": "Huhn-Lauch-Kartoffel-Topf",
     "category": "family",
-    "requires": ["Huhn", "Lauch", "Kartoffel"],
+    "requires": [
+      "Huhn",
+      "Lauch",
+      "Kartoffel"
+    ],
     "stage": 2,
     "batch": "4 Portionen",
     "ingredients": "Huhn, Lauch, Kartoffel, Wasser",
-    "note": "Alles vollständig weich garen. Huhn fein zerkleinern und mit Gemüse sowie Kartoffel vermengen.",
+    "note": "Huhn vollständig durchgaren und fein zerkleinern. Lauch und Kartoffel mit Wasser vollständig weich garen. Alles zu einer weichen, saftigen Mischung vermengen und je nach Konsistenzstufe zerdrücken oder klein schneiden.",
     "freeze": "gut einfrierbar",
     "searchAliases": [],
     "freezable": true,
@@ -770,7 +1190,11 @@ const RECIPES = [
   {
     "name": "Huhn-Brokkoli-Reis",
     "category": "family",
-    "requires": ["Huhn", "Brokkoli", "Reis"],
+    "requires": [
+      "Huhn",
+      "Brokkoli",
+      "Reis"
+    ],
     "stage": 2,
     "batch": "4 Portionen",
     "ingredients": "Huhn, Brokkoli, sehr weich gekochter Reis",
@@ -783,7 +1207,11 @@ const RECIPES = [
   {
     "name": "Rind-Gemüse-Bolognese",
     "category": "family",
-    "requires": ["Rind", "Karotte", "Tomate"],
+    "requires": [
+      "Rind",
+      "Karotte",
+      "Tomate"
+    ],
     "stage": 2,
     "batch": "6 Saucenportionen",
     "ingredients": "Rind, Karotte, Tomate, Wasser, optional Kräuter",
@@ -796,13 +1224,18 @@ const RECIPES = [
   {
     "name": "Tomaten-Linsen-Sauce",
     "category": "family",
-    "requires": ["Tomate", "Rote Linsen"],
+    "requires": [
+      "Tomate",
+      "Rote Linsen"
+    ],
     "stage": 2,
     "batch": "6 Saucenportionen",
     "ingredients": "Tomate, rote Linsen, Wasser, optional Basilikum",
     "note": "Linsen in der Tomatensauce sehr weich kochen und fein pürieren oder zerdrücken.",
     "freeze": "gut einfrierbar",
-    "pantryItems": ["rote Linsen"],
+    "pantryItems": [
+      "rote Linsen"
+    ],
     "freezable": true,
     "freezerNote": "Rasch abkühlen, in Mahlzeitenportionen einfrieren und vollständig durcherhitzen.",
     "searchAliases": []
@@ -810,7 +1243,11 @@ const RECIPES = [
   {
     "name": "Brokkoli-Linsen-Pasta",
     "category": "family",
-    "requires": ["Brokkoli", "Rote Linsen", "Nudeln/Pasta"],
+    "requires": [
+      "Brokkoli",
+      "Rote Linsen",
+      "Nudeln/Pasta"
+    ],
     "stage": 3,
     "batch": "4 Portionen",
     "ingredients": "Brokkoli, rote Linsen, sehr weiche Nudeln",
@@ -823,7 +1260,11 @@ const RECIPES = [
   {
     "name": "Gemüse-Pasta mit Zucchini und Tomate",
     "category": "family",
-    "requires": ["Zucchini", "Tomate", "Nudeln/Pasta"],
+    "requires": [
+      "Zucchini",
+      "Tomate",
+      "Nudeln/Pasta"
+    ],
     "stage": 3,
     "batch": "4 Portionen",
     "ingredients": "Zucchini, Tomate, sehr weiche Nudeln",
@@ -836,7 +1277,11 @@ const RECIPES = [
   {
     "name": "Lachs-Reis-Erbsen",
     "category": "family",
-    "requires": ["Lachs", "Reis", "Erbsen (TK möglich)"],
+    "requires": [
+      "Lachs",
+      "Reis",
+      "Erbsen (TK möglich)"
+    ],
     "stage": 2,
     "batch": "2–3 Portionen",
     "ingredients": "Lachs, Reis, Erbsen, Wasser",
@@ -849,7 +1294,10 @@ const RECIPES = [
   {
     "name": "Lachs-Süßkartoffel-Stampf",
     "category": "family",
-    "requires": ["Lachs", "Süßkartoffel"],
+    "requires": [
+      "Lachs",
+      "Süßkartoffel"
+    ],
     "stage": 2,
     "batch": "2–3 Portionen",
     "ingredients": "Lachs, Süßkartoffel",
@@ -862,7 +1310,11 @@ const RECIPES = [
   {
     "name": "Kabeljau-Tomaten-Gemüse",
     "category": "family",
-    "requires": ["Kabeljau", "Tomate", "Zucchini"],
+    "requires": [
+      "Kabeljau",
+      "Tomate",
+      "Zucchini"
+    ],
     "stage": 2,
     "batch": "3 Portionen",
     "ingredients": "Kabeljau, Tomate, Zucchini",
@@ -875,7 +1327,9 @@ const RECIPES = [
   {
     "name": "Weiches Rührei",
     "category": "family",
-    "requires": ["Ei"],
+    "requires": [
+      "Ei"
+    ],
     "stage": 2,
     "batch": "1 Portion",
     "ingredients": "Ei, optional wenig Wasser oder bereits eingeführte Milch als Zutat",
@@ -886,7 +1340,9 @@ const RECIPES = [
   {
     "name": "Eier-Finger",
     "category": "balls",
-    "requires": ["Ei"],
+    "requires": [
+      "Ei"
+    ],
     "stage": 3,
     "batch": "2 Fingerfood-Portionen",
     "ingredients": "vollständig gegartes Ei",
@@ -899,7 +1355,10 @@ const RECIPES = [
   {
     "name": "Paprika-Omelettstreifen",
     "category": "balls",
-    "requires": ["Ei", "Paprika"],
+    "requires": [
+      "Ei",
+      "Paprika"
+    ],
     "stage": 3,
     "batch": "6–8 Streifen",
     "ingredients": "Ei, sehr fein geschnittene weich gegarte Paprika",
@@ -913,7 +1372,10 @@ const RECIPES = [
   {
     "name": "Ei-Champignon-Cups",
     "category": "baking",
-    "requires": ["Ei", "Champignon"],
+    "requires": [
+      "Ei",
+      "Champignon"
+    ],
     "stage": 3,
     "batch": "6 kleine Cups",
     "ingredients": "Ei, fein gehackte weich gegarte Champignons",
@@ -927,14 +1389,24 @@ const RECIPES = [
   {
     "name": "Hummus mit weichen Gemüsesticks",
     "category": "balls",
-    "requires": ["Kichererbse"],
-    "oneOf": ["Gurke", "Karotte", "Zucchini", "Süßkartoffel"],
+    "requires": [
+      "Kichererbse"
+    ],
+    "oneOf": [
+      "Gurke",
+      "Karotte",
+      "Zucchini",
+      "Süßkartoffel"
+    ],
     "stage": 3,
     "batch": "3 kleine Portionen",
     "ingredients": "weich gekochte Kichererbsen, optional Tahin, Wasser und ein mechanisch weicher Gemüsestick nach Auswahl",
     "note": "Kichererbsen sehr glatt pürieren. Tahin nur nach eingeführtem Sesam verwenden. Gurke, Karotte, Zucchini oder Süßkartoffel nur in einer konkret mechanisch weichen, sicher greifbaren Form ohne harte, zähe oder spröde Bissen anbieten.",
     "freeze": "Hummus gut einfrierbar",
-    "pantryItems": ["Kichererbsen", "Tahin"],
+    "pantryItems": [
+      "Kichererbsen",
+      "Tahin"
+    ],
     "freezable": true,
     "freezerNote": "Einzeln vorfrieren und danach gesammelt verpacken; portionsweise auftauen.",
     "searchAliases": [],
@@ -943,7 +1415,10 @@ const RECIPES = [
   {
     "name": "Kürbis-Kichererbsen-Creme",
     "category": "porridge",
-    "requires": ["Kürbis", "Kichererbse"],
+    "requires": [
+      "Kürbis",
+      "Kichererbse"
+    ],
     "stage": 2,
     "batch": "4 Portionen",
     "ingredients": "Kürbis, weich gekochte Kichererbsen, Wasser",
@@ -956,7 +1431,10 @@ const RECIPES = [
   {
     "name": "Avocado-Bananen-Creme",
     "category": "porridge",
-    "requires": ["Avocado", "Banane"],
+    "requires": [
+      "Avocado",
+      "Banane"
+    ],
     "stage": 1,
     "batch": "1 Portion",
     "ingredients": "reife Avocado, reife Banane",
@@ -967,13 +1445,19 @@ const RECIPES = [
   {
     "name": "Buchweizen-Bananen-Pancakes",
     "category": "pancakes",
-    "requires": ["Buchweizen", "Banane", "Ei"],
+    "requires": [
+      "Buchweizen",
+      "Banane",
+      "Ei"
+    ],
     "stage": 3,
     "batch": "6 kleine Pancakes",
     "ingredients": "Buchweizenflocken oder -mehl, Banane, Ei",
     "note": "Zu einem weichen Teig verrühren und kleine Pancakes vollständig durchgaren. Weich servieren.",
     "freeze": "gut einfrierbar",
-    "pantryItems": ["Buchweizenflocken oder Buchweizen"],
+    "pantryItems": [
+      "Buchweizenflocken oder Buchweizen"
+    ],
     "freezable": true,
     "freezerNote": "Einzeln vorfrieren und danach gesammelt verpacken; portionsweise auftauen.",
     "searchAliases": [],
@@ -982,13 +1466,18 @@ const RECIPES = [
   {
     "name": "Süßkartoffel-Linsen-Taler",
     "category": "balls",
-    "requires": ["Süßkartoffel", "Rote Linsen"],
+    "requires": [
+      "Süßkartoffel",
+      "Rote Linsen"
+    ],
     "stage": 3,
     "batch": "8 kleine Taler",
     "ingredients": "Süßkartoffel, sehr weich gekochte rote Linsen",
     "note": "Masse zerdrücken, kleine flache Taler formen und vollständig durchgaren. Weich lassen.",
     "freeze": "gut einfrierbar",
-    "pantryItems": ["rote Linsen"],
+    "pantryItems": [
+      "rote Linsen"
+    ],
     "freezable": true,
     "freezerNote": "Einzeln vorfrieren und danach gesammelt verpacken; portionsweise auftauen.",
     "searchAliases": [],
@@ -997,7 +1486,11 @@ const RECIPES = [
   {
     "name": "Tofu-Zucchini-Reis",
     "category": "family",
-    "requires": ["Tofu", "Zucchini", "Reis"],
+    "requires": [
+      "Tofu",
+      "Zucchini",
+      "Reis"
+    ],
     "stage": 2,
     "batch": "3 Portionen",
     "ingredients": "Naturtofu, Zucchini, sehr weich gekochter Reis",
@@ -1010,7 +1503,9 @@ const RECIPES = [
   {
     "name": "Gebackene Saba-Banane",
     "category": "philippines",
-    "requires": ["Saba-Banane"],
+    "requires": [
+      "Saba-Banane"
+    ],
     "stage": 3,
     "batch": "2 Portionen",
     "ingredients": "reife Saba-Banane",
@@ -1023,7 +1518,10 @@ const RECIPES = [
   {
     "name": "Huhn-Lugaw",
     "category": "philippines",
-    "requires": ["Huhn", "Reis"],
+    "requires": [
+      "Huhn",
+      "Reis"
+    ],
     "stage": 2,
     "batch": "5 Portionen",
     "ingredients": "Huhn, Reis, viel Wasser, optional wenig Ingwer nach Einführung",
@@ -1037,7 +1535,11 @@ const RECIPES = [
   {
     "name": "Sayote-Huhn-Reis",
     "category": "philippines",
-    "requires": ["Sayote (Chayote)", "Huhn", "Reis"],
+    "requires": [
+      "Sayote (Chayote)",
+      "Huhn",
+      "Reis"
+    ],
     "stage": 2,
     "batch": "4 Portionen",
     "ingredients": "Sayote, Huhn, Reis, Wasser",
@@ -1051,7 +1553,10 @@ const RECIPES = [
   {
     "name": "Monggo-Süßkartoffel-Brei",
     "category": "philippines",
-    "requires": ["Mungbohne", "Süßkartoffel"],
+    "requires": [
+      "Mungbohne",
+      "Süßkartoffel"
+    ],
     "stage": 2,
     "batch": "5 Portionen",
     "ingredients": "Mungbohnen, Süßkartoffel, Wasser",
@@ -1065,14 +1570,19 @@ const RECIPES = [
   {
     "name": "Ube-Hafer-Brei",
     "category": "philippines",
-    "requires": ["Ube (violette Yamswurzel)", "Hafer"],
+    "requires": [
+      "Ube (violette Yamswurzel)",
+      "Hafer"
+    ],
     "stage": 1,
     "batch": "3 Portionen",
     "ingredients": "vollständig gegarte Ube, Haferflocken, Wasser",
     "note": "Ube vollständig weich garen. Hafer weich kochen und mit Ube fein pürieren. Keine rohe Ube verwenden.",
     "freeze": "gut einfrierbar",
     "ph": true,
-    "pantryItems": ["feine Haferflocken"],
+    "pantryItems": [
+      "feine Haferflocken"
+    ],
     "searchAliases": [],
     "freezable": true,
     "freezerNote": "Portionsweise rasch abkühlen, einfrieren und vollständig auftauen beziehungsweise durcherhitzen."
@@ -1080,15 +1590,33 @@ const RECIPES = [
   {
     "name": "Obst-Joghurt",
     "category": "porridge",
-    "requires": ["Naturjoghurt"],
-    "oneOf": ["Apfel", "Birne", "Banane", "Pfirsich", "Aprikose", "Pflaume", "Mango"],
+    "requires": [
+      "Naturjoghurt"
+    ],
+    "oneOf": [
+      "Apfel",
+      "Birne",
+      "Banane",
+      "Pfirsich",
+      "Aprikose",
+      "Pflaume",
+      "Mango"
+    ],
     "stage": 1,
     "batch": "1 kleine Portion",
     "ingredients": "Naturjoghurt und weiches Obst nach Auswahl",
     "note": "Pasteurisierten ungesüßten Naturjoghurt mit fein zerdrücktem oder püriertem Obst verrühren. Als kleine Portion oder Teil der einmaligen Milchmahlzeit des Tages einplanen.",
     "freezable": false,
-    "searchAliases": ["Apfel Joghurt", "Birne Joghurt", "Banane Joghurt", "Marille"],
-    "tags": ["Joghurt", "Löffelgericht"],
+    "searchAliases": [
+      "Apfel Joghurt",
+      "Birne Joghurt",
+      "Banane Joghurt",
+      "Marille"
+    ],
+    "tags": [
+      "Joghurt",
+      "Löffelgericht"
+    ],
     "milkMeal": "small",
     "hardMinMonths": 6,
     "minMonths": 6
@@ -1096,37 +1624,86 @@ const RECIPES = [
   {
     "name": "Obst-Hafer-Joghurt",
     "category": "porridge",
-    "requires": ["Hafer", "Naturjoghurt"],
-    "oneOf": ["Apfel", "Birne", "Banane", "Pfirsich", "Aprikose", "Pflaume", "Mango"],
+    "requires": [
+      "Hafer",
+      "Naturjoghurt"
+    ],
+    "oneOf": [
+      "Apfel",
+      "Birne",
+      "Banane",
+      "Pfirsich",
+      "Aprikose",
+      "Pflaume",
+      "Mango"
+    ],
     "stage": 1,
     "batch": "1 Portion",
     "ingredients": "weich gekochter Hafer, pasteurisierter ungesüßter Naturjoghurt und weiches Obst nach Auswahl",
     "note": "Hafer zuerst in Wasser weich kochen, abkühlen lassen und erst dann Naturjoghurt sowie Obst einrühren.",
     "freezable": true,
     "freezerNote": "Hafer und Obst können gemeinsam eingefroren werden. Joghurt nach dem Auftauen einrühren; komplett gemischt kann sich die Konsistenz trennen.",
-    "searchAliases": ["Obst-Hafer-Joghurt", "Apfel Hafer Joghurt", "Birne Hafer Joghurt", "Banane Hafer Joghurt", "Joghurt-Hafer-Bananenbrei"],
-    "tags": ["Joghurt", "Meal Prep"],
+    "searchAliases": [
+      "Obst-Hafer-Joghurt",
+      "Apfel Hafer Joghurt",
+      "Birne Hafer Joghurt",
+      "Banane Hafer Joghurt",
+      "Joghurt-Hafer-Bananenbrei"
+    ],
+    "tags": [
+      "Joghurt",
+      "Meal Prep"
+    ],
     "milkMeal": "full",
-    "legacyNames": ["Obst-Hafer-Joghurt", "Joghurt-Hafer-Bananenbrei"],
+    "legacyNames": [
+      "Obst-Hafer-Joghurt",
+      "Joghurt-Hafer-Bananenbrei"
+    ],
     "family": true,
     "familyLabel": "7 Obstvarianten",
-    "variantLabels": ["Apfel", "Birne", "Banane", "Pfirsich", "Aprikose", "Pflaume", "Mango"],
+    "variantLabels": [
+      "Apfel",
+      "Birne",
+      "Banane",
+      "Pfirsich",
+      "Aprikose",
+      "Pflaume",
+      "Mango"
+    ],
     "hardMinMonths": 6,
     "minMonths": 6
   },
   {
     "name": "Obst-Hirse-Joghurt",
     "category": "porridge",
-    "requires": ["Hirse", "Naturjoghurt"],
-    "oneOf": ["Apfel", "Birne", "Banane", "Pfirsich", "Aprikose", "Pflaume", "Mango"],
+    "requires": [
+      "Hirse",
+      "Naturjoghurt"
+    ],
+    "oneOf": [
+      "Apfel",
+      "Birne",
+      "Banane",
+      "Pfirsich",
+      "Aprikose",
+      "Pflaume",
+      "Mango"
+    ],
     "stage": 1,
     "batch": "1 Portion",
     "ingredients": "weich gekochte Hirse, Naturjoghurt und Obst nach Auswahl",
     "note": "Hirse in Wasser weich kochen, abkühlen und mit Naturjoghurt und Obst verrühren.",
     "freezable": true,
     "freezerNote": "Hirse-Obst-Basis einfrieren; Joghurt möglichst nach dem Auftauen ergänzen.",
-    "searchAliases": ["Apfel Hirse Joghurt", "Birne Hirse Joghurt", "Marille"],
-    "tags": ["Joghurt", "Meal Prep"],
+    "searchAliases": [
+      "Apfel Hirse Joghurt",
+      "Birne Hirse Joghurt",
+      "Marille"
+    ],
+    "tags": [
+      "Joghurt",
+      "Meal Prep"
+    ],
     "milkMeal": "full",
     "hardMinMonths": 6,
     "minMonths": 6
@@ -1134,16 +1711,35 @@ const RECIPES = [
   {
     "name": "Obst-Grieß-Joghurt",
     "category": "porridge",
-    "requires": ["Weizen", "Naturjoghurt"],
-    "oneOf": ["Apfel", "Birne", "Banane", "Pfirsich", "Aprikose", "Pflaume", "Mango"],
+    "requires": [
+      "Weizen",
+      "Naturjoghurt"
+    ],
+    "oneOf": [
+      "Apfel",
+      "Birne",
+      "Banane",
+      "Pfirsich",
+      "Aprikose",
+      "Pflaume",
+      "Mango"
+    ],
     "stage": 1,
     "batch": "1 Portion",
     "ingredients": "feiner Weizengrieß, Naturjoghurt und Obst nach Auswahl",
     "note": "Grieß in Wasser weich kochen, abkühlen lassen und Naturjoghurt sowie Obst einrühren.",
     "freezable": true,
     "freezerNote": "Grieß-Obst-Basis portionsweise einfrieren; Joghurt nach dem Auftauen ergänzen oder nach dem Auftauen kräftig umrühren.",
-    "searchAliases": ["Apfel Grieß Joghurt", "Birne Grieß Joghurt", "Obst Griess Joghurt", "Marille"],
-    "tags": ["Joghurt", "Meal Prep"],
+    "searchAliases": [
+      "Apfel Grieß Joghurt",
+      "Birne Grieß Joghurt",
+      "Obst Griess Joghurt",
+      "Marille"
+    ],
+    "tags": [
+      "Joghurt",
+      "Meal Prep"
+    ],
     "milkMeal": "full",
     "hardMinMonths": 6,
     "minMonths": 6
@@ -1151,8 +1747,19 @@ const RECIPES = [
   {
     "name": "Buttermilch-Hafer-Obstbrei",
     "category": "porridge",
-    "requires": ["Buttermilch", "Hafer"],
-    "oneOf": ["Apfel", "Birne", "Banane", "Pfirsich", "Aprikose", "Pflaume", "Mango"],
+    "requires": [
+      "Buttermilch",
+      "Hafer"
+    ],
+    "oneOf": [
+      "Apfel",
+      "Birne",
+      "Banane",
+      "Pfirsich",
+      "Aprikose",
+      "Pflaume",
+      "Mango"
+    ],
     "stage": 1,
     "minMonths": 6,
     "batch": "1 Portion",
@@ -1160,8 +1767,15 @@ const RECIPES = [
     "note": "Hafer in Wasser weich kochen, auf Esstemperatur abkühlen lassen und erst dann Buttermilch sowie Obst einrühren.",
     "freezable": true,
     "freezerNote": "Hafer-Obst-Basis einfrieren; Buttermilch nach dem Auftauen frisch einrühren.",
-    "searchAliases": ["Apfel Hafer Buttermilch", "Banane Hafer Buttermilch", "Marille"],
-    "tags": ["Buttermilch", "Meal Prep"],
+    "searchAliases": [
+      "Apfel Hafer Buttermilch",
+      "Banane Hafer Buttermilch",
+      "Marille"
+    ],
+    "tags": [
+      "Buttermilch",
+      "Meal Prep"
+    ],
     "milkMeal": "full",
     "excludeMeat": true,
     "hardMinMonths": 6
@@ -1169,8 +1783,19 @@ const RECIPES = [
   {
     "name": "Buttermilch-Hirse-Obstbrei",
     "category": "porridge",
-    "requires": ["Buttermilch", "Hirse"],
-    "oneOf": ["Apfel", "Birne", "Banane", "Pfirsich", "Aprikose", "Pflaume", "Mango"],
+    "requires": [
+      "Buttermilch",
+      "Hirse"
+    ],
+    "oneOf": [
+      "Apfel",
+      "Birne",
+      "Banane",
+      "Pfirsich",
+      "Aprikose",
+      "Pflaume",
+      "Mango"
+    ],
     "stage": 1,
     "minMonths": 6,
     "batch": "1 Portion",
@@ -1178,8 +1803,15 @@ const RECIPES = [
     "note": "Hirse in Wasser weich kochen, abkühlen lassen und Buttermilch sowie Obst einrühren.",
     "freezable": true,
     "freezerNote": "Hirse-Obst-Basis einfrieren; Buttermilch erst nach dem Auftauen ergänzen.",
-    "searchAliases": ["Apfel Hirse Buttermilch", "Birne Hirse Buttermilch", "Marille"],
-    "tags": ["Buttermilch", "Meal Prep"],
+    "searchAliases": [
+      "Apfel Hirse Buttermilch",
+      "Birne Hirse Buttermilch",
+      "Marille"
+    ],
+    "tags": [
+      "Buttermilch",
+      "Meal Prep"
+    ],
     "milkMeal": "full",
     "excludeMeat": true,
     "hardMinMonths": 6
@@ -1187,8 +1819,19 @@ const RECIPES = [
   {
     "name": "Buttermilch-Grieß-Obstbrei",
     "category": "porridge",
-    "requires": ["Buttermilch", "Weizen"],
-    "oneOf": ["Apfel", "Birne", "Banane", "Pfirsich", "Aprikose", "Pflaume", "Mango"],
+    "requires": [
+      "Buttermilch",
+      "Weizen"
+    ],
+    "oneOf": [
+      "Apfel",
+      "Birne",
+      "Banane",
+      "Pfirsich",
+      "Aprikose",
+      "Pflaume",
+      "Mango"
+    ],
     "stage": 1,
     "minMonths": 6,
     "batch": "1 Portion",
@@ -1196,8 +1839,15 @@ const RECIPES = [
     "note": "Grieß in Wasser weich kochen, abkühlen lassen und Buttermilch sowie Obst einrühren.",
     "freezable": true,
     "freezerNote": "Grieß-Obst-Basis einfrieren; Buttermilch nach dem Auftauen frisch einrühren.",
-    "searchAliases": ["Apfel Grieß Buttermilch", "Obst Griess Buttermilch", "Marille"],
-    "tags": ["Buttermilch", "Meal Prep"],
+    "searchAliases": [
+      "Apfel Grieß Buttermilch",
+      "Obst Griess Buttermilch",
+      "Marille"
+    ],
+    "tags": [
+      "Buttermilch",
+      "Meal Prep"
+    ],
     "milkMeal": "full",
     "excludeMeat": true,
     "hardMinMonths": 6
@@ -1205,14 +1855,25 @@ const RECIPES = [
   {
     "name": "Joghurt-Nussmus-Miniportion",
     "category": "porridge",
-    "requires": ["Naturjoghurt"],
-    "oneOf": ["Erdnuss", "Mandel", "Cashew", "Walnuss", "Haselnuss"],
+    "requires": [
+      "Naturjoghurt"
+    ],
+    "oneOf": [
+      "Erdnuss",
+      "Mandel",
+      "Cashew",
+      "Walnuss",
+      "Haselnuss"
+    ],
     "stage": 1,
     "batch": "1 Miniportion",
     "ingredients": "Naturjoghurt und sehr kleine Menge bereits erfolgreich eingeführtes glattes Nussmus",
     "note": "Nur nach erfolgreicher Allergeneinführung verwenden; glattes Mus vollständig und dünn in Joghurt einrühren.",
     "freezable": false,
-    "tags": ["Joghurt", "Allergen"],
+    "tags": [
+      "Joghurt",
+      "Allergen"
+    ],
     "milkMeal": "small",
     "searchAliases": [],
     "hardMinMonths": 6,
@@ -1221,14 +1882,23 @@ const RECIPES = [
   {
     "name": "Bananen-Joghurt-Hafer-Pancakes",
     "category": "pancakes",
-    "requires": ["Banane", "Naturjoghurt", "Hafer", "Ei"],
+    "requires": [
+      "Banane",
+      "Naturjoghurt",
+      "Hafer",
+      "Ei"
+    ],
     "stage": 3,
     "batch": "6 Mini-Pancakes",
     "ingredients": "reife Banane, Naturjoghurt, Hafer und Ei",
-    "note": "Banane fein zerdrücken und mit Naturjoghurt, Hafer und Ei zu einem gleichmäßigen Teig verrühren. Kleine flache Pancakes bei niedriger Hitze vollständig durchgaren und weich halten; keine harte oder stark gebräunte Kruste entstehen lassen.",
+    "note": "Kleine flache Pancakes bei niedriger Hitze vollständig durchgaren und weich halten.",
     "freezable": true,
     "freezerNote": "Einzeln vorfrieren und portionsweise auftauen.",
-    "tags": ["Fingerfood", "Pfanne", "einfrierbar"],
+    "tags": [
+      "Fingerfood",
+      "Pfanne",
+      "einfrierbar"
+    ],
     "milkMeal": "small",
     "searchAliases": [],
     "hardMinMonths": 6,
@@ -1238,16 +1908,36 @@ const RECIPES = [
   {
     "name": "Obst-Joghurt-Hafer-Ofenbites",
     "category": "baking",
-    "requires": ["Naturjoghurt", "Hafer", "Ei"],
-    "oneOf": ["Apfel", "Birne", "Banane", "Pfirsich", "Aprikose", "Pflaume", "Mango"],
+    "requires": [
+      "Naturjoghurt",
+      "Hafer",
+      "Ei"
+    ],
+    "oneOf": [
+      "Apfel",
+      "Birne",
+      "Banane",
+      "Pfirsich",
+      "Aprikose",
+      "Pflaume",
+      "Mango"
+    ],
     "stage": 3,
     "batch": "8 weiche Bites",
     "ingredients": "Naturjoghurt, Hafer, Ei und Obst nach Auswahl",
-    "note": "Obst fein zerdrücken oder pürieren und mit Naturjoghurt, Hafer und Ei zu einer gleichmäßigen Masse verrühren. In einer flachen Form vollständig, aber weich backen, nicht austrocknen lassen und in gut greifbare Stücke schneiden.",
+    "note": "In einer flachen Form weich backen, nicht austrocknen lassen und in gut greifbare Stücke schneiden.",
     "freezable": true,
     "freezerNote": "Einzeln vorfrieren und portionsweise auftauen.",
-    "searchAliases": ["Apfel Joghurt Ofenbites", "Obst Hafer Joghurt Bites", "Marille"],
-    "tags": ["Fingerfood", "Backen", "einfrierbar"],
+    "searchAliases": [
+      "Apfel Joghurt Ofenbites",
+      "Obst Hafer Joghurt Bites",
+      "Marille"
+    ],
+    "tags": [
+      "Fingerfood",
+      "Backen",
+      "einfrierbar"
+    ],
     "milkMeal": "small",
     "hardMinMonths": 6,
     "minMonths": 6,
@@ -1256,14 +1946,23 @@ const RECIPES = [
   {
     "name": "Zucchini-Joghurt-Hafer-Bites",
     "category": "baking",
-    "requires": ["Zucchini", "Naturjoghurt", "Hafer", "Ei"],
+    "requires": [
+      "Zucchini",
+      "Naturjoghurt",
+      "Hafer",
+      "Ei"
+    ],
     "stage": 3,
     "batch": "8 weiche Bites",
     "ingredients": "fein geriebene Zucchini, Naturjoghurt, Hafer und Ei",
-    "note": "Geriebene Zucchini bei Bedarf leicht ausdrücken und mit Naturjoghurt, Hafer und Ei zu einer gleichmäßigen Masse verrühren. Flach ausstreichen und vollständig, aber weich backen; keine harte Kruste entstehen lassen. In gut greifbare Stücke schneiden.",
+    "note": "Flach und weich backen; vollständig durchgaren, aber keine harte Kruste entstehen lassen.",
     "freezable": true,
     "freezerNote": "Einzeln vorfrieren und portionsweise auftauen.",
-    "tags": ["Fingerfood", "Backen", "einfrierbar"],
+    "tags": [
+      "Fingerfood",
+      "Backen",
+      "einfrierbar"
+    ],
     "milkMeal": "small",
     "searchAliases": [],
     "hardMinMonths": 6,
@@ -1273,14 +1972,22 @@ const RECIPES = [
   {
     "name": "Joghurt-Hafer-Waffeln",
     "category": "baking",
-    "requires": ["Naturjoghurt", "Hafer", "Ei"],
+    "requires": [
+      "Naturjoghurt",
+      "Hafer",
+      "Ei"
+    ],
     "stage": 4,
     "batch": "4 kleine weiche Waffeln",
     "ingredients": "Naturjoghurt, fein gemahlener Hafer und Ei",
-    "note": "Naturjoghurt, fein gemahlenen Hafer und Ei zu einem glatten Teig verrühren. Im Waffeleisen vollständig, aber nur hell und weich ausbacken; harte Kanten abschneiden und vor dem Servieren auf leichte Zerdrückbarkeit prüfen.",
+    "note": "Im Waffeleisen nur hell und weich ausbacken; harte Kanten abschneiden.",
     "freezable": true,
     "freezerNote": "Mit Backpapier getrennt einfrieren.",
-    "tags": ["Snack", "Backen", "einfrierbar"],
+    "tags": [
+      "Snack",
+      "Backen",
+      "einfrierbar"
+    ],
     "milkMeal": "small",
     "minMonths": 10,
     "searchAliases": [],
@@ -1290,14 +1997,22 @@ const RECIPES = [
   {
     "name": "Weiche Joghurt-Fladen",
     "category": "baking",
-    "requires": ["Naturjoghurt", "Weizen", "Ei"],
+    "requires": [
+      "Naturjoghurt",
+      "Weizen",
+      "Ei"
+    ],
     "stage": 4,
     "batch": "6 kleine Fladen",
     "ingredients": "Naturjoghurt, Weizenmehl oder feiner Grieß und Ei",
-    "note": "Naturjoghurt mit Weizenmehl oder feinem Grieß und Ei zu einem weichen, gleichmäßigen Teig verrühren. Kleine flache Portionen vollständig, aber weich backen; keine harte oder dunkle Kruste entstehen lassen.",
+    "note": "Kleine flache Portionen vollständig, aber weich backen. Keine harte oder dunkle Kruste.",
     "freezable": true,
     "freezerNote": "Einzeln vorfrieren und portionsweise auftauen.",
-    "tags": ["Snack", "Backen", "einfrierbar"],
+    "tags": [
+      "Snack",
+      "Backen",
+      "einfrierbar"
+    ],
     "milkMeal": "small",
     "minMonths": 10,
     "searchAliases": [],
@@ -1307,53 +2022,100 @@ const RECIPES = [
   {
     "name": "Gemüse-Joghurt-Mini-Muffins",
     "category": "baking",
-    "requires": ["Naturjoghurt", "Hafer", "Ei"],
-    "oneOf": ["Zucchini", "Karotte", "Brokkoli", "Süßkartoffel"],
+    "requires": [
+      "Naturjoghurt",
+      "Hafer",
+      "Ei"
+    ],
+    "oneOf": [
+      "Zucchini",
+      "Karotte",
+      "Brokkoli",
+      "Süßkartoffel"
+    ],
     "stage": 4,
     "batch": "8 Mini-Muffins",
     "ingredients": "pasteurisierter ungesüßter Naturjoghurt, Hafer, Ei und sehr fein vorbereitetes Gemüse nach Auswahl",
-    "note": "Das gewählte Gemüse sehr weich garen und fein vorbereiten. Mit Naturjoghurt, Hafer und Ei zu einem gleichmäßigen Teig verrühren, in Mini-Formen füllen und ohne Salz oder Zucker vollständig backen. Innen saftig halten und keine harte Kruste entstehen lassen.",
+    "note": "Ohne Salz oder Zucker vollständig backen, innen saftig halten und keine harte Kruste entstehen lassen. Vor dem Servieren auf leichte Zerdrückbarkeit prüfen.",
     "freezable": true,
     "freezerNote": "Einzeln vorfrieren und portionsweise auftauen.",
-    "tags": ["Snack", "Backen", "einfrierbar"],
+    "tags": [
+      "Snack",
+      "Backen",
+      "einfrierbar"
+    ],
     "milkMeal": "small",
     "minMonths": 10,
-    "legacyNames": ["Gemüse-Joghurt-Mini-Muffins", "Zucchini-Joghurt-Muffins"],
-    "searchAliases": ["Gemüse-Joghurt-Mini-Muffins", "Zucchini-Joghurt-Muffins"],
+    "legacyNames": [
+      "Gemüse-Joghurt-Mini-Muffins",
+      "Zucchini-Joghurt-Muffins"
+    ],
+    "searchAliases": [
+      "Gemüse-Joghurt-Mini-Muffins",
+      "Zucchini-Joghurt-Muffins"
+    ],
     "family": true,
     "familyLabel": "4 Gemüsevarianten",
-    "variantLabels": ["Zucchini", "Karotte", "Brokkoli", "Süßkartoffel"],
+    "variantLabels": [
+      "Zucchini",
+      "Karotte",
+      "Brokkoli",
+      "Süßkartoffel"
+    ],
     "hardMinMonths": 6,
     "skillRequirement": "Kann weiche kompakte Fingerfoodstücke sicher abbeißen und kauen. Das Stück muss zwischen zwei Fingern leicht zerdrückbar sein; nur aufrecht sitzend und direkt beaufsichtigt anbieten."
   },
   {
     "name": "Huhn-Gemüse-Muffins",
     "category": "baking",
-    "requires": ["Huhn", "Hafer", "Ei"],
-    "oneOf": ["Zucchini", "Karotte", "Brokkoli", "Süßkartoffel"],
+    "requires": [
+      "Huhn",
+      "Hafer",
+      "Ei"
+    ],
+    "oneOf": [
+      "Zucchini",
+      "Karotte",
+      "Brokkoli",
+      "Süßkartoffel"
+    ],
     "stage": 4,
     "batch": "8 Mini-Muffins",
     "ingredients": "vollständig gegartes fein zerkleinertes Huhn, Hafer, Ei und Gemüse",
-    "note": "Das vollständig gegarte Huhn fein zerkleinern und das gewählte Gemüse sehr weich garen und fein vorbereiten. Beides mit Hafer und Ei zu einer gleichmäßigen Masse verrühren, in Mini-Formen füllen und vollständig backen. Innen saftig halten und keine harte Kruste entstehen lassen.",
+    "note": "Kleine Muffins vollständig durchgaren und saftig halten; keine harte Kruste.",
     "freezable": true,
     "freezerNote": "Einzeln vorfrieren und vollständig erwärmen.",
-    "tags": ["Snack", "Backen", "einfrierbar"],
+    "tags": [
+      "Snack",
+      "Backen",
+      "einfrierbar"
+    ],
     "minMonths": 11,
-    "excludeMeals": ["breakfast"],
+    "excludeMeals": [
+      "breakfast"
+    ],
     "searchAliases": [],
     "skillRequirement": "Kann weiche kompakte Fingerfoodstücke sicher abbeißen und kauen. Das Stück muss zwischen zwei Fingern leicht zerdrückbar sein; nur aufrecht sitzend und direkt beaufsichtigt anbieten."
   },
   {
     "name": "Süßkartoffel-Linsen-Muffins",
     "category": "baking",
-    "requires": ["Süßkartoffel", "Rote Linsen", "Hafer"],
+    "requires": [
+      "Süßkartoffel",
+      "Rote Linsen",
+      "Hafer"
+    ],
     "stage": 4,
     "batch": "8 Mini-Muffins",
     "ingredients": "Süßkartoffelpüree, sehr weich gekochte rote Linsen und Hafer",
-    "note": "Süßkartoffelpüree mit den sehr weich gekochten roten Linsen und Hafer zu einem feuchten, gleichmäßigen Teig vermengen. In kleine Formen füllen und vollständig, aber weich backen; nicht austrocknen lassen.",
+    "note": "Zu einem feuchten Teig mischen, vollständig backen und weich halten.",
     "freezable": true,
     "freezerNote": "Einzeln vorfrieren und portionsweise auftauen.",
-    "tags": ["Snack", "Backen", "einfrierbar"],
+    "tags": [
+      "Snack",
+      "Backen",
+      "einfrierbar"
+    ],
     "minMonths": 10,
     "searchAliases": [],
     "skillRequirement": "Kann weiche kompakte Fingerfoodstücke sicher abbeißen und kauen. Das Stück muss zwischen zwei Fingern leicht zerdrückbar sein; nur aufrecht sitzend und direkt beaufsichtigt anbieten."
@@ -1361,60 +2123,240 @@ const RECIPES = [
   {
     "name": "Fleisch-Gemüse-Bällchen",
     "category": "balls",
-    "requires": ["Rind", "Karotte", "Kartoffel"],
+    "requires": [
+      "Rind",
+      "Karotte",
+      "Kartoffel"
+    ],
     "stage": 4,
     "batch": "8 kleine weiche Bällchen",
     "ingredients": "mageres Faschiertes und weich gegartes Gemüse beziehungsweise Kartoffel nach Variante",
     "note": "Kleine flache oder längliche Stücke statt fester runder Kugeln formen. Vollständig durchgaren, saftig halten, harte Kruste vermeiden und vor dem Servieren auf leichte Zerdrückbarkeit prüfen.",
     "freezable": true,
     "freezerNote": "Einzeln vorfrieren und vollständig erwärmen.",
-    "tags": ["Snack", "Fingerfood", "einfrierbar"],
+    "tags": [
+      "Snack",
+      "Fingerfood",
+      "einfrierbar"
+    ],
     "minMonths": 11,
-    "alternatives": [["Pute", "Süßkartoffel"]],
-    "legacyNames": ["Rind-Karotte-Kartoffel-Bällchen", "Pute-Süßkartoffel-Bällchen"],
-    "searchAliases": ["Rind-Karotte-Kartoffel-Bällchen", "Pute-Süßkartoffel-Bällchen"],
+    "alternatives": [
+      [
+        "Pute",
+        "Süßkartoffel"
+      ]
+    ],
+    "legacyNames": [
+      "Rind-Karotte-Kartoffel-Bällchen",
+      "Pute-Süßkartoffel-Bällchen"
+    ],
+    "searchAliases": [
+      "Rind-Karotte-Kartoffel-Bällchen",
+      "Pute-Süßkartoffel-Bällchen"
+    ],
     "family": true,
     "familyLabel": "2 Fleischvarianten",
-    "variantLabels": ["Rind + Karotte + Kartoffel", "Pute + Süßkartoffel"],
+    "variantLabels": [
+      "Rind + Karotte + Kartoffel",
+      "Pute + Süßkartoffel"
+    ],
     "skillRequirement": "Kann weiche kompakte Fingerfoodstücke sicher abbeißen und kauen. Das Stück muss zwischen zwei Fingern leicht zerdrückbar sein; nur aufrecht sitzend und direkt beaufsichtigt anbieten."
   },
   {
     "name": "Gemüse-Fleisch-Nockerl",
     "category": "family",
-    "requires": ["Huhn", "Zucchini", "Weizen", "Ei", "Rapsöl"],
+    "requires": [
+      "Huhn",
+      "Zucchini",
+      "Weizen",
+      "Ei",
+      "Rapsöl"
+    ],
     "stage": 3,
     "batch": "12–16 kleine weiche Nockerl",
     "ingredients": "vollständig gegartes fein zerkleinertes Huhn, sehr weich gegarte Zucchini, Weizenmehl oder feiner Weizengrieß, Ei und wenig Rapsöl; Varianten mit Rind und Karotte oder roten Linsen und Süßkartoffel",
     "note": "Fleisch beziehungsweise Linsen und Gemüse vollständig garen und sehr fein vorbereiten. Mit Ei, Weizen und wenig Rapsöl zu einem weichen Teig verrühren. Kleine Nockerl in siedendem Wasser vollständig garen, ein Stück aufschneiden und die weiche, durchgegarte Konsistenz prüfen. Als weiche Stücke anbieten oder bei Bedarf zerdrücken.",
     "freezable": true,
     "freezerNote": "Gegarte Nockerl einzeln vorfrieren, portionsweise verpacken und nach dem Auftauen vollständig erwärmen.",
-    "tags": ["Fingerfood", "Familiengericht", "einfrierbar"],
-    "alternatives": [["Rind", "Karotte", "Weizen", "Ei", "Rapsöl"], ["Rote Linsen", "Süßkartoffel", "Weizen", "Ei", "Rapsöl"]],
-    "searchAliases": ["Huhn-Zucchini-Nockerl", "Rind-Karotten-Nockerl", "Linsen-Süßkartoffel-Nockerl", "Gemüse-Fleisch-Spätzle", "Baby-Spätzle"],
+    "tags": [
+      "Fingerfood",
+      "Familiengericht",
+      "einfrierbar"
+    ],
+    "alternatives": [
+      [
+        "Rind",
+        "Karotte",
+        "Weizen",
+        "Ei",
+        "Rapsöl"
+      ],
+      [
+        "Rote Linsen",
+        "Süßkartoffel",
+        "Weizen",
+        "Ei",
+        "Rapsöl"
+      ]
+    ],
+    "searchAliases": [
+      "Huhn-Zucchini-Nockerl",
+      "Rind-Karotten-Nockerl",
+      "Linsen-Süßkartoffel-Nockerl",
+      "Gemüse-Fleisch-Spätzle",
+      "Baby-Spätzle"
+    ],
     "family": true,
     "familyLabel": "3 Varianten",
-    "variantLabels": ["Huhn + Zucchini", "Rind + Karotte", "Rote Linsen + Süßkartoffel"],
+    "variantLabels": [
+      "Huhn + Zucchini",
+      "Rind + Karotte",
+      "Rote Linsen + Süßkartoffel"
+    ],
     "skillRequirement": "Kann sehr weiche Stücke sicher im Mund bewegen und kauen. Die Nockerl müssen vollständig durchgegart sein und sich zwischen zwei Fingern leicht zerdrücken lassen; nur aufrecht sitzend und direkt beaufsichtigt anbieten."
   },
   {
     "name": "Bohnen-Kartoffel-Stampf",
     "category": "family",
-    "requires": ["Kartoffel"],
+    "requires": [
+      "Kartoffel"
+    ],
     "stage": 2,
     "batch": "4–6 kleine Portionen",
     "ingredients": "sehr weich gekochte Kartoffel und sehr weich gegarte weiße oder schwarze Bohnen ohne zugesetztes Salz; optional wenig Rapsöl",
     "note": "Bohnen vollständig weich garen, bei Bedarf Schalen entfernen und gemeinsam mit Kartoffel fein zerdrücken. Je nach aktueller Konsistenzstufe glatt, grob gestampft oder mit sehr weichen kleinen Stückchen anbieten. Keine gesüßten oder stark gesalzenen Bohnenkonserven verwenden.",
     "freezable": true,
     "freezerNote": "In kleinen Portionen einfrieren, vollständig auftauen und gleichmäßig erwärmen.",
-    "tags": ["Löffelgericht", "Hülsenfrüchte", "Meal Prep"],
-    "oneOf": ["Weiße Bohnen", "Schwarze Bohnen"],
-    "searchAliases": ["Weiße-Bohnen-Kartoffel-Stampf", "Schwarze-Bohnen-Kartoffel-Stampf", "Bohnen-Kartoffel-Brei"],
+    "tags": [
+      "Löffelgericht",
+      "Hülsenfrüchte",
+      "Meal Prep"
+    ],
+    "oneOf": [
+      "Weiße Bohnen",
+      "Schwarze Bohnen"
+    ],
+    "searchAliases": [
+      "Weiße-Bohnen-Kartoffel-Stampf",
+      "Schwarze-Bohnen-Kartoffel-Stampf",
+      "Bohnen-Kartoffel-Brei"
+    ],
     "family": true,
     "familyLabel": "2 Bohnenvarianten",
-    "variantLabels": ["Weiße Bohnen", "Schwarze Bohnen"]
+    "variantLabels": [
+      "Weiße Bohnen",
+      "Schwarze Bohnen"
+    ]
   }
 ];
 
 const LEGACY_RECIPE_NAMES = [
-  "Banane-Hafer-Pancakes", "Apfel-Hafer-Pancakes", "Birne-Hirse-Pancakes", "Kürbis-Hafer-Pancakes", "Zucchini-Hafer-Pancakes", "Süßkartoffel-Pancakes", "Mango-Hafer-Pancakes", "Ube-Bananen-Pancakes", "Rind-Hafer-Bällchen", "Huhn-Zucchini-Hafer-Bällchen", "Pute-Karotten-Bällchen", "Lachs-Kartoffel-Bällchen", "Rote-Linsen-Gemüsebällchen", "Tofu-Brokkoli-Bällchen", "Brokkoli-Kartoffel-Taler", "Zucchini-Hafer-Puffer", "Kichererbsen-Kürbis-Taler", "Rote-Linsen-Bratlinge", "Polenta-Gemüse-Sticks", "Süßkartoffel-Hirse-Sticks", "Omelettstreifen", "Zucchini-Omelett", "Obst-Haferbrei", "Obst-Hirsebrei", "Obst-Polentabrei", "Obst-Reisbrei", "Obst-Quinoabrei", "Obst-Buchweizenbrei", "Obst-Grießbrei", "Milch-Getreide-Brei", "Baby-Bananenbrot", "Kürbis-Hafer-Brei", "Gemüse-Nudel-Sauce", "Baby-Linsen-Bolognese", "Lugaw-Basis", "Kürbis-Lugaw", "Monggo-Kalabasa-Brei", "Tinola-inspiriert", "Arroz-caldo-inspiriert", "Kalabasa mit Kokos", "Tilapia-Reis-Brei", "Bangus-Kartoffel-Taler", "Bananen-Hafer-Muffins", "Obst-Hafer-Muffins", "Zucchini-Hafer-Muffins", "Kürbis-Hirse-Muffins", "Karotten-Polenta-Brei", "Süßkartoffel-Rote-Linsen-Brei", "Zucchini-Quinoa-Brei", "Kichererbsenmehl-Zucchini-Taler", "Bananen-Haferbrei mit Erdnussmus", "Karotten-Hirse-Brei mit Tahin", "Apfel-Hirse-Brei mit Mandelmus", "Apfel-Birnen-Kompott", "Karotte-Süßkartoffel-Brei", "Brokkoli-Kartoffel-Stampf", "Karfiol-Kartoffel-Stampf", "Zucchini-Kartoffel-Brei", "Erbsen-Kartoffel-Stampf", "Kürbis-Linsen-Suppe", "Mildes Rote-Linsen-Dhal", "Huhn-Karotte-Nudel-Topf", "Huhn-Lauch-Kartoffel-Topf", "Huhn-Brokkoli-Reis", "Rind-Gemüse-Bolognese", "Tomaten-Linsen-Sauce", "Brokkoli-Linsen-Pasta", "Gemüse-Pasta mit Zucchini und Tomate", "Lachs-Reis-Erbsen", "Lachs-Süßkartoffel-Stampf", "Kabeljau-Tomaten-Gemüse", "Weiches Rührei", "Eier-Finger", "Paprika-Omelettstreifen", "Ei-Champignon-Cups", "Hummus mit weichen Gemüsesticks", "Kürbis-Kichererbsen-Creme", "Avocado-Bananen-Creme", "Buchweizen-Bananen-Pancakes", "Polenta-Zucchini-Sticks", "Süßkartoffel-Linsen-Taler", "Tofu-Zucchini-Reis", "Gebackene Saba-Banane", "Huhn-Lugaw", "Sayote-Huhn-Reis", "Monggo-Süßkartoffel-Brei", "Ube-Hafer-Brei", "Obst-Joghurt", "Obst-Hafer-Joghurt", "Obst-Hirse-Joghurt", "Obst-Grieß-Joghurt", "Buttermilch-Hafer-Obstbrei", "Buttermilch-Hirse-Obstbrei", "Buttermilch-Grieß-Obstbrei", "Joghurt-Hafer-Bananenbrei", "Joghurt-Nussmus-Miniportion", "Bananen-Joghurt-Hafer-Pancakes", "Obst-Joghurt-Hafer-Ofenbites", "Zucchini-Joghurt-Hafer-Bites", "Joghurt-Hafer-Waffeln", "Weiche Joghurt-Fladen", "Gemüse-Joghurt-Mini-Muffins", "Huhn-Gemüse-Muffins", "Ei-Hafer-Gemüse-Muffins", "Süßkartoffel-Linsen-Muffins", "Zucchini-Joghurt-Muffins", "Rind-Karotte-Kartoffel-Bällchen", "Pute-Süßkartoffel-Bällchen"
+  "Banane-Hafer-Pancakes",
+  "Apfel-Hafer-Pancakes",
+  "Birne-Hirse-Pancakes",
+  "Kürbis-Hafer-Pancakes",
+  "Zucchini-Hafer-Pancakes",
+  "Süßkartoffel-Pancakes",
+  "Mango-Hafer-Pancakes",
+  "Ube-Bananen-Pancakes",
+  "Rind-Hafer-Bällchen",
+  "Huhn-Zucchini-Hafer-Bällchen",
+  "Pute-Karotten-Bällchen",
+  "Lachs-Kartoffel-Bällchen",
+  "Rote-Linsen-Gemüsebällchen",
+  "Tofu-Brokkoli-Bällchen",
+  "Brokkoli-Kartoffel-Taler",
+  "Zucchini-Hafer-Puffer",
+  "Kichererbsen-Kürbis-Taler",
+  "Rote-Linsen-Bratlinge",
+  "Polenta-Gemüse-Sticks",
+  "Süßkartoffel-Hirse-Sticks",
+  "Omelettstreifen",
+  "Zucchini-Omelett",
+  "Obst-Haferbrei",
+  "Obst-Hirsebrei",
+  "Obst-Polentabrei",
+  "Obst-Reisbrei",
+  "Obst-Quinoabrei",
+  "Obst-Buchweizenbrei",
+  "Obst-Grießbrei",
+  "Milch-Getreide-Brei",
+  "Baby-Bananenbrot",
+  "Kürbis-Hafer-Brei",
+  "Gemüse-Nudel-Sauce",
+  "Baby-Linsen-Bolognese",
+  "Lugaw-Basis",
+  "Kürbis-Lugaw",
+  "Monggo-Kalabasa-Brei",
+  "Tinola-inspiriert",
+  "Arroz-caldo-inspiriert",
+  "Kalabasa mit Kokos",
+  "Tilapia-Reis-Brei",
+  "Bangus-Kartoffel-Taler",
+  "Bananen-Hafer-Muffins",
+  "Obst-Hafer-Muffins",
+  "Zucchini-Hafer-Muffins",
+  "Kürbis-Hirse-Muffins",
+  "Karotten-Polenta-Brei",
+  "Süßkartoffel-Rote-Linsen-Brei",
+  "Zucchini-Quinoa-Brei",
+  "Kichererbsenmehl-Zucchini-Taler",
+  "Bananen-Haferbrei mit Erdnussmus",
+  "Karotten-Hirse-Brei mit Tahin",
+  "Apfel-Hirse-Brei mit Mandelmus",
+  "Apfel-Birnen-Kompott",
+  "Karotte-Süßkartoffel-Brei",
+  "Brokkoli-Kartoffel-Stampf",
+  "Karfiol-Kartoffel-Stampf",
+  "Zucchini-Kartoffel-Brei",
+  "Erbsen-Kartoffel-Stampf",
+  "Kürbis-Linsen-Suppe",
+  "Mildes Rote-Linsen-Dhal",
+  "Huhn-Karotte-Nudel-Topf",
+  "Huhn-Lauch-Kartoffel-Topf",
+  "Huhn-Brokkoli-Reis",
+  "Rind-Gemüse-Bolognese",
+  "Tomaten-Linsen-Sauce",
+  "Brokkoli-Linsen-Pasta",
+  "Gemüse-Pasta mit Zucchini und Tomate",
+  "Lachs-Reis-Erbsen",
+  "Lachs-Süßkartoffel-Stampf",
+  "Kabeljau-Tomaten-Gemüse",
+  "Weiches Rührei",
+  "Eier-Finger",
+  "Paprika-Omelettstreifen",
+  "Ei-Champignon-Cups",
+  "Hummus mit weichen Gemüsesticks",
+  "Kürbis-Kichererbsen-Creme",
+  "Avocado-Bananen-Creme",
+  "Buchweizen-Bananen-Pancakes",
+  "Polenta-Zucchini-Sticks",
+  "Süßkartoffel-Linsen-Taler",
+  "Tofu-Zucchini-Reis",
+  "Gebackene Saba-Banane",
+  "Huhn-Lugaw",
+  "Sayote-Huhn-Reis",
+  "Monggo-Süßkartoffel-Brei",
+  "Ube-Hafer-Brei",
+  "Obst-Joghurt",
+  "Obst-Hafer-Joghurt",
+  "Obst-Hirse-Joghurt",
+  "Obst-Grieß-Joghurt",
+  "Buttermilch-Hafer-Obstbrei",
+  "Buttermilch-Hirse-Obstbrei",
+  "Buttermilch-Grieß-Obstbrei",
+  "Joghurt-Hafer-Bananenbrei",
+  "Joghurt-Nussmus-Miniportion",
+  "Bananen-Joghurt-Hafer-Pancakes",
+  "Obst-Joghurt-Hafer-Ofenbites",
+  "Zucchini-Joghurt-Hafer-Bites",
+  "Joghurt-Hafer-Waffeln",
+  "Weiche Joghurt-Fladen",
+  "Gemüse-Joghurt-Mini-Muffins",
+  "Huhn-Gemüse-Muffins",
+  "Ei-Hafer-Gemüse-Muffins",
+  "Süßkartoffel-Linsen-Muffins",
+  "Zucchini-Joghurt-Muffins",
+  "Rind-Karotte-Kartoffel-Bällchen",
+  "Pute-Süßkartoffel-Bällchen"
 ];

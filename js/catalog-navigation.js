@@ -59,9 +59,17 @@
     return recipeCatalogMealEligible(recipe, "lunch") || recipeCatalogMealEligible(recipe, "dinner");
   }
 
+  function recipeCatalogFilterBars() {
+    return [
+      document.getElementById("recipeMealFilter"),
+      document.getElementById("recipeFilter"),
+    ].filter(Boolean);
+  }
+
   function installRecipeMealFilters() {
     const filterBar = document.getElementById("recipeFilter");
-    if (!filterBar || filterBar.querySelector('[data-recipe-filter="breakfast"]')) return;
+    const categoryField = filterBar?.closest(".recipe-filter-field");
+    if (!filterBar || !categoryField || document.getElementById("recipeMealFilter")) return;
 
     const breakfast = document.createElement("button");
     breakfast.type = "button";
@@ -73,12 +81,21 @@
     mainMeal.dataset.recipeFilter = "main";
     mainMeal.textContent = "Hauptmahlzeit";
 
-    const snack = filterBar.querySelector('[data-recipe-filter="snack"]');
-    if (snack) snack.before(breakfast, mainMeal);
-    else filterBar.append(breakfast, mainMeal);
+    const mealField = document.createElement("div");
+    mealField.className = "field recipe-meal-filter-field";
+    const mealLabel = document.createElement("label");
+    mealLabel.textContent = "Mahlzeit";
+    const mealBar = document.createElement("div");
+    mealBar.className = "seg recipe-meal-filters";
+    mealBar.id = "recipeMealFilter";
+    mealBar.setAttribute("role", "group");
+    mealBar.setAttribute("aria-label", "Rezeptmahlzeit");
 
-    const label = filterBar.closest(".recipe-filter-field")?.querySelector(":scope > label");
-    if (label) label.textContent = "Mahlzeit & Kategorie";
+    mealBar.append(breakfast, mainMeal);
+    const snack = filterBar.querySelector('[data-recipe-filter="snack"]');
+    if (snack) mealBar.append(snack);
+    mealField.append(mealLabel, mealBar);
+    categoryField.before(mealField);
   }
 
   function recipeCatalogSearchTerms(recipe) {
@@ -174,15 +191,15 @@
   }
 
   function renderRecipeCatalog() {
-    const filterBar = document.getElementById("recipeFilter");
+    const filterBars = recipeCatalogFilterBars();
     const search = document.getElementById("recipeSearch");
     if (!document.getElementById("recipeList")) return;
 
-    if (filterBar) {
+    filterBars.forEach((filterBar) => {
       filterBar.querySelectorAll("[data-recipe-filter]").forEach((button) =>
         button.classList.toggle("active", button.dataset.recipeFilter === recipeFilter),
       );
-    }
+    });
     if (search) search.value = recipeQuery;
 
     const query = normalizeName(recipeQuery);
@@ -230,11 +247,13 @@
       else recipeFilter = "available";
       renderRecipeCatalog();
     });
-    filterBar?.querySelectorAll("[data-recipe-filter]").forEach((button) => {
-      button.onclick = () => {
-        recipeFilter = button.dataset.recipeFilter;
-        renderRecipeCatalog();
-      };
+    filterBars.forEach((filterBar) => {
+      filterBar.querySelectorAll("[data-recipe-filter]").forEach((button) => {
+        button.onclick = () => {
+          recipeFilter = button.dataset.recipeFilter;
+          renderRecipeCatalog();
+        };
+      });
     });
     if (search) {
       search.oninput = (event) => {

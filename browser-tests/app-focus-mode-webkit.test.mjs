@@ -50,6 +50,14 @@ async function waitForApp(page) {
   );
 }
 
+async function waitForPersistedFocus(page, expectedMode) {
+  await page.waitForFunction(async (mode) => {
+    if (typeof idbGet !== "function" || typeof STATE_RECORD === "undefined") return false;
+    const persisted = await idbGet(STATE_RECORD).catch(() => null);
+    return persisted?.settings?.appFocusMode === mode;
+  }, expectedMode);
+}
+
 async function navLabels(page) {
   return page.locator("nav button[data-view]").evaluateAll((buttons) =>
     buttons.map((button) => button.textContent.trim()),
@@ -140,7 +148,7 @@ try {
   assert.deepEqual(await navLabels(page), everydayNav, "Alltag-&-Rezepte-Navigation muss exakt in der freigegebenen Reihenfolge erscheinen");
   assert.deepEqual(await plannerMealSnapshot(page, plannerKey), plannerBefore, "Fokuswechsel darf Planner-Mahlzeitendaten nicht verändern");
 
-  await page.waitForTimeout(150);
+  await waitForPersistedFocus(page, "everyday-recipes");
   await page.reload({ waitUntil: "load" });
   await waitForApp(page);
   await page.waitForFunction(() => window.__beikostTest.getState().settings.appFocusMode === "everyday-recipes");
@@ -171,7 +179,7 @@ try {
   assert.equal(await page.locator("#foodsCatalogSection").isVisible(), true, "Planen-&-Dokumentieren muss den bisherigen Lebensmittel-Standardmodus wiederherstellen");
   assert.equal(await page.locator("#recipesSection").isHidden(), true, "Planen-&-Dokumentieren darf nicht im Rezeptmodus hängen bleiben");
 
-  await page.waitForTimeout(150);
+  await waitForPersistedFocus(page, "planning-documentation");
   await page.reload({ waitUntil: "load" });
   await waitForApp(page);
   assert.equal(

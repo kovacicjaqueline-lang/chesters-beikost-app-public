@@ -11,7 +11,7 @@ const mimeTypes = {
   ".js": "text/javascript; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".json": "application/json; charset=utf-8",
-  ".webmanifest": "application/manifest+json; charset=utf-8",
+  ".webmanifest": "application/manifest+json",
   ".svg": "image/svg+xml",
   ".png": "image/png",
   ".webp": "image/webp",
@@ -94,7 +94,7 @@ try {
   });
 
   await page.locator('nav button[data-view="more"]').click();
-  await page.locator("#logDetails > summary").click();
+  await page.locator('.more-nav-row[data-more-target="logSection"]').click();
   const copyButton = page.locator('.log-entry[data-log="copy-source"] .copyLog');
   await copyButton.waitFor();
   assert.equal(await copyButton.getAttribute("aria-label"), "Essen kopieren");

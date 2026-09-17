@@ -16,9 +16,9 @@
     "Allergen wiederholen",
     "manuell",
   ]);
-  const MAX_ALTERNATIVES = 12;
-  const MAX_FOCUS_CANDIDATES = 16;
-  const MAX_VARIANTS_PER_FOCUS = 4;
+  const MAX_ALTERNATIVES = 6;
+  const MAX_FOCUS_CANDIDATES = 8;
+  const MAX_VARIANTS_PER_FOCUS = 3;
 
   function canonicalIds(ids) {
     return [...new Set(ids || [])].filter(Boolean).sort();
@@ -127,7 +127,7 @@
       for (const planned of day.meals || []) {
         if (!planned?.active || planned.empty || !planned.focusId) continue;
         const key = swap.slotKey(day.date, planned.meal);
-        if (key === targetKey || state.manualMeals?.[key]?.manualAdded) continue;
+        if (key === targetKey || state.manualMeals?.[key]) continue;
         const existing = state.planLocks[key];
         if (existing?.mode === "manual" || existing?.followUpFoodId) continue;
         const snapshot = mealSnapshot(day.date, planned.meal, planned, "auto");
@@ -228,12 +228,13 @@
           ctx,
           exclude = [],
         ) {
+          const result = liveIntroductionCandidate(concreteMeal, on, ctx, exclude);
           if (
             concreteMeal === meal &&
             on === date &&
-            !exclude.includes(focus.id)
-          ) return { f: focus, type: contract.type };
-          return liveIntroductionCandidate(concreteMeal, on, ctx, exclude);
+            result?.f?.id === focus.id
+          ) return { ...result, type: contract.type };
+          return result;
         };
       }
 
@@ -349,8 +350,8 @@
   function taskPreservingAlternatives(date, meal) {
     if (!date || !meal || date < today()) return { ok: false, reason: "past", alternatives: [] };
     const key = swap.slotKey(date, meal);
-    if (state.manualMeals?.[key]?.manualAdded) {
-      return { ok: false, reason: "manual-added", alternatives: [] };
+    if (state.manualMeals?.[key]) {
+      return { ok: false, reason: "manual", alternatives: [] };
     }
     if (mealIsCompleted(date, meal)) {
       return { ok: false, reason: "completed", alternatives: [] };

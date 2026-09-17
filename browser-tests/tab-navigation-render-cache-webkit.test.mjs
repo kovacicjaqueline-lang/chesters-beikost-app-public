@@ -91,7 +91,7 @@ try {
   const afterFirstOpen = await page.evaluate(() => window.__tabRenderCounts.foods);
   assert.equal(afterFirstOpen, 1, "Der erste Aufruf des Lebensmittel-Tabs muss die Ansicht rendern");
 
-  await activateView(page, "home");
+  await activateView(page, "more");
   await activateView(page, "foods");
   const afterUnchangedRevisit = await page.evaluate(() => window.__tabRenderCounts.foods);
   assert.equal(
@@ -112,7 +112,7 @@ try {
     state.settings.seasonal = !state.settings.seasonal;
     await save();
   });
-  await activateView(page, "home");
+  await activateView(page, "more");
   await activateView(page, "foods");
   const afterSavedStateChange = await page.evaluate(() => window.__tabRenderCounts.foods);
   assert.equal(

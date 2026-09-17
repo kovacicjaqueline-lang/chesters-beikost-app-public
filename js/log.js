@@ -74,6 +74,7 @@ function renderLogsCore() {
               ${l.note ? `<details class="log-note-details"><summary>Notiz</summary><div class="small">${esc(l.note)}</div></details>` : ""}
             </div>
             <div class="log-entry-actions">
+              <button type="button" class="iconbtn copyLog" aria-label="Essen kopieren" title="Kopieren">⧉</button>
               <button class="iconbtn editLog" aria-label="Essen bearbeiten">✎</button>
               <button class="iconbtn deleteLog" aria-label="Löschen">×</button>
             </div>
@@ -88,6 +89,9 @@ function renderLogsCore() {
     more.onclick = () => { logVisibleCount += 10; renderLogs(); };
   }
 
+  document.querySelectorAll(".copyLog").forEach((b) =>
+    b.onclick = () => copyLogEntry(b.closest("[data-log]").dataset.log),
+  );
   document.querySelectorAll(".editLog").forEach((b) =>
     b.onclick = () => editLogEntry(b.closest("[data-log]").dataset.log),
   );
@@ -113,6 +117,22 @@ function renderLogsCore() {
       });
     },
   );
+}
+
+function copyLogEntry(id) {
+  let source = state.logs.find((log) => log.id === id);
+  if (!source) return;
+  let copied = clone(source);
+  delete copied.id;
+  delete copied.createdAt;
+  delete copied.updatedAt;
+  delete copied.reactionFoodId;
+  delete copied.editId;
+  copied.date = today();
+  openLog(copied);
+  pendingLog.__copySource = true;
+  pendingLog.__fromPlan = false;
+  renderLogForm();
 }
 
 function editLogEntry(id) {
@@ -468,9 +488,12 @@ function renderLogForm() {
   p.sampleFoodIds = sampleIds;
   p.baseFoodIds = [...new Set((p.baseFoodIds || []).filter((id) => mainIds.includes(id)))];
   if (!p.baseFoodIds.length) p.baseFoodIds = [...mainIds];
-  document.getElementById("logTitle").textContent = p.editId ? "Essen bearbeiten" : "Essen eintragen";
+  document.getElementById("logTitle").textContent = p.editId ? "Essen bearbeiten" : (p.__copySource ? "Essen kopieren" : "Essen eintragen");
   let subtitle = document.getElementById("logSubtitle");
-  if (subtitle) { subtitle.textContent = ""; subtitle.hidden = true; }
+  if (subtitle) {
+    subtitle.textContent = p.__copySource ? "Aus dem Protokoll übernommen. Prüfe Datum und Bewertung vor dem Speichern." : "";
+    subtitle.hidden = !p.__copySource;
+  }
   let stockedSelected = selected.filter((f) => inventoryPortions(f.id) > 0);
   selectedInventoryFoods = new Set([...selectedInventoryFoods].filter((id) => stockedSelected.some((f) => f.id === id)));
   let recipeItem = selectedRecipeInventoryId ? state.inventory.find((item) => item.id === selectedRecipeInventoryId) : null;
@@ -509,7 +532,7 @@ function renderLogForm() {
     <details class="accordion"><summary>Notiz ergänzen</summary><div class="field"><label>Notiz oder Reaktion</label><textarea id="logNote">${esc(p.note || "")}</textarea></div></details>
     ${!p.editId && recipeItem ? `<div class="field"><label>Aus dem Rezeptvorrat verwendet</label><label class="toggleline"><input class="ds-toggle-input" type="checkbox" id="useRecipeInventory" checked><span class="toggle-copy"><b>1 ${esc(recipeItem.size || "Portion")} ${esc(recipeItem.recipeName)}</b><span class="small">Eingefroren am ${shortDate(recipeItem.frozenDate)}</span></span><span class="toggle-state" aria-hidden="true"></span></label></div>` : ""}
     ${!p.editId && !recipeItem && stockedSelected.length ? `<div class="field"><label>Aus dem Gefriervorrat verwendet</label><div class="chips">${stockedSelected.map((f) => `<label class="chip toggle-chip"><input class="ds-toggle-input" type="checkbox" data-inventory-food="${f.id}" ${selectedInventoryFoods.has(f.id) ? "checked" : ""}><span>1 Portion ${esc(f.name)} <small>(${inventoryPortions(f.id)} vorhanden)</small></span></label>`).join("")}</div></div>` : ""}
-    <div class="sticky-form-actions"><div class="ds-actionbar"><button class="btn secondary" id="cancelLog" type="button">Abbrechen</button><button class="btn" id="saveLog">${p.editId ? "Änderungen speichern" : "Speichern"}</button></div></div>`;
+    <div class="sticky-form-actions"><div class="ds-actionbar"><button class="btn secondary" id="cancelLog" type="button">Abbrechen</button><button class="btn" id="saveLog">${p.editId ? "Änderungen speichern" : (p.__copySource ? "Kopie speichern" : "Speichern")}</button></div></div>`;
   document.querySelectorAll("#logForm select").forEach((select) => select.addEventListener("change", updateConditionalQuestions));
   document.getElementById("logTexture")?.addEventListener("change", clearLogTextureValidation);
   document.getElementById("logDate").onchange = (event) => requestLogDateChange(event.target.value, p.date);

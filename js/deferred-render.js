@@ -15,6 +15,8 @@ let deferredViewRenderPending = false;
 let deferredViewRenderId = "";
 let deferredViewRenderCallback = null;
 const deferredRenderClickTargets = new WeakSet();
+const tabNavigationClickTargets = new WeakSet();
+let tabNavigationRenderActive = false;
 let viewRenderRevision = 0;
 let viewRenderCacheInstalled = false;
 const renderedViewSignatures = new Map();
@@ -44,6 +46,21 @@ function invalidateViewRenderCache() {
   viewRenderRevision += 1;
 }
 
+function queueTabNavigationRenderEnd() {
+  let finish = () => { tabNavigationRenderActive = false; };
+  if (typeof queueMicrotask === "function") queueMicrotask(finish);
+  else Promise.resolve().then(finish);
+}
+
+function installTabNavigationRenderMarker(button) {
+  if (!button || tabNavigationClickTargets.has(button)) return;
+  tabNavigationClickTargets.add(button);
+  button.addEventListener("click", () => {
+    tabNavigationRenderActive = true;
+    queueTabNavigationRenderEnd();
+  }, true);
+}
+
 function installViewRenderCache() {
   if (viewRenderCacheInstalled || typeof renderView !== "function") return;
 
@@ -51,7 +68,7 @@ function installViewRenderCache() {
   renderView = function renderViewWithCache(viewId, ...args) {
     let id = String(viewId || "home");
     let signature = currentViewRenderSignature(id);
-    if (renderedViewSignatures.get(id) === signature) return;
+    if (tabNavigationRenderActive && renderedViewSignatures.get(id) === signature) return;
     let result = baseRenderView.call(this, viewId, ...args);
     renderedViewSignatures.set(id, currentViewRenderSignature(id));
     return result;
@@ -74,6 +91,10 @@ function installViewRenderCache() {
       return result;
     };
   }
+
+  document
+    .querySelectorAll("nav button[data-view]")
+    .forEach(installTabNavigationRenderMarker);
 
   viewRenderCacheInstalled = true;
 }
@@ -113,7 +134,13 @@ function renderViewAfterNextPaint(viewId, callback) {
     let render = deferredViewRenderCallback;
     deferredViewRenderId = "";
     deferredViewRenderCallback = null;
-    if (typeof render === "function") render(id);
+    if (typeof render !== "function") return;
+    tabNavigationRenderActive = true;
+    try {
+      render(id);
+    } finally {
+      tabNavigationRenderActive = false;
+    }
   });
 }
 

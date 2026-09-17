@@ -26,8 +26,9 @@ test("Flow-Terminologie trennt Planung und tatsächliches Essen", () => {
   assert.ok(uiSource.includes('${isNewManualSlot ? "Mahlzeit hinzufügen" : "Änderungen speichern"}</button>'));
   assert.ok(uiSource.includes('openGeneric(isNewManualSlot ? `Mahlzeit hinzufügen · ${mealName(meal)}` : `Mahlzeit bearbeiten · ${mealName(meal)}`, body)'));
 
-  assert.ok(logSource.includes('document.getElementById("logTitle").textContent = p.editId ? "Essen bearbeiten" : "Essen eintragen";'));
-  assert.ok(logSource.includes('id="saveLog">${p.editId ? "Änderungen speichern" : "Speichern"}</button>'));
+  assert.ok(logSource.includes('document.getElementById("logTitle").textContent = p.editId ? "Essen bearbeiten" : (p.__copySource ? "Essen kopieren" : "Essen eintragen");'));
+  assert.ok(logSource.includes('id="saveLog">${p.editId ? "Änderungen speichern" : (p.__copySource ? "Kopie speichern" : "Speichern")}</button>'));
+  assert.ok(logSource.includes('class="iconbtn copyLog" aria-label="Essen kopieren"'));
   assert.ok(logSource.includes('class="iconbtn editLog" aria-label="Essen bearbeiten"'));
   assert.equal(logSource.includes('class="iconbtn editLog" aria-label="Bearbeiten"'), false);
   assert.equal(logSource.includes('button.textContent = "+ Essen eintragen";'), false);

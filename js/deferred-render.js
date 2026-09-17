@@ -49,7 +49,7 @@ function invalidateViewRenderCache() {
 
 function queueTabNavigationRenderEnd() {
   let finish = () => { tabNavigationRenderActive = false; };
-  if (typeof queueMicrotask === "function") queueMicrotask(finish);
+  if (typeof setTimeout === "function") setTimeout(finish, 0);
   else Promise.resolve().then(finish);
 }
 

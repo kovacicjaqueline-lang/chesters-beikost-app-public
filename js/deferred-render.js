@@ -15,6 +15,68 @@ let deferredViewRenderPending = false;
 let deferredViewRenderId = "";
 let deferredViewRenderCallback = null;
 const deferredRenderClickTargets = new WeakSet();
+let viewRenderRevision = 0;
+let viewRenderCacheInstalled = false;
+const renderedViewSignatures = new Map();
+const cachedViewIds = ["home", "plan", "prep", "foods", "more"];
+
+function currentViewRenderSignature(viewId) {
+  let id = String(viewId || "home");
+  let transient = [];
+  if (id === "foods") {
+    transient.push(
+      typeof foodFilter === "undefined" ? "" : String(foodFilter),
+      typeof foodReorderMode === "undefined" ? "" : String(foodReorderMode),
+      document.getElementById("foodSearch")?.value || "",
+    );
+  } else if (id === "more") {
+    transient.push(
+      typeof statisticsRange === "undefined" ? "" : String(statisticsRange),
+      typeof recipeQuery === "undefined" ? "" : String(recipeQuery),
+      typeof recipeFilter === "undefined" ? "" : String(recipeFilter),
+      typeof logFoodQuery === "undefined" ? "" : String(logFoodQuery),
+    );
+  }
+  return `${viewRenderRevision}|${transient.join("|")}`;
+}
+
+function invalidateViewRenderCache() {
+  viewRenderRevision += 1;
+}
+
+function installViewRenderCache() {
+  if (viewRenderCacheInstalled || typeof renderView !== "function") return;
+
+  let baseRenderView = renderView;
+  renderView = function renderViewWithCache(viewId, ...args) {
+    let id = String(viewId || "home");
+    let signature = currentViewRenderSignature(id);
+    if (renderedViewSignatures.get(id) === signature) return;
+    let result = baseRenderView.call(this, viewId, ...args);
+    renderedViewSignatures.set(id, currentViewRenderSignature(id));
+    return result;
+  };
+
+  if (typeof save === "function") {
+    let baseSave = save;
+    save = function saveWithViewRenderInvalidation(...args) {
+      invalidateViewRenderCache();
+      return baseSave.apply(this, args);
+    };
+  }
+
+  if (typeof renderAll === "function") {
+    let baseRenderAll = renderAll;
+    renderAll = function renderAllWithViewRenderInvalidation(...args) {
+      invalidateViewRenderCache();
+      let result = baseRenderAll.apply(this, args);
+      cachedViewIds.forEach((id) => renderedViewSignatures.set(id, currentViewRenderSignature(id)));
+      return result;
+    };
+  }
+
+  viewRenderCacheInstalled = true;
+}
 
 function afterNextPaint(callback) {
   if (typeof callback !== "function") return;
@@ -117,6 +179,8 @@ function deferFullRenderForClick(button) {
 
 function installSaveUiLatencyFlows() {
   if (typeof document === "undefined") return;
+
+  installViewRenderCache();
 
   let genericBody = document.getElementById("genericBody");
   if (genericBody) {

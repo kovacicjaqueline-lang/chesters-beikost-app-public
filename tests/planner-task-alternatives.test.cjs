@@ -215,6 +215,18 @@ test("TASK-ALT-06: Runtime findet Recipe-first-/Basis-Alternativen ohne die Lern
     excluded: context.state.autoLockExcluded,
     followUps: context.state.followUps,
   }), before);
+
+  context.state.manualMeals["2026-09-20|lunch"] = { manualAdded: false };
+  assert.equal(
+    context.__plannerTaskAlternatives.taskPreservingAlternatives("2026-09-20", "lunch").reason,
+    "manual",
+  );
+  delete context.state.manualMeals["2026-09-20|lunch"];
+  context.state.planLocks["2026-09-20|lunch"] = { followUpFoodId: "gurke" };
+  assert.equal(
+    context.__plannerTaskAlternatives.taskPreservingAlternatives("2026-09-20", "lunch").reason,
+    "follow-up",
+  );
 });
 
 test("TASK-ALT-07: Modul bleibt unsichtbare Grundlage und ist Loader-/Offline-seitig eingebunden", () => {

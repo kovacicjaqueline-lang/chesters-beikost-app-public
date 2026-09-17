@@ -14,9 +14,10 @@ let deferredRenderScopeCallbacks = [];
 let deferredViewRenderPending = false;
 let deferredViewRenderId = "";
 let deferredViewRenderCallback = null;
+let deferredViewRenderUseCache = false;
 const deferredRenderClickTargets = new WeakSet();
-const tabNavigationClickTargets = new WeakSet();
 let tabNavigationRenderActive = false;
+let tabNavigationMarkerInstalled = false;
 let viewRenderRevision = 0;
 let viewRenderCacheInstalled = false;
 const renderedViewSignatures = new Map();
@@ -52,13 +53,14 @@ function queueTabNavigationRenderEnd() {
   else Promise.resolve().then(finish);
 }
 
-function installTabNavigationRenderMarker(button) {
-  if (!button || tabNavigationClickTargets.has(button)) return;
-  tabNavigationClickTargets.add(button);
-  button.addEventListener("click", () => {
+function installTabNavigationRenderMarker() {
+  if (tabNavigationMarkerInstalled) return;
+  document.addEventListener("click", (event) => {
+    if (!event.target?.closest?.("nav button[data-view]")) return;
     tabNavigationRenderActive = true;
     queueTabNavigationRenderEnd();
   }, true);
+  tabNavigationMarkerInstalled = true;
 }
 
 function installViewRenderCache() {
@@ -92,10 +94,7 @@ function installViewRenderCache() {
     };
   }
 
-  document
-    .querySelectorAll("nav button[data-view]")
-    .forEach(installTabNavigationRenderMarker);
-
+  installTabNavigationRenderMarker();
   viewRenderCacheInstalled = true;
 }
 
@@ -126,20 +125,24 @@ function renderViewAfterNextPaint(viewId, callback) {
   if (typeof callback !== "function") return;
   deferredViewRenderId = String(viewId || "");
   deferredViewRenderCallback = callback;
+  deferredViewRenderUseCache = tabNavigationRenderActive;
   if (deferredViewRenderPending) return;
   deferredViewRenderPending = true;
   afterNextPaint(() => {
     deferredViewRenderPending = false;
     let id = deferredViewRenderId;
     let render = deferredViewRenderCallback;
+    let useCache = deferredViewRenderUseCache;
     deferredViewRenderId = "";
     deferredViewRenderCallback = null;
+    deferredViewRenderUseCache = false;
     if (typeof render !== "function") return;
-    tabNavigationRenderActive = true;
+    let previousTabNavigationRenderActive = tabNavigationRenderActive;
+    tabNavigationRenderActive = useCache;
     try {
       render(id);
     } finally {
-      tabNavigationRenderActive = false;
+      tabNavigationRenderActive = previousTabNavigationRenderActive;
     }
   });
 }
@@ -147,6 +150,7 @@ function renderViewAfterNextPaint(viewId, callback) {
 function cancelDeferredViewRender() {
   deferredViewRenderId = "";
   deferredViewRenderCallback = null;
+  deferredViewRenderUseCache = false;
 }
 
 function beginDeferredFullRender() {

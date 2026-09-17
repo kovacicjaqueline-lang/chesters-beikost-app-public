@@ -112,6 +112,33 @@ try {
   assert.equal(compactSize.assetWidth, 25, "kompaktes FOOD-Asset muss tatsächlich 25px breit rendern");
   assert.equal(compactSize.assetHeight, 25, "kompaktes FOOD-Asset muss tatsächlich 25px hoch rendern");
 
+  const recipeSize = await page.locator("#foods").evaluate((foods) => {
+    const host = document.createElement("div");
+    host.className = "recipe-heading-with-icon";
+    host.innerHTML = '<span class="illustration-icon illustration-icon--recipe item-illustration recipe-illustration"><img class="illustration-icon__asset" alt=""></span><b>Rezept</b>';
+    foods.appendChild(host);
+
+    const wrapper = host.querySelector(".illustration-icon--recipe");
+    const asset = host.querySelector(".illustration-icon__asset");
+    const wrapperRect = wrapper?.getBoundingClientRect();
+    const assetRect = asset?.getBoundingClientRect();
+    const result = {
+      wrapperWidth: wrapperRect?.width ?? 0,
+      wrapperHeight: wrapperRect?.height ?? 0,
+      assetWidth: assetRect?.width ?? 0,
+      assetHeight: assetRect?.height ?? 0,
+      sizeToken: wrapper ? getComputedStyle(wrapper).getPropertyValue("--illustration-size").trim() : "",
+    };
+    host.remove();
+    return result;
+  });
+
+  assert.equal(recipeSize.sizeToken, "76px", "mobiler Recipe-Wrapper muss den sichtbaren 76px-Override erben");
+  assert.equal(recipeSize.wrapperWidth, 76, "mobiler Recipe-Wrapper darf das 76px-Asset nicht auf das kompakte Token beschneiden");
+  assert.equal(recipeSize.wrapperHeight, 76, "mobiler Recipe-Wrapper muss 76px hoch rendern");
+  assert.equal(recipeSize.assetWidth, 76, "mobiles Recipe-Asset muss tatsächlich 76px breit rendern");
+  assert.equal(recipeSize.assetHeight, 76, "mobiles Recipe-Asset muss tatsächlich 76px hoch rendern");
+
   await context.close();
 } finally {
   await browser.close();

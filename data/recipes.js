@@ -661,7 +661,7 @@ const RECIPES = [
     "stage": 3,
     "batch": "3–4 Portionen Sauce",
     "ingredients": "rote Linsen, gegarte Tomate, sehr weiche Nudeln",
-    "note": "Linsen sehr weich kochen; Sauce saftig halten und ohne Salz zubereiten.",
+    "note": "Linsen in 150 ml Wasser sehr weich kochen, bis sie fast zerfallen. Gegarte Tomate fein zerdrücken, unterrühren und die Sauce saftig halten. Nudeln separat sehr weich kochen, abgießen, passend klein anbieten und mit der Linsen-Tomatensauce mischen. Lauwarm und ohne Salz servieren.",
     "freezable": true,
     "freezerNote": "Rasch abkühlen, in Mahlzeitenportionen einfrieren und vollständig durcherhitzen.",
     "searchAliases": []

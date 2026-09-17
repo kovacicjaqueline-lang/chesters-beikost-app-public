@@ -22,6 +22,7 @@ function createHarness({ withAnimationFrame = true } = {}) {
     console,
     Promise,
     renderAll: () => events.push("render"),
+    renderCurrentView: () => events.push("current"),
     setTimeout: (callback) => { timers.push(callback); return timers.length; },
   };
   if (withAnimationFrame) sandbox.requestAnimationFrame = (callback) => { raf.push(callback); return raf.length; };
@@ -67,6 +68,23 @@ function createHarness({ withAnimationFrame = true } = {}) {
 }
 
 {
+  const h = createHarness();
+  const callbacks = [];
+  h.sandbox.runWithDeferredCurrentViewRender(() => {
+    h.events.push("save");
+    h.sandbox.renderAll();
+    h.events.push("toast-ready");
+  }, () => callbacks.push("after-current-view"));
+
+  assert.deepEqual(h.events, ["save", "toast-ready"], "Protokoll-Speichern darf keinen synchronen Render auslösen");
+  assert.equal(h.raf.length, 1, "Der gezielte View-Render muss bis nach der nächsten Paint-Gelegenheit warten");
+  h.raf.shift()();
+  h.timers.shift()();
+  assert.deepEqual(h.events, ["save", "toast-ready", "current"], "Ein angeforderter Voll-Render muss beim Protokoll auf die aktuelle Ansicht begrenzt werden");
+  assert.deepEqual(callbacks, ["after-current-view"]);
+}
+
+{
   const h = createHarness({ withAnimationFrame: false });
   h.sandbox.renderAllAfterNextPaint();
   assert.deepEqual(h.events, []);
@@ -95,6 +113,50 @@ function createHarness({ withAnimationFrame = true } = {}) {
   h.raf.shift()();
   h.timers.shift()();
   assert.deepEqual(renderedViews, [], "Ein synchron übernommener Render muss den geplanten View-Render verwerfen");
+}
+
+{
+  const h = createHarness();
+  let undo = null;
+  const toasts = [];
+  h.sandbox.document = {
+    getElementById: () => null,
+    querySelector: () => null,
+  };
+  h.sandbox.state = { logs: [] };
+  h.sandbox.pendingLog = {};
+  h.sandbox.showToast = (message, undoFn = null) => {
+    toasts.push(message);
+    if (typeof undoFn === "function") undo = undoFn;
+  };
+  h.sandbox.saveLog = () => {
+    h.sandbox.state.logs.push({ id: "log-1" });
+    h.sandbox.renderAll();
+    h.sandbox.showToast("Eintrag gespeichert.", () => {
+      h.sandbox.state.logs = [];
+      h.sandbox.renderAll();
+      h.sandbox.showToast("Eintrag rückgängig gemacht.");
+    });
+  };
+
+  h.sandbox.installSaveUiLatencyFlows();
+  h.sandbox.saveLog();
+
+  assert.equal(h.sandbox.state.logs.length, 1, "State und Persistenzpfad müssen vor dem Render abgeschlossen sein");
+  assert.deepEqual(h.events, [], "Der Log-Save-Wrapper darf den bisherigen renderAll-Aufruf nicht direkt ausführen");
+  assert.deepEqual(toasts, ["Eintrag gespeichert."], "Der sichtbare Speicherhinweis muss ohne Render-Wartezeit erscheinen");
+  assert.equal(typeof undo, "function", "Rückgängig muss erhalten bleiben");
+  h.raf.shift()();
+  h.timers.shift()();
+  assert.deepEqual(h.events, ["current"], "Nach dem Speichern darf nur die aktuell sichtbare Ansicht neu gerendert werden");
+
+  undo();
+  assert.equal(h.sandbox.state.logs.length, 0, "Rückgängig muss den gespeicherten Zustand weiterhin wiederherstellen");
+  assert.deepEqual(h.events, ["current"], "Auch Rückgängig darf keinen synchronen Voll-Render auslösen");
+  assert.deepEqual(toasts, ["Eintrag gespeichert.", "Eintrag rückgängig gemacht."]);
+  h.raf.shift()();
+  h.timers.shift()();
+  assert.deepEqual(h.events, ["current", "current"], "Rückgängig muss ebenfalls nur die aktuell sichtbare Ansicht aktualisieren");
 }
 
 console.log("Deferred full-render scheduling regression passed.");

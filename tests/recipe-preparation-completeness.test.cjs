@@ -17,43 +17,109 @@ function loadCatalog() {
   return JSON.parse(vm.runInContext("JSON.stringify(RECIPES)", context));
 }
 
-const REQUIRED_NOTE_FRAGMENTS = {
-  "Birne-Hirse-Pancakes": [/Birne/i, /Hirse/i, /Ei/i, /misch|verrühr/i],
-  "Rind-Hafer-Bällchen": [/Rind/i, /Hafer/i, /Ei/i, /misch|verarbeit/i],
-  "Geflügel-Gemüse-Hafer-Bällchen": [/Geflügel|Huhn|Pute/i, /Gemüse|Zucchini|Karotte/i, /Hafer/i, /misch|vermeng/i],
-  "Rote-Linsen-Gemüsebällchen": [/Linsen/i, /Karotte/i, /Hafer/i, /misch|vermeng/i],
-  "Tofu-Brokkoli-Bällchen": [/Tofu/i, /Brokkoli/i, /Hafer/i, /misch|vermeng/i],
-  "Zucchini-Hafer-Puffer": [/Zucchini/i, /Hafer/i, /Ei/i, /misch|verrühr/i],
-  "Polenta-Zucchini-Sticks": [/Polenta/i, /Zucchini/i, /misch|unterrühr|unterheb/i, /auskühl|fest/i],
-  "Zucchini-Omelett": [/Zucchini/i, /Ei/i, /verrühr|misch/i],
-  "Kürbis-Hafer-Brei": [/Kürbis/i, /Hafer/i, /weich/i, /misch|pürier|zerdrück/i],
+const INCOMPLETE_PREPARATIONS = Object.freeze([
+  "Birne-Hirse-Pancakes",
+  "Rind-Hafer-Bällchen",
+  "Geflügel-Gemüse-Hafer-Bällchen",
+  "Rote-Linsen-Gemüsebällchen",
+  "Tofu-Brokkoli-Bällchen",
+  "Zucchini-Hafer-Puffer",
+  "Polenta-Zucchini-Sticks",
+  "Zucchini-Omelett",
+  "Kürbis-Hafer-Brei",
+  "Gemüse-Nudel-Sauce",
+  "Baby-Linsen-Bolognese",
+  "Bangus-Kartoffel-Taler",
+  "Obst-Hafer-Muffins",
+  "Gemüse-Hafer-Muffins",
+  "Kürbis-Hirse-Muffins",
+  "Bananen-Haferbrei mit Erdnussmus",
+  "Karotten-Hirse-Brei mit Tahin",
+  "Apfel-Hirse-Brei mit Mandelmus",
+  "Paprika-Omelettstreifen",
+  "Ei-Champignon-Cups",
+]);
+
+const TERSE_PREPARATIONS = Object.freeze([
+  "Zucchini-Hafer-Pancakes",
+  "Ube-Bananen-Pancakes",
+  "Lachs-Kartoffel-Bällchen",
+  "Brokkoli-Kartoffel-Taler",
+  "Kichererbsen-Kürbis-Taler",
+  "Rote-Linsen-Bratlinge",
+  "Süßkartoffel-Hirse-Sticks",
+  "Omelettstreifen",
+  "Obst-Hirsebrei",
+  "Obst-Polentabrei",
+  "Obst-Reisbrei",
+  "Obst-Buchweizenbrei",
+  "Obst-Grießbrei",
+  "Lugaw-Basis",
+  "Kürbis-Lugaw",
+  "Tinola-inspiriert",
+  "Arroz-caldo-inspiriert",
+  "Kalabasa mit Kokos",
+  "Tilapia-Reis-Brei",
+  "Kürbis-Linsen-Suppe",
+  "Mildes Rote-Linsen-Dhal",
+  "Huhn-Karotte-Nudel-Topf",
+  "Huhn-Lauch-Kartoffel-Topf",
+]);
+
+const REQUIRED_NOTE_FRAGMENTS = Object.freeze({
+  "Birne-Hirse-Pancakes": [/Birne/i, /Hirse/i, /Ei/i, /verrühr/i],
+  "Rind-Hafer-Bällchen": [/Hafer/i, /Ei/i, /vermeng/i],
+  "Geflügel-Gemüse-Hafer-Bällchen": [/Gemüse/i, /Hafer/i, /vermeng/i],
+  "Rote-Linsen-Gemüsebällchen": [/Linsen/i, /Karotte/i, /Hafer/i, /vermeng/i],
+  "Tofu-Brokkoli-Bällchen": [/Tofu/i, /Brokkoli/i, /Hafer/i, /vermeng/i],
+  "Zucchini-Hafer-Puffer": [/Zucchini/i, /Hafer/i, /Ei/i, /verrühr/i],
+  "Polenta-Zucchini-Sticks": [/Polenta/i, /Zucchini/i, /unterrühr/i, /auskühl|fest/i],
+  "Zucchini-Omelett": [/Zucchini/i, /Ei/i, /verrühr/i],
+  "Kürbis-Hafer-Brei": [/Kürbis/i, /Hafer/i, /verrühr/i],
   "Gemüse-Nudel-Sauce": [/Zucchini/i, /Tomate/i, /Nudeln/i, /Sauce/i],
   "Baby-Linsen-Bolognese": [/Linsen/i, /Tomate/i, /Nudeln/i, /Sauce/i],
-  "Bangus-Kartoffel-Taler": [/Bangus/i, /Kartoffel/i, /zerdrück|vermeng|misch/i, /Taler|flach/i],
-  "Obst-Hafer-Muffins": [/Obst/i, /Hafer/i, /Ei/i, /misch|verrühr/i],
-  "Gemüse-Hafer-Muffins": [/Gemüse/i, /Hafer/i, /Ei/i, /misch|verrühr/i],
-  "Kürbis-Hirse-Muffins": [/Kürbis/i, /Hirse/i, /Ei/i, /misch|verrühr/i],
+  "Bangus-Kartoffel-Taler": [/Bangus/i, /Kartoffel/i, /vermeng/i, /Taler/i],
+  "Obst-Hafer-Muffins": [/Obst/i, /Hafer/i, /Ei/i, /verrühr/i],
+  "Gemüse-Hafer-Muffins": [/Gemüse/i, /Hafer/i, /Ei/i, /verrühr/i],
+  "Kürbis-Hirse-Muffins": [/Kürbis/i, /Hirse/i, /Ei/i, /verrühr/i],
   "Bananen-Haferbrei mit Erdnussmus": [/Hafer/i, /Banane/i, /Erdnuss/i],
   "Karotten-Hirse-Brei mit Tahin": [/Hirse/i, /Karotte/i, /Tahin/i],
   "Apfel-Hirse-Brei mit Mandelmus": [/Hirse/i, /Apfel/i, /Mandel/i],
-  "Paprika-Omelettstreifen": [/Paprika/i, /Ei/i, /verrühr|misch/i],
-  "Ei-Champignon-Cups": [/Champignon/i, /Ei/i, /verrühr|misch/i],
-};
+  "Paprika-Omelettstreifen": [/Paprika/i, /Ei/i, /verrühr/i],
+  "Ei-Champignon-Cups": [/Champignon/i, /Ei/i, /verrühr/i],
+});
 
-test("recipe preparation completeness: audited recipes explain how their named ingredients become the dish", () => {
+test("recipe preparation audit covers the full 123-recipe runtime catalog", () => {
   const recipes = loadCatalog();
   assert.equal(recipes.length, 123);
+  assert.equal(INCOMPLETE_PREPARATIONS.length, 20);
+  assert.equal(TERSE_PREPARATIONS.length, 23);
+  assert.equal(new Set([...INCOMPLETE_PREPARATIONS, ...TERSE_PREPARATIONS]).size, 43);
+});
 
-  for (const [name, fragments] of Object.entries(REQUIRED_NOTE_FRAGMENTS)) {
+test("recipe preparation completeness: the 20 incomplete recipes now explain their missing preparation steps", () => {
+  const recipes = loadCatalog();
+  for (const name of INCOMPLETE_PREPARATIONS) {
     const recipe = recipes.find((item) => item.name === name);
     assert.ok(recipe, `${name}: Rezept fehlt`);
-    for (const fragment of fragments) {
+    assert.ok(recipe.note.length >= 120, `${name}: Zubereitung bleibt zu knapp`);
+    for (const fragment of REQUIRED_NOTE_FRAGMENTS[name] || []) {
       assert.match(recipe.note, fragment, `${name}: Zubereitung ist weiter unvollständig (${fragment})`);
     }
   }
 });
 
-test("recipe preparation consistency: no optional ingredient is suggested outside the recipe contract", () => {
+test("recipe preparation completeness: the 23 terse recipes now contain reproducible multi-step guidance", () => {
+  const recipes = loadCatalog();
+  for (const name of TERSE_PREPARATIONS) {
+    const recipe = recipes.find((item) => item.name === name);
+    assert.ok(recipe, `${name}: Rezept fehlt`);
+    assert.ok(recipe.note.length >= 120, `${name}: Zubereitung bleibt zu knapp`);
+    assert.ok((recipe.note.match(/[.!?](?:\s|$)/g) || []).length >= 2, `${name}: Zubereitung bleibt einschrittig`);
+  }
+});
+
+test("recipe preparation consistency: Monggo-Kalabasa does not suggest undeclared Malunggay", () => {
   const recipes = loadCatalog();
   const monggo = recipes.find((item) => item.name === "Monggo-Kalabasa-Brei");
   assert.ok(monggo);

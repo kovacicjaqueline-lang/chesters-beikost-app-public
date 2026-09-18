@@ -895,7 +895,8 @@
     if (currentDay !== plannerLastSeenDay) {
       plannerLastSeenDay = currentDay;
       plannerSessionDeferred = false;
-      renderAll();
+      if (typeof invalidateViewRenderCache === "function") invalidateViewRenderCache();
+      renderCurrentView();
     }
     scheduleRolloverPrompt();
   }

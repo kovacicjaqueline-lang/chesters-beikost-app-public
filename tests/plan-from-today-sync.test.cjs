@@ -128,6 +128,39 @@ test('visibilitychange synchronisiert erst beim tatsächlichen Sichtbarwerden', 
   assert.equal(renders, 1);
 });
 
+test('Kalendertageswechsel speichert planFrom ohne zweiten Storage-Render', async () => {
+  let currentDay = '2026-08-24';
+  let saves = 0;
+  let renders = 0;
+  const listeners = new Map();
+  const fakeDocument = {
+    visibilityState: 'hidden',
+    addEventListener(type, handler) {
+      listeners.set(type, handler);
+    },
+    dispatchEvent(event) {
+      const handler = listeners.get(event.type);
+      if (handler) handler(event);
+    },
+  };
+  const { context, installPlanFromVisibilitySync } = loadHelpers({
+    state: { settings: { planFrom: currentDay } },
+    today: () => currentDay,
+    save: async () => { saves += 1; },
+    renderCurrentView: () => { renders += 1; },
+  });
+
+  assert.equal(installPlanFromVisibilitySync(fakeDocument), true);
+  currentDay = '2026-08-25';
+  fakeDocument.visibilityState = 'visible';
+  fakeDocument.dispatchEvent({ type: 'visibilitychange' });
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.equal(context.state.settings.planFrom, '2026-08-25');
+  assert.equal(saves, 1);
+  assert.equal(renders, 0);
+});
+
 test('Bootstrap und Browser-Boot installieren die Plan-ab-Prüfung', () => {
   assert.match(
     storage,

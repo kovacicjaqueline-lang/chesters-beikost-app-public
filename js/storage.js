@@ -154,8 +154,17 @@ async function syncPlanFromOnAppOpen() {
 }
 function installPlanFromVisibilitySync(doc) {
   if (!doc?.addEventListener) return false;
+  let lastVisibleDay = today();
   doc.addEventListener("visibilitychange", () => {
-    if (doc.visibilityState === "visible") void syncPlanFromOnAppOpen();
+    if (doc.visibilityState !== "visible") return;
+    let currentDay = today();
+    let calendarDayChanged = currentDay !== lastVisibleDay;
+    lastVisibleDay = currentDay;
+    if (calendarDayChanged) {
+      if (syncPlanFromToToday(state, currentDay)) void save();
+      return;
+    }
+    void syncPlanFromOnAppOpen();
   });
   return true;
 }

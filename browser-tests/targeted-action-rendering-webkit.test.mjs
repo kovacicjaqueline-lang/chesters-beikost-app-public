@@ -11,7 +11,7 @@ const mimeTypes = {
   ".js": "text/javascript; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".json": "application/json; charset=utf-8",
-  ".webmanifest": "application/manifest+json; charset=utf-8",
+  ".webmanifest": "application/manifest+json",
   ".svg": "image/svg+xml",
   ".png": "image/png",
   ".webp": "image/webp",
@@ -113,6 +113,76 @@ try {
   assert.ok(planProfile.probe.plan >= 2, "Plan-Datumswechsel und Heute müssen gezielt den Plan rendern");
   assert.notEqual(planProfile.afterDateChange, planProfile.today, "Plan-Datumswechsel muss den gewählten Folgetag speichern");
   assert.equal(planProfile.finalPlanFrom, planProfile.today, "Heute muss planFrom wieder auf den aktuellen Tag setzen");
+
+  const mealDeleteSetup = await page.evaluate(() => {
+    const bridge = window.__beikostTest;
+    const snapshot = bridge.getState();
+    const foodId = snapshot.foods.find((item) => item.active)?.id;
+    if (!foodId) throw new Error("Mahlzeiten-Löschtest braucht ein aktives Lebensmittel");
+    const date = bridge.today();
+    const key = `${date}|lunch`;
+    const meal = {
+      date,
+      meal: "lunch",
+      focusId: foodId,
+      foodIds: [foodId],
+      baseFoodIds: [foodId],
+      sampleFoodIds: [],
+      foodRoles: { [foodId]: "base" },
+      recipeName: "",
+      manualAdded: true,
+      type: "manuell",
+      note: "targeted-render-delete-meal",
+      createdAt: new Date().toISOString(),
+    };
+    snapshot.manualMeals ||= {};
+    snapshot.planLocks ||= {};
+    snapshot.manualMeals[key] = { ...meal };
+    snapshot.planLocks[key] = { ...meal, mode: "manual" };
+    bridge.setState(snapshot);
+    window.showView("plan");
+    return { date, key };
+  });
+  await waitForView(page, "plan");
+  await page.waitForFunction(({ date }) =>
+    !!document.querySelector(`.removeManualMeal[data-date="${date}"][data-meal="lunch"]`),
+  mealDeleteSetup);
+  await page.evaluate(() => {
+    window.__targetedActionRenderProbe.full = 0;
+    window.__targetedActionRenderProbe.current = 0;
+    window.__targetedActionRenderProbe.plan = 0;
+  });
+  await page.locator(`.removeManualMeal[data-date="${mealDeleteSetup.date}"][data-meal="lunch"]`).click();
+  await page.locator("#confirmMealDelete").waitFor({ state: "visible" });
+  const deleteMealMs = await page.evaluate(() => {
+    const start = performance.now();
+    document.getElementById("confirmMealDelete").click();
+    return performance.now() - start;
+  });
+  await page.waitForFunction((key) => !window.__beikostTest.getState().manualMeals?.[key], mealDeleteSetup.key);
+  const afterMealDelete = await page.evaluate(() => ({
+    probe: { ...window.__targetedActionRenderProbe },
+    modalOpen: document.getElementById("genericModal").classList.contains("open"),
+    undoVisible: getComputedStyle(document.getElementById("toastUndo")).display !== "none",
+  }));
+  assert.equal(afterMealDelete.probe.full, 0, "Mahlzeit-Löschen darf keinen Voll-Render auslösen");
+  assert.ok(afterMealDelete.probe.current >= 1, "Mahlzeit-Löschen muss nur die aktuelle Ansicht rendern");
+  assert.equal(afterMealDelete.modalOpen, false, "Löschdialog muss nach dem Bestätigen geschlossen bleiben");
+  assert.equal(afterMealDelete.undoVisible, true, "Rückgängig muss nach dem Mahlzeit-Löschen verfügbar bleiben");
+
+  const undoMealMs = await page.evaluate(() => {
+    const start = performance.now();
+    document.getElementById("toastUndo").click();
+    return performance.now() - start;
+  });
+  await page.waitForFunction((key) => !!window.__beikostTest.getState().manualMeals?.[key], mealDeleteSetup.key);
+  const afterMealUndo = await page.evaluate(() => ({
+    probe: { ...window.__targetedActionRenderProbe },
+    note: window.__beikostTest.getState().manualMeals?.[Object.keys(window.__beikostTest.getState().manualMeals || {}).find((key) => window.__beikostTest.getState().manualMeals[key]?.note === "targeted-render-delete-meal")]?.note || "",
+  }));
+  assert.equal(afterMealUndo.probe.full, 0, "Mahlzeit-Rückgängig darf keinen Voll-Render auslösen");
+  assert.ok(afterMealUndo.probe.current >= 2, "Mahlzeit-Rückgängig muss die aktuelle Ansicht erneut gezielt rendern");
+  assert.equal(afterMealUndo.note, "targeted-render-delete-meal", "Rückgängig muss dieselbe Mahlzeit wiederherstellen");
 
   await page.evaluate(() => {
     window.__targetedActionRenderProbe.full = 0;
@@ -230,7 +300,13 @@ try {
   assert.equal(afterUndo.listCount, 1, "Wiederhergestellter Eintrag muss sofort wieder sichtbar sein");
   assert.equal(afterUndo.restoredId, "targeted-render-delete-log", "Rückgängig muss denselben Protokolleintrag wiederherstellen");
 
-  console.log(`[targeted-action-profile] ${JSON.stringify({ plan: planProfile.timings, food: foodProfile.timings, deleteMs, undoMs })}`);
+  console.log(`[targeted-action-profile] ${JSON.stringify({
+    plan: planProfile.timings,
+    mealDelete: { deleteMealMs, undoMealMs },
+    food: foodProfile.timings,
+    deleteMs,
+    undoMs,
+  })}`);
 } finally {
   await context.close();
   await browser.close();

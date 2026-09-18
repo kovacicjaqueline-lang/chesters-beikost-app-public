@@ -84,10 +84,17 @@ try {
   );
   assert.equal(
     await page.locator(".recipe-filter-field > label").textContent(),
-    "Kategorie",
-    "Die bestehende Kategoriezeile bleibt separat erhalten",
+    "Passend",
+    "Die Verfügbarkeitsfilter brauchen eine eigene Zeile",
   );
   assert.equal(await page.locator("#recipeMealFilter").isVisible(), true, "Die Mahlzeitenfilterzeile muss sichtbar sein");
+  assert.equal(await page.locator('[data-recipe-filter="almost"]').evaluate((button) => button.classList.contains("active")), true, "Fast passend soll der Standardfilter sein");
+  const fastDefaultIncludesUnlocked = await page.evaluate(() => {
+    const states = viewRenderRecipeStates();
+    const visible = [...document.querySelectorAll("#recipeList .recipe-card-v2 summary b")].map((node) => node.textContent.trim());
+    return states.some((recipe) => recipe.unlocked && visible.includes(recipe.name));
+  });
+  assert.equal(fastDefaultIncludesUnlocked, true, "Fast passend muss bereits passende Rezepte einschließen");
 
   await page.locator('[data-recipe-filter="breakfast"]').click();
   const breakfastRecipes = await recipeNames();
@@ -104,7 +111,7 @@ try {
     false,
     "Frühstück darf Rezepte mit nicht frühstückstauglicher Pflichtzutat nicht enthalten",
   );
-  assert.match(await page.locator("#recipeCount").textContent(), /Frühstück/);
+  assert.match(await page.locator("#recipeCount").textContent(), /Rezept/);
 
   await page.locator('[data-recipe-filter="main"]').click();
   const mainMealRecipes = await recipeNames();
@@ -116,7 +123,7 @@ try {
     mainMealRecipes.includes("Obst-Hafer-Pancakes"),
     "Hauptmahlzeit bleibt absichtlich nicht exklusiv, wenn die FOOD-Zutaten auch dafür geeignet sind",
   );
-  assert.match(await page.locator("#recipeCount").textContent(), /Hauptmahlzeit/);
+  assert.match(await page.locator("#recipeCount").textContent(), /Rezept/);
 
   await page.locator('[data-recipe-filter="snack"]').click();
   const snackRecipes = await recipeNames();
@@ -129,7 +136,7 @@ try {
     false,
     "Snack darf nicht aus FOOD-Mahlzeiteneignung abgeleitet werden",
   );
-  assert.match(await page.locator("#recipeCount").textContent(), /Snack/);
+  assert.match(await page.locator("#recipeCount").textContent(), /Rezept/);
 
   await page.locator('[data-recipe-filter="all"]').click();
   await search.fill("Ei");

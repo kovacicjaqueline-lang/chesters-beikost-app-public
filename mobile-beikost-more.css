@@ -563,3 +563,10 @@ body.mobile-foundation #foods .recipe-summary-end{gap:0}
 body.mobile-foundation #foods .recipe-chevron{font-size:0}
 body.mobile-foundation #foods .recipe-chevron::after{content:"›";font-size:26px}
 body.mobile-foundation #foods .recipe-card-v2[open] .recipe-chevron{transform:rotate(90deg)}
+
+@media (max-width:760px){
+  body.mobile-foundation #foods .recipe-heading-with-icon .recipe-icon,
+  body.mobile-foundation #foods .recipe-heading-with-icon .illustration-icon--recipe,
+  body.mobile-foundation #foods .recipe-heading-with-icon img,
+  body.mobile-foundation #foods .recipe-heading-with-icon svg{--illustration-size:52px!important;width:52px!important;min-width:52px!important;height:52px!important;max-width:52px!important;max-height:52px!important}
+}

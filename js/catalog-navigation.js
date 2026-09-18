@@ -245,7 +245,10 @@
 
   function openRecipeCatalog(filter = "") {
     if (filter === "freezer") {
+      recipeExtraFilters.clear();
       recipeExtraFilters.add("freezer");
+      recipeFilter = "all";
+      recipeMealFilter = "";
     } else if (filter && typeof recipeFilter !== "undefined") {
       recipeFilter = filter;
     }

@@ -61,8 +61,17 @@
     const aFood = typeof food === "function" ? food(a.dataset.food) : null;
     const bFood = typeof food === "function" ? food(b.dataset.food) : null;
     if (query && aFood && bFood && typeof foodSearchScore === "function") {
-      const scoreOrder = foodSearchScore(aFood, query) - foodSearchScore(bFood, query);
-      if (scoreOrder) return scoreOrder;
+      const aScore = foodSearchScore(aFood, query);
+      const bScore = foodSearchScore(bFood, query);
+      if (aScore !== bScore) return aScore - bScore;
+    }
+    if (aFood && bFood && typeof rank === "function") {
+      const rankOrder = rank(bFood) - rank(aFood);
+      if (rankOrder) return rankOrder;
+    }
+    if (aFood && bFood && typeof inventoryPortions === "function") {
+      const inventoryOrder = Number(inventoryPortions(bFood.id) > 0) - Number(inventoryPortions(aFood.id) > 0);
+      if (inventoryOrder) return inventoryOrder;
     }
     return Number(aFood?.priority || 0) - Number(bFood?.priority || 0);
   }
@@ -73,10 +82,13 @@
     if (!input || !results) return;
     const query = mealSelectorQuery.trim();
     const rows = Array.from(results.querySelectorAll(".selector-row.selectFood, .selector-row.selectRecipe"));
-    const foodRows = rows.filter((row) => row.classList.contains("selectFood"));
-    const sortedFoods = [...foodRows].sort((a, b) => compareFoodSelectorRows(a, b, query));
-    const emptyNode = results.querySelector(".flow-meal-selector-empty");
-    sortedFoods.forEach((row) => results.insertBefore(row, emptyNode || null));
+    const currentFoodRows = rows.filter((row) => row.classList.contains("selectFood"));
+    const sortedFoodRows = [...currentFoodRows].sort((a, b) => compareFoodSelectorRows(a, b, query));
+    const foodOrderChanged = sortedFoodRows.some((row, index) => row !== currentFoodRows[index]);
+    if (foodOrderChanged) {
+      const currentEmpty = results.querySelector(".flow-meal-selector-empty");
+      sortedFoodRows.forEach((row) => results.insertBefore(row, currentEmpty || null));
+    }
     let visibleRows = 0;
     rows.forEach((row) => {
       const matches = selectorRowMatches(row, query);
@@ -743,7 +755,10 @@
     genericOpen = open;
     if (open) mealSelectorQuery = "";
     syncGeneric();
-    if (open && genericModal.dataset.flowDialogContext) genericModal.querySelector(".sheet")?.scrollTo?.(0, 0);
+    if (open && genericModal.dataset.flowDialogContext) {
+      const sheet = genericModal.querySelector(".sheet");
+      if (sheet) sheet.scrollTop = 0;
+    }
   });
   genericStateObserver.observe(genericModal, { attributes: true, attributeFilter: ["class"] });
 

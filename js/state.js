@@ -440,7 +440,9 @@ const DEFAULT = {
 };
 let state = null;
 let foodFilter = "open";
-let recipeFilter = "available";
+let recipeFilter = "almost";
+let recipeMealFilter = "";
+let recipeExtraFilters = new Set();
 let recipeQuery = "";
 let logVisibleCount = 8;
 let logMonthFilter = "all";

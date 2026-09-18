@@ -105,9 +105,9 @@
 
   function currentVisiblePlan() {
     const from = visibleStart();
-    return typeof planDisplayDays === "function"
-      ? planDisplayDays(from, 7)
-      : buildDays(from, 7, false);
+    // planDisplayDays persistiert Rollover-Snapshots und darf deshalb während der
+    // read-only Alternativensuche nicht aufgerufen werden.
+    return buildDays(from, 7, false);
   }
 
   function targetMealFrom(days, date, meal) {

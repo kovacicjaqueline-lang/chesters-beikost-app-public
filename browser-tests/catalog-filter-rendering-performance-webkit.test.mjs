@@ -118,7 +118,7 @@ try {
   await page.locator('#catalogSwitch [data-catalog-mode="recipes"]').click();
   await settle();
   const recipeSamples = [];
-  for (const filter of ["all", "available", "freezer", "all", "available", "freezer", "all"]) {
+  for (const filter of ["all", "available", "almost", "all", "available", "almost", "all"]) {
     recipeSamples.push(await measureFilter(`#recipeFilter [data-recipe-filter="${filter}"]`, "#recipeList"));
   }
 

@@ -356,9 +356,11 @@ try {
       window.today = originalToday;
     }
   }, tomorrow);
-  await page.waitForTimeout(100);
+  await page.waitForFunction((expected) => window.__beikostTest.getState().settings.planFrom === expected, tomorrow);
   const calendarRolloverInteraction = await measureInteraction();
   const calendarRollover = await page.evaluate(() => window.__resumeProbe.snapshot());
+  assert.equal(calendarRollover.calls.renderAll, 0, "Calendar rollover resume must not trigger a full-app render");
+  assert.equal(calendarRollover.calls.renderCurrentView, 1, "Calendar rollover resume must refresh the active view exactly once");
 
   const report = {
     viewport: { width: 390, height: 844, deviceScaleFactor: 2 },

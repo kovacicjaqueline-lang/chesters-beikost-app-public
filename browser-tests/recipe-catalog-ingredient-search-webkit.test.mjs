@@ -72,12 +72,12 @@ try {
   const search = page.locator("#recipeSearch");
   const recipeNames = () => page.locator("#recipeList .recipe-card-v2 summary b").allTextContents();
   assert.equal(await page.locator('[data-recipe-filter="almost"]').evaluate((button) => button.classList.contains("active")), true, "Fast passend soll der Standardfilter sein");
-  const fastDefaultIncludesUnlocked = await page.evaluate(() => {
+  const fastDefaultMatchesAvailability = await page.evaluate(() => {
     const states = viewRenderRecipeStates();
-    const visible = [...document.querySelectorAll("#recipeList .recipe-card-v2 summary b")].map((node) => node.textContent.trim());
-    return states.some((recipe) => recipe.unlocked && visible.includes(recipe.name));
+    const visible = new Set([...document.querySelectorAll("#recipeList .recipe-card-v2 summary b")].map((node) => node.textContent.trim()));
+    return states.every((recipe) => visible.has(recipe.name) === (!!recipe.unlocked || !!recipe.almost));
   });
-  assert.equal(fastDefaultIncludesUnlocked, true, "Fast passend muss bereits passende Rezepte einschließen");
+  assert.equal(fastDefaultMatchesAvailability, true, "Fast passend muss passende und fast passende Rezepte einschließen");
 
   await page.locator('[data-recipe-filter="all"]').click();
   const beforeSearch = await recipeNames();

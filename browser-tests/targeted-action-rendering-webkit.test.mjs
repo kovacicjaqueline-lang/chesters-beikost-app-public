@@ -67,7 +67,8 @@ try {
   await page.evaluate(() => {
     const baseRenderAll = window.renderAll;
     const baseRenderCurrentView = window.renderCurrentView;
-    window.__targetedActionRenderProbe = { full: 0, current: 0 };
+    const baseRenderPlan = window.renderPlan;
+    window.__targetedActionRenderProbe = { full: 0, current: 0, plan: 0 };
     window.renderAll = function profiledRenderAll(...args) {
       window.__targetedActionRenderProbe.full += 1;
       return baseRenderAll.apply(this, args);
@@ -76,9 +77,124 @@ try {
       window.__targetedActionRenderProbe.current += 1;
       return baseRenderCurrentView.apply(this, args);
     };
+    window.renderPlan = function profiledRenderPlan(...args) {
+      window.__targetedActionRenderProbe.plan += 1;
+      return baseRenderPlan.apply(this, args);
+    };
   });
 
-  await page.evaluate(() => window.showView("foods"));
+  await page.evaluate(() => window.showView("plan"));
+  await waitForView(page, "plan");
+  const planProfile = await page.evaluate(() => {
+    window.__targetedActionRenderProbe.full = 0;
+    window.__targetedActionRenderProbe.current = 0;
+    window.__targetedActionRenderProbe.plan = 0;
+    const timings = {};
+    const next = window.addDays(window.__beikostTest.today(), 1);
+    const input = document.getElementById("planFrom");
+    input.value = next;
+    let start = performance.now();
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    timings.changeDateMs = performance.now() - start;
+    const afterDateChange = window.__beikostTest.getState().settings.planFrom;
+
+    start = performance.now();
+    document.getElementById("planToday").click();
+    timings.todayMs = performance.now() - start;
+    return {
+      timings,
+      probe: { ...window.__targetedActionRenderProbe },
+      afterDateChange,
+      finalPlanFrom: window.__beikostTest.getState().settings.planFrom,
+      today: window.__beikostTest.today(),
+    };
+  });
+  assert.equal(planProfile.probe.full, 0, "Plan-Datumswechsel und Heute dürfen keinen Voll-Render auslösen");
+  assert.ok(planProfile.probe.plan >= 2, "Plan-Datumswechsel und Heute müssen gezielt den Plan rendern");
+  assert.notEqual(planProfile.afterDateChange, planProfile.today, "Plan-Datumswechsel muss den gewählten Folgetag speichern");
+  assert.equal(planProfile.finalPlanFrom, planProfile.today, "Heute muss planFrom wieder auf den aktuellen Tag setzen");
+
+  const mealDeleteSetup = await page.evaluate(() => {
+    const bridge = window.__beikostTest;
+    const snapshot = bridge.getState();
+    const foodId = snapshot.foods.find((item) => item.active)?.id;
+    if (!foodId) throw new Error("Mahlzeiten-Löschtest braucht ein aktives Lebensmittel");
+    const date = bridge.today();
+    const key = `${date}|lunch`;
+    const meal = {
+      date,
+      meal: "lunch",
+      focusId: foodId,
+      foodIds: [foodId],
+      baseFoodIds: [foodId],
+      sampleFoodIds: [],
+      foodRoles: { [foodId]: "base" },
+      recipeName: "",
+      manualAdded: true,
+      type: "manuell",
+      note: "targeted-render-delete-meal",
+      createdAt: new Date().toISOString(),
+    };
+    snapshot.manualMeals ||= {};
+    snapshot.planLocks ||= {};
+    snapshot.manualMeals[key] = { ...meal };
+    snapshot.planLocks[key] = { ...meal, mode: "manual" };
+    bridge.setState(snapshot);
+    window.showView("plan");
+    return { date, key };
+  });
+  await waitForView(page, "plan");
+  await page.waitForFunction(({ date }) =>
+    !!document.querySelector(`.removeManualMeal[data-date="${date}"][data-meal="lunch"]`),
+  mealDeleteSetup);
+  await page.evaluate(() => {
+    window.__targetedActionRenderProbe.full = 0;
+    window.__targetedActionRenderProbe.current = 0;
+    window.__targetedActionRenderProbe.plan = 0;
+  });
+  const removeManualMeal = page.locator(`#plan .removeManualMeal[data-date="${mealDeleteSetup.date}"][data-meal="lunch"]`);
+  await removeManualMeal.evaluate((button) => {
+    const details = button.closest("details.manual-meal");
+    if (details) details.open = true;
+  });
+  await removeManualMeal.click();
+  await page.locator("#confirmMealDelete").waitFor({ state: "visible" });
+  const deleteMealMs = await page.evaluate(() => {
+    const start = performance.now();
+    document.getElementById("confirmMealDelete").click();
+    return performance.now() - start;
+  });
+  await page.waitForFunction((key) => !window.__beikostTest.getState().manualMeals?.[key], mealDeleteSetup.key);
+  const afterMealDelete = await page.evaluate(() => ({
+    probe: { ...window.__targetedActionRenderProbe },
+    modalOpen: document.getElementById("genericModal").classList.contains("open"),
+    undoVisible: getComputedStyle(document.getElementById("toastUndo")).display !== "none",
+  }));
+  assert.equal(afterMealDelete.probe.full, 0, "Mahlzeit-Löschen darf keinen Voll-Render auslösen");
+  assert.ok(afterMealDelete.probe.current >= 1, "Mahlzeit-Löschen muss nur die aktuelle Ansicht rendern");
+  assert.equal(afterMealDelete.modalOpen, false, "Löschdialog muss nach dem Bestätigen geschlossen bleiben");
+  assert.equal(afterMealDelete.undoVisible, true, "Rückgängig muss nach dem Mahlzeit-Löschen verfügbar bleiben");
+
+  const undoMealMs = await page.evaluate(() => {
+    const start = performance.now();
+    document.getElementById("toastUndo").click();
+    return performance.now() - start;
+  });
+  await page.waitForFunction((key) => !!window.__beikostTest.getState().manualMeals?.[key], mealDeleteSetup.key);
+  const afterMealUndo = await page.evaluate((key) => ({
+    probe: { ...window.__targetedActionRenderProbe },
+    note: window.__beikostTest.getState().manualMeals?.[key]?.note || "",
+  }), mealDeleteSetup.key);
+  assert.equal(afterMealUndo.probe.full, 0, "Mahlzeit-Rückgängig darf keinen Voll-Render auslösen");
+  assert.ok(afterMealUndo.probe.current >= 2, "Mahlzeit-Rückgängig muss die aktuelle Ansicht erneut gezielt rendern");
+  assert.equal(afterMealUndo.note, "targeted-render-delete-meal", "Rückgängig muss dieselbe Mahlzeit wiederherstellen");
+
+  await page.evaluate(() => {
+    window.__targetedActionRenderProbe.full = 0;
+    window.__targetedActionRenderProbe.current = 0;
+    window.__targetedActionRenderProbe.plan = 0;
+    window.showView("foods");
+  });
   await waitForView(page, "foods");
   await page.waitForFunction(() => !!document.querySelector("#foodList .foodcard[data-food]"));
   const foodId = await page.locator("#foodList .foodcard[data-food]").first().getAttribute("data-food");
@@ -102,6 +218,10 @@ try {
     status.value = "Bekannt";
     timings.statusMs = measure(() => status.dispatchEvent(new Event("change", { bubbles: true })));
 
+    let liked = document.getElementById("foodDetailsLiked");
+    liked.checked = true;
+    timings.likedMs = measure(() => liked.dispatchEvent(new Event("change", { bubbles: true })));
+
     timings.topMs = measure(() => document.getElementById("foodDetailsTop").click());
     timings.bottomMs = measure(() => document.getElementById("foodDetailsBottom").click());
 
@@ -110,13 +230,15 @@ try {
       probe: { ...window.__targetedActionRenderProbe },
       priority: window.food(id).priority,
       manualStatus: window.food(id).manualStatus,
+      liked: window.food(id).liked,
       modalOpen: document.getElementById("genericModal").classList.contains("open"),
     };
   }, foodId);
 
   assert.equal(foodProfile.probe.full, 0, "Food-Detailänderungen dürfen keinen Voll-Render auslösen");
-  assert.ok(foodProfile.probe.current >= 4, "Food-Detailänderungen müssen die aktuelle Ansicht gezielt rendern");
+  assert.ok(foodProfile.probe.current >= 5, "Food-Detailänderungen müssen die aktuelle Ansicht gezielt rendern");
   assert.equal(foodProfile.manualStatus, "Bekannt", "Manueller Lebensmittelstatus muss unverändert gespeichert werden");
+  assert.equal(foodProfile.liked, true, "Vorliebe muss unverändert gespeichert werden");
   assert.equal(foodProfile.modalOpen, true, "Food-Detaildialog muss nach lokaler Änderung offen bleiben");
 
   await page.evaluate((id) => {
@@ -142,6 +264,7 @@ try {
     window.__beikostTest.setState(state);
     window.__targetedActionRenderProbe.full = 0;
     window.__targetedActionRenderProbe.current = 0;
+    window.__targetedActionRenderProbe.plan = 0;
   }, foodId);
 
   await page.evaluate(() => window.showView("more"));
@@ -182,7 +305,13 @@ try {
   assert.equal(afterUndo.listCount, 1, "Wiederhergestellter Eintrag muss sofort wieder sichtbar sein");
   assert.equal(afterUndo.restoredId, "targeted-render-delete-log", "Rückgängig muss denselben Protokolleintrag wiederherstellen");
 
-  console.log(`[targeted-action-profile] ${JSON.stringify({ food: foodProfile.timings, deleteMs, undoMs })}`);
+  console.log(`[targeted-action-profile] ${JSON.stringify({
+    plan: planProfile.timings,
+    mealDelete: { deleteMealMs, undoMealMs },
+    food: foodProfile.timings,
+    deleteMs,
+    undoMs,
+  })}`);
 } finally {
   await context.close();
   await browser.close();

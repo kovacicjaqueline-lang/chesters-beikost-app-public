@@ -239,12 +239,40 @@ function wrapHandlerWithTargetedRender(element, handlerKey, renderTarget, option
   element[handlerKey] = targetedHandler;
 }
 
+function wrapDialogOpenerWithTargetedConfirm(element, handlerKey, confirmId, renderTarget, options = {}) {
+  let baseHandler = element?.[handlerKey];
+  if (typeof baseHandler !== "function" || baseHandler.__targetedConfirmRender) return;
+  let targetedOpener = function targetedConfirmOpener(...args) {
+    let result = baseHandler.apply(this, args);
+    wrapHandlerWithTargetedRender(document.getElementById(confirmId), "onclick", renderTarget, options);
+    return result;
+  };
+  targetedOpener.__targetedConfirmRender = true;
+  element[handlerKey] = targetedOpener;
+}
+
 function patchFoodDetailTargetedRenderHandlers() {
   if (typeof renderCurrentView !== "function") return;
   wrapHandlerWithTargetedRender(document.getElementById("foodDetailsPriority"), "onchange", renderCurrentView);
   wrapHandlerWithTargetedRender(document.getElementById("foodDetailsStatus"), "onchange", renderCurrentView);
+  wrapHandlerWithTargetedRender(document.getElementById("foodDetailsLiked"), "onchange", renderCurrentView);
   wrapHandlerWithTargetedRender(document.getElementById("foodDetailsTop"), "onclick", renderCurrentView);
   wrapHandlerWithTargetedRender(document.getElementById("foodDetailsBottom"), "onclick", renderCurrentView);
+}
+
+function patchPlanTargetedRenderHandlers() {
+  if (typeof renderCurrentView !== "function") return;
+  wrapHandlerWithTargetedRender(document.getElementById("planFrom"), "onchange", renderCurrentView);
+  wrapHandlerWithTargetedRender(document.getElementById("planToday"), "onclick", renderCurrentView);
+  document.querySelectorAll(".removeManualMeal, .removePlannedMeal").forEach((button) => {
+    wrapDialogOpenerWithTargetedConfirm(
+      button,
+      "onclick",
+      "confirmMealDelete",
+      renderCurrentView,
+      { wrapUndo: true },
+    );
+  });
 }
 
 function patchLogDeleteTargetedRenderHandlers() {
@@ -271,7 +299,9 @@ function installTargetedActionRendering() {
       return result;
     };
   }
+  globalThis.MobileUiLifecycle?.onRender?.("plan", patchPlanTargetedRenderHandlers);
   patchFoodDetailTargetedRenderHandlers();
+  patchPlanTargetedRenderHandlers();
   patchLogDeleteTargetedRenderHandlers();
 }
 

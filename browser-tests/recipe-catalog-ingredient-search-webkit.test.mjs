@@ -69,8 +69,6 @@ try {
 
   await page.locator('nav button[data-view="foods"]').click();
   await page.locator('#catalogSwitch [data-catalog-mode="recipes"]').click();
-  await page.locator('[data-recipe-filter="all"]').click();
-
   const search = page.locator("#recipeSearch");
   const recipeNames = () => page.locator("#recipeList .recipe-card-v2 summary b").allTextContents();
   const beforeSearch = await recipeNames();
@@ -96,7 +94,8 @@ try {
   });
   assert.equal(fastDefaultIncludesUnlocked, true, "Fast passend muss bereits passende Rezepte einschließen");
 
-  await page.locator('[data-recipe-filter="breakfast"]').click();
+  await page.locator('[data-recipe-filter="all"]').click();
+  await page.locator('[data-recipe-meal="breakfast"]').click();
   const breakfastRecipes = await recipeNames();
   assert.ok(
     breakfastRecipes.includes("Obst-Hafer-Pancakes"),
@@ -113,7 +112,7 @@ try {
   );
   assert.match(await page.locator("#recipeCount").textContent(), /Rezept/);
 
-  await page.locator('[data-recipe-filter="main"]').click();
+  await page.locator('[data-recipe-meal="main"]').click();
   const mainMealRecipes = await recipeNames();
   assert.ok(
     mainMealRecipes.includes("Rind-Hafer-Bällchen"),
@@ -125,7 +124,7 @@ try {
   );
   assert.match(await page.locator("#recipeCount").textContent(), /Rezept/);
 
-  await page.locator('[data-recipe-filter="snack"]').click();
+  await page.locator('[data-recipe-meal="snack"]').click();
   const snackRecipes = await recipeNames();
   assert.ok(
     snackRecipes.includes("Weiche Apfel-Hafer-Riegel"),

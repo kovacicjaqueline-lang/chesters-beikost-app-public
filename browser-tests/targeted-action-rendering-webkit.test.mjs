@@ -152,7 +152,7 @@ try {
     window.__targetedActionRenderProbe.current = 0;
     window.__targetedActionRenderProbe.plan = 0;
   });
-  const removeManualMeal = page.locator(`.removeManualMeal[data-date="${mealDeleteSetup.date}"][data-meal="lunch"]`);
+  const removeManualMeal = page.locator(`#planView .removeManualMeal[data-date="${mealDeleteSetup.date}"][data-meal="lunch"]`);
   await removeManualMeal.evaluate((button) => {
     const details = button.closest("details.manual-meal");
     if (details) details.open = true;

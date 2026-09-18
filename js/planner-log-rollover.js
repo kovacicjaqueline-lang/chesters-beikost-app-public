@@ -864,7 +864,6 @@
         plannerPromptOpen = false;
         save();
         closeGeneric();
-        renderAll();
         showToast("Planung nicht verschoben.");
       };
       document.getElementById("backfillOpenPlans").onclick = () => {

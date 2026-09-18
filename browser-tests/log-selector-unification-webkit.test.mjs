@@ -46,10 +46,55 @@ function startStaticServer() {
 
 async function reset(page) {
   await page.evaluate(() => {
-    const state = window.__beikostTest.reset();
-    state.logs = [];
-    state.backupMeta.chesterContextSeeded = true;
-    window.__beikostTest.setState(state);
+    const next = window.__beikostTest.reset();
+    next.logs = [];
+    next.backupMeta.chesterContextSeeded = true;
+    window.__beikostTest.setState(next);
+  });
+}
+
+async function seedRecents(page) {
+  return page.evaluate(() => {
+    const next = window.__beikostTest.getState();
+    const foods = next.foods.filter((item) => item.active).slice(0, 6);
+    const recipes = RECIPES.slice(0, 5);
+    assertForSeed(foods.length >= 5 && recipes.length >= 5);
+    const row = (id, date, recipe, foodIds) => ({
+      id,
+      date,
+      meal: "",
+      foodIds,
+      focusId: foodIds[0],
+      recipeName: recipe,
+      outcome: "eaten",
+      foodOutcomes: Object.fromEntries(foodIds.map((foodId) => [foodId, "eaten"])),
+      entryType: "food",
+      baseFoodIds: foodIds,
+      sampleFoodIds: [],
+      individualRatings: false,
+      amount: "",
+      textureKnown: true,
+      textureStage: 1,
+      createdAt: `${date}T12:00:00.000Z`,
+      updatedAt: `${date}T12:00:00.000Z`,
+    });
+    next.logs = [
+      row("recent-1", "2026-09-05", recipes[0].name, [foods[0].id, foods[1].id]),
+      row("recent-2", "2026-09-04", recipes[1].name, [foods[1].id, foods[2].id]),
+      row("recent-3", "2026-09-03", recipes[0].name, [foods[3].id]),
+      row("recent-4", "2026-09-02", recipes[2].name, [foods[4].id]),
+      row("recent-5", "2026-09-01", recipes[3].name, [foods[0].id]),
+      row("recent-6", "2026-08-31", recipes[4].name, [foods[5].id]),
+    ];
+    window.__beikostTest.setState(next);
+    return {
+      recipes: [recipes[0].name, recipes[1].name, recipes[2].name, recipes[3].name],
+      foods: [foods[0], foods[1], foods[2], foods[3]].map(({ id, name }) => ({ id, name })),
+    };
+
+    function assertForSeed(condition) {
+      if (!condition) throw new Error("Testdaten für Recents fehlen");
+    }
   });
 }
 
@@ -68,111 +113,178 @@ try {
   await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => !!window.__beikostTest?.getState && window.__flowDialogUiInstalled === true);
 
-  // Freier Eintrag: Auswahl bleibt kompakt, Suche wird bewusst geöffnet.
   await reset(page);
-  await page.evaluate(() => window.openLog(null));
+  const expected = await seedRecents(page);
+  await page.evaluate(() => {
+    window.__prepDemandCalls = 0;
+    const original = prepDemand;
+    prepDemand = (...args) => {
+      window.__prepDemandCalls += 1;
+      return original(...args);
+    };
+    openLog(null);
+  });
   const selector = page.locator("#logForm .flow-log-selector");
   await selector.waitFor();
+  await page.waitForFunction(() => document.activeElement?.id === "logRecipeSearch");
+  assert.equal(await page.evaluate(() => window.__prepDemandCalls), 0, "Leerer FOOD-Zustand darf prepDemand() nicht aufrufen");
+  assert.equal(await page.locator("#logDate").isVisible(), true);
+  assert.equal(await page.evaluate(() => {
+    const date = document.getElementById("logDate")?.closest(".field, .log-date-grid");
+    const selection = document.querySelector("#logForm .flow-log-selector");
+    return !!date && !!selection && !!(date.compareDocumentPosition(selection) & Node.DOCUMENT_POSITION_FOLLOWING);
+  }), true, "Datum muss vor dem Auswahlbereich stehen");
 
   const tabs = selector.locator(".flow-log-selector-tabs [data-flow-log-selector]");
-  assert.equal(await tabs.count(), 2, "Freier Eintrag muss Rezept-/Lebensmittel-Umschalter anbieten");
   assert.deepEqual(await tabs.allTextContents(), ["Rezepte", "Lebensmittel"]);
   assert.equal(await selector.locator('[data-flow-log-selector="recipes"]').getAttribute("aria-pressed"), "true");
-  assert.equal(await page.locator("#logRecipeSearch").isVisible(), false, "Rezeptsuche soll den Editor standardmäßig nicht beherrschen");
-  assert.equal(await page.locator('[data-flow-log-search-toggle="recipes"]').isVisible(), true);
-  assert.equal(await page.locator('[data-flow-log-search-toggle="recipes"]').textContent(), "Rezept suchen");
-  assert.equal(await page.locator("#logRecipeSearch").getAttribute("placeholder"), "Rezept suchen");
-  assert.equal(await page.locator(".log-recipe-results-label").isVisible(), false, "Doppelter leerer Rezept-Hinweis darf nicht sichtbar sein");
-
-  await page.locator('[data-flow-log-search-toggle="recipes"]').click();
   assert.equal(await page.locator("#logRecipeSearch").isVisible(), true);
-  assert.equal(await page.evaluate(() => document.activeElement?.id), "logRecipeSearch");
-  assert.equal(await page.locator('[data-flow-log-search-toggle="recipes"]').getAttribute("aria-expanded"), "true");
-  await page.locator("#logRecipeSearch").fill("Birne-Hirse-Pancakes");
-  const recipeResult = page.locator(".selectLogRecipeResult.selector-row.selectRecipe").filter({ hasText: "Birne-Hirse-Pancakes" }).first();
-  await recipeResult.waitFor();
-  assert.equal(await page.locator(".log-recipe-results-label").textContent(), "Suchergebnisse");
+  assert.equal(await page.locator("#logRecipeSearch").getAttribute("placeholder"), "Rezept suchen");
+  assert.equal(await page.locator('[data-flow-log-search-toggle]').count(), 0, "Zusätzliche Suchbuttons dürfen nicht mehr existieren");
+
+  const recipeRows = page.locator(".log-recipe-results .selectLogRecipeResult");
+  assert.equal(await recipeRows.count(), 4);
+  assert.deepEqual(await recipeRows.locator(".log-result-name").allTextContents(), expected.recipes);
+  assert.equal(await recipeRows.locator(".log-result-meta").count(), 0);
+  assert.equal(await page.locator("#logForm").getByText("Zuletzt eingetragen", { exact: true }).count(), 0);
+  assert.equal(await page.locator(".log-recipe-results-label").isVisible(), false);
+
+  await page.locator("#logRecipeSearch").fill("unauffindbar-rezept-xyz");
+  assert.equal(await page.locator(".log-recipe-results").textContent(), "Kein Rezept gefunden");
+  assert.equal(await recipeRows.count(), 0);
 
   await selector.locator('[data-flow-log-selector="foods"]').click();
+  await page.waitForFunction(() => document.activeElement?.id === "logFoodSearch");
+  assert.equal(await page.locator("#logRecipeSearch").inputValue(), "");
+  assert.equal(await page.locator("#logFoodSearch").inputValue(), "");
   assert.equal(await selector.locator('[data-flow-log-selector="foods"]').getAttribute("aria-pressed"), "true");
-  assert.equal(await page.locator("#logRecipeSearch").isVisible(), false);
-  assert.equal(await page.locator("#logFoodSearch").isVisible(), false, "Tabwechsel darf die Suche nicht ungefragt öffnen");
-  assert.equal(await page.locator('[data-flow-log-search-toggle="foods"]').textContent(), "Lebensmittel suchen");
-  assert.equal(await page.locator("#logFoodSearch").getAttribute("placeholder"), "Lebensmittel suchen");
-  assert.equal(await page.locator("#addCustomLogFood").isVisible(), true, "Eigenes Lebensmittel gehört auch bei geschlossener Suche in den Lebensmittel-Tab");
 
-  await page.locator('[data-flow-log-search-toggle="foods"]').click();
-  assert.equal(await page.locator("#logFoodSearch").isVisible(), true);
-  assert.equal(await page.locator(".log-food-results-label").textContent(), "Vorschläge aus Plan und Verlauf");
-  assert.equal(await page.evaluate(() => document.activeElement?.id), "logFoodSearch");
+  const foodRows = page.locator(".log-food-results .addLogFoodResult");
+  assert.equal(await foodRows.count(), 4);
+  assert.deepEqual(await foodRows.locator(".log-result-name").allTextContents(), expected.foods.map((item) => item.name));
+  assert.equal(await foodRows.locator(".log-result-meta").count(), 0);
+  assert.equal(await page.locator(".log-food-results-label").isVisible(), false);
+  assert.equal(await page.locator("#addCustomLogFood").isVisible(), false, "Custom-Food darf im leeren Zustand nicht sichtbar sein");
 
-  await page.locator("#logFoodSearch").fill("Karotte");
-  const foodResult = page.locator(".addLogFoodResult.selector-row.selectFood").filter({ hasText: "Karotte" }).first();
-  await foodResult.waitFor();
-  await foodResult.click();
-  await page.waitForFunction(() => document.querySelector("#logForm .flow-log-selector"));
-  assert.equal(await page.locator('[data-flow-log-selector="foods"]').getAttribute("aria-pressed"), "true", "Tabwahl muss nach Log-Neurendering erhalten bleiben");
-  assert.equal(await page.locator("#logFoodSearch").isVisible(), true, "Mehrfachauswahl darf einen laufenden Suchmodus nicht schließen");
-  const selectedFoodResult = page.locator('.addLogFoodResult.selector-row.selectFood.selected[data-food="karotte"]');
-  await selectedFoodResult.waitFor();
-  assert.equal(await selectedFoodResult.locator(".log-result-add").textContent(), "✓");
-  assert.match(await selectedFoodResult.getAttribute("aria-label"), /entfernen/);
-  assert.equal(
-    await page.evaluate(() => {
-      const selectorNode = document.querySelector("#logForm .flow-log-selector");
-      const evaluation = [...document.querySelectorAll("#logForm .field")].find((node) =>
-        /Lebensmittel bewerten|Einführung und Wiederholung/.test(node.querySelector(":scope > label")?.textContent || ""),
-      );
-      return !!selectorNode && !!evaluation && !!(selectorNode.compareDocumentPosition(evaluation) & Node.DOCUMENT_POSITION_FOLLOWING);
-    }),
-    true,
-    "Auswahl muss vor den protokollspezifischen Bewertungsfeldern stehen",
-  );
+  await page.locator("#logFoodSearch").fill(expected.foods[0].name);
+  await page.locator(`.addLogFoodResult[data-food="${expected.foods[0].id}"]`).waitFor();
+  assert.equal(await page.locator("#addCustomLogFood").isVisible(), false);
+  await page.locator("#logFoodSearch").fill("eigenes-testfood-xyz");
+  assert.equal(await page.locator(".log-food-results").textContent(), "Kein Lebensmittel gefunden");
+  assert.equal(await page.locator("#addCustomLogFood").isVisible(), true);
+  assert.match(await page.locator("#addCustomLogFood").textContent(), /eigenes-testfood-xyz/);
+  assert.equal(await page.evaluate(() => {
+    const results = document.querySelector(".log-food-results");
+    const custom = document.getElementById("addCustomLogFood");
+    return !!results && !!custom && !!(results.compareDocumentPosition(custom) & Node.DOCUMENT_POSITION_FOLLOWING);
+  }), true, "Custom-Food-Aktion muss unter dem 0-Treffer-Hinweis stehen");
 
-  // Ausgewählte FOODs bleiben wie im Mahlzeiteneditor sichtbar und lassen sich wieder abwählen.
-  await selectedFoodResult.click();
-  await page.waitForFunction(() => !document.querySelector('.addLogFoodResult.selected[data-food="karotte"]'));
-  await page.locator('[data-flow-log-selector="recipes"]').click();
-  assert.equal(await page.locator("#logRecipeSearch").isVisible(), false);
-  assert.equal(await page.locator('[data-flow-log-search-toggle="recipes"]').isVisible(), true);
-
-  // Validierung aus dem Rezept-Tab führt zu FOOD und öffnet dort gezielt die Suche.
-  await page.locator("#saveLog").click();
-  await page.locator(".log-food-picker.field-error").waitFor();
-  await page.waitForFunction(() => document.querySelector('[data-flow-log-selector="foods"]')?.getAttribute("aria-pressed") === "true");
-  assert.equal(await page.locator("#logFoodSearch").isVisible(), true, "Fehlerkorrektur muss den benötigten Suchmodus direkt öffnen");
-  assert.equal(await page.evaluate(() => document.activeElement?.id), "logFoodSearch");
-  assert.equal(await page.locator("#logFoodError").isVisible(), true);
-  assert.match(await page.locator("#logFoodError").textContent(), /mindestens ein tatsächlich enthaltenes Lebensmittel/);
+  await page.locator("#logFoodSearch").fill("");
+  const recentFood = page.locator(`.addLogFoodResult[data-food="${expected.foods[0].id}"]`);
+  await recentFood.click();
+  await page.waitForFunction(() => document.activeElement?.id === "logFoodSearch");
+  assert.equal(await page.locator("#logFoodSearch").inputValue(), "");
+  const selectedRecent = page.locator(`.addLogFoodResult.selected[data-food="${expected.foods[0].id}"]`);
+  await selectedRecent.waitFor();
+  assert.equal(await selectedRecent.locator(".log-result-add").textContent(), "✓");
 
   await page.locator('[data-flow-log-selector="recipes"]').click();
-  await page.waitForFunction(() => document.querySelector('[data-flow-log-selector="recipes"]')?.getAttribute("aria-pressed") === "true");
-  assert.equal(await page.locator("#logRecipeSearch").isVisible(), false, "Tabwechsel soll wieder im kompakten Zustand landen");
-  assert.equal(await page.locator('[data-flow-log-search-toggle="recipes"]').isVisible(), true, "Nach FOOD-Validierung muss Rezeptsuche weiter erreichbar sein");
-  assert.equal(await page.locator("#logFoodError").isVisible(), false, "Der erledigte FOOD-Fehler darf den Rezept-Tab nicht blockieren");
-  assert.equal(await page.locator(".log-food-picker.field-error").count(), 0);
-  await page.evaluate(() => window.closeLog());
+  await page.waitForFunction(() => document.activeElement?.id === "logRecipeSearch");
+  assert.equal(await page.locator("#logFoodSearch").inputValue(), "");
+  assert.equal(await page.locator("#logRecipeSearch").inputValue(), "");
 
-  // Geplanter Kontext bleibt fachlich enger und ebenfalls kompakt.
+  await page.locator("#logRecipeSearch").fill(expected.recipes[0]);
+  await page.locator(".selectLogRecipeResult").filter({ hasText: expected.recipes[0] }).first().click();
+  await page.waitForFunction(() => document.querySelector("#logForm .flow-log-selector")?.hidden === true);
+  assert.equal(await page.locator(".selected-target .small").count(), 0);
+  assert.equal((await page.locator(".selected-target b").textContent()).trim(), expected.recipes[0]);
+  assert.equal(await page.locator("#clearLogRecipe").isVisible(), true);
+  await page.locator("#clearLogRecipe").click();
+  await page.waitForFunction(() => document.activeElement?.id === "logRecipeSearch");
+  assert.equal(await page.locator("#logRecipeSearch").inputValue(), "");
+  assert.equal(await selector.isVisible(), true);
+
+  const variantRecipe = await page.evaluate(() => RECIPES.find((recipe) => logRecipeNeedsExplicitChoice(recipe))?.name || "");
+  assert.ok(variantRecipe, "Mindestens ein Rezept mit expliziter Variantenwahl wird für die Regression benötigt");
+  await page.locator("#logRecipeSearch").fill(variantRecipe);
+  await page.locator(".selectLogRecipeResult").filter({ hasText: variantRecipe }).first().click();
+  const requiredChoices = page.locator("[data-log-recipe-required]");
+  await requiredChoices.first().waitFor();
+  assert.equal(await page.locator("[data-log-recipe-confirm]").count(), 0);
+  assert.equal(await requiredChoices.first().inputValue(), "");
+  assert.equal(await page.locator("#saveLog").isDisabled(), true);
+  assert.equal(await page.evaluate(() => document.activeElement?.hasAttribute("data-log-recipe-required")), true);
+  while (true) {
+    const values = await page.locator("[data-log-recipe-required]").evaluateAll((nodes) => nodes.map((node) => node.value));
+    const emptyIndex = values.findIndex((value) => !value);
+    if (emptyIndex < 0) break;
+    await page.locator("[data-log-recipe-required]").nth(emptyIndex).selectOption({ index: 1 });
+    await page.waitForTimeout(0);
+  }
+  assert.equal(await page.locator("#saveLog").isDisabled(), false);
+
+  assert.equal(await page.evaluate(() => {
+    const consistency = document.getElementById("logTexture")?.closest(".field");
+    const rating = [...document.querySelectorAll("#logForm .field")].filter((field) => field.querySelector("#mainOutcome, [data-individual-result], [data-sample-result]"));
+    const amount = document.getElementById("logAmount")?.closest(".field");
+    const stock = [...document.querySelectorAll("#logForm .field")].filter((field) => field.querySelector("#useRecipeInventory, [data-inventory-food]"));
+    const save = document.querySelector("#logForm .sticky-form-actions");
+    const nodes = [consistency, ...rating, amount, ...stock, save].filter(Boolean);
+    return nodes.length >= 4 && nodes.every((node, index) => index === 0 || !!(nodes[index - 1].compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING));
+  }), true);
+  assert.equal(await page.locator("#logNote").count(), 0);
+  assert.equal(await page.locator("#conditionalLogQuestions").count(), 0);
+  const logText = await page.locator("#logForm").textContent();
+  for (const removedText of ["Notiz ergänzen", "Notiz oder Reaktion", "Nur wenig Interesse", "Klar verweigert", "Keine Gelegenheit", "Zutat nicht verfügbar", "Diese Zutaten wurden tatsächlich verwendet"]) {
+    assert.equal(logText.includes(removedText), false, `${removedText} darf nicht mehr in der Maske stehen`);
+  }
+  await page.evaluate(() => closeLog());
+
   await reset(page);
-  await page.evaluate(() => window.openLog({
-    date: window.__beikostTest.today(),
-    meal: "lunch",
-    focusId: "karotte",
-    foodIds: ["karotte"],
-    baseFoodIds: [],
-    sampleFoodIds: ["karotte"],
-    recipeName: "",
-    entryType: "meal",
-  }));
-  await page.locator("#logForm .flow-log-selector").waitFor();
-  assert.equal(await page.locator("#logForm .flow-log-selector-tabs").count(), 0, "Geplanter Log darf keine freie Rezeptwahl erfinden");
-  assert.equal(await page.locator("#logFoodSearch").isVisible(), false);
-  assert.equal(await page.locator('[data-flow-log-search-toggle="foods"]').isVisible(), true);
-  assert.equal(await page.locator("#logRecipeSearch").count(), 0);
+  const legacy = await page.evaluate(() => {
+    const next = window.__beikostTest.getState();
+    const item = next.foods.find((food) => food.active);
+    const id = "legacy-hidden-fields";
+    next.logs = [{
+      id,
+      date: window.__beikostTest.today(),
+      meal: "",
+      foodIds: [item.id],
+      focusId: item.id,
+      recipeName: "",
+      outcome: "not_accepted",
+      foodOutcomes: { [item.id]: "not_accepted" },
+      entryType: "food",
+      baseFoodIds: [item.id],
+      sampleFoodIds: [],
+      individualRatings: false,
+      amount: "",
+      textureKnown: false,
+      note: "Historische Notiz behalten",
+      rejectionStrength: "refused",
+      notOfferedReason: "unavailable",
+      legacyMarker: "keep-me",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }];
+    window.__beikostTest.setState(next);
+    editLogEntry(id);
+    return { id };
+  });
+  await page.locator("#logModal.open").waitFor();
+  assert.equal(await page.locator("#logNote").count(), 0);
+  assert.equal(await page.locator("#conditionalLogQuestions").count(), 0);
+  await page.locator("#saveLog").click();
+  await page.waitForFunction(() => !document.getElementById("logModal")?.classList.contains("open"));
+  const savedLegacy = await page.evaluate((id) => window.__beikostTest.getState().logs.find((log) => log.id === id), legacy.id);
+  assert.equal(savedLegacy.note, "Historische Notiz behalten");
+  assert.equal(savedLegacy.rejectionStrength, "refused");
+  assert.equal(savedLegacy.notOfferedReason, "unavailable");
+  assert.equal(savedLegacy.legacyMarker, "keep-me");
+
   assert.ok(
     await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1),
-    "Gemeinsamer Log-Selector darf auf iPhone-Breite keinen horizontalen Überlauf erzeugen",
+    "Log-Flow darf auf iPhone-Breite keinen horizontalen Überlauf erzeugen",
   );
 } finally {
   await context.close();
@@ -180,4 +292,4 @@ try {
   await new Promise((resolve) => server.close(resolve));
 }
 
-console.log("WebKit log selector unification regression passed.");
+console.log("WebKit mobile log entry regression passed.");

@@ -254,6 +254,7 @@
     }
     setCatalogMode(MODE_RECIPES);
     showView("foods");
+    renderRecipeCatalog();
     requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
   }
 

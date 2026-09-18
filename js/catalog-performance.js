@@ -234,6 +234,42 @@
     ];
   }
 
+  function recipeFoodMealEligible(label, meal) {
+    if (typeof FOOD_DB === "undefined" || typeof recipeFoodFromStructuredLabel !== "function") return false;
+    const item = recipeFoodFromStructuredLabel(label, FOOD_DB);
+    return !!item && Array.isArray(item.meals) && item.meals.includes(meal);
+  }
+
+  function recipeChoiceEligible(labels, meal) {
+    return !labels?.length || labels.some((label) => recipeFoodMealEligible(label, meal));
+  }
+
+  function recipeRequirementSetEligible(labels, meal) {
+    return (labels || []).every((label) => recipeFoodMealEligible(label, meal));
+  }
+
+  function recipeMealEligible(recipe, meal) {
+    const requirementSets = [
+      recipe?.requires || [],
+      ...(recipe?.alternatives || []),
+    ];
+    if (!requirementSets.some((labels) => recipeRequirementSetEligible(labels, meal))) return false;
+    if (!recipeChoiceEligible(recipe?.oneOf || [], meal)) return false;
+    if (!recipeChoiceEligible(recipe?.milkChoices || [], meal)) return false;
+    return true;
+  }
+
+  function recipeMainMealEligible(recipe) {
+    return recipeMealEligible(recipe, "lunch") || recipeMealEligible(recipe, "dinner");
+  }
+
+  function recipeFilterBars() {
+    return [
+      document.getElementById("recipeMealFilter"),
+      document.getElementById("recipeFilter"),
+    ].filter(Boolean);
+  }
+
   function recipeSearchEntry(recipe) {
     const key = recipe?.name || "";
     if (recipeSearchIndexCache.has(key)) return recipeSearchIndexCache.get(key);
@@ -307,9 +343,13 @@
               ? !!recipe.freezable
               : recipeFilter === "philippines"
                 ? recipe.ph || recipe.category === "philippines"
-                : recipeFilter === "snack"
-                  ? (recipe.tags || []).some((tag) => normalizeName(tag) === "snack")
-                  : recipe.category === recipeFilter;
+                : recipeFilter === "breakfast"
+                  ? recipeMealEligible(recipe, "breakfast")
+                  : recipeFilter === "main"
+                    ? recipeMainMealEligible(recipe)
+                    : recipeFilter === "snack"
+                      ? (recipe.tags || []).some((tag) => normalizeName(tag) === "snack")
+                      : recipe.category === recipeFilter;
   }
 
   function refreshRecipeStateCache() {
@@ -371,7 +411,7 @@
   }
 
   function renderOptimizedRecipeCatalog({ reuseStates = false } = {}) {
-    const filterBar = document.getElementById("recipeFilter");
+    const filterBars = recipeFilterBars();
     const search = document.getElementById("recipeSearch");
     const list = document.getElementById("recipeList");
     if (!list) return;
@@ -380,9 +420,11 @@
     if (!reuseStates || !recipeStatesCache) refreshRecipeStateCache();
     const allRecipeStates = recipeStatesCache || [];
 
-    filterBar?.querySelectorAll("[data-recipe-filter]").forEach((button) =>
-      button.classList.toggle("active", button.dataset.recipeFilter === recipeFilter),
-    );
+    filterBars.forEach((filterBar) => {
+      filterBar.querySelectorAll("[data-recipe-filter]").forEach((button) =>
+        button.classList.toggle("active", button.dataset.recipeFilter === recipeFilter),
+      );
+    });
     if (search && search.value !== recipeQuery) search.value = recipeQuery;
 
     const query = normalizeName(recipeQuery);
@@ -393,9 +435,13 @@
     if (countBox) {
       const context = recipeFilter === "almost"
         ? "es fehlen höchstens zwei Schritte"
-        : recipeFilter === "snack"
-          ? "Snack"
-          : "passend zu Filter und Suche";
+        : recipeFilter === "breakfast"
+          ? "Frühstück"
+          : recipeFilter === "main"
+            ? "Hauptmahlzeit"
+            : recipeFilter === "snack"
+              ? "Snack"
+              : "passend zu Filter und Suche";
       countBox.textContent = `${recipes.length} Rezept${recipes.length === 1 ? "" : "e"} · ${context}`;
     }
 
@@ -421,11 +467,13 @@
         }];
     reconcileKeyedHtml(list, entries);
 
-    filterBar?.querySelectorAll("[data-recipe-filter]").forEach((button) => {
-      button.onclick = () => {
-        recipeFilter = button.dataset.recipeFilter;
-        renderOptimizedRecipeCatalog({ reuseStates: true });
-      };
+    filterBars.forEach((filterBar) => {
+      filterBar.querySelectorAll("[data-recipe-filter]").forEach((button) => {
+        button.onclick = () => {
+          recipeFilter = button.dataset.recipeFilter;
+          renderOptimizedRecipeCatalog({ reuseStates: true });
+        };
+      });
     });
     if (search) {
       search.oninput = (event) => {

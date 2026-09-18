@@ -63,18 +63,49 @@ try {
   await page.waitForFunction(() =>
     !!window.__beikostTest?.getState &&
     typeof window.renderAll === "function" &&
+    typeof window.withViewRenderCycle === "function" &&
     typeof window.viewRenderBuildDays === "function",
   );
   await page.waitForFunction(() => window.__plannerPoliciesReady === true);
 
   const measurement = await page.evaluate(() => {
-    state.settings.planFrom = today();
     const baseBuildDays = buildDays;
+    const baseWithViewRenderCycle = withViewRenderCycle;
+    const originalRenderers = {
+      renderHome,
+      renderPlan,
+      renderLogs,
+      renderStatistics,
+      renderFoods,
+      renderPrep,
+      renderAllergenModule,
+      renderSettings,
+      renderAudit,
+      renderStorageStatus,
+    };
     let matchingBuilds = 0;
+    const cycleIds = [];
+
     buildDays = function countedBuildDays(from, n = 7, applyAutoLocks = true) {
       if (String(from) === today() && Number(n) === 7 && applyAutoLocks !== false) matchingBuilds += 1;
       return baseBuildDays.apply(this, arguments);
     };
+    withViewRenderCycle = function observedViewRenderCycle(viewId, callback) {
+      cycleIds.push(String(viewId || ""));
+      return baseWithViewRenderCycle(viewId, callback);
+    };
+
+    const noop = () => {};
+    renderHome = noop;
+    renderPlan = () => viewRenderBuildDays(today(), 7);
+    renderLogs = noop;
+    renderStatistics = noop;
+    renderFoods = noop;
+    renderPrep = () => viewRenderBuildDays(today(), 7);
+    renderAllergenModule = noop;
+    renderSettings = noop;
+    renderAudit = noop;
+    renderStorageStatus = noop;
 
     try {
       renderAll();
@@ -82,18 +113,35 @@ try {
       viewRenderBuildDays(today(), 7);
       viewRenderBuildDays(today(), 7);
       return {
+        firstCycleId: cycleIds[0] || "",
         duringFullRender,
         outsideCycleAdditionalBuilds: matchingBuilds - duringFullRender,
       };
     } finally {
       buildDays = baseBuildDays;
+      withViewRenderCycle = baseWithViewRenderCycle;
+      renderHome = originalRenderers.renderHome;
+      renderPlan = originalRenderers.renderPlan;
+      renderLogs = originalRenderers.renderLogs;
+      renderStatistics = originalRenderers.renderStatistics;
+      renderFoods = originalRenderers.renderFoods;
+      renderPrep = originalRenderers.renderPrep;
+      renderAllergenModule = originalRenderers.renderAllergenModule;
+      renderSettings = originalRenderers.renderSettings;
+      renderAudit = originalRenderers.renderAudit;
+      renderStorageStatus = originalRenderers.renderStorageStatus;
     }
   });
 
   assert.equal(
+    measurement.firstCycleId,
+    "all",
+    "Der installierte renderAll()-Wrapper muss einen gemeinsamen Full-Render-Zyklus öffnen",
+  );
+  assert.equal(
     measurement.duringFullRender,
     1,
-    "Plan und Prep müssen im selben renderAll()-Zyklus denselben 7-Tage-buildDays-Aufruf teilen",
+    "Zwei Renderer müssen im selben renderAll()-Zyklus denselben 7-Tage-buildDays-Aufruf teilen",
   );
   assert.equal(
     measurement.outsideCycleAdditionalBuilds,

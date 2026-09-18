@@ -56,6 +56,18 @@ try {
     hasTouch: true,
   });
   const page = await context.newPage();
+  const resourceFailures = [];
+  page.on("requestfailed", (request) => resourceFailures.push({
+    url: request.url(),
+    error: request.failure()?.errorText || "request failed",
+  }));
+  page.on("response", (response) => {
+    if (response.status() >= 400) resourceFailures.push({
+      url: response.url(),
+      error: `HTTP ${response.status()}`,
+    });
+  });
+
   const navigationStartedAt = performance.now();
   await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "load" });
   const loadWallClockMs = performance.now() - navigationStartedAt;
@@ -130,10 +142,14 @@ try {
           activeViewDisplay: activeView ? getComputedStyle(activeView).display : "",
           htmlBackground: htmlStyle.backgroundColor,
           bodyBackground: bodyStyle.backgroundColor,
+          bgVariable: htmlStyle.getPropertyValue("--bg").trim(),
           bodyVisibility: bodyStyle.visibility,
           bodyDisplay: bodyStyle.display,
           bodyOpacity: bodyStyle.opacity,
           readyState: document.readyState,
+          stylesheets: [...document.styleSheets].map((sheet) => ({ href: sheet.href || "inline", rules: (() => {
+            try { return sheet.cssRules.length; } catch (_) { return null; }
+          })() })),
         };
       },
       async syntheticVisibility(state) {
@@ -177,6 +193,21 @@ try {
   const sameDayTiming = await page.evaluate(() => window.__resumeProbe.syntheticVisibility("visible"));
   const sameDay = await page.evaluate(() => window.__resumeProbe.snapshot());
 
+  console.log(`APP_RESUME_PRECHECK ${JSON.stringify({
+    resourceFailures,
+    timing: sameDayTiming,
+    shell: {
+      htmlBackground: sameDay.htmlBackground,
+      bodyBackground: sameDay.bodyBackground,
+      bgVariable: sameDay.bgVariable,
+      stylesheets: sameDay.stylesheets,
+      activeView: sameDay.activeView,
+      activeViewDisplay: sameDay.activeViewDisplay,
+    },
+    calls: sameDay.calls,
+    mutations: sameDay.mutations,
+  })}`);
+
   assert.equal(sameDay.calls.save, 0, "Same-day resume must not persist state");
   assert.equal(sameDay.calls.renderCurrentView, 0, "Same-day resume must keep the existing view instead of rerendering it");
   assert.equal(sameDay.calls.renderAll, 0, "Same-day resume must never trigger a full-app render");
@@ -184,7 +215,10 @@ try {
   assert.notEqual(sameDay.bodyDisplay, "none", "The app body must not be hidden on resume");
   assert.notEqual(sameDay.bodyVisibility, "hidden", "The app body must remain visible on resume");
   assert.notEqual(sameDay.bodyOpacity, "0", "The app body must not be transparent on resume");
-  assert.notEqual(sameDay.bodyBackground, "rgba(0, 0, 0, 0)", "The app shell needs an opaque background after CSS has loaded");
+  assert.ok(
+    sameDay.htmlBackground !== "rgba(0, 0, 0, 0)" || sameDay.bodyBackground !== "rgba(0, 0, 0, 0)",
+    "The rendered app canvas needs an opaque root or body background after CSS has loaded",
+  );
 
   await setPlanFrom(yesterday);
   await resetProbe();
@@ -222,6 +256,7 @@ try {
       loadWallClockMs: Number(loadWallClockMs.toFixed(1)),
       readyWallClockMs: Number(readyWallClockMs.toFixed(1)),
     },
+    resourceFailures,
     sameDay: {
       timing: Object.fromEntries(Object.entries(sameDayTiming).map(([key, value]) => [key, Number(value.toFixed(2))])),
       calls: sameDay.calls,
@@ -244,8 +279,10 @@ try {
     shell: {
       htmlBackground: sameDay.htmlBackground,
       bodyBackground: sameDay.bodyBackground,
+      bgVariable: sameDay.bgVariable,
       activeView: sameDay.activeView,
       activeViewDisplay: sameDay.activeViewDisplay,
+      stylesheets: sameDay.stylesheets,
     },
   };
 

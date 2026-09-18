@@ -92,7 +92,10 @@ function installViewRenderCache() {
     let baseRenderAll = renderAll;
     renderAll = function renderAllWithViewRenderInvalidation(...args) {
       invalidateViewRenderCache();
-      let result = baseRenderAll.apply(this, args);
+      let runFullRender = () => baseRenderAll.apply(this, args);
+      let result = typeof withViewRenderCycle === "function"
+        ? withViewRenderCycle("all", runFullRender)
+        : runFullRender();
       cachedViewIds.forEach((id) => renderedViewSignatures.set(id, currentViewRenderSignature(id)));
       return result;
     };

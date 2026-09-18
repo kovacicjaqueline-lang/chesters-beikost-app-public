@@ -522,3 +522,44 @@ body.mobile-foundation #more .version-details {
     height: 76px;
   }
 }
+
+/* Recipe catalog: freigegebene kompakte Filter- und Kartenhierarchie. */
+body.mobile-foundation #foods #recipesDetails > summary b{font-size:23px}
+body.mobile-foundation #foods #recipesDetails > summary small{margin-top:3px}
+body.mobile-foundation #foods .recipe-filter-field,
+body.mobile-foundation #foods .recipe-meal-filter-field{margin-bottom:8px}
+body.mobile-foundation #foods .recipe-filter-field>label,
+body.mobile-foundation #foods .recipe-meal-filter-field>label{display:none}
+body.mobile-foundation #foods #recipeFilter,
+body.mobile-foundation #foods #recipeMealFilter{display:flex;gap:6px;overflow-x:auto;padding:0 0 2px;scrollbar-width:none}
+body.mobile-foundation #foods #recipeFilter::-webkit-scrollbar,
+body.mobile-foundation #foods #recipeMealFilter::-webkit-scrollbar{display:none}
+body.mobile-foundation #foods #recipeFilter button,
+body.mobile-foundation #foods #recipeMealFilter button{flex:0 0 auto;min-height:40px;width:auto;white-space:nowrap}
+body.mobile-foundation #foods .recipe-more-filter-button{min-height:42px;margin:0 0 12px;padding:8px 13px}
+body.mobile-foundation #foods .recipe-filter-sheet[hidden]{display:none}
+body.mobile-foundation #foods .recipe-filter-sheet{position:fixed;inset:0;z-index:60;display:flex;align-items:flex-end}
+body.mobile-foundation #foods .recipe-filter-sheet-backdrop{position:absolute;inset:0;border:0;background:rgba(33,29,24,.34)}
+body.mobile-foundation #foods .recipe-filter-sheet-panel{position:relative;width:100%;max-height:min(78dvh,680px);overflow:auto;padding:18px 16px calc(16px + env(safe-area-inset-bottom));border-radius:22px 22px 0 0;background:var(--card);box-shadow:0 -10px 30px rgba(33,29,24,.16)}
+body.mobile-foundation #foods .recipe-filter-sheet-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+body.mobile-foundation #foods .recipe-filter-sheet-head h2{margin:0;font-size:21px}
+body.mobile-foundation #foods .recipe-filter-sheet-group{margin-top:18px}
+body.mobile-foundation #foods .recipe-filter-sheet-group h3{margin:0 0 8px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+body.mobile-foundation #foods .recipe-extra-filter-list{display:flex;flex-wrap:wrap;gap:7px}
+body.mobile-foundation #foods .recipe-extra-filter-list button{flex:0 0 auto;width:auto;min-height:42px}
+body.mobile-foundation #foods .recipe-filter-sheet-actions{position:sticky;bottom:calc(-16px - env(safe-area-inset-bottom));display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;margin:20px -16px calc(-16px - env(safe-area-inset-bottom));padding:10px 16px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:var(--card)}
+body.mobile-foundation #foods .recipe-card-v2{margin:0;border-radius:0;border-top:1px solid var(--line);background:transparent}
+body.mobile-foundation #foods #recipeList>.recipe-card-v2:first-child{border-top:1px solid var(--line)}
+body.mobile-foundation #foods .recipe-card-v2>summary{min-height:68px;padding:8px 0}
+body.mobile-foundation #foods .recipe-heading-with-icon{grid-template-columns:52px minmax(0,1fr);gap:10px}
+body.mobile-foundation #foods .recipe-heading-with-icon .recipe-icon,
+body.mobile-foundation #foods .recipe-heading-with-icon .illustration-icon--recipe,
+body.mobile-foundation #foods .recipe-heading-with-icon img,
+body.mobile-foundation #foods .recipe-heading-with-icon svg{--illustration-size:52px;width:52px;min-width:52px;height:52px}
+body.mobile-foundation #foods .recipe-type-text,
+body.mobile-foundation #foods .recipe-tech-text,
+body.mobile-foundation #foods .recipe-summary-end .pill{display:none!important}
+body.mobile-foundation #foods .recipe-summary-end{gap:0}
+body.mobile-foundation #foods .recipe-chevron{font-size:0}
+body.mobile-foundation #foods .recipe-chevron::after{content:"›";font-size:26px}
+body.mobile-foundation #foods .recipe-card-v2[open] .recipe-chevron{transform:rotate(90deg)}

@@ -90,6 +90,15 @@ async function plannerMealSnapshot(page, key) {
 
 const defaultNav = ["Heute", "Plan", "Prep", "Beikost", "Mehr"];
 const everydayNav = ["Heute", "Rezepte", "Plan", "Prep", "Mehr"];
+const focusScriptMatch = fs.readFileSync(path.join(root, "index.html"), "utf8")
+  .match(/<script src="(js\/app-focus-mode\.js\?v=[^"]+)"><\/script>/);
+assert.ok(focusScriptMatch, "index.html muss das Fokusmodus-Runtime-Skript versioniert laden");
+assert.equal(
+  fs.readFileSync(path.join(root, "sw.js"), "utf8").includes(JSON.stringify(`./${focusScriptMatch[1]}`)),
+  true,
+  "der Fokusmodus muss unter exakt derselben Runtime-URL für den ersten Offline-/PWA-Start precached sein",
+);
+
 const server = await startStaticServer();
 const { port } = server.address();
 const browser = await webkit.launch();

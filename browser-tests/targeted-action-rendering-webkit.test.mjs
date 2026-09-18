@@ -11,7 +11,7 @@ const mimeTypes = {
   ".js": "text/javascript; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".json": "application/json; charset=utf-8",
-  ".webmanifest": "application/manifest+json",
+  ".webmanifest": "application/manifest+json; charset=utf-8",
   ".svg": "image/svg+xml",
   ".png": "image/png",
   ".webp": "image/webp",
@@ -176,10 +176,10 @@ try {
     return performance.now() - start;
   });
   await page.waitForFunction((key) => !!window.__beikostTest.getState().manualMeals?.[key], mealDeleteSetup.key);
-  const afterMealUndo = await page.evaluate(() => ({
+  const afterMealUndo = await page.evaluate((key) => ({
     probe: { ...window.__targetedActionRenderProbe },
-    note: window.__beikostTest.getState().manualMeals?.[Object.keys(window.__beikostTest.getState().manualMeals || {}).find((key) => window.__beikostTest.getState().manualMeals[key]?.note === "targeted-render-delete-meal")]?.note || "",
-  }));
+    note: window.__beikostTest.getState().manualMeals?.[key]?.note || "",
+  }), mealDeleteSetup.key);
   assert.equal(afterMealUndo.probe.full, 0, "Mahlzeit-Rückgängig darf keinen Voll-Render auslösen");
   assert.ok(afterMealUndo.probe.current >= 2, "Mahlzeit-Rückgängig muss die aktuelle Ansicht erneut gezielt rendern");
   assert.equal(afterMealUndo.note, "targeted-render-delete-meal", "Rückgängig muss dieselbe Mahlzeit wiederherstellen");

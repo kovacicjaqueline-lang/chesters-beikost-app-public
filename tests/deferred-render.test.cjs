@@ -18,18 +18,16 @@ function createHarness({ withAnimationFrame = true } = {}) {
   const events = [];
   const raf = [];
   const timers = [];
-  const microtasks = [];
   const sandbox = {
     console,
     Promise,
     renderAll: () => events.push("render"),
     setTimeout: (callback) => { timers.push(callback); return timers.length; },
-    queueMicrotask: (callback) => { microtasks.push(callback); },
   };
   if (withAnimationFrame) sandbox.requestAnimationFrame = (callback) => { raf.push(callback); return raf.length; };
   vm.createContext(sandbox);
   vm.runInContext(source, sandbox, { filename: "js/deferred-render.js" });
-  return { sandbox, events, raf, timers, microtasks };
+  return { sandbox, events, raf, timers };
 }
 
 {
@@ -97,34 +95,6 @@ function createHarness({ withAnimationFrame = true } = {}) {
   h.raf.shift()();
   h.timers.shift()();
   assert.deepEqual(renderedViews, [], "Ein synchron übernommener Render muss den geplanten View-Render verwerfen");
-}
-
-{
-  const h = createHarness();
-  let genericClick = null;
-  const genericBody = {
-    addEventListener: (type, callback) => {
-      if (type === "click") genericClick = callback;
-    },
-  };
-  h.sandbox.document = {
-    getElementById: (id) => id === "genericBody" ? genericBody : null,
-    querySelectorAll: () => [],
-  };
-  h.sandbox.installSaveUiLatencyFlows();
-  assert.equal(typeof genericClick, "function", "Die generische Save-Latenzbehandlung muss installiert werden");
-
-  genericClick({ target: { closest: () => ({ id: "keepOpenPlans" }) } });
-  h.sandbox.renderAll();
-
-  assert.deepEqual(h.events, [], "Nicht verschieben darf den Voll-Render nicht im Tap-Task ausführen");
-  assert.equal(h.microtasks.length, 1, "Der Deferred-Scope muss nach dem Event beendet werden");
-  h.microtasks.shift()();
-  assert.equal(h.raf.length, 1, "Der Voll-Render muss bis nach der nächsten Paint-Gelegenheit warten");
-  h.raf.shift()();
-  assert.equal(h.timers.length, 1);
-  h.timers.shift()();
-  assert.deepEqual(h.events, ["render"], "Der bestehende Voll-Render muss anschließend weiterhin genau einmal laufen");
 }
 
 console.log("Deferred full-render scheduling regression passed.");

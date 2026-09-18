@@ -197,6 +197,15 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      - name: Upload app resume metrics
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-resume-metrics-${{ github.run_id }}-shard-${{ matrix.shard }}
+          path: artifacts/browser-tests/app-resume/
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Upload plan checks UX screenshots
         if: ${{ failure() }}
         uses: actions/upload-artifact@v4

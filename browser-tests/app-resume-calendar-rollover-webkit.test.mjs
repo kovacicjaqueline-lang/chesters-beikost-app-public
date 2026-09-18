@@ -10,8 +10,8 @@ const mimeTypes = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
   ".css": "text/css; charset=utf-8",
-  ".json": "application/json; charset=utf-8",
-  ".webmanifest": "application/manifest+json; charset=utf-8",
+  ".json": "application/json",
+  ".webmanifest": "application/manifest+json",
   ".svg": "image/svg+xml",
   ".png": "image/png",
   ".webp": "image/webp",
@@ -60,15 +60,16 @@ try {
   await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "load" });
   await page.waitForFunction(() => !!window.__beikostTest?.getState);
 
+  const today = await page.evaluate(() => window.__beikostTest.today());
   const tomorrow = await page.evaluate(() => window.__beikostTest.addDays(window.__beikostTest.today(), 1));
-  await page.evaluate((nextDay) => {
+  await page.evaluate((currentDay) => {
     const next = window.__beikostTest.getState();
-    next.settings.planFrom = nextDay;
+    next.settings.planFrom = currentDay;
     window.__beikostTest.setState(next);
-  }, tomorrow);
+  }, today);
   await page.waitForFunction(
-    (nextDay) => window.__beikostTest.getState().settings.planFrom === nextDay,
-    tomorrow,
+    (currentDay) => window.__beikostTest.getState().settings.planFrom === currentDay,
+    today,
   );
 
   await page.evaluate(() => {
@@ -105,6 +106,7 @@ try {
       return {
         calls: { ...window.__calendarRolloverProbe },
         events: [...window.__calendarRolloverEvents],
+        planFrom: window.__beikostTest.getState().settings.planFrom,
         activeView: activeView?.id || "",
         activeViewDisplay: activeView ? getComputedStyle(activeView).display : "",
         bodyVisibility: getComputedStyle(document.body).visibility,
@@ -116,9 +118,10 @@ try {
     }
   }, tomorrow);
 
+  assert.equal(result.planFrom, tomorrow, "Calendar rollover must advance a stale planFrom to the new current day");
   assert.equal(result.calls.renderAll, 0, "Calendar rollover resume must not trigger a full-app render");
   assert.ok(result.calls.invalidateViewRenderCache >= 1, "Calendar rollover must invalidate cached hidden views");
-  assert.equal(result.calls.renderCurrentView, 1, "Calendar rollover must refresh only the active view once when planFrom is already current");
+  assert.equal(result.calls.renderCurrentView, 1, "Calendar rollover must refresh the active view exactly once");
   const firstInvalidation = result.events.indexOf("invalidateViewRenderCache");
   const firstViewRender = result.events.indexOf("renderCurrentView");
   assert.ok(

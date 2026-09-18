@@ -553,7 +553,7 @@ body.mobile-foundation #foods #recipeList>.recipe-card-v2:first-child{border-top
 body.mobile-foundation #foods .recipe-card-v2>summary{min-height:68px;padding:8px 0}
 body.mobile-foundation #foods .recipe-heading-with-icon{grid-template-columns:52px minmax(0,1fr);gap:10px}
 body.mobile-foundation #foods .recipe-heading-with-icon>.recipe-illustration{--illustration-size:52px;width:52px;min-width:52px;height:52px;flex:0 0 52px}
-body.mobile-foundation #foods .recipe-heading-with-icon>.recipe-illustration .illustration-icon__asset{width:100%;height:100%;object-fit:contain}
+body.mobile-foundation #foods .recipe-heading-with-icon>.recipe-illustration>.illustration-icon__asset{width:52px;height:52px;max-width:100%;max-height:100%;object-fit:contain}
 body.mobile-foundation #foods .recipe-type-text,
 body.mobile-foundation #foods .recipe-tech-text,
 body.mobile-foundation #foods .recipe-summary-end .pill{display:none!important}

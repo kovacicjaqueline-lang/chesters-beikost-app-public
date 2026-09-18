@@ -152,7 +152,12 @@ try {
     window.__targetedActionRenderProbe.current = 0;
     window.__targetedActionRenderProbe.plan = 0;
   });
-  await page.locator(`.removeManualMeal[data-date="${mealDeleteSetup.date}"][data-meal="lunch"]`).click();
+  const removeManualMeal = page.locator(`.removeManualMeal[data-date="${mealDeleteSetup.date}"][data-meal="lunch"]`);
+  await removeManualMeal.evaluate((button) => {
+    const details = button.closest("details.manual-meal");
+    if (details) details.open = true;
+  });
+  await removeManualMeal.click();
   await page.locator("#confirmMealDelete").waitFor({ state: "visible" });
   const deleteMealMs = await page.evaluate(() => {
     const start = performance.now();

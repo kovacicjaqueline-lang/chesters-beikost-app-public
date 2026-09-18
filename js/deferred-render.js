@@ -92,7 +92,10 @@ function installViewRenderCache() {
     let baseRenderAll = renderAll;
     renderAll = function renderAllWithViewRenderInvalidation(...args) {
       invalidateViewRenderCache();
-      let result = baseRenderAll.apply(this, args);
+      let runFullRender = () => baseRenderAll.apply(this, args);
+      let result = typeof withViewRenderCycle === "function"
+        ? withViewRenderCycle("all", runFullRender)
+        : runFullRender();
       cachedViewIds.forEach((id) => renderedViewSignatures.set(id, currentViewRenderSignature(id)));
       return result;
     };
@@ -236,12 +239,51 @@ function wrapHandlerWithTargetedRender(element, handlerKey, renderTarget, option
   element[handlerKey] = targetedHandler;
 }
 
+function wrapDialogOpenerWithTargetedConfirm(element, handlerKey, confirmId, renderTarget, options = {}) {
+  let baseHandler = element?.[handlerKey];
+  if (typeof baseHandler !== "function" || baseHandler.__targetedConfirmRender) return;
+  let targetedOpener = function targetedConfirmOpener(...args) {
+    let result = baseHandler.apply(this, args);
+    wrapHandlerWithTargetedRender(document.getElementById(confirmId), "onclick", renderTarget, options);
+    return result;
+  };
+  targetedOpener.__targetedConfirmRender = true;
+  element[handlerKey] = targetedOpener;
+}
+
 function patchFoodDetailTargetedRenderHandlers() {
   if (typeof renderCurrentView !== "function") return;
   wrapHandlerWithTargetedRender(document.getElementById("foodDetailsPriority"), "onchange", renderCurrentView);
   wrapHandlerWithTargetedRender(document.getElementById("foodDetailsStatus"), "onchange", renderCurrentView);
+  wrapHandlerWithTargetedRender(document.getElementById("foodDetailsLiked"), "onchange", renderCurrentView);
   wrapHandlerWithTargetedRender(document.getElementById("foodDetailsTop"), "onclick", renderCurrentView);
   wrapHandlerWithTargetedRender(document.getElementById("foodDetailsBottom"), "onclick", renderCurrentView);
+}
+
+function patchPlanTargetedRenderHandlers() {
+  if (typeof renderPlan === "function") {
+    wrapHandlerWithTargetedRender(document.getElementById("planFrom"), "onchange", renderPlan);
+    wrapHandlerWithTargetedRender(document.getElementById("planToday"), "onclick", renderPlan);
+    wrapDialogOpenerWithTargetedConfirm(
+      document.getElementById("planRecalculate"),
+      "onclick",
+      "confirmPlanRebuild",
+      renderPlan,
+    );
+  }
+  if (typeof renderCurrentView !== "function") return;
+  document.querySelectorAll(".meal-lock").forEach((button) => {
+    wrapHandlerWithTargetedRender(button, "onclick", renderCurrentView);
+  });
+  document.querySelectorAll(".removeManualMeal, .removePlannedMeal").forEach((button) => {
+    wrapDialogOpenerWithTargetedConfirm(
+      button,
+      "onclick",
+      "confirmMealDelete",
+      renderCurrentView,
+      { wrapUndo: true },
+    );
+  });
 }
 
 function patchLogDeleteTargetedRenderHandlers() {
@@ -268,7 +310,10 @@ function installTargetedActionRendering() {
       return result;
     };
   }
+  globalThis.MobileUiLifecycle?.onRender?.("plan", patchPlanTargetedRenderHandlers);
+  globalThis.MobileUiLifecycle?.onRender?.("home", patchPlanTargetedRenderHandlers);
   patchFoodDetailTargetedRenderHandlers();
+  patchPlanTargetedRenderHandlers();
   patchLogDeleteTargetedRenderHandlers();
 }
 

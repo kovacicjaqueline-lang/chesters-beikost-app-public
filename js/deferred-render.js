@@ -261,17 +261,9 @@ function patchFoodDetailTargetedRenderHandlers() {
 }
 
 function patchPlanTargetedRenderHandlers() {
-  if (typeof renderPlan === "function") {
-    wrapHandlerWithTargetedRender(document.getElementById("planFrom"), "onchange", renderPlan);
-    wrapHandlerWithTargetedRender(document.getElementById("planToday"), "onclick", renderPlan);
-    wrapDialogOpenerWithTargetedConfirm(
-      document.getElementById("planRecalculate"),
-      "onclick",
-      "confirmPlanRebuild",
-      renderPlan,
-    );
-  }
   if (typeof renderCurrentView !== "function") return;
+  wrapHandlerWithTargetedRender(document.getElementById("planFrom"), "onchange", renderCurrentView);
+  wrapHandlerWithTargetedRender(document.getElementById("planToday"), "onclick", renderCurrentView);
   document.querySelectorAll(".meal-lock").forEach((button) => {
     wrapHandlerWithTargetedRender(button, "onclick", renderCurrentView);
   });
@@ -311,7 +303,6 @@ function installTargetedActionRendering() {
     };
   }
   globalThis.MobileUiLifecycle?.onRender?.("plan", patchPlanTargetedRenderHandlers);
-  globalThis.MobileUiLifecycle?.onRender?.("home", patchPlanTargetedRenderHandlers);
   patchFoodDetailTargetedRenderHandlers();
   patchPlanTargetedRenderHandlers();
   patchLogDeleteTargetedRenderHandlers();

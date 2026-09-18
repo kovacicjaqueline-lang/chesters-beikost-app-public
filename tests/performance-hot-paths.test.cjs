@@ -196,6 +196,7 @@ test("IndexedDB-Verbindung wird zwischen Reads und Writes wiederverwendet", asyn
     window: { indexedDB },
     document: { addEventListener() {} },
     navigator: {},
+    today: () => "2026-09-18",
     DB_NAME: "test",
     DB_VERSION: 1,
     DB_STORE: "app",

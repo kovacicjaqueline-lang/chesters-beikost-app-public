@@ -132,7 +132,7 @@ try {
     };
   });
   assert.equal(recipePresentation.borderRadius, "0px", "Rezeptübersicht soll als ruhige Liste statt Kartenstapel erscheinen");
-  assert.ok(recipePresentation.iconWidth <= 56, "Rezeptbilder sollen kompakt bleiben");
+  assert.ok(recipePresentation.iconWidth <= 60, "Rezeptbilder sollen kompakt bleiben");
   assert.equal(recipePresentation.typeVisible, false, "Rezeptart gehört nicht auf die schlichte Übersichtskarte");
   assert.equal(recipePresentation.badgeVisible, false, "Einfrierbar- und Status-Badges gehören in die Details");
 

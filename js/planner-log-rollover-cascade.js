@@ -31,9 +31,123 @@
     return primary ? core.linkedCompletionLog(data, primary.planId, date, meal) : null;
   }
 
-  const API = Object.freeze({ materializeVisibleFuturePlans, primarySlotCompletion });
+  const NON_PLANNER_SETTING_KEYS = new Set([
+    "phaseReadinessSignalsByPhase",
+    "planCheckEvaluationRevision",
+    "targetFoods",
+    "textureStageSince",
+  ]);
+
+  function dayPlanRuntimePlannerInput(data) {
+    let settings = Object.fromEntries(
+      Object.entries(data?.settings || {}).filter(([key]) => !NON_PLANNER_SETTING_KEYS.has(key)),
+    );
+    return {
+      settings,
+      foods: data?.foods || [],
+      logs: data?.logs || [],
+      inventory: data?.inventory || [],
+      overrides: data?.overrides || {},
+      deferred: data?.deferred || {},
+      pantry: data?.pantry || {},
+      planLocks: data?.planLocks || {},
+      autoLockExcluded: data?.autoLockExcluded || {},
+      manualMeals: data?.manualMeals || {},
+      combinationPauses: data?.combinationPauses || {},
+      followUps: data?.followUps || {},
+      shoppingHints: data?.shoppingHints || {},
+      plannerLinking: data?.backupMeta?.plannerLinking || null,
+    };
+  }
+
+  function createDayPlanRuntimeCache(
+    buildDaysFn,
+    plannerInputFn = () => null,
+    currentDayFn = () => "",
+    maxEntries = 64,
+  ) {
+    if (typeof buildDaysFn !== "function" || typeof plannerInputFn !== "function") return null;
+    let cache = new Map();
+    let generation = 0;
+    let hits = 0;
+    let misses = 0;
+    let limit = Math.max(1, Number(maxEntries) || 64);
+
+    let keyFor = (from, n = 7, applyAutoLocks = true) =>
+      `${generation}|${String(currentDayFn() || "")}|${String(from)}|${Number(n)}|${applyAutoLocks !== false}`;
+    let inputSignature = () => JSON.stringify(plannerInputFn());
+
+    let remember = (key, signature, value) => {
+      cache.delete(key);
+      cache.set(key, { signature, value });
+      while (cache.size > limit) cache.delete(cache.keys().next().value);
+      return value;
+    };
+
+    let invalidate = () => {
+      generation += 1;
+      cache.clear();
+    };
+
+    let cachedBuildDays = function cachedBuildDays(from, n = 7, applyAutoLocks = true) {
+      let key = keyFor(from, n, applyAutoLocks);
+      let signature = inputSignature();
+      let cached = cache.get(key);
+      if (cached?.signature === signature) {
+        hits += 1;
+        // Als einfache LRU halten wir häufige Planbereiche am Ende der Map.
+        cache.delete(key);
+        cache.set(key, cached);
+        return cached.value;
+      }
+      misses += 1;
+      let result = buildDaysFn.call(this, from, n, applyAutoLocks);
+      // ensureAutoLocks() kann den Planner-State während der Berechnung verändern.
+      // Das finale Ergebnis gehört dann zum finalen Input-Snapshot, nicht zum
+      // Zustand vor dem Build. Temporäre Simulationen erhalten dadurch zugleich
+      // einen eigenen Input-Snapshot, ohne dass sie save() aufrufen müssen.
+      return remember(keyFor(from, n, applyAutoLocks), inputSignature(), result);
+    };
+
+    return Object.freeze({
+      buildDays: cachedBuildDays,
+      invalidate,
+      stats: () => ({ generation, hits, misses, entries: cache.size, maxEntries: limit }),
+    });
+  }
+
+  const API = Object.freeze({
+    materializeVisibleFuturePlans,
+    primarySlotCompletion,
+    dayPlanRuntimePlannerInput,
+    createDayPlanRuntimeCache,
+  });
   if (typeof module !== "undefined" && module.exports) module.exports = API;
   if (typeof window === "undefined" || typeof document === "undefined") return;
+
+  if (!globalScope.__dayPlanRuntimeCache && typeof buildDays === "function") {
+    let runtimeCache = createDayPlanRuntimeCache(
+      buildDays,
+      () => dayPlanRuntimePlannerInput(state),
+      () => today(),
+    );
+    if (runtimeCache) {
+      buildDays = runtimeCache.buildDays;
+      globalScope.invalidateDayPlanRuntimeCache = runtimeCache.invalidate;
+      globalScope.__dayPlanRuntimeCache = runtimeCache;
+
+      let baseClearAutomaticLocks = clearAutomaticLocks;
+      clearAutomaticLocks = function cacheAwareClearAutomaticLocks(...args) {
+        runtimeCache.invalidate();
+        return baseClearAutomaticLocks.apply(this, args);
+      };
+      let baseRebuildVisiblePlan = rebuildVisiblePlan;
+      rebuildVisiblePlan = function cacheAwareRebuildVisiblePlan(...args) {
+        runtimeCache.invalidate();
+        return baseRebuildVisiblePlan.apply(this, args);
+      };
+    }
+  }
 
   let coreForSlot = () => globalScope.__plannerLogRolloverCore;
   completedLog = function concretePrimaryCompletedLog(date, meal) {

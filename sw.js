@@ -162,6 +162,7 @@ const UI_PRECACHE = [
   "./js/product-allergens.js",
   "./js/product-allergens-guards.js",
   "./js/catalog-navigation.js",
+  "./js/app-focus-mode.js?v=10.1.26",
   "./js/mobile-beikost-more.js?v=10.1.26",
 ];
 

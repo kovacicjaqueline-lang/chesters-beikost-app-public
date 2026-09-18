@@ -11,7 +11,7 @@ const mimeTypes = {
   ".js": "text/javascript; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".json": "application/json; charset=utf-8",
-  ".webmanifest": "application/manifest+json; charset=utf-8",
+  ".webmanifest": "application/manifest+json",
   ".svg": "image/svg+xml",
   ".png": "image/png",
   ".webp": "image/webp",
@@ -152,7 +152,7 @@ try {
     window.__targetedActionRenderProbe.current = 0;
     window.__targetedActionRenderProbe.plan = 0;
   });
-  const removeManualMeal = page.locator(`#planView .removeManualMeal[data-date="${mealDeleteSetup.date}"][data-meal="lunch"]`);
+  const removeManualMeal = page.locator(`#plan .removeManualMeal[data-date="${mealDeleteSetup.date}"][data-meal="lunch"]`);
   await removeManualMeal.evaluate((button) => {
     const details = button.closest("details.manual-meal");
     if (details) details.open = true;

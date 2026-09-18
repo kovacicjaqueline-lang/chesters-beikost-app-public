@@ -114,7 +114,7 @@ test("TASK-ALT-05: Rezept und FOOD-only bleiben unterschiedliche Ideen bei ident
   assert.equal(task.candidateIdentity({ ...recipe, foodIds: ["gurke", "kartoffel"] }), task.candidateIdentity(recipe));
 });
 
-test("TASK-ALT-06: Runtime findet Recipe-first-/Basis-Alternativen ohne die Lernaufgabe oder State zu verändern", () => {
+test("TASK-ALT-06: Runtime findet Recipe-first-/Basis-Alternativen read-only ohne die Lernaufgabe zu verändern", () => {
   const source = fs.readFileSync(path.join(root, "js", "planner-task-alternatives.js"), "utf8");
   const current = activeMeal({ recipeName: "Aktuelles Rezept" });
   const foods = [
@@ -156,7 +156,9 @@ test("TASK-ALT-06: Runtime findet Recipe-first-/Basis-Alternativen ohne die Lern
     },
     today: () => "2026-09-20",
     visiblePlanStart: () => "2026-09-20",
-    planDisplayDays: () => [{ date: "2026-09-20", meals: [JSON.parse(JSON.stringify(current))] }],
+    planDisplayDays: () => {
+      throw new Error("planDisplayDays darf in der read-only Alternativsuche nicht aufgerufen werden");
+    },
     clone: (value) => JSON.parse(JSON.stringify(value)),
     mealSnapshot: (_date, _meal, meal) => JSON.parse(JSON.stringify(meal)),
     mealIsCompleted: () => false,
@@ -172,7 +174,12 @@ test("TASK-ALT-06: Runtime findet Recipe-first-/Basis-Alternativen ohne die Lern
       targetKeysForFoodIds: () => [],
     },
   });
+  let buildCall = 0;
   context.buildDays = (from) => {
+    buildCall += 1;
+    if (buildCall === 1) {
+      return [{ date: from, meals: [JSON.parse(JSON.stringify(current))] }];
+    }
     const chosen = context.introductionCandidate("lunch", from, {}, []);
     const base = context.companionFor(chosen.f, "lunch", from, chosen.type);
     const recipe = context.recipeStates()[0] || null;
@@ -204,6 +211,7 @@ test("TASK-ALT-06: Runtime findet Recipe-first-/Basis-Alternativen ohne die Lern
   assert.ok(result.alternatives.length >= 2);
   assert.ok(result.alternatives.some((meal) => meal.recipeName === "Alternatives Rezept"));
   assert.ok(result.alternatives.some((meal) => meal.recipeName === ""));
+  assert.ok(buildCall > 1);
   for (const meal of result.alternatives) {
     assert.equal(meal.focusId, "gurke");
     assert.deepEqual([...meal.sampleFoodIds], ["gurke"]);
@@ -236,6 +244,7 @@ test("TASK-ALT-07: Modul bleibt unsichtbare Grundlage und ist Loader-/Offline-se
 
   assert.match(source, /taskPreservingAlternatives/);
   assert.match(source, /buildDays\(/);
+  assert.doesNotMatch(source, /planDisplayDays\s*\(/);
   assert.match(source, /automaticFoodEligibility/);
   assert.match(source, /plannerFoodCanBeAutomaticFocus/);
   assert.match(source, /PlannerAllergenMaintenance/);

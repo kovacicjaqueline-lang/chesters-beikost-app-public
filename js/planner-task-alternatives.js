@@ -19,6 +19,14 @@
   const MAX_ALTERNATIVES = 6;
   const MAX_FOCUS_CANDIDATES = 8;
   const MAX_VARIANTS_PER_FOCUS = 3;
+  const READ_ONLY_STATE_KEYS = Object.freeze([
+    "planLocks",
+    "manualMeals",
+    "overrides",
+    "autoLockExcluded",
+    "followUps",
+    "backupMeta",
+  ]);
 
   function canonicalIds(ids) {
     return [...new Set(ids || [])].filter(Boolean).sort();
@@ -108,6 +116,26 @@
     // planDisplayDays persistiert Rollover-Snapshots und darf deshalb während der
     // read-only Alternativensuche nicht aufgerufen werden.
     return buildDays(from, 7, false);
+  }
+
+  function captureReadOnlyState() {
+    const snapshot = {};
+    for (const key of READ_ONLY_STATE_KEYS) {
+      const exists = Object.prototype.hasOwnProperty.call(state, key);
+      snapshot[key] = {
+        exists,
+        value: exists ? clone(state[key]) : undefined,
+      };
+    }
+    return snapshot;
+  }
+
+  function restoreReadOnlyState(snapshot) {
+    for (const key of READ_ONLY_STATE_KEYS) {
+      const saved = snapshot?.[key];
+      if (!saved?.exists) delete state[key];
+      else state[key] = clone(saved.value);
+    }
   }
 
   function targetMealFrom(days, date, meal) {
@@ -347,7 +375,7 @@
     return alternatives;
   }
 
-  function taskPreservingAlternatives(date, meal) {
+  function taskPreservingAlternativesCore(date, meal) {
     if (!date || !meal || date < today()) return { ok: false, reason: "past", alternatives: [] };
     const key = swap.slotKey(date, meal);
     if (state.manualMeals?.[key]) {
@@ -400,6 +428,15 @@
       contract,
       alternatives,
     };
+  }
+
+  function taskPreservingAlternatives(date, meal) {
+    const snapshot = captureReadOnlyState();
+    try {
+      return taskPreservingAlternativesCore(date, meal);
+    } finally {
+      restoreReadOnlyState(snapshot);
+    }
   }
 
   globalScope.__plannerTaskAlternatives = Object.freeze({

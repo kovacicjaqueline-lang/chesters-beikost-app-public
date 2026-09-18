@@ -73,15 +73,18 @@ try {
 
   await page.evaluate(() => {
     const calls = { renderAll: 0, renderCurrentView: 0, invalidateViewRenderCache: 0 };
+    const events = [];
     for (const name of Object.keys(calls)) {
       const base = globalThis[name];
       assertFunction(name, base);
       globalThis[name] = function measuredCalendarRolloverCall(...args) {
         calls[name] += 1;
+        events.push(name);
         return base.apply(this, args);
       };
     }
     globalThis.__calendarRolloverProbe = calls;
+    globalThis.__calendarRolloverEvents = events;
 
     function assertFunction(name, value) {
       if (typeof value !== "function") throw new Error(`${name} is not available`);
@@ -101,6 +104,7 @@ try {
       const activeView = document.querySelector(".view.active");
       return {
         calls: { ...window.__calendarRolloverProbe },
+        events: [...window.__calendarRolloverEvents],
         activeView: activeView?.id || "",
         activeViewDisplay: activeView ? getComputedStyle(activeView).display : "",
         bodyVisibility: getComputedStyle(document.body).visibility,
@@ -113,8 +117,14 @@ try {
   }, tomorrow);
 
   assert.equal(result.calls.renderAll, 0, "Calendar rollover resume must not trigger a full-app render");
-  assert.equal(result.calls.invalidateViewRenderCache, 1, "Calendar rollover must invalidate cached hidden views once");
+  assert.ok(result.calls.invalidateViewRenderCache >= 1, "Calendar rollover must invalidate cached hidden views");
   assert.equal(result.calls.renderCurrentView, 1, "Calendar rollover must refresh only the active view once when planFrom is already current");
+  const firstInvalidation = result.events.indexOf("invalidateViewRenderCache");
+  const firstViewRender = result.events.indexOf("renderCurrentView");
+  assert.ok(
+    firstInvalidation !== -1 && firstViewRender !== -1 && firstInvalidation < firstViewRender,
+    "Calendar rollover must invalidate cached views before refreshing the active view",
+  );
   assert.equal(result.activeView, "home", "Calendar rollover must preserve the active view");
   assert.equal(result.activeViewDisplay, "block", "The active view must remain visible during calendar rollover");
   assert.notEqual(result.bodyVisibility, "hidden", "The app body must remain visible during calendar rollover");

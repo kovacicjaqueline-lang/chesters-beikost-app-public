@@ -114,7 +114,7 @@ test("TASK-ALT-05: Rezept und FOOD-only bleiben unterschiedliche Ideen bei ident
   assert.equal(task.candidateIdentity({ ...recipe, foodIds: ["gurke", "kartoffel"] }), task.candidateIdentity(recipe));
 });
 
-test("TASK-ALT-06: Runtime findet Recipe-first-/Basis-Alternativen read-only ohne die Lernaufgabe zu verändern", () => {
+test("TASK-ALT-06: Runtime findet Recipe-first-/Basis-Alternativen und stellt alle Planner-Seiteneffekte wieder her", () => {
   const source = fs.readFileSync(path.join(root, "js", "planner-task-alternatives.js"), "utf8");
   const current = activeMeal({ recipeName: "Aktuelles Rezept" });
   const foods = [
@@ -122,7 +122,8 @@ test("TASK-ALT-06: Runtime findet Recipe-first-/Basis-Alternativen read-only ohn
     { id: "kartoffel", active: true },
     { id: "reis", active: true },
   ];
-  const context = vm.createContext({
+  let context;
+  context = vm.createContext({
     console,
     Set,
     Map,
@@ -159,9 +160,13 @@ test("TASK-ALT-06: Runtime findet Recipe-first-/Basis-Alternativen read-only ohn
     planDisplayDays: () => {
       throw new Error("planDisplayDays darf in der read-only Alternativsuche nicht aufgerufen werden");
     },
-    clone: (value) => JSON.parse(JSON.stringify(value)),
+    clone: (value) => value === undefined ? undefined : JSON.parse(JSON.stringify(value)),
     mealSnapshot: (_date, _meal, meal) => JSON.parse(JSON.stringify(meal)),
-    mealIsCompleted: () => false,
+    mealIsCompleted: () => {
+      context.state.planLocks["__completion-side-effect|lunch"] = { focusId: "gurke" };
+      context.state.backupMeta = { plannerLinking: { version: 99 } };
+      return false;
+    },
     food: (id) => foods.find((item) => item.id === id) || null,
     eligible: () => true,
     automaticFoodEligibility: () => true,
@@ -178,6 +183,7 @@ test("TASK-ALT-06: Runtime findet Recipe-first-/Basis-Alternativen read-only ohn
   context.buildDays = (from) => {
     buildCall += 1;
     if (buildCall === 1) {
+      context.state.planLocks["__build-side-effect|lunch"] = { focusId: "reis" };
       return [{ date: from, meals: [JSON.parse(JSON.stringify(current))] }];
     }
     const chosen = context.introductionCandidate("lunch", from, {}, []);
@@ -200,9 +206,11 @@ test("TASK-ALT-06: Runtime findet Recipe-first-/Basis-Alternativen read-only ohn
   vm.runInContext(source, context);
   const before = JSON.stringify({
     planLocks: context.state.planLocks,
+    manualMeals: context.state.manualMeals,
     overrides: context.state.overrides,
     excluded: context.state.autoLockExcluded,
     followUps: context.state.followUps,
+    backupMeta: context.state.backupMeta,
   });
   const result = context.__plannerTaskAlternatives.taskPreservingAlternatives("2026-09-20", "lunch");
 
@@ -219,9 +227,11 @@ test("TASK-ALT-06: Runtime findet Recipe-first-/Basis-Alternativen read-only ohn
   }
   assert.equal(JSON.stringify({
     planLocks: context.state.planLocks,
+    manualMeals: context.state.manualMeals,
     overrides: context.state.overrides,
     excluded: context.state.autoLockExcluded,
     followUps: context.state.followUps,
+    backupMeta: context.state.backupMeta,
   }), before);
 
   context.state.manualMeals["2026-09-20|lunch"] = { manualAdded: false };
@@ -243,6 +253,8 @@ test("TASK-ALT-07: Modul bleibt unsichtbare Grundlage und ist Loader-/Offline-se
   const sw = fs.readFileSync(path.join(root, "sw.js"), "utf8");
 
   assert.match(source, /taskPreservingAlternatives/);
+  assert.match(source, /captureReadOnlyState/);
+  assert.match(source, /restoreReadOnlyState/);
   assert.match(source, /buildDays\(/);
   assert.doesNotMatch(source, /planDisplayDays\s*\(/);
   assert.match(source, /automaticFoodEligibility/);

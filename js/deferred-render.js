@@ -264,9 +264,6 @@ function patchPlanTargetedRenderHandlers() {
   if (typeof renderCurrentView !== "function") return;
   wrapHandlerWithTargetedRender(document.getElementById("planFrom"), "onchange", renderCurrentView);
   wrapHandlerWithTargetedRender(document.getElementById("planToday"), "onclick", renderCurrentView);
-  document.querySelectorAll(".meal-lock").forEach((button) => {
-    wrapHandlerWithTargetedRender(button, "onclick", renderCurrentView);
-  });
   document.querySelectorAll(".removeManualMeal, .removePlannedMeal").forEach((button) => {
     wrapDialogOpenerWithTargetedConfirm(
       button,

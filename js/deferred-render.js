@@ -299,6 +299,7 @@ function installSaveUiLatencyFlows() {
       "saveInv",
       "saveCustom",
       "useExistingCustom",
+      "keepOpenPlans",
     ]);
     genericBody.addEventListener("click", (event) => {
       let button = event.target?.closest?.("button");

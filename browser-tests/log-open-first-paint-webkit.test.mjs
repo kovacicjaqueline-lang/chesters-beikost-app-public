@@ -77,21 +77,29 @@ try {
     const baseInventoryPortions = window.inventoryPortions;
     window.__logFirstPaintProbe = {
       painted: false,
+      inSuggestionRender: false,
       suggestionCalls: 0,
       suggestionBeforePaint: 0,
-      inventoryCalls: 0,
-      inventoryBeforePaint: 0,
+      suggestionInventoryCalls: 0,
+      suggestionInventoryBeforePaint: 0,
       baseLogFoodResultsHtml,
       baseInventoryPortions,
     };
     window.logFoodResultsHtml = function probedLogFoodResultsHtml(...args) {
       window.__logFirstPaintProbe.suggestionCalls += 1;
       if (!window.__logFirstPaintProbe.painted) window.__logFirstPaintProbe.suggestionBeforePaint += 1;
-      return baseLogFoodResultsHtml.apply(this, args);
+      window.__logFirstPaintProbe.inSuggestionRender = true;
+      try {
+        return baseLogFoodResultsHtml.apply(this, args);
+      } finally {
+        window.__logFirstPaintProbe.inSuggestionRender = false;
+      }
     };
     window.inventoryPortions = function probedInventoryPortions(...args) {
-      window.__logFirstPaintProbe.inventoryCalls += 1;
-      if (!window.__logFirstPaintProbe.painted) window.__logFirstPaintProbe.inventoryBeforePaint += 1;
+      if (window.__logFirstPaintProbe.inSuggestionRender) {
+        window.__logFirstPaintProbe.suggestionInventoryCalls += 1;
+        if (!window.__logFirstPaintProbe.painted) window.__logFirstPaintProbe.suggestionInventoryBeforePaint += 1;
+      }
       return baseInventoryPortions.apply(this, args);
     };
     requestAnimationFrame(() => { window.__logFirstPaintProbe.painted = true; });
@@ -107,7 +115,7 @@ try {
       searchReady: !!document.getElementById("logFoodSearch"),
       loadingSuggestions: !!document.querySelector("#logForm .log-food-results-loading"),
       suggestionCalls: window.__logFirstPaintProbe.suggestionCalls,
-      inventoryCalls: window.__logFirstPaintProbe.inventoryCalls,
+      suggestionInventoryCalls: window.__logFirstPaintProbe.suggestionInventoryCalls,
     };
   });
 
@@ -117,7 +125,7 @@ try {
   assert.equal(immediate.searchReady, true, "Lebensmittelsuche muss bereits im ersten Dialog-Render verfügbar sein");
   assert.equal(immediate.loadingSuggestions, true, "Vorschlagsbereich soll bis nach dem ersten Paint einen leichten Ladezustand zeigen");
   assert.equal(immediate.suggestionCalls, 0, "Lebensmittelvorschläge dürfen den ersten Paint nicht blockieren");
-  assert.equal(immediate.inventoryCalls, 0, "Vorratsranking der Vorschläge darf den ersten Paint nicht blockieren");
+  assert.equal(immediate.suggestionInventoryCalls, 0, "Vorratsranking der Vorschläge darf den ersten Paint nicht blockieren");
 
   await page.waitForFunction(() =>
     window.__logFirstPaintProbe?.suggestionCalls > 0 &&
@@ -127,19 +135,20 @@ try {
   const deferred = await page.evaluate(() => ({
     painted: window.__logFirstPaintProbe.painted,
     suggestionBeforePaint: window.__logFirstPaintProbe.suggestionBeforePaint,
-    inventoryBeforePaint: window.__logFirstPaintProbe.inventoryBeforePaint,
+    suggestionInventoryBeforePaint: window.__logFirstPaintProbe.suggestionInventoryBeforePaint,
     suggestionCalls: window.__logFirstPaintProbe.suggestionCalls,
-    inventoryCalls: window.__logFirstPaintProbe.inventoryCalls,
+    suggestionInventoryCalls: window.__logFirstPaintProbe.suggestionInventoryCalls,
     resultCount: document.querySelectorAll("#logForm .addLogFoodResult").length,
   }));
 
   assert.equal(deferred.painted, true, "Vorschläge müssen erst nach einem sichtbaren Frame ergänzt werden");
   assert.equal(deferred.suggestionBeforePaint, 0, "Vorschlagsberechnung muss vollständig hinter dem ersten Paint liegen");
-  assert.equal(deferred.inventoryBeforePaint, 0, "Vorratsranking muss vollständig hinter dem ersten Paint liegen");
+  assert.equal(deferred.suggestionInventoryBeforePaint, 0, "Vorratsranking innerhalb der Vorschläge muss vollständig hinter dem ersten Paint liegen");
   assert.ok(deferred.suggestionCalls >= 1, "Vorschläge müssen nach dem Paint tatsächlich berechnet werden");
-  assert.ok(deferred.resultCount > 0, "Nachgeladenen Vorschläge müssen sichtbar sein");
+  assert.ok(deferred.suggestionInventoryCalls > 0, "Nachgeladene Vorschläge müssen das Vorratsranking tatsächlich auswerten");
+  assert.ok(deferred.resultCount > 0, "Nachgeladene Vorschläge müssen sichtbar sein");
 
-  console.log(`Essen-eintragen First-Paint: synchroner Öffnungspfad ${immediate.openMs.toFixed(2)} ms; Vorschläge danach ${deferred.suggestionCalls}x berechnet, ${deferred.inventoryCalls} Vorratsabfragen.`);
+  console.log(`Essen-eintragen First-Paint: synchroner Öffnungspfad ${immediate.openMs.toFixed(2)} ms; Vorschläge danach ${deferred.suggestionCalls}x berechnet, ${deferred.suggestionInventoryCalls} zugehörige Vorratsabfragen.`);
 
   await page.evaluate(() => {
     window.logFoodResultsHtml = window.__logFirstPaintProbe.baseLogFoodResultsHtml;

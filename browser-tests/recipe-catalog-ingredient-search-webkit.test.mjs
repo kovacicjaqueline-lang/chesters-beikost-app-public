@@ -71,6 +71,14 @@ try {
   await page.locator('#catalogSwitch [data-catalog-mode="recipes"]').click();
   const search = page.locator("#recipeSearch");
   const recipeNames = () => page.locator("#recipeList .recipe-card-v2 summary b").allTextContents();
+  assert.equal(await page.locator('[data-recipe-filter="almost"]').evaluate((button) => button.classList.contains("active")), true, "Fast passend soll der Standardfilter sein");
+  const fastDefaultIncludesUnlocked = await page.evaluate(() => {
+    const states = viewRenderRecipeStates();
+    const visible = [...document.querySelectorAll("#recipeList .recipe-card-v2 summary b")].map((node) => node.textContent.trim());
+    return states.some((recipe) => recipe.unlocked && visible.includes(recipe.name));
+  });
+  assert.equal(fastDefaultIncludesUnlocked, true, "Fast passend muss bereits passende Rezepte einschließen");
+
   await page.locator('[data-recipe-filter="all"]').click();
   const beforeSearch = await recipeNames();
   assert.ok(beforeSearch.includes("Obst-Hafer-Pancakes"), "Ei-Rezept muss vor der Suche im Alle-Filter vorhanden sein");
@@ -87,13 +95,6 @@ try {
     "Die Verfügbarkeitsfilter brauchen eine eigene Zeile",
   );
   assert.equal(await page.locator("#recipeMealFilter").isVisible(), true, "Die Mahlzeitenfilterzeile muss sichtbar sein");
-  assert.equal(await page.locator('[data-recipe-filter="almost"]').evaluate((button) => button.classList.contains("active")), true, "Fast passend soll der Standardfilter sein");
-  const fastDefaultIncludesUnlocked = await page.evaluate(() => {
-    const states = viewRenderRecipeStates();
-    const visible = [...document.querySelectorAll("#recipeList .recipe-card-v2 summary b")].map((node) => node.textContent.trim());
-    return states.some((recipe) => recipe.unlocked && visible.includes(recipe.name));
-  });
-  assert.equal(fastDefaultIncludesUnlocked, true, "Fast passend muss bereits passende Rezepte einschließen");
 
   await page.locator('[data-recipe-filter="all"]').click();
   await page.locator('[data-recipe-meal="breakfast"]').click();

@@ -359,7 +359,7 @@ const ILLUSTRATION_ASSET_REVISION = "10.1.25";
 function revisionedIllustrationSrc(src){ return `${src}${String(src).includes("?") ? "&" : "?"}v=${ILLUSTRATION_ASSET_REVISION}`; }
 function illustrationLoadAttributes(options = {}){
   const loading = options.loading === "eager" ? "eager" : "lazy";
-  const fetchPriority = options.fetchPriority === "high" ? " fetchpriority="high"" : "";
+  const fetchPriority = options.fetchPriority === "high" ? ' fetchpriority="high"' : "";
   return `loading="${loading}" decoding="async"${fetchPriority}`;
 }
 function illustrationImg(src,label,kind="food",options={}){

@@ -380,6 +380,23 @@ function installSaveUiLatencyFlows() {
   installTargetedActionRendering();
 }
 
+function withMemoizedInventoryPortions(callback) {
+  if (typeof callback !== "function") return;
+  let baseInventoryPortions = typeof inventoryPortions === "function" ? inventoryPortions : null;
+  if (!baseInventoryPortions) return callback();
+  let cache = new Map();
+  inventoryPortions = function memoizedInventoryPortions(foodId) {
+    let id = String(foodId || "");
+    if (!cache.has(id)) cache.set(id, baseInventoryPortions(foodId));
+    return cache.get(id);
+  };
+  try {
+    return callback();
+  } finally {
+    inventoryPortions = baseInventoryPortions;
+  }
+}
+
 function scheduleDeferredLogSuggestions() {
   if (typeof renderLogFoodResults !== "function") return;
   let request = ++deferredLogSuggestionRequest;
@@ -388,18 +405,23 @@ function scheduleDeferredLogSuggestions() {
     if (!document.getElementById("logModal")?.classList.contains("open")) return;
     let input = document.getElementById("logFoodSearch");
     if (!input || String(input.value || "").trim()) return;
-    renderLogFoodResults();
+    withMemoizedInventoryPortions(() => renderLogFoodResults());
   });
 }
 
 function renderLogFormWithoutPlanSuggestions(render) {
   if (typeof render !== "function") return;
   let basePrepDemand = typeof prepDemand === "function" ? prepDemand : null;
+  let baseLogFoodResultsHtml = typeof logFoodResultsHtml === "function" ? logFoodResultsHtml : null;
   if (basePrepDemand) prepDemand = () => [];
+  if (baseLogFoodResultsHtml) {
+    logFoodResultsHtml = () => '<div class="small log-food-results-loading">Vorschläge werden geladen…</div>';
+  }
   try {
     render();
   } finally {
     if (basePrepDemand) prepDemand = basePrepDemand;
+    if (baseLogFoodResultsHtml) logFoodResultsHtml = baseLogFoodResultsHtml;
   }
   scheduleDeferredLogSuggestions();
 }
@@ -450,13 +472,14 @@ function installOpenUiLatencyFlows() {
   if (typeof openLog === "function" && typeof renderLogForm === "function") {
     let baseOpenLog = openLog;
     openLog = function openLogWithoutBlockingSuggestions(...args) {
-      let basePrepDemand = typeof prepDemand === "function" ? prepDemand : null;
-      if (basePrepDemand) prepDemand = () => [];
+      let baseRenderLogForm = renderLogForm;
+      renderLogForm = function renderLogFormForFirstPaint() {
+        return renderLogFormWithoutPlanSuggestions(baseRenderLogForm);
+      };
       try {
         return baseOpenLog.apply(this, args);
       } finally {
-        if (basePrepDemand) prepDemand = basePrepDemand;
-        scheduleDeferredLogSuggestions();
+        renderLogForm = baseRenderLogForm;
       }
     };
   }

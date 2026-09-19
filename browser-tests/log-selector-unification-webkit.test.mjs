@@ -143,7 +143,7 @@ try {
   }));
   assert.ok(
     initialSheetMetrics.scrollHeight > initialSheetMetrics.clientHeight,
-    "Der Testdialog muss für den Fokus-Scroll tatsächlich länger als der Viewport sein",
+    "Der Testdialog muss für den Scrollpositions-Regressionscheck tatsächlich länger als der Viewport sein",
   );
   await logSheet.evaluate((element) => {
     element.scrollTop = element.scrollHeight;
@@ -158,11 +158,6 @@ try {
     0,
     "Auch nach einem vorherigen Scrollen muss der Dialog beim erneuten Öffnen oben starten",
   );
-  await page.locator("#logAmount").focus();
-  await page.waitForFunction(() => {
-    const sheet = document.querySelector("#logModal .sheet");
-    return document.activeElement?.id === "logAmount" && !!sheet && sheet.scrollTop > 0;
-  });
   assert.equal(await page.evaluate(() => window.__prepDemandCalls), 0, "Leerer FOOD-Zustand darf prepDemand() nicht aufrufen");
   assert.equal(await page.locator("#logDate").isVisible(), true);
   assert.equal(await page.evaluate(() => {

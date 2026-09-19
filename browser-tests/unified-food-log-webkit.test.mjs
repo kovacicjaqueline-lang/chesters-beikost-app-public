@@ -119,6 +119,7 @@ try {
   await page.evaluate(() => window.openLog(null));
   assert.equal(await page.locator("#logMeal").count(), 0, "Freier Eintrag darf keine Mahlzeitenauswahl anzeigen");
   assert.equal(await page.locator("#logTexture").inputValue(), "", "Neue Textur darf nicht vorausgewählt sein");
+  assert.equal(await page.locator("#logTexture + .small").count(), 0, "Das Konsistenzfeld darf keinen zusätzlichen Hinweistext anzeigen");
   await selectFood(page, "Karotte");
   await selectLogOption(page, "#logTexture", "1");
   await page.locator("#logAmount").fill("5");

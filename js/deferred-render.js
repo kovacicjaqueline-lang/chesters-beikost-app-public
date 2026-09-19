@@ -381,14 +381,16 @@ function installSaveUiLatencyFlows() {
 }
 
 function scheduleDeferredLogSuggestions() {
-  if (typeof renderLogFoodResults !== "function") return;
+  if (typeof renderLogFoodResults !== "function" && typeof renderLogRecipeResults !== "function") return;
   let request = ++deferredLogSuggestionRequest;
   afterNextPaint(() => {
     if (request !== deferredLogSuggestionRequest) return;
     if (!document.getElementById("logModal")?.classList.contains("open")) return;
     let input = document.getElementById("logFoodSearch");
-    if (!input || String(input.value || "").trim()) return;
-    renderLogFoodResults();
+    if (input && typeof renderLogFoodResults === "function") renderLogFoodResults();
+    let recipeInput = document.getElementById("logRecipeSearch");
+    if (recipeInput && typeof renderLogRecipeResults === "function") renderLogRecipeResults();
+    if (typeof pendingLog !== "undefined" && pendingLog) pendingLog.__deferLogSuggestions = false;
   });
 }
 

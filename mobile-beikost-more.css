@@ -509,17 +509,17 @@ body.mobile-foundation #more .version-details {
   }
 
   body.mobile-foundation #foods .recipe-heading-with-icon {
-    grid-template-columns: 76px minmax(0, 1fr);
+    grid-template-columns: 52px minmax(0, 1fr);
   }
 
   body.mobile-foundation #foods .recipe-heading-with-icon .recipe-icon,
   body.mobile-foundation #foods .recipe-heading-with-icon .illustration-icon--recipe,
   body.mobile-foundation #foods .recipe-heading-with-icon img,
   body.mobile-foundation #foods .recipe-heading-with-icon svg {
-    --illustration-size: 76px;
-    width: 76px;
-    min-width: 76px;
-    height: 76px;
+    --illustration-size: 52px;
+    width: 52px;
+    min-width: 52px;
+    height: 52px;
   }
 }
 

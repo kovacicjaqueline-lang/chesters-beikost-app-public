@@ -222,7 +222,7 @@ try {
   await page.locator('nav button[data-view="prep"]').click();
   await page.locator("#prepOpenFreezerRecipes").click();
   assert.equal(await page.locator("#recipesSection").isVisible(), true, "Gefrierschrank-Einstieg muss direkt die Rezeptansicht öffnen");
-  assert.ok(await page.locator('#recipeFilter button[data-recipe-filter="freezer"]').evaluate((button) => button.classList.contains("active")), "Gefrierschrank-Einstieg muss direkt den Einfrierbar-Filter öffnen");
+  assert.ok(await page.locator('[data-recipe-extra-filter="freezer"]').evaluate((button) => button.classList.contains("active")), "Gefrierschrank-Einstieg muss direkt den Einfrierbar-Detailfilter öffnen");
 
   await page.reload({ waitUntil: "load" });
   await waitForApp(page);
@@ -231,7 +231,7 @@ try {
   assert.ok(await page.locator('#foodFilters button[data-filter="open"]').evaluate((button) => button.classList.contains("active")), "Lebensmittelfilter muss nach Reload wieder auf Offen stehen");
   await page.locator('#catalogSwitch button[data-catalog-mode="recipes"]').click();
   assert.equal(await page.locator("#recipeSearch").inputValue(), "", "Rezeptsuche darf Reload nicht überleben");
-  assert.ok(await page.locator('#recipeFilter button[data-recipe-filter="available"]').evaluate((button) => button.classList.contains("active")), "Rezeptfilter muss nach Reload wieder auf Jetzt passend stehen");
+  assert.ok(await page.locator('#recipeFilter button[data-recipe-filter="almost"]').evaluate((button) => button.classList.contains("active")), "Rezeptfilter muss nach Reload wieder auf Fast passend stehen");
   assert.equal(await page.locator("#smallSoftPiecesCapability").isChecked(), true, "gespeicherte Small-Soft-Fähigkeit darf durch UI-Tab-State-Reset nicht verloren gehen");
   assert.equal(await page.locator("#gradedBiteCapability").isChecked(), true, "gespeicherte Graded-Bite-Fähigkeit darf durch UI-Tab-State-Reset nicht verloren gehen");
   assert.equal(await page.locator("#structuredChewCapability").isChecked(), true, "gespeicherte Structured-Chew-Fähigkeit darf durch UI-Tab-State-Reset nicht verloren gehen");

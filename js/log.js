@@ -404,7 +404,7 @@ function logRecipeResultsHtml(query = pendingLog?.__recipeQuery || "") {
   let q = normalizeName(query);
   let recipes = q ? logRecipeCandidates(query) : recentRecipeItems(4);
   if (q && !recipes.length) return '<div class="small log-search-empty">Kein Rezept gefunden</div>';
-  return recipes.map((recipe) => `<button type="button" class="live-result selectLogRecipeResult" data-recipe="${esc(recipe.name)}" aria-label="${esc(recipe.name)} auswählen"><span class="grow log-result-copy"><b class="log-result-name">${esc(recipe.name)}</b>${q ? '<span class="small log-result-meta">Rezept auswählen</span>' : ""}</span><span class="log-result-add" aria-hidden="true">＋</span></button>`).join("");
+  return recipes.map((recipe) => `<button type="button" class="live-result selectLogRecipeResult" data-recipe="${esc(recipe.name)}" aria-label="${esc(recipe.name)} auswählen"><span class="grow log-result-copy"><b class="log-result-name">${esc(recipe.name)}</b></span><span class="log-result-add" aria-hidden="true">＋</span></button>`).join("");
 }
 
 function removeLogFoodSelection(id) {

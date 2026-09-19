@@ -133,6 +133,12 @@ function copyLogEntry(id) {
   pendingLog.__copySource = true;
   pendingLog.__fromPlan = false;
   renderLogForm();
+  const deferPrepDemand = () => {
+    if (!pendingLog?.__copySource || typeof prepDemand !== "function") return;
+    prepDemand();
+  };
+  if (typeof requestAnimationFrame === "function") requestAnimationFrame(deferPrepDemand);
+  else setTimeout(deferPrepDemand, 0);
 }
 
 function editLogEntry(id) {
@@ -781,7 +787,7 @@ function saveLog() {
   };
   if (selectedTexture !== null) newLog.textureStage = selectedTexture;
   if (Object.prototype.hasOwnProperty.call(pendingLog, "presentationMode")) newLog.presentationMode = pendingLog.presentationMode;
-  if (!isEdit) {
+  if (!isEdit && !pendingLog.__copySource) {
     delete newLog.note;
     delete newLog.rejectionStrength;
     delete newLog.notOfferedReason;

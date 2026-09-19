@@ -245,7 +245,8 @@
 
   function removeDeprecatedLogFields() {
     logBody.querySelector("#conditionalLogQuestions")?.remove();
-    logBody.querySelector("#logNote")?.closest("details")?.remove();
+    const title = document.getElementById("logTitle")?.textContent?.trim();
+    if (title !== "Essen kopieren") logBody.querySelector("#logNote")?.closest("details")?.remove();
     logBody.querySelector(".selected-target")?.querySelector(":scope > .small")?.remove();
   }
 
@@ -406,6 +407,7 @@
       logSelectorMode = "recipes";
     }
     syncLog();
+    if (open) queueMicrotask(() => logBody.querySelector("#logRecipeSearch")?.focus());
   });
   logStateObserver.observe(logModal, {
     attributes: true,

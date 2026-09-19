@@ -133,6 +133,39 @@ try {
   assert.match(await todayCard.innerText(), /Neue Kostprobe|Allergen-Aufgabe/);
   assert.equal(await todayCard.locator(".everyday-recipe-visual .recipe-illustration").count(), 1, "Vorhandenes Recipe-V2-Bild wird an der geplanten Rezeptmahlzeit gezeigt");
   assert.equal(await todayCard.locator(".everyday-recipe-open").count(), 1, "Geplantes Rezept bleibt direkt öffnbar");
+
+  const everydayLayout = await todayCard.locator(".today-everyday-meal").first().evaluate((meal) => {
+    const row = meal.querySelector(".meal-summary-row");
+    const visual = meal.querySelector(".everyday-recipe-visual");
+    const main = meal.querySelector(".meal-summary-main");
+    const actions = meal.querySelector(".meal-summary-actions");
+    const rowRect = row?.getBoundingClientRect();
+    const visualRect = visual?.getBoundingClientRect();
+    const mainRect = main?.getBoundingClientRect();
+    const actionsRect = actions?.getBoundingClientRect();
+    return {
+      hasRecipeClass: row?.classList.contains("has-recipe-visual"),
+      rowClientWidth: row?.clientWidth || 0,
+      rowScrollWidth: row?.scrollWidth || 0,
+      rowRight: rowRect?.right || 0,
+      visualRight: visualRect?.right || 0,
+      mainLeft: mainRect?.left || 0,
+      mainRight: mainRect?.right || 0,
+      mainWidth: mainRect?.width || 0,
+      actionsLeft: actionsRect?.left || 0,
+      pageScrollWidth: document.documentElement.scrollWidth,
+      viewportWidth: window.innerWidth,
+      imageLoading: visual?.querySelector("img")?.getAttribute("loading") || "",
+    };
+  });
+  assert.equal(everydayLayout.hasRecipeClass, true, "Rezeptmahlzeit markiert ihre dreispaltige Kartenzeile");
+  assert.ok(everydayLayout.rowScrollWidth <= everydayLayout.rowClientWidth + 1, "Alltags-Rezeptkarte darf horizontal nicht überlaufen");
+  assert.ok(everydayLayout.mainWidth >= 120, "Rezeptname und Alltagshinweis müssen eine nutzbare Textspalte behalten");
+  assert.ok(everydayLayout.mainLeft >= everydayLayout.visualRight - 1, "Text muss rechts neben dem Rezeptbild beginnen");
+  assert.ok(everydayLayout.mainRight <= everydayLayout.rowRight + 1, "Text darf nicht aus der Kartenzeile laufen");
+  assert.ok(everydayLayout.actionsLeft >= everydayLayout.mainRight - 1, "Schloss muss rechts neben der Textspalte bleiben");
+  assert.ok(everydayLayout.pageScrollWidth <= everydayLayout.viewportWidth + 1, "Alltagsansicht darf keinen Seiten-Overflow erzeugen");
+  assert.equal(everydayLayout.imageLoading, "eager", "Das sichtbare Alltags-Rezeptbild wird priorisiert geladen");
   assert.equal(await todayCard.locator(".today-everyday-meal .logMeal").count(), 2, "Essen eintragen bleibt für jede geplante Mahlzeit erreichbar");
 
   await todayCard.locator(".everyday-recipe-open").click();
@@ -143,6 +176,22 @@ try {
 
   await page.locator('nav button[data-view="foods"]').click();
   await page.locator("#recipesSection").waitFor({ state: "visible" });
+  await page.locator("#recipeList .recipe-card-v2").first().waitFor();
+
+  const recipeImages = await page.locator("#recipeList .recipe-card-v2 img.illustration-icon__asset").evaluateAll((images) =>
+    images.map((image) => ({
+      loading: image.getAttribute("loading"),
+      fetchPriority: image.getAttribute("fetchpriority"),
+    })),
+  );
+  assert.ok(recipeImages.length >= 4, "Der Rezeptkatalog muss mehrere Rezeptbilder rendern");
+  assert.ok(recipeImages.slice(0, 4).every((image) => image.loading === "eager" && image.fetchPriority === "high"), "Die ersten sichtbaren Rezeptbilder müssen priorisiert geladen werden");
+  assert.ok(recipeImages.slice(4).some((image) => image.loading === "lazy"), "Weiter unten liegende Rezeptbilder bleiben Lazy-Loading");
+
+  await page.waitForFunction(() => {
+    const image = document.querySelector("#recipeList .recipe-card-v2 img.illustration-icon__asset");
+    return !!image && image.complete && image.naturalWidth > 0;
+  });
   for (const filter of ["available", "almost", "pantry", "freezer"]) {
     assert.equal(await page.locator(`#recipeFilter [data-recipe-filter="${filter}"]`).count(), 1, `${filter} bleibt schnell erreichbar`);
   }

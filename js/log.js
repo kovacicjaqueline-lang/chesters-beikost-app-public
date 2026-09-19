@@ -269,30 +269,32 @@ function logRecipeChoiceHtml(recipe, choice) {
 function closeLog() {
   document.getElementById("logModal").classList.remove("open");
 }
-function logDraftHasContent() {
-  return !!(selectedLogFoods.size || pendingLog?.recipeName || document.getElementById("logAmount")?.value || document.getElementById("logNote")?.value);
+function logContextHasChanged(p = pendingLog) {
+  return !!p && (p.date !== p.__originalDate || p.meal !== p.__originalMeal);
+}
+function syncLogContextUi() {
+  let p = pendingLog;
+  if (!p) return;
+  let summary = document.getElementById("logContextSummary");
+  if (summary) summary.textContent = `${nice(p.date, true)} · ${mealName(p.meal)}`;
+  let hint = document.getElementById("logContextPlanHint");
+  if (hint) {
+    hint.hidden = !(p.__fromPlan && !logContextHasChanged(p));
+    hint.textContent = hint.hidden ? "" : "aus dem Plan";
+  }
+  let fields = document.getElementById("logContextFields");
+  if (fields) fields.style.display = p.__contextEditing ? "block" : "none";
+  let button = document.getElementById("editLogContext");
+  if (button) {
+    button.textContent = p.__contextEditing ? "Fertig" : "Ändern";
+    button.setAttribute("aria-expanded", p.__contextEditing ? "true" : "false");
+  }
 }
 function requestLogDateChange(nextDate, previousDate) {
   if (!pendingLog || !nextDate || nextDate === previousDate) return;
   captureLogDraft({ skipDate: true });
-  if (!logDraftHasContent()) {
-    pendingLog.date = nextDate;
-    renderLogForm();
-    return;
-  }
-  let chosenDate = previousDate;
-  document.getElementById("logModal").classList.remove("open");
-  openGeneric(
-    "Entwurf verschieben?",
-    `<p class="draft-day-copy">Der begonnene Eintrag bleibt vollständig erhalten.</p><div class="draft-day-actions"><button class="btn secondary" id="keepDraftDay">Beim bisherigen Tag bleiben</button><button class="btn" id="moveDraftDay">Auf ${esc(nice(nextDate, true))} verschieben</button></div>`,
-    () => {
-      pendingLog.date = chosenDate;
-      document.getElementById("logModal").classList.add("open");
-      renderLogForm();
-    },
-  );
-  document.getElementById("keepDraftDay").onclick = closeGeneric;
-  document.getElementById("moveDraftDay").onclick = () => { chosenDate = nextDate; closeGeneric(); };
+  pendingLog.date = nextDate;
+  syncLogContextUi();
 }
 
 function renderLogs() {
@@ -586,10 +588,9 @@ function renderLogForm() {
   let mainBlock = mainIds.length ? `<div class="field"><label>${mainIds.length === 1 ? "Lebensmittel bewerten" : "Mahlzeit bewerten"}</label>${mainIds.length > 1 && p.individualRatings ? `<div class="sample-outcome-list">${individualRows}</div><div class="individual-rating"><button class="text-button" id="toggleIndividualRatings" type="button">Gemeinsam bewerten</button></div>` : `<div class="grouped-outcome"><div><b>${mainIds.map((id) => esc(food(id)?.name || id)).join(" + ")}</b><span>${mainIds.length === 1 ? "Ergebnis" : "gemeinsam bewertet"}</span></div><select id="mainOutcome">${outcomeOptions.map(([value, title]) => `<option value="${value}" ${mainDefault === value ? "selected" : ""}>${title}</option>`).join("")}</select></div>${mainIds.length > 1 ? `<div class="individual-rating"><button class="text-button" id="toggleIndividualRatings" type="button">Zutaten einzeln bewerten ›</button></div>` : ""}`}</div>` : "";
   let sampleBlock = sampleIds.length ? `<div class="field"><label>Einführung und Wiederholung</label><div class="sample-outcome-list">${sampleIds.map((id) => `<div class="food-outcome-row"><div class="food-outcome-name"><b>${esc(food(id)?.name || id)}</b><span>${esc(logLearningLabel(id))}</span></div><select data-sample-result="${id}">${outcomeOptions.map(([value, title]) => `<option value="${value}" ${(p.foodOutcomes[id] || "tried") === value ? "selected" : ""}>${title}</option>`).join("")}</select><button class="iconbtn" data-remove-log-food="${id}" aria-label="${esc(food(id)?.name || id)} entfernen">×</button></div>`).join("")}</div></div>` : "";
   let mealOptions = ["breakfast", "lunch", "snack", "dinner"].map((meal) => `<option value="${meal}" ${p.meal === meal ? "selected" : ""}>${esc(mealName(meal))}</option>`).join("");
-  let contextChanged = p.date !== p.__originalDate || p.meal !== p.__originalMeal;
-  let contextHint = p.__fromPlan && !contextChanged ? '<div class="small">aus dem Plan</div>' : "";
+  let contextHint = p.__fromPlan && !logContextHasChanged(p);
   let logContext = p.__mealContext
-    ? `<div class="field" style="margin-bottom:10px"><div class="row"><div class="grow"><b>${esc(nice(p.date, true))} · ${esc(mealName(p.meal))}</b>${contextHint}</div><button class="text-button" id="editLogContext" type="button" aria-expanded="${p.__contextEditing ? "true" : "false"}">${p.__contextEditing ? "Fertig" : "Ändern"}</button></div><div id="logContextFields" style="display:${p.__contextEditing ? "block" : "none"};margin-top:10px"><div class="grid2"><div class="field"><label>Datum</label><input type="date" id="logDate" value="${p.date}"></div><div class="field"><label>Mahlzeit</label><select id="logMeal">${mealOptions}</select></div></div></div></div>`
+    ? `<div class="field" style="margin-bottom:10px"><div class="row"><div class="grow"><b id="logContextSummary">${esc(nice(p.date, true))} · ${esc(mealName(p.meal))}</b><div id="logContextPlanHint"${contextHint ? "" : " hidden"}>${contextHint ? "aus dem Plan" : ""}</div></div><button class="text-button" id="editLogContext" type="button" aria-expanded="${p.__contextEditing ? "true" : "false"}">${p.__contextEditing ? "Fertig" : "Ändern"}</button></div><div id="logContextFields" style="display:${p.__contextEditing ? "block" : "none"};margin-top:10px"><div class="grid2"><div class="field"><label>Datum</label><input type="date" id="logDate" value="${p.date}"></div><div class="field"><label>Mahlzeit</label><select id="logMeal">${mealOptions}</select></div></div></div></div>`
     : `<div class="log-date-grid"><div class="field"><label>Datum</label><input type="date" id="logDate" value="${p.date}"></div></div>`;
   let freeRecipePicker = !p.editId && !p.__mealContext ? `<div class="field log-recipe-picker"><label>Rezept auswählen (optional)</label><input id="logRecipeSearch" value="${esc(p.__recipeQuery || "")}" placeholder="Rezeptnamen eingeben" autocomplete="off"><div class="small log-recipe-results-label">${p.__recipeQuery ? "Suchergebnisse" : "Rezeptnamen eingeben"}</div><div class="log-recipe-results">${logRecipeResultsHtml(p.__recipeQuery || "")}</div></div>` : "";
   let freeRecipe = !p.editId && !p.__mealContext && p.recipeName ? recipeByName(p.recipeName) : null;
@@ -619,8 +620,8 @@ function renderLogForm() {
   document.querySelectorAll("#logForm select").forEach((select) => select.addEventListener("change", updateConditionalQuestions));
   document.getElementById("logTexture")?.addEventListener("change", clearLogTextureValidation);
   document.getElementById("logDate").onchange = (event) => requestLogDateChange(event.target.value, p.date);
-  document.getElementById("editLogContext")?.addEventListener("click", () => { p.__contextEditing = !p.__contextEditing; renderLogForm(); });
-  document.getElementById("logMeal")?.addEventListener("change", (event) => { captureLogDraft(); p.meal = event.target.value; p.__contextEditing = true; renderLogForm(); });
+  document.getElementById("editLogContext")?.addEventListener("click", () => { p.__contextEditing = !p.__contextEditing; syncLogContextUi(); });
+  document.getElementById("logMeal")?.addEventListener("change", (event) => { captureLogDraft(); p.meal = event.target.value; p.__contextEditing = true; syncLogContextUi(); });
   document.getElementById("toggleIndividualRatings")?.addEventListener("click", () => { captureLogDraft(); p.individualRatings = !p.individualRatings; renderLogForm(); });
   document.querySelectorAll("[data-remove-log-food]").forEach((button) => button.onclick = () => { captureLogDraft(); removeLogFoodSelection(button.dataset.removeLogFood); renderLogForm(); });
   document.getElementById("logRecipeSearch")?.addEventListener("input", renderLogRecipeResults);

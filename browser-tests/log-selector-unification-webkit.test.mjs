@@ -125,8 +125,39 @@ try {
     openLog(null);
   });
   const selector = page.locator("#logForm .flow-log-selector");
+  const logSheet = page.locator("#logModal .sheet");
   await selector.waitFor();
-  await page.waitForFunction(() => document.activeElement?.id === "logRecipeSearch");
+  assert.notEqual(
+    await page.evaluate(() => document.activeElement?.id),
+    "logRecipeSearch",
+    "Beim Öffnen darf das Suchfeld nicht automatisch fokussiert werden",
+  );
+  assert.equal(
+    await logSheet.evaluate((element) => element.scrollTop),
+    0,
+    "Der Dialog muss beim Öffnen am oberen Anfang starten",
+  );
+  const initialSheetMetrics = await logSheet.evaluate((element) => ({
+    scrollHeight: element.scrollHeight,
+    clientHeight: element.clientHeight,
+  }));
+  assert.ok(
+    initialSheetMetrics.scrollHeight > initialSheetMetrics.clientHeight,
+    "Der Testdialog muss für den Scrollpositions-Regressionscheck tatsächlich länger als der Viewport sein",
+  );
+  await logSheet.evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+  });
+  await page.waitForFunction(() => document.querySelector("#logModal .sheet")?.scrollTop > 0);
+  await page.locator("#cancelLog").click();
+  await page.waitForFunction(() => !document.getElementById("logModal")?.classList.contains("open"));
+  await page.evaluate(() => openLog(null));
+  await selector.waitFor();
+  assert.equal(
+    await logSheet.evaluate((element) => element.scrollTop),
+    0,
+    "Auch nach einem vorherigen Scrollen muss der Dialog beim erneuten Öffnen oben starten",
+  );
   assert.equal(await page.evaluate(() => window.__prepDemandCalls), 0, "Leerer FOOD-Zustand darf prepDemand() nicht aufrufen");
   assert.equal(await page.locator("#logDate").isVisible(), true);
   assert.equal(await page.evaluate(() => {
@@ -202,7 +233,6 @@ try {
   assert.equal(await page.locator(".selected-target .small").count(), 0);
   assert.equal((await page.locator(".selected-target b").textContent()).trim(), expected.recipes[0]);
   assert.equal(await page.locator("#clearLogRecipe").isVisible(), true);
-
   await selector.locator('[data-flow-log-selector="foods"]').click();
   await page.waitForFunction(() => document.activeElement?.id === "logFoodSearch");
   const extraFoodId = await page.evaluate(() => state.foods.find((item) => item.active && item.name === "Rind")?.id || "");
@@ -223,7 +253,6 @@ try {
     "Die Linsensuche muss Tomaten-Linsen-Sauce im Essen-eintragen-Dialog anzeigen",
   );
   assert.equal(await page.locator(".log-recipe-results .log-result-meta").count(), 0, "Rezeptkarten dürfen keinen Auswahl-Hinweis pro Karte anzeigen");
-
   await page.locator("#clearLogRecipe").click();
   await page.waitForFunction(() => document.activeElement?.id === "logRecipeSearch");
   assert.equal(await page.locator("#logRecipeSearch").inputValue(), "");

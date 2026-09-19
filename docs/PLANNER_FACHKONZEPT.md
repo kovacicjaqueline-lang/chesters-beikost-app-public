@@ -269,7 +269,7 @@ Neue Allergengruppen müssen durch dieselbe Plannerlogik laufen wie bereits vorh
 
 ## 6.2 Einführung und gezielte Wiederholung ✅ main
 
-- Ein noch offenes Allergen kann nur eingeführt werden, wenn eine geeignete bekannte Basis vorhanden ist.
+- Ein noch offenes Allergen benötigt grundsätzlich eine geeignete bekannte Basis. Fachlich ausdrücklich als eigenständig geeignete Allergene gekennzeichnete FOODs dürfen davon abweichen; aktuell gilt das für Ei (`plannerIntroductionMode: "standalone"`), das als gut durchgegarte eigenständige Speise eingeführt oder gezielt wiederholt werden darf. Andere Allergene bleiben basispflichtig, sofern nicht separat fachlich freigegeben.
 - Eine gezielte Wiederholung bleibt Teil der Lernphase, wenn sie fachlich noch zur Einführung gehört, etwa als bewusstes Follow-up nach einer Einführung oder Reaktion/Ablehnung.
 - Solche Allergen-Wiederholungen dürfen vorhandene harte Mahlzeiten-/Safety-Gates nicht umgehen.
 - Sobald automatisch eine Allergen-Einführung oder tatsächlich noch zur Lernphase gehörende gezielte Allergen-Wiederholung geplant wird, ist sie die **einzige automatische Lernaufgabe dieses Tages**; weitere neue Nicht-Allergene oder andere automatische Lernwiederholungen werden an diesem Tag nicht zusätzlich eingeplant.

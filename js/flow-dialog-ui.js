@@ -407,7 +407,11 @@
       logSelectorMode = "recipes";
     }
     syncLog();
-    if (open) queueMicrotask(() => logBody.querySelector("#logRecipeSearch")?.focus());
+    if (open) {
+      const focusRecipeSearch = () => logBody.querySelector("#logRecipeSearch")?.focus();
+      if (typeof requestAnimationFrame === "function") requestAnimationFrame(focusRecipeSearch);
+      else queueMicrotask(focusRecipeSearch);
+    }
   });
   logStateObserver.observe(logModal, {
     attributes: true,

@@ -219,6 +219,7 @@ try {
     1,
     "Die Linsensuche muss Tomaten-Linsen-Sauce im Essen-eintragen-Dialog anzeigen",
   );
+  assert.equal(await page.locator(".log-recipe-results .log-result-meta").count(), 0, "Rezeptkarten dürfen keinen Auswahl-Hinweis pro Karte anzeigen");
 
   await page.locator("#clearLogRecipe").click();
   await page.waitForFunction(() => document.activeElement?.id === "logRecipeSearch");

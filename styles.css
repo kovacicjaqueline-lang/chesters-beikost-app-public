@@ -673,7 +673,7 @@ main{padding-bottom:28px}
 @media(max-width:390px){.plan-defaults{grid-template-columns:1fr}.entry-chooser{grid-template-columns:1fr 1fr}.grouped-outcome{grid-template-columns:1fr 126px}.choice-pills{grid-template-columns:1fr}.food-head-actions{gap:0!important}.food-head-actions .btn{font-size:12px;padding:5px}.recipe-card-v2 .status-chips{max-width:none}.recipe-summary-grid{grid-template-columns:minmax(0,1fr) auto}.recipe-card-v2>summary .status-chips{justify-content:flex-end;margin-top:0}}
 
 /* Kompakte Lebensmittel-Suchergebnisse im Protokoll */
-.log-food-result{display:grid;grid-template-columns:30px minmax(0,1fr) 28px;gap:9px;align-items:center;width:100%;text-align:left}
+.log-food-result{display:grid;grid-template-columns:30px minmax(0,1fr) 28px;gap:9px;align-items:center;min-height:60px;width:100%;text-align:left}
 .log-result-emoji{font-size:21px;line-height:1;text-align:center}
 .log-result-copy{display:block;min-width:0}
 .log-result-name{display:block;overflow-wrap:anywhere;white-space:normal}

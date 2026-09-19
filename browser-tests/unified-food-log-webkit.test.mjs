@@ -383,6 +383,7 @@ try {
   // Beim Bearbeiten darf eine fehlgeschlagene Validierung weder den gespeicherten Kontext noch plannedMealId verändern.
   await page.evaluate((id) => window.editLogEntry(id), planned.id);
   assert.doesNotMatch(await page.locator("#logForm").innerText(), /aus dem Plan/);
+  await page.locator("#logAmount").evaluate((element) => { element.dataset.contextRenderSentinel = "stable"; });
   await page.getByRole("button", { name: "Ändern", exact: true }).click();
   await page.locator("#logDate").fill(movedDateIso);
   await page.locator("#logDate").dispatchEvent("change");

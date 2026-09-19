@@ -906,6 +906,9 @@ function openManualMealSelector(date, meal, initialMeal = null) {
     }).join("") : '<div class="small manual-role-none">Keine</div>'}</div>`;
     return `<div class="manual-role-overview">${group("Hauptbasis", validation.bases, "base")}${group("Bekannte Komponente", validation.components || [], "component")}${group("Einführung und Wiederholung", validation.samples, "sample")}</div>`;
   }
+  function mealSelectorVisual(markup, kind) {
+    return `<span class="meal-selector-visual meal-selector-visual--${kind}" aria-hidden="true">${markup}</span>`;
+  }
   function renderSelector() {
     let roleData = currentRoleData();
     let validation = manualMealValidation(roleData, meal, date);
@@ -947,7 +950,7 @@ function openManualMealSelector(date, meal, initialMeal = null) {
                 let recipeBases = recipeIds.filter((id) => recipeRoleInfos[id].role === "base"), recipeSamples = recipeIds.filter((id) => recipeRoleInfos[id].role === "sample");
                 let preview = manualMealValidation({ recipeName: r.name, foodIds: recipeIds, baseFoodIds: recipeBases, sampleFoodIds: recipeSamples, foodRoles: foodRolesFor(recipeIds, recipeBases, recipeSamples) }, meal, date);
                 let roleHint = preview.multipleUnsafeIds.length ? ` · nicht speicherbar: ${preview.multipleUnsafeIds.map((id) => food(id)?.name || id).join(", ")}` : preview.samples.length ? ` · ${preview.samples.map((id) => `${manualLearningRoleText(id)}: ${food(id)?.name || id}`).join(", ")}` : "";
-                return `<button class="selector-row selectRecipe ${selectedRecipe === r.name ? "selected" : ""}" data-recipe="${encodeURIComponent(r.name)}">${recipeIconSvg(r)}<span class="grow"><b>${esc(r.name)}</b><span class="small" style="display:block">${r.unlocked ? "Jetzt passend" : `Fast passend · ${esc(recipeMissingSummary(r))}`}${recipeInventoryPortions(r.name) ? ` · ${recipeInventoryPortions(r.name)} im Vorrat` : ""}${esc(roleHint)}</span></span><span class="selector-check" aria-hidden="true">${selectedRecipe === r.name ? "✓" : ""}</span></button>`;
+                return `<button class="selector-row selectRecipe ${selectedRecipe === r.name ? "selected" : ""}" data-recipe="${encodeURIComponent(r.name)}">${mealSelectorVisual(recipeIconSvg(r), "recipe")}<span class="grow"><b>${esc(r.name)}</b><span class="small" style="display:block">${r.unlocked ? "Jetzt passend" : `Fast passend · ${esc(recipeMissingSummary(r))}`}${recipeInventoryPortions(r.name) ? ` · ${recipeInventoryPortions(r.name)} im Vorrat` : ""}${esc(roleHint)}</span></span><span class="selector-check" aria-hidden="true">${selectedRecipe === r.name ? "✓" : ""}</span></button>`;
               }).join("")
               : '<div class="empty">Kein passendes Rezept gefunden.</div>'
             : foodRows.length
@@ -963,7 +966,7 @@ function openManualMealSelector(date, meal, initialMeal = null) {
                         : roleInfo.role === "sample" ? `wird ${learningLabel}`
                           : roleInfo.role === "component" ? "wird bekannte Komponente"
                             : "wird Hauptbasis";
-                return `<button class="selector-row selectFood ${selected ? "selected" : ""} ${pausedManual ? "manual-paused-food" : ""}" data-food="${f.id}">${foodIconSvg(f)}<span class="grow"><b>${esc(f.name)}</b><span class="small" style="display:block">${esc(status(f))}${pausedManual ? " · nur manuell" : ""}${!f.active ? " · deaktiviert" : ""}${inventoryPortions(f.id) ? ` · ${inventoryPortions(f.id)} Portionen im Vorrat` : ""}</span></span><span class="manual-role-type ${role || roleInfo.role} ${pausedManual ? "paused" : ""}">${esc(roleLabel)}</span><span class="selector-check" aria-hidden="true">${selected ? "✓" : ""}</span></button>`;
+                return `<button class="selector-row selectFood ${selected ? "selected" : ""} ${pausedManual ? "manual-paused-food" : ""}" data-food="${f.id}">${mealSelectorVisual(foodIconSvg(f), "food")}<span class="grow"><b>${esc(f.name)}</b><span class="small" style="display:block">${esc(status(f))}${pausedManual ? " · nur manuell" : ""}${!f.active ? " · deaktiviert" : ""}${inventoryPortions(f.id) ? ` · ${inventoryPortions(f.id)} Portionen im Vorrat` : ""}</span></span><span class="manual-role-type ${role || roleInfo.role} ${pausedManual ? "paused" : ""}">${esc(roleLabel)}</span><span class="selector-check" aria-hidden="true">${selected ? "✓" : ""}</span></button>`;
               }).join("")
               : '<div class="empty">Kein Lebensmittel gefunden.</div>'
         }

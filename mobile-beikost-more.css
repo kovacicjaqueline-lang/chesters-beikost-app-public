@@ -571,3 +571,8 @@ body.mobile-foundation #foods .recipe-heading-with-icon > img.recipe-illustratio
   max-height: 52px;
   object-fit: contain;
 }
+
+/* Normalisierte Recipe-V2-Assets dürfen die kompakte 52px-Reihe optisch nicht sprengen. */
+body.mobile-foundation #foods .recipe-card-v2 .illustration-icon--recipe > .illustration-icon__asset[src*="/recipes/"] {
+  transform: translate(var(--recipe-circle-shift-x, 0), var(--recipe-circle-shift-y, 0)) scale(min(1.153846, var(--recipe-circle-scale, 1)));
+}

@@ -62,6 +62,7 @@ async function selectFood(page, name) {
     const searchToggle = page.locator('[data-flow-log-search-toggle="foods"]');
     if (await searchToggle.count()) await searchToggle.click();
   }
+  await search.waitFor({ state: "visible" });
   await search.fill(name);
   const result = page.locator(".addLogFoodResult").filter({ hasText: name }).first();
   await result.waitFor();

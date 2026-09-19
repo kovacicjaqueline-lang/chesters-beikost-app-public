@@ -81,6 +81,24 @@ try {
     window.__beikostTest.setState(next);
     window.__beikostTest.openManualMealSelector(window.__beikostTest.today(), "lunch");
   });
+
+  const recipeVisuals = page.locator('.selector-row.selectRecipe .meal-selector-visual');
+  assert.ok(await recipeVisuals.count() > 0, "Rezepttreffer müssen eine eigene Bildspalte haben");
+  assert.equal(await recipeVisuals.first().isVisible(), true, "Rezeptbild muss in der Auswahl sichtbar sein");
+  assert.match(
+    await recipeVisuals.first().locator("img").getAttribute("src"),
+    /illustrations-v2\/recipes\//,
+    "Rezepttreffer müssen das bestehende Rezeptbild verwenden",
+  );
+  const foodVisuals = page.locator('.selector-row.selectFood .meal-selector-visual');
+  assert.ok(await foodVisuals.count() > 0, "Lebensmitteltreffer müssen eine eigene Bildspalte haben");
+  assert.equal(await foodVisuals.first().isVisible(), true, "Lebensmittelbild muss in der Auswahl sichtbar sein");
+  assert.match(
+    await foodVisuals.first().locator("img").getAttribute("src"),
+    /illustrations-v2\/foods\//,
+    "Lebensmitteltreffer müssen das bestehende Lebensmittelbild verwenden",
+  );
+
   await page.locator("#selectorFoods").click();
 
   const search = page.locator("#mealSelectorSearch");

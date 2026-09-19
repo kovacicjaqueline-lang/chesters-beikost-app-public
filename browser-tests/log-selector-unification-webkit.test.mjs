@@ -208,6 +208,9 @@ try {
   const extraFoodId = await page.evaluate(() => state.foods.find((item) => item.active && item.name === "Rind")?.id || "");
   assert.ok(extraFoodId, "Ein zusätzliches Lebensmittel für den Rezept-Regressionstest muss vorhanden sein");
   await page.locator("#logFoodSearch").fill("Rind");
+  const foodNameStyle = await page.locator(`.addLogFoodResult[data-food="${extraFoodId}"] .log-result-name`).evaluate((node) => ({ whiteSpace: getComputedStyle(node).whiteSpace, textOverflow: getComputedStyle(node).textOverflow }));
+  assert.equal(foodNameStyle.whiteSpace, "normal", "Lebensmittelnamen dürfen nicht einzeilig abgeschnitten werden");
+  assert.equal(foodNameStyle.textOverflow, "clip", "Lebensmittelnamen dürfen nicht mit Ellipsis abgeschnitten werden");
   await page.locator(`.addLogFoodResult[data-food="${extraFoodId}"]`).click();
   await page.waitForFunction((id) => !!document.querySelector(`.addLogFoodResult.selected[data-food="${id}"]`), extraFoodId);
 

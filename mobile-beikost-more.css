@@ -19,6 +19,21 @@ body.mobile-foundation #foods .catalog-switch {
   backdrop-filter: none;
 }
 
+/* Sticky-Köpfe mit negativem oberen Margin müssen auch den dadurch außerhalb ihrer
+ * eigenen Box liegenden Streifen decken. Sonst scrollt der Katalog dort auf iOS
+ * sichtbar zwischen App-Bar und Sticky-Kopf durch. */
+body.mobile-foundation #foods .catalog-switch::before,
+body.mobile-foundation #more .more-panel-header::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -14px;
+  height: 14px;
+  background: rgb(244, 239, 231);
+  pointer-events: none;
+}
+
 body.mobile-foundation #foods .catalog-switch button {
   min-height: 44px;
   border-radius: 14px;

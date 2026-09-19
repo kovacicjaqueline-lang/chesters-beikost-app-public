@@ -240,7 +240,7 @@
     }
     setHidden(recipePicker, mode !== "recipes");
     setHidden(foodPicker, mode !== "foods");
-    setHidden(selector, !!(recipePicker && logBody.querySelector(".selected-target") && mode === "recipes"));
+    setHidden(selector, false);
   }
 
   function removeDeprecatedLogFields() {

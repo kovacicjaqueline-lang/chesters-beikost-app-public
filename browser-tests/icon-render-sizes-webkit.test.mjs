@@ -133,11 +133,11 @@ try {
     return result;
   });
 
-  assert.equal(recipeSize.sizeToken, "76px", "mobiler Recipe-Wrapper muss den sichtbaren 76px-Override erben");
-  assert.equal(recipeSize.wrapperWidth, 76, "mobiler Recipe-Wrapper darf das 76px-Asset nicht auf das kompakte Token beschneiden");
-  assert.equal(recipeSize.wrapperHeight, 76, "mobiler Recipe-Wrapper muss 76px hoch rendern");
-  assert.equal(recipeSize.assetWidth, 76, "mobiles Recipe-Asset muss tatsächlich 76px breit rendern");
-  assert.equal(recipeSize.assetHeight, 76, "mobiles Recipe-Asset muss tatsächlich 76px hoch rendern");
+  assert.equal(recipeSize.sizeToken, "52px", "mobiler Recipe-Wrapper muss den sichtbaren 52px-Override erben");
+  assert.equal(recipeSize.wrapperWidth, 52, "mobiler Recipe-Wrapper darf das 52px-Asset nicht auf das kompakte Token beschneiden");
+  assert.equal(recipeSize.wrapperHeight, 52, "mobiler Recipe-Wrapper muss 52px hoch rendern");
+  assert.equal(recipeSize.assetWidth, 52, "mobiles Recipe-Asset muss tatsächlich 52px breit rendern");
+  assert.equal(recipeSize.assetHeight, 52, "mobiles Recipe-Asset muss tatsächlich 52px hoch rendern");
 
   await context.close();
 } finally {

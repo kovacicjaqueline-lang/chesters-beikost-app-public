@@ -59,88 +59,39 @@
     return recipeCatalogMealEligible(recipe, "lunch") || recipeCatalogMealEligible(recipe, "dinner");
   }
 
-  function recipeCatalogFilterBars() {
-    return [
-      document.getElementById("recipeMealFilter"),
-      document.getElementById("recipeFilter"),
-    ].filter(Boolean);
-  }
+  const RECIPE_TYPE_FILTERS = new Set(["porridge", "pancakes", "balls", "family", "baking"]);
 
   function installRecipeMealFilters() {
-    const filterBar = document.getElementById("recipeFilter");
-    const categoryField = filterBar?.closest(".recipe-filter-field");
-    if (!filterBar || !categoryField || document.getElementById("recipeMealFilter")) return;
-
-    const breakfast = document.createElement("button");
-    breakfast.type = "button";
-    breakfast.dataset.recipeFilter = "breakfast";
-    breakfast.textContent = "Frühstück";
-
-    const mainMeal = document.createElement("button");
-    mainMeal.type = "button";
-    mainMeal.dataset.recipeFilter = "main";
-    mainMeal.textContent = "Hauptmahlzeit";
-
+    const categoryField = document.getElementById("recipeFilter")?.closest(".recipe-filter-field");
+    if (!categoryField || document.getElementById("recipeMealFilter")) return;
     const mealField = document.createElement("div");
     mealField.className = "field recipe-meal-filter-field";
-    const mealLabel = document.createElement("label");
-    mealLabel.textContent = "Mahlzeit";
-    const mealBar = document.createElement("div");
-    mealBar.className = "seg recipe-meal-filters";
-    mealBar.id = "recipeMealFilter";
-    mealBar.setAttribute("role", "group");
-    mealBar.setAttribute("aria-label", "Rezeptmahlzeit");
-
-    mealBar.append(breakfast, mainMeal);
-    const snack = filterBar.querySelector('[data-recipe-filter="snack"]');
-    if (snack) mealBar.append(snack);
-    mealField.append(mealLabel, mealBar);
-    categoryField.before(mealField);
+    mealField.innerHTML = `<label>Mahlzeit</label><div class="seg recipe-meal-filters" id="recipeMealFilter" role="group" aria-label="Rezeptmahlzeit"><button type="button" data-recipe-meal="breakfast">Frühstück</button><button type="button" data-recipe-meal="main">Hauptmahlzeit</button><button type="button" data-recipe-meal="snack">Snack</button></div>`;
+    categoryField.after(mealField);
   }
 
   function recipeCatalogSearchTerms(recipe) {
     const aliases = typeof recipeAliasValues === "function" ? recipeAliasValues(recipe) : [];
     const structuredTerms = recipeCatalogStructuredLabels(recipe).flatMap((label) => {
-      if (
-        typeof recipeFoodFromStructuredLabel !== "function" ||
-        typeof FOOD_DB === "undefined" ||
-        typeof foodAliasTerms !== "function"
-      ) return [label];
+      if (typeof recipeFoodFromStructuredLabel !== "function" || typeof FOOD_DB === "undefined" || typeof foodAliasTerms !== "function") return [label];
       const item = recipeFoodFromStructuredLabel(label, FOOD_DB);
       return item ? [item.name, ...foodAliasTerms(item)] : [label];
     });
-    return [
-      recipe?.name || "",
-      ...aliases,
-      ...(recipe?.variantLabels || []),
-      ...structuredTerms,
-    ].filter(Boolean);
+    return [recipe?.name || "", ...aliases, ...(recipe?.variantLabels || []), ...structuredTerms].filter(Boolean);
   }
 
   function recipeCatalogSearchMatches(recipe, query, fullSearchText = "") {
     const normalizedQuery = normalizeName(query || "");
     if (!normalizedQuery) return true;
-
-    // Ist die Eingabe exakt ein bekanntes Lebensmittel (z. B. „Ei“), zählt
-    // ausschließlich die strukturierte Rezept-Zutatenbeziehung. So kann ein
-    // zufälliger Titeltext niemals einen Zutaten-Treffer vortäuschen.
     const exactFood = recipeCatalogExactFood(query);
     if (exactFood) return recipeCatalogContainsFood(recipe, exactFood);
-
     const exactOrPrefixMatch = recipeCatalogSearchTerms(recipe).some((term) => {
       const normalizedTerm = normalizeName(term || "");
       if (!normalizedTerm) return false;
       if (normalizedTerm === normalizedQuery || normalizedTerm.startsWith(normalizedQuery)) return true;
-      return normalizedTerm
-        .split(" ")
-        .filter(Boolean)
-        .some((word) => word === normalizedQuery || word.startsWith(normalizedQuery));
+      return normalizedTerm.split(" ").filter(Boolean).some((word) => word === normalizedQuery || word.startsWith(normalizedQuery));
     });
     if (exactOrPrefixMatch) return true;
-
-    // Sehr kurze Suchbegriffe dürfen nicht irgendwo mitten in einem Wort treffen.
-    // Ab drei Zeichen bleibt die bisherige flexible Volltextsuche inklusive
-    // Zutatenbeschreibung erhalten.
     if (normalizedQuery.length < 3) return false;
     return normalizeName(fullSearchText).includes(normalizedQuery);
   }
@@ -151,116 +102,113 @@
     renderPrep = function renderPrepWithIngredientAwareRecipeSearch(...args) {
       const currentQuery = typeof recipeQuery !== "undefined" ? recipeQuery : "";
       if (!normalizeName(currentQuery)) return baseRenderPrep.apply(this, args);
-
       const baseRecipeSearchText = recipeSearchText;
       recipeSearchText = (recipe) => {
         const fullSearchText = baseRecipeSearchText(recipe);
         return recipeCatalogSearchMatches(recipe, currentQuery, fullSearchText) ? fullSearchText : "";
       };
-      try {
-        return baseRenderPrep.apply(this, args);
-      } finally {
-        recipeSearchText = baseRecipeSearchText;
-      }
+      try { return baseRenderPrep.apply(this, args); }
+      finally { recipeSearchText = baseRecipeSearchText; }
     };
   }
 
-  function recipeCatalogCategoryMatches(recipe) {
-    return recipeFilter === "available"
-      ? recipe.unlocked
-      : recipeFilter === "almost"
-        ? recipe.almost
-        : recipeFilter === "all"
-          ? true
-          : recipeFilter === "pantry"
-            ? (recipe.requires || []).every((name) => {
-                const item = state.foods.find((foodItem) => foodItem.name === name);
-                return item && (inventoryPortions(item.id) > 0 || state.pantry[item.id]);
-              })
-            : recipeFilter === "freezer"
-              ? !!recipe.freezable
-              : recipeFilter === "philippines"
-                ? recipe.ph || recipe.category === "philippines"
-                : recipeFilter === "breakfast"
-                  ? recipeCatalogMealEligible(recipe, "breakfast")
-                  : recipeFilter === "main"
-                    ? recipeCatalogMainMealEligible(recipe)
-                    : recipeFilter === "snack"
-                      ? (recipe.tags || []).some((tag) => normalizeName(tag) === "snack")
-                      : recipe.category === recipeFilter;
+  function recipeCatalogAvailabilityMatches(recipe) {
+    if (recipeFilter === "available") return !!recipe.unlocked;
+    if (recipeFilter === "all") return true;
+    return !!recipe.unlocked || !!recipe.almost;
+  }
+
+  function recipeCatalogMealMatches(recipe) {
+    if (!recipeMealFilter) return true;
+    if (recipeMealFilter === "breakfast") return recipeCatalogMealEligible(recipe, "breakfast");
+    if (recipeMealFilter === "main") return recipeCatalogMainMealEligible(recipe);
+    return (recipe.tags || []).some((tag) => normalizeName(tag) === "snack");
+  }
+
+  function recipeCatalogExtraMatches(recipe) {
+    if (recipeExtraFilters.has("freezer") && !recipe.freezable) return false;
+    const types = [...recipeExtraFilters].filter((key) => RECIPE_TYPE_FILTERS.has(key));
+    return !types.length || types.includes(recipe.category);
+  }
+
+  function recipeCatalogMatches(recipe) {
+    return recipeCatalogAvailabilityMatches(recipe) && recipeCatalogMealMatches(recipe) && recipeCatalogExtraMatches(recipe);
+  }
+
+  function syncRecipeFilterUi(resultCount = null) {
+    document.querySelectorAll("#recipeFilter [data-recipe-filter]").forEach((button) =>
+      button.classList.toggle("active", button.dataset.recipeFilter === recipeFilter));
+    document.querySelectorAll("#recipeMealFilter [data-recipe-meal]").forEach((button) =>
+      button.classList.toggle("active", button.dataset.recipeMeal === recipeMealFilter));
+    document.querySelectorAll("[data-recipe-extra-filter]").forEach((button) =>
+      button.classList.toggle("active", recipeExtraFilters.has(button.dataset.recipeExtraFilter)));
+    const more = document.getElementById("recipeMoreFilters");
+    if (more) more.textContent = recipeExtraFilters.size ? `Filter (${recipeExtraFilters.size})` : "Filter";
+    const apply = document.getElementById("recipeFilterApply");
+    if (apply && Number.isFinite(resultCount)) apply.textContent = `${resultCount} Rezept${resultCount === 1 ? "" : "e"} anzeigen`;
+  }
+
+  function closeRecipeFilterSheet() {
+    const sheet = document.getElementById("recipeFilterSheet");
+    if (sheet) sheet.hidden = true;
+  }
+
+  function bindRecipeFilterControls() {
+    document.querySelectorAll("#recipeFilter [data-recipe-filter]").forEach((button) => {
+      button.onclick = () => { recipeFilter = button.dataset.recipeFilter; renderRecipeCatalog(); };
+    });
+    document.querySelectorAll("#recipeMealFilter [data-recipe-meal]").forEach((button) => {
+      button.onclick = () => {
+        recipeMealFilter = recipeMealFilter === button.dataset.recipeMeal ? "" : button.dataset.recipeMeal;
+        renderRecipeCatalog();
+      };
+    });
+    document.getElementById("recipeMoreFilters")?.addEventListener("click", () => {
+      document.getElementById("recipeFilterSheet").hidden = false;
+      syncRecipeFilterUi();
+    });
+    document.querySelectorAll("[data-recipe-filter-close]").forEach((button) => button.onclick = closeRecipeFilterSheet);
+    document.getElementById("recipeFilterApply")?.addEventListener("click", closeRecipeFilterSheet);
+    document.getElementById("recipeFilterReset")?.addEventListener("click", () => {
+      recipeExtraFilters.clear();
+      renderRecipeCatalog();
+    });
+    document.querySelectorAll("[data-recipe-extra-filter]").forEach((button) => {
+      button.onclick = () => {
+        const key = button.dataset.recipeExtraFilter;
+        if (recipeExtraFilters.has(key)) recipeExtraFilters.delete(key);
+        else recipeExtraFilters.add(key);
+        renderRecipeCatalog();
+      };
+    });
   }
 
   function renderRecipeCatalog() {
-    const filterBars = recipeCatalogFilterBars();
     const search = document.getElementById("recipeSearch");
     if (!document.getElementById("recipeList")) return;
-
-    filterBars.forEach((filterBar) => {
-      filterBar.querySelectorAll("[data-recipe-filter]").forEach((button) =>
-        button.classList.toggle("active", button.dataset.recipeFilter === recipeFilter),
-      );
-    });
     if (search) search.value = recipeQuery;
-
     const query = normalizeName(recipeQuery);
     const allRecipeStates = typeof viewRenderRecipeStates === "function" ? viewRenderRecipeStates() : recipeStates();
     const recipes = allRecipeStates.filter((recipe) => {
-      if (!recipeCatalogCategoryMatches(recipe)) return false;
+      if (!recipeCatalogMatches(recipe)) return false;
       if (!query) return true;
       const fullSearchText = typeof recipeSearchText === "function" ? recipeSearchText(recipe) : "";
       return recipeCatalogSearchMatches(recipe, recipeQuery, fullSearchText);
     });
-
     const countBox = document.getElementById("recipeCount");
-    if (countBox) {
-      const context = recipeFilter === "almost"
-        ? "es fehlen höchstens zwei Schritte"
-        : recipeFilter === "breakfast"
-          ? "Frühstück"
-          : recipeFilter === "main"
-            ? "Hauptmahlzeit"
-            : recipeFilter === "snack"
-              ? "Snack"
-              : "passend zu Filter und Suche";
-      countBox.textContent = `${recipes.length} Rezept${recipes.length === 1 ? "" : "e"} · ${context}`;
-    }
-
-    const emptyMode = query || recipeFilter !== "available"
-      ? "reset"
-      : allRecipeStates.some((item) => item.almost)
-        ? "almost"
-        : "all";
-    const emptyLabel = emptyMode === "reset"
-      ? "Filter zurücksetzen"
-      : emptyMode === "almost"
-        ? "Fast passende Rezepte anzeigen"
-        : "Alle Rezepte anzeigen";
-
+    if (countBox) countBox.textContent = `${recipes.length} Rezept${recipes.length === 1 ? "" : "e"}`;
+    syncRecipeFilterUi(recipes.length);
     document.getElementById("recipeList").innerHTML = recipes.length
       ? recipes.map(renderRecipeCard).join("")
-      : `<div class="empty ds-empty"><div>Keine Rezepte für diesen Filter gefunden.</div><button class="btn" id="recipeEmptyAction" type="button">${emptyLabel}</button></div>`;
-
+      : '<div class="empty ds-empty"><div>Keine Rezepte für diese Auswahl gefunden.</div><button class="btn" id="recipeEmptyAction" type="button">Filter zurücksetzen</button></div>';
     document.getElementById("recipeEmptyAction")?.addEventListener("click", () => {
       recipeQuery = "";
-      if (emptyMode === "almost") recipeFilter = "almost";
-      else if (emptyMode === "all") recipeFilter = "all";
-      else recipeFilter = "available";
+      recipeFilter = "almost";
+      recipeMealFilter = "";
+      recipeExtraFilters.clear();
       renderRecipeCatalog();
     });
-    filterBars.forEach((filterBar) => {
-      filterBar.querySelectorAll("[data-recipe-filter]").forEach((button) => {
-        button.onclick = () => {
-          recipeFilter = button.dataset.recipeFilter;
-          renderRecipeCatalog();
-        };
-      });
-    });
-    if (search) {
-      search.oninput = (event) => {
-        recipeQuery = event.target.value;
-        renderRecipeCatalog();
-      };
-    }
+    if (search) search.oninput = (event) => { recipeQuery = event.target.value; renderRecipeCatalog(); };
     if (typeof bindRecipeStockButtons === "function") bindRecipeStockButtons();
     globalThis.MobileUiLifecycle?.afterRender("foods", { source: "recipe-catalog" });
   }
@@ -296,9 +244,17 @@
   }
 
   function openRecipeCatalog(filter = "") {
-    if (filter && typeof recipeFilter !== "undefined") recipeFilter = filter;
+    if (filter === "freezer") {
+      recipeExtraFilters.clear();
+      recipeExtraFilters.add("freezer");
+      recipeFilter = "all";
+      recipeMealFilter = "";
+    } else if (filter && typeof recipeFilter !== "undefined") {
+      recipeFilter = filter;
+    }
     setCatalogMode(MODE_RECIPES);
     showView("foods");
+    renderRecipeCatalog();
     requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
   }
 
@@ -320,6 +276,7 @@
   }
 
   installRecipeMealFilters();
+  bindRecipeFilterControls();
   installIngredientAwareRecipeSearch();
   installCatalogAwareViewRenderer();
 

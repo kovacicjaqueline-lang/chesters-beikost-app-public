@@ -121,10 +121,20 @@
  </div>
  <div class="card recipes-card catalog-recipes-card" id="recipesSection" hidden>
   <details class="panel-details" id="recipesDetails" open>
-   <summary><span><b>Rezepte & Fingerfood</b><small id="recipeCount">Passend zu Status und Konsistenz.</small></span></summary>
+   <summary><span><b>Rezepte</b><small id="recipeCount">Rezepte</small></span></summary>
    <div class="panel-body">
     <div class="field recipe-search"><label>Rezept suchen</label><input type="search" id="recipeSearch" placeholder="z. B. Lachs, Zucchini, Pancakes"></div>
-    <div class="field recipe-filter-field"><label>Kategorie</label><div class="seg recipe-filters" id="recipeFilter" role="group" aria-label="Rezeptkategorie"><button class="active" type="button" data-recipe-filter="available">Jetzt passend</button><button type="button" data-recipe-filter="almost">Fast passend</button><button type="button" data-recipe-filter="all">Alle</button><button type="button" data-recipe-filter="pantry">Mit Vorrat</button><button type="button" data-recipe-filter="freezer">Einfrierbar</button><button type="button" data-recipe-filter="porridge">Brei & Löffelgerichte</button><button type="button" data-recipe-filter="pancakes">Pancakes</button><button type="button" data-recipe-filter="balls">Bällchen, Taler & Fingerfood</button><button type="button" data-recipe-filter="family">Familiengerichte</button><button type="button" data-recipe-filter="philippines">Philippinen</button><button type="button" data-recipe-filter="baking">Backen</button><button type="button" data-recipe-filter="snack">Snack</button></div></div>
+    <div class="field recipe-filter-field"><label>Passend</label><div class="seg recipe-filters" id="recipeFilter" role="group" aria-label="Rezeptverfügbarkeit"><button type="button" data-recipe-filter="available">Jetzt passend</button><button class="active" type="button" data-recipe-filter="almost">Fast passend</button><button type="button" data-recipe-filter="all">Alle</button></div></div>
+    <button class="btn secondary recipe-more-filter-button" id="recipeMoreFilters" type="button">Filter</button>
+    <div class="recipe-filter-sheet" id="recipeFilterSheet" hidden>
+      <button class="recipe-filter-sheet-backdrop" type="button" data-recipe-filter-close aria-label="Filter schließen"></button>
+      <div class="recipe-filter-sheet-panel" role="dialog" aria-modal="true" aria-labelledby="recipeFilterSheetTitle">
+        <div class="recipe-filter-sheet-head"><h2 id="recipeFilterSheetTitle">Weitere Filter</h2><button class="btn secondary smallbtn" type="button" data-recipe-filter-close>Schließen</button></div>
+        <div class="recipe-filter-sheet-group"><h3>Eigenschaften</h3><div class="seg recipe-extra-filter-list"><button type="button" data-recipe-extra-filter="freezer">Einfrierbar</button></div></div>
+        <div class="recipe-filter-sheet-group"><h3>Rezeptart</h3><div class="seg recipe-extra-filter-list"><button type="button" data-recipe-extra-filter="porridge">Brei &amp; Löffelgerichte</button><button type="button" data-recipe-extra-filter="pancakes">Pancakes</button><button type="button" data-recipe-extra-filter="balls">Bällchen, Taler &amp; Fingerfood</button><button type="button" data-recipe-extra-filter="family">Familiengerichte</button><button type="button" data-recipe-extra-filter="baking">Backen</button></div></div>
+        <div class="recipe-filter-sheet-actions"><button class="btn secondary" id="recipeFilterReset" type="button">Zurücksetzen</button><button class="btn" id="recipeFilterApply" type="button">Rezepte anzeigen</button></div>
+      </div>
+    </div>
     <div id="recipeList"></div>
    </div>
   </details>

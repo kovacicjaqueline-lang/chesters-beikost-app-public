@@ -11,7 +11,6 @@
   root.__mobileBeikostMoreInstalled = true;
 
   const FOOD_PRIMARY_FILTERS = new Set(["all", "open", "allergen"]);
-  const RECIPE_PRIMARY_FILTERS = new Set(["available", "almost", "all"]);
 
   function syncGroupedFilterVisibility() {
     document.querySelectorAll(".mobile-filter-secondary").forEach((secondary) => {
@@ -70,12 +69,6 @@
     section.classList.add("mobile-recipe-catalog");
 
     document.getElementById("recipeSearch")?.closest(".field")?.classList.add("mobile-catalog-search");
-    groupFilters(
-      document.getElementById("recipeFilter"),
-      RECIPE_PRIMARY_FILTERS,
-      "data-recipe-filter",
-      "Weitere Kategorien",
-    );
   }
 
   function decorateFoodRows() {

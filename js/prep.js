@@ -547,18 +547,8 @@ function renderPrepCore() {
         )
         .join("")
     : '<div class="empty">Noch kein einfrierbares Rezept hinterlegt.</div>';
-  document.getElementById("prepOpenFreezerRecipes").onclick = () => {
-    recipeFilter = "freezer";
-    showView("more");
-    setTimeout(() => {
-      renderPrep();
-      let details = document.getElementById("recipesDetails");
-      if (details) details.open = true;
-      document
-        .getElementById("recipesSection")
-        ?.scrollIntoView({ behavior: "smooth" });
-    }, 80);
-  };
+  // Navigation in den Rezeptkatalog wird zentral in catalog-navigation.js gebunden.
+  // Der alte Handler darf den neuen Einfrierbar-Detailfilter nicht überschreiben.
 
   let guides = [
     ["Reis", "Sehr weich kochen und pur einfrieren. Innerhalb 1 Stunde abkühlen; nur einmal wieder erhitzen."],

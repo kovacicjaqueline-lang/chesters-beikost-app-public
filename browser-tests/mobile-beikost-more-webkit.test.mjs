@@ -103,42 +103,38 @@ try {
   assert.equal(detailLayout.radius, "0px", "Lebensmittel-Details sollen kein Bottom-Sheet-Radiusmuster verwenden");
   await page.locator("#closeGeneric").click();
 
-  await page.evaluate(() => {
-    recipeFilter = "freezer";
-    renderPrep();
-  });
-  await page.waitForFunction(() => {
-    const details = document.querySelector("#recipeFilter > .mobile-filter-secondary");
-    const active = details?.querySelector('button[data-recipe-filter="freezer"].active');
-    return !!details?.open && !!active;
-  });
-  assert.equal(
-    await page.locator("#recipeFilter > .mobile-filter-secondary").evaluate((details) => details.open),
-    true,
-    "ein programmgesteuert aktiver sekundärer Rezeptfilter muss sichtbar aufgeklappt werden",
-  );
-  assert.equal(
-    await page.locator('#recipeFilter button[data-recipe-filter="freezer"]').evaluate((button) => button.classList.contains("active")),
-    true,
-    "der programmgesteuerte Filter Einfrierbar muss sichtbar aktiv sein",
-  );
-
   await page.locator('#catalogSwitch button[data-catalog-mode="recipes"]').click();
-  await page.locator('#recipeFilter button[data-recipe-filter="all"]').click();
+  assert.equal(await page.locator('[data-recipe-filter="almost"]').evaluate((button) => button.classList.contains("active")), true, "Fast passend soll im Rezeptkatalog standardmäßig aktiv sein");
+  assert.equal(await page.locator("#recipeMealFilter").isVisible(), true, "Mahlzeiten-Schnellfilter müssen sichtbar bleiben");
+  assert.equal(await page.locator('[data-recipe-filter="pantry"]').count(), 0, "Mit Vorrat gehört nicht mehr in die normale Rezeptfilterung");
+  assert.equal(await page.locator('[data-recipe-filter="philippines"]').count(), 0, "Philippinen gehört nicht mehr in die normale Rezeptfilterung");
+
+  await page.locator("#recipeMoreFilters").click();
+  assert.equal(await page.locator("#recipeFilterSheet").isVisible(), true, "Weitere Rezeptfilter sollen als Bottom Sheet öffnen");
+  await page.locator('[data-recipe-extra-filter="freezer"]').click();
+  assert.equal(await page.locator("#recipeMoreFilters").textContent(), "Filter (1)", "Aktive Zusatzfilter sollen nur als Anzahl auf der Hauptansicht erscheinen");
+  await page.locator("#recipeFilterApply").click();
+  assert.equal(await page.locator("#recipeFilterSheet").isHidden(), true, "Rezepte anzeigen soll das Filter-Sheet schließen");
+
+  await page.locator('[data-recipe-filter="all"]').click();
   const firstRecipe = page.locator("#recipeList .recipe-card-v2").first();
   await firstRecipe.waitFor({ state: "visible" });
   const recipePresentation = await firstRecipe.evaluate((card) => {
     const icon = card.querySelector(".recipe-heading-with-icon .recipe-icon, .recipe-heading-with-icon img, .recipe-heading-with-icon svg");
     const box = icon?.getBoundingClientRect();
+    const type = card.querySelector(".recipe-type-text");
+    const badge = card.querySelector(".recipe-summary-end .pill");
     return {
-      borderTopWidth: getComputedStyle(card).borderTopWidth,
+      borderRadius: getComputedStyle(card).borderRadius,
       iconWidth: box?.width || 0,
-      techMetaVisible: !!card.querySelector(".recipe-tech-text") && getComputedStyle(card.querySelector(".recipe-tech-text")).display !== "none",
+      typeVisible: !!type && getComputedStyle(type).display !== "none",
+      badgeVisible: !!badge && getComputedStyle(badge).display !== "none",
     };
   });
-  assert.equal(recipePresentation.borderTopWidth, "0px", "Recipe-V2-Karten sollen weniger Rahmen verwenden");
-  assert.ok(recipePresentation.iconWidth >= 70, "Recipe-V2-Illustrationen sollen im mobilen Katalog deutlich gewichtet bleiben");
-  assert.equal(recipePresentation.techMetaVisible, false, "sekundäre technische Rezept-Metadaten sollen in der Übersicht reduziert sein");
+  assert.equal(recipePresentation.borderRadius, "0px", "Rezeptübersicht soll als ruhige Liste statt Kartenstapel erscheinen");
+  assert.ok(recipePresentation.iconWidth <= 60, "Rezeptbilder sollen kompakt bleiben");
+  assert.equal(recipePresentation.typeVisible, false, "Rezeptart gehört nicht auf die schlichte Übersichtskarte");
+  assert.equal(recipePresentation.badgeVisible, false, "Einfrierbar- und Status-Badges gehören in die Details");
 
   await page.locator('nav button[data-view="more"]').click();
   await page.waitForFunction(() =>

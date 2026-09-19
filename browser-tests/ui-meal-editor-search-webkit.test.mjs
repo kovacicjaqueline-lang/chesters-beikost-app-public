@@ -108,8 +108,10 @@ try {
       return box ? { left: box.left, right: box.right, width: box.width } : null;
     };
     const rowBox = row.getBoundingClientRect();
+    const rowStyle = getComputedStyle(row);
+    const contentRight = rowBox.right - Number.parseFloat(rowStyle.paddingRight) - Number.parseFloat(rowStyle.borderRightWidth);
     return {
-      row: { left: rowBox.left, right: rowBox.right, width: rowBox.width },
+      row: { left: rowBox.left, right: contentRight, width: rowBox.width },
       visual: rect(".meal-selector-visual"),
       copy: rect(".grow"),
       role: rect(".manual-role-type"),

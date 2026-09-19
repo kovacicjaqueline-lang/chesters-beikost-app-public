@@ -662,7 +662,8 @@ body.mobile-foundation #genericModal .sheet {
     if (recipe && row && !row.querySelector(".everyday-recipe-visual")) {
       const visual = document.createElement("span");
       visual.className = "everyday-recipe-visual";
-      visual.innerHTML = recipeIconSvg(recipe);
+      visual.innerHTML = recipeIconSvg(recipe, { loading: "eager", fetchPriority: "high" });
+      row.classList.add("has-recipe-visual");
       row.insertBefore(visual, title);
     }
 

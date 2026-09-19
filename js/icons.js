@@ -357,16 +357,22 @@ function illustrationMissingMarkup(label,kind="food"){
 }
 const ILLUSTRATION_ASSET_REVISION = "10.1.25";
 function revisionedIllustrationSrc(src){ return `${src}${String(src).includes("?") ? "&" : "?"}v=${ILLUSTRATION_ASSET_REVISION}`; }
-function illustrationImg(src,label,kind="food"){
+function illustrationLoadAttributes(options = {}){
+  const loading = options.loading === "eager" ? "eager" : "lazy";
+  const fetchPriority = options.fetchPriority === "high" ? ' fetchpriority="high"' : "";
+  return `loading="${loading}" decoding="async"${fetchPriority}`;
+}
+function illustrationImg(src,label,kind="food",options={}){
   if(!src) return illustrationMissingMarkup(label,kind);
   const assetSrc=revisionedIllustrationSrc(src);
+  const loadAttributes = illustrationLoadAttributes(options);
   if(isV2IllustrationPath(src)){
-    return `<span class="illustration-icon illustration-icon--${kind} item-illustration ${kind}-illustration" aria-hidden="true"><img class="illustration-icon__asset" src="${assetSrc}" alt="" aria-hidden="true" loading="lazy" decoding="async" data-illustration-label="${esc(label)}" data-illustration-kind="${kind}"></span>`;
+    return `<span class="illustration-icon illustration-icon--${kind} item-illustration ${kind}-illustration" aria-hidden="true"><img class="illustration-icon__asset" src="${assetSrc}" alt="" aria-hidden="true" ${loadAttributes} data-illustration-label="${esc(label)}" data-illustration-kind="${kind}"></span>`;
   }
-  return `<img class="item-illustration ${kind}-illustration" src="${assetSrc}" alt="" aria-hidden="true" loading="lazy" decoding="async">`;
+  return `<img class="item-illustration ${kind}-illustration" src="${assetSrc}" alt="" aria-hidden="true" ${loadAttributes}>`;
 }
-function foodIconSvg(foodOrId){ const f=typeof foodOrId==="string" ? (food(foodOrId)||FOOD_DB.find(x=>x.id===foodOrId)) : foodOrId; return illustrationImg(foodIllustrationPath(f),f?.name||"unbekanntes Lebensmittel","food"); }
-function recipeIconSvg(recipeOrName){ const r=typeof recipeOrName==="string" ? RECIPES.find(x=>x.name===recipeOrName) : recipeOrName; const src=r&&(RECIPE_ICON_PATHS[r.name]||RECIPE_RUNTIME_ICON_ALIASES[r.name]); return illustrationImg(src,r?.name||String(recipeOrName||"unbekanntes Rezept"),"recipe"); }
+function foodIconSvg(foodOrId,options={}){ const f=typeof foodOrId==="string" ? (food(foodOrId)||FOOD_DB.find(x=>x.id===foodOrId)) : foodOrId; return illustrationImg(foodIllustrationPath(f),f?.name||"unbekanntes Lebensmittel","food",options); }
+function recipeIconSvg(recipeOrName,options={}){ const r=typeof recipeOrName==="string" ? RECIPES.find(x=>x.name===recipeOrName) : recipeOrName; const src=r&&(RECIPE_ICON_PATHS[r.name]||RECIPE_RUNTIME_ICON_ALIASES[r.name]); return illustrationImg(src,r?.name||String(recipeOrName||"unbekanntes Rezept"),"recipe",options); }
 function foodIllustrationUsesFallback(f){ return !foodIllustrationPath(f); }
 function recipeIllustrationPath(r){ return r&&(RECIPE_ICON_PATHS[r.name]||RECIPE_RUNTIME_ICON_ALIASES[r.name])||""; }
 function auditIllustrationCoverage(){ return {foodsMissing:FOOD_DB.filter(foodIllustrationUsesFallback).map(f=>f.name),recipesMissing:RECIPES.filter(r=>!recipeIllustrationPath(r)).map(r=>r.name),foodCount:FOOD_DB.length,recipeCount:RECIPES.length}; }

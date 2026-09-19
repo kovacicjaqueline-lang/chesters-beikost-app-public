@@ -109,6 +109,7 @@ function renderLogsCore() {
         }
       }
       state.logs = state.logs.filter((log) => log.id !== id);
+      if (typeof invalidateLogsForCache === "function") invalidateLogsForCache();
       for (let foodId of new Set(removed.foodIds || [])) rebuildFoodConsequences(foodId);
       save(); renderAll();
       showToast("Eintrag gelöscht.", () => {
@@ -730,6 +731,7 @@ function saveLog() {
 
   if (isEdit) state.logs = state.logs.map((log) => log.id === pendingLog.editId ? newLog : log);
   else state.logs.push(newLog);
+  if (typeof invalidateLogsForCache === "function") invalidateLogsForCache();
 
   let affectedFoodIds = new Set([...(oldLog?.foodIds || []), ...ids]);
   for (let foodId of affectedFoodIds) rebuildFoodConsequences(foodId);

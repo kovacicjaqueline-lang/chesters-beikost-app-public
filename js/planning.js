@@ -118,11 +118,13 @@ function activeMeal(meal, on) {
   return phaseMealKeys().includes(meal);
 }
 function usageCount(id) {
+  if (typeof foodUsageCount === "function") return foodUsageCount(id);
   return state.logs.filter(
     (l) => (l.foodIds || []).includes(id) && outcomeForFood(l, id) === "eaten",
   ).length;
 }
 function eatenExposureCount(id) {
+  if (typeof foodEatenExposureCount === "function") return foodEatenExposureCount(id);
   return new Set(
     state.logs
       .filter(
@@ -258,6 +260,7 @@ function combinationKey(ids) {
 }
 function combinationHistory(ids) {
   let key = combinationKey(ids);
+  if (typeof logIndexFor === "function") return logIndexFor().byCombinationKey.get(key) || [];
   return state.logs
     .filter((l) => combinationKey(l.foodIds) === key)
     .sort((a, b) => `${a.date}|${a.createdAt || ""}`.localeCompare(`${b.date}|${b.createdAt || ""}`));
@@ -1250,6 +1253,7 @@ function shiftAutomaticSlot(date, meal) {
   return true;
 }
 function priorBaseIds(foodId) {
+  if (typeof latestLogForFood === "function") return latestLogForFood(foodId)?.baseFoodIds || [];
   return state.logs
     .filter((log) => (log.foodIds || []).includes(foodId))
     .sort((a, b) => `${b.date}${b.createdAt || ""}`.localeCompare(`${a.date}${a.createdAt || ""}`))[0]?.baseFoodIds || [];
@@ -1339,6 +1343,7 @@ function applyFollowUpPlan(record, requestedDate = "") {
   return { ok: true, date };
 }
 function refusalHistory(foodId) {
+  if (typeof logIndexFor === "function") return logIndexFor().refusalByFoodId.get(foodId) || [];
   return state.logs.filter((log) => (log.foodIds || []).includes(foodId) && outcomeForFood(log, foodId) === "not_accepted");
 }
 function followUpStatusText(record) {
@@ -1412,6 +1417,7 @@ function clearFollowUp(foodId) {
   removeFollowUpPlan(foodId);
 }
 function latestLogForFood(foodId) {
+  if (typeof logIndexFor === "function") return logIndexFor().latestByFoodId.get(foodId) || null;
   return state.logs.filter((log) => (log.foodIds || []).includes(foodId)).sort((a, b) => `${b.date}${b.updatedAt || b.createdAt || ""}`.localeCompare(`${a.date}${a.updatedAt || a.createdAt || ""}`))[0] || null;
 }
 function clearLogGeneratedState(foodId) {

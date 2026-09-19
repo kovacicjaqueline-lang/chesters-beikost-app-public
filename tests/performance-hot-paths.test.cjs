@@ -93,6 +93,145 @@ test("Log-Zuordnung wird einmal je Logbestand aufgebaut und nach Änderungen ern
   assert.deepEqual(Array.from(updated, (entry) => entry.id), ["1", "2", "3"]);
 });
 
+test("Log-Index teilt Planner-Aggregate und Kombinationshistorien", () => {
+  const logs = [
+    {
+      id: "eaten-1",
+      date: "2026-02-01",
+      meal: "lunch",
+      foodIds: ["apfel", "hafer"],
+      foodOutcomes: { apfel: "eaten", hafer: "eaten" },
+      createdAt: "2026-02-01T10:00:00.000Z",
+    },
+    {
+      id: "refused",
+      date: "2026-02-02",
+      meal: "lunch",
+      foodIds: ["apfel", "hafer"],
+      foodOutcomes: { apfel: "not_accepted", hafer: "eaten" },
+      rejectionStrength: "refused",
+      createdAt: "2026-02-02T10:00:00.000Z",
+    },
+  ];
+  const context = {
+    console,
+    state: { foods: [], logs, settings: { birthDate: "2026-01-01" } },
+    FOOD_DB: [],
+    STATUS_ORDER: {},
+    logExposureKey: (log) => `${log.date}|${log.meal}`,
+  };
+  vm.createContext(context);
+  vm.runInContext(read("js/model.js"), context);
+  vm.runInContext(read("js/planning.js"), context);
+
+  assert.equal(context.usageCount("apfel"), 1);
+  assert.equal(context.eatenExposureCount("apfel"), 1);
+  assert.deepEqual(Array.from(context.combinationHistory(["hafer", "apfel"]), (log) => log.id), ["eaten-1", "refused"]);
+  assert.deepEqual(Array.from(context.refusalHistory("apfel"), (log) => log.id), ["refused"]);
+  assert.equal(context.latestLogForFood("apfel").id, "refused");
+
+  logs[0].foodOutcomes.apfel = "not_accepted";
+  context.invalidateLogsForCache();
+  assert.equal(context.usageCount("apfel"), 0, "in-place Logänderungen müssen nach expliziter Invalidierung frisch ausgewertet werden");
+});
+
+test("Inventory-Aggregate werden gemeinsam aufgebaut und nach Mengenänderung invalidiert", () => {
+  const inventory = [
+    { id: "a", kind: "food", foodId: "apfel", portions: 2, gramsPerPortion: 35, frozenDate: "2026-02-01" },
+    { id: "b", kind: "food", foodId: "apfel", portions: 1, gramsPerPortion: 20, frozenDate: "2026-02-02" },
+    { id: "recipe", kind: "recipe", recipeName: "Obst-Haferbrei", portions: 2 },
+  ];
+  const context = {
+    console,
+    state: { foods: [], inventory },
+    food: () => null,
+    RECIPES: [],
+    normalizeName: (value) => String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim(),
+  };
+  vm.createContext(context);
+  vm.runInContext(read("js/prep.js"), context);
+
+  assert.equal(context.inventoryPortions("apfel"), 3);
+  assert.equal(context.inventoryGrams("apfel"), 90);
+  assert.equal(context.inventoryRecipePortions("Obst-Haferbrei"), 2);
+  inventory.push({ id: "legacy-recipe", kind: "recipe", recipeName: "Legacy-Rezept", portions: 2 });
+  context.invalidateInventoryAggregateCache();
+  assert.equal(context.inventoryRecipePortions("legacy rezept"), 2, "Rezeptnamen müssen wie der bestehende Matcher normalisiert werden");
+  assert.strictEqual(context.inventoryAggregateIndex(), context.inventoryAggregateIndex());
+
+  inventory[0].portions = 1;
+  context.invalidateInventoryAggregateCache();
+  assert.equal(context.inventoryPortions("apfel"), 2);
+  assert.equal(context.inventoryGrams("apfel"), 55);
+});
+
+test("Legacy-Plan-Migration invalidiert den Log-Index nach der Zuordnung", () => {
+  const core = require("../js/planner-log-rollover.js");
+  const logs = [{
+    id: "legacy-log",
+    date: "2026-02-01",
+    meal: "lunch",
+    foodIds: ["apfel"],
+    outcome: "eaten",
+    createdAt: "2026-02-01T10:00:00.000Z",
+  }];
+  const context = {
+    console,
+    state: { foods: [], logs, settings: {} },
+    FOOD_DB: [],
+    STATUS_ORDER: {},
+  };
+  vm.createContext(context);
+  vm.runInContext(read("js/model.js"), context);
+  const previousIndex = global.logIndexFor;
+  const previousInvalidate = global.invalidateLogsForCache;
+  global.logIndexFor = context.logIndexFor;
+  global.invalidateLogsForCache = context.invalidateLogsForCache;
+  try {
+    const data = {
+      logs,
+      planLocks: { "2026-02-01|lunch": { focusId: "apfel", foodIds: ["apfel"] } },
+      manualMeals: {},
+      backupMeta: { plannerLinking: { version: 0 } },
+    };
+    core.upgradePlannerLinking(data);
+    const planId = data.planLocks["2026-02-01|lunch"].planId;
+    assert.equal(logs[0].plannedMealId, planId);
+    assert.equal(core.linkedCompletionLog(data, planId, "2026-02-01", "lunch").id, "legacy-log");
+  } finally {
+    if (previousIndex === undefined) delete global.logIndexFor;
+    else global.logIndexFor = previousIndex;
+    if (previousInvalidate === undefined) delete global.invalidateLogsForCache;
+    else global.invalidateLogsForCache = previousInvalidate;
+  }
+});
+
+test("Planner-Log-Index beschleunigt Completion- und Tageslogzugriff ohne Auswahländerung", () => {
+  const core = require("../js/planner-log-rollover.js");
+  const logs = [
+    { id: "older", date: "2026-02-01", meal: "lunch", plannedMealId: "plan-1", outcome: "tried", createdAt: "2026-02-01T10:00:00.000Z" },
+    { id: "newer", date: "2026-02-01", meal: "lunch", plannedMealId: "plan-1", outcome: "not_offered", createdAt: "2026-02-01T11:00:00.000Z" },
+    { id: "free", date: "2026-02-01", meal: "breakfast", outcome: "tried", createdAt: "2026-02-01T09:00:00.000Z" },
+  ];
+  const context = {
+    console,
+    state: { foods: [], logs, settings: {} },
+    FOOD_DB: [],
+    STATUS_ORDER: {},
+  };
+  vm.createContext(context);
+  vm.runInContext(read("js/model.js"), context);
+  const previous = global.logIndexFor;
+  global.logIndexFor = context.logIndexFor;
+  try {
+    assert.equal(core.linkedCompletionLog({ logs }, "plan-1", "2026-02-01", "lunch").id, "older");
+    assert.deepEqual(Array.from(core.logsForDate({ logs }, "2026-02-01"), (log) => log.id), ["free", "older", "newer"]);
+  } finally {
+    if (previous === undefined) delete global.logIndexFor;
+    else global.logIndexFor = previous;
+  }
+});
+
 test("Prep berechnet den vollständigen Rezeptstatus nur einmal pro Render", () => {
   const source = read("js/prep.js");
   const start = source.indexOf("function renderPrepCore()");

@@ -65,6 +65,9 @@
   }
 
   function logsForDate(data, date) {
+    if (typeof logIndexFor === "function") {
+      return (logIndexFor(data?.logs).byDate.get(date) || []).slice();
+    }
     return (data?.logs || [])
       .filter((log) => log?.date === date)
       .slice()
@@ -76,6 +79,9 @@
   }
 
   function legacyCompletedLog(data, date, meal) {
+    if (typeof logIndexFor === "function") {
+      return (logIndexFor(data?.logs).byDateMealCompletion.get(`${date}|${meal}`) || [])[0] || null;
+    }
     return (data?.logs || [])
       .filter((log) => log?.date === date && log?.meal === meal && logQualifiesAsCompletion(log))
       .slice()
@@ -127,6 +133,7 @@
         let selected = legacyCompletedLog(data, date, meal);
         if (selected && !selected.plannedMealId) {
           selected.plannedMealId = plan.planId;
+          if (typeof invalidateLogsForCache === "function") invalidateLogsForCache(data.logs);
           changed = true;
         }
       }
@@ -138,6 +145,13 @@
 
   function linkedCompletionLog(data, planId, date = "", meal = "") {
     if (!planId) return null;
+    if (typeof logIndexFor === "function") {
+      return (logIndexFor(data?.logs).byPlannedMealId.get(planId) || []).find((log) =>
+        (!date || log.date === date) &&
+        (!meal || log.meal === meal) &&
+        logQualifiesAsCompletion(log),
+      ) || null;
+    }
     return (data?.logs || [])
       .filter((log) =>
         log?.plannedMealId === planId &&

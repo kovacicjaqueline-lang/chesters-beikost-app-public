@@ -216,30 +216,20 @@ try {
   await settle();
 
   const foodSearch = await repeatedInput("#foodSearch", "#foodList", "ha", true);
-  const foodSearchWithoutBodyObserver = await repeatedInput("#foodSearch", "#foodList", "ha", false);
-  await page.evaluate(() => window.__catalogPerfProbe.setBodyObserversEnabled(true));
 
   await page.locator('#catalogSwitch [data-catalog-mode="recipes"]').click();
   await page.locator('[data-recipe-filter="all"]').click();
   await settle();
 
   const recipeSearch = await repeatedInput("#recipeSearch", "#recipeList", "flocken", true);
-  const recipeSearchWithoutBodyObserver = await repeatedInput("#recipeSearch", "#recipeList", "flocken", false);
-  await page.evaluate(() => window.__catalogPerfProbe.setBodyObserversEnabled(true));
 
   const report = {
     viewport: { width: 390, height: 844, deviceScaleFactor: 2 },
     foodSearch,
-    foodSearchWithoutBodyObserver,
     recipeSearch,
-    recipeSearchWithoutBodyObserver,
-    observerImpact: {
-      foodMedianDeltaMs: foodSearch.medianElapsedMs - foodSearchWithoutBodyObserver.medianElapsedMs,
-      recipeMedianDeltaMs: recipeSearch.medianElapsedMs - recipeSearchWithoutBodyObserver.medianElapsedMs,
-    },
   };
 
-  assert.ok(foodSearch.samples[0].globalObserverCount >= 1, "Der globale body/subtree MutationObserver muss für die Baseline erfasst werden");
+  assert.equal(foodSearch.samples[0].globalObserverCount, 0, "Der Katalog darf keinen globalen body/subtree MutationObserver registrieren");
   assert.ok(foodSearch.samples.some((sample) => sample.mutationRecords > 0), "Lebensmittelsuche muss DOM-Mutationen messbar machen");
   assert.ok(recipeSearch.samples.some((sample) => sample.mutationRecords > 0), "Rezeptsuche muss DOM-Mutationen messbar machen");
   assert.deepEqual(pageErrors, [], "Performance-Messung darf keine JavaScript-Fehler auslösen");

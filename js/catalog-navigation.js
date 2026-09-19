@@ -320,8 +320,11 @@
     }
   }, true);
 
-  const observer = new MutationObserver(() => fixLegacyNavigationCopy());
-  observer.observe(document.body, { childList: true, subtree: true });
+  // Die Korrekturen betreffen ausschließlich Inhalte, die nach einem Prep- oder
+  // Mehr-Render entstehen. Ein globaler body/subtree-Observer lief dagegen bei
+  // jeder Katalog-Mutation mit und machte Suche und Filter unnötig teuer.
+  globalThis.MobileUiLifecycle?.onRender?.("prep", fixLegacyNavigationCopy);
+  globalThis.MobileUiLifecycle?.onRender?.("more", fixLegacyNavigationCopy);
 
   setCatalogMode(MODE_FOODS);
   fixLegacyNavigationCopy();

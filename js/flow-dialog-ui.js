@@ -408,9 +408,12 @@
     }
     syncLog();
     if (open) {
-      const focusRecipeSearch = () => logBody.querySelector("#logRecipeSearch")?.focus();
-      if (typeof requestAnimationFrame === "function") requestAnimationFrame(focusRecipeSearch);
-      else queueMicrotask(focusRecipeSearch);
+      // Beim Öffnen darf der freie Eintragsdialog nicht durch einen erzwungenen
+      // Fokus auf das Suchfeld nach unten springen. Der Fokus soll erst durch
+      // eine echte Nutzeraktion entstehen; dann darf WebKit den nativen
+      // Sheet-Scroll an die Tastatur bzw. das fokussierte Feld anpassen.
+      const sheet = logModal.querySelector(".sheet");
+      if (sheet) sheet.scrollTop = 0;
     }
   });
   logStateObserver.observe(logModal, {

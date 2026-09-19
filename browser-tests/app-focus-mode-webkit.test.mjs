@@ -125,18 +125,19 @@ try {
   const plannerKey = await page.evaluate(() => {
     const bridge = window.__beikostTest;
     const next = bridge.getState();
-    const focusId = bridge.foodId("Karotte");
+    const focusId = bridge.foodId("Banane");
+    const componentId = bridge.foodId("Ei");
     const date = bridge.addDays(bridge.today(), 20);
     const key = `${date}|dinner`;
     const meal = {
       date,
       meal: "dinner",
       focusId,
-      foodIds: [focusId],
-      baseFoodIds: [focusId],
+      foodIds: [focusId, componentId],
+      baseFoodIds: [focusId, componentId],
       sampleFoodIds: [],
-      foodRoles: { [focusId]: "base" },
-      recipeName: "",
+      foodRoles: { [focusId]: "base", [componentId]: "base" },
+      recipeName: "Bananen-Ei-Pancakes",
       note: "app-focus-regression",
       manualAdded: true,
     };

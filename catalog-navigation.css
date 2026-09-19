@@ -504,3 +504,111 @@ body.mobile-foundation .today-recipe-row svg {
     flex-direction: column;
   }
 }
+
+/* Alltag & Rezepte: derselbe Heute-Renderpfad, aber mit allen geplanten
+ * Mahlzeiten als primärem mobilen Arbeitsbereich. */
+body.mobile-foundation #home.everyday-recipes-home .today-context,
+body.mobile-foundation #home.everyday-recipes-home .today-progress {
+  margin-bottom: 12px;
+}
+
+body.mobile-foundation .today-everyday-meals {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+body.mobile-foundation .today-everyday-meal {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: #fffdf9;
+}
+
+body.mobile-foundation .today-everyday-meal > .mealbox,
+body.mobile-foundation .today-everyday-meal > .manual-meal {
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+body.mobile-foundation .today-everyday-meal .meal-summary-row,
+body.mobile-foundation .today-everyday-meal > .manual-meal > summary .row {
+  align-items: flex-start;
+}
+
+body.mobile-foundation .everyday-recipe-visual {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  flex: 0 0 56px;
+  border-radius: 15px;
+  background: var(--accent2);
+  overflow: hidden;
+}
+
+body.mobile-foundation .everyday-recipe-visual .recipe-illustration,
+body.mobile-foundation .everyday-recipe-visual .illustration-icon,
+body.mobile-foundation .everyday-recipe-visual img {
+  width: 50px;
+  height: 50px;
+}
+
+body.mobile-foundation .today-everyday-meal .dish-title,
+body.mobile-foundation .today-everyday-meal .manual-meal-title {
+  font-size: 17px;
+  line-height: 1.25;
+}
+
+body.mobile-foundation .today-everyday-meal .everyday-task-hint {
+  display: grid;
+  gap: 1px;
+  margin-top: 9px;
+  padding: 8px 9px;
+  border-radius: 11px;
+  background: #f7f1e8;
+}
+
+body.mobile-foundation .today-everyday-meal .everyday-task-hint span,
+body.mobile-foundation .today-everyday-meal .everyday-task-hint small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+body.mobile-foundation .today-everyday-meal .everyday-task-hint.allergen {
+  background: var(--terrabg);
+}
+
+body.mobile-foundation .today-everyday-meal .everyday-task-hint.allergen span {
+  color: #743b2b;
+  font-weight: 800;
+}
+
+body.mobile-foundation .today-everyday-meal .everyday-recipe-open {
+  width: 100%;
+  margin-top: 10px;
+}
+
+body.mobile-foundation .today-everyday-meal .logMeal,
+body.mobile-foundation .today-everyday-meal .homeLog {
+  background: var(--accent2);
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+
+body.mobile-foundation .today-everyday-meal .meal-plan-actions {
+  margin-top: 10px;
+}
+
+body.mobile-foundation .today-everyday-meal .compact-role-list {
+  margin-top: 9px;
+}
+
+body.mobile-foundation .today-everyday-meal .today-timeline,
+body.mobile-foundation .today-everyday-meal .today-recommendation {
+  display: none;
+}

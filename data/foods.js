@@ -226,6 +226,7 @@ const FOOD_DB = [
     "priority": 9,
     "active": true,
     "allergenGroup": "Ei",
+    "plannerIntroductionMode": "standalone",
     "ironRich": true,
     "ph": false,
     "alias": "",
@@ -234,7 +235,7 @@ const FOOD_DB = [
       "lunch",
       "dinner"
     ],
-    "safeForm": "Gut durchgegartes Vollei; zunächst klein in einer bekannten Mahlzeit.",
+    "safeForm": "Gut durchgegart als Eierspeise, Omelett oder hartgekochtes Ei in altersgerechter Form; zunächst klein anbieten.",
     "prep": "frisch",
     "seasonMonths": [],
     "count100": true,

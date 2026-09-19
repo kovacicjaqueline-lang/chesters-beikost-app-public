@@ -70,15 +70,23 @@ function foodStatusPreferenceKnownBase(meal, exclude = []) {
 }
 
 function foodStatusPreferenceCompanionFor(focus, meal, on, focusType = "") {
-  if (focus.allergenGroup) return knownBase(meal, [focus.id]);
-
   let introductionTypes = new Set([
     "neu",
     "gezielt wiederholen",
+    "Allergen einführen",
     "Allergen wiederholen",
     "manuell",
   ]);
-  let needsTrustedBase = introductionTypes.has(focusType) && !isTrustedBase(focus);
+  let standaloneAllergen = typeof plannerAllergenCanBeStandalone === "function"
+    ? plannerAllergenCanBeStandalone(focus)
+    : !!focus?.allergenGroup && focus?.plannerIntroductionMode === "standalone";
+  let standaloneIntroduction = typeof plannerAllergenIsStandaloneIntroduction === "function"
+    ? plannerAllergenIsStandaloneIntroduction(focus, focusType)
+    : standaloneAllergen && introductionTypes.has(focusType) && !isTrustedBase(focus);
+  let needsTrustedBase = introductionTypes.has(focusType) && !isTrustedBase(focus) && !standaloneAllergen;
+
+  if (standaloneIntroduction) return null;
+  if (focus.allergenGroup && !standaloneAllergen) return knownBase(meal, [focus.id]);
 
   let pool = state.foods.filter((candidate) => {
     let normalMealMatch = eligible(candidate, meal, on);

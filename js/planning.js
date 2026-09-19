@@ -144,6 +144,30 @@ function canCombine(f) {
 function isTrustedBase(f) {
   return ["Verträgliche Basis", "Regelmäßig"].includes(status(f));
 }
+const PLANNER_STANDALONE_ALLERGEN_INTRODUCTION_TYPES = new Set([
+  "neu",
+  "gezielt wiederholen",
+  "Allergen einführen",
+  "Allergen wiederholen",
+  "manuell",
+]);
+function plannerAllergenCanBeStandalone(f) {
+  return !!f?.allergenGroup && f.plannerIntroductionMode === "standalone";
+}
+function plannerAllergenIsStandaloneIntroduction(f, focusType = "") {
+  return (
+    plannerAllergenCanBeStandalone(f) &&
+    PLANNER_STANDALONE_ALLERGEN_INTRODUCTION_TYPES.has(focusType) &&
+    !isTrustedBase(f)
+  );
+}
+function plannerIntroductionNeedsTrustedBase(f, focusType = "") {
+  return (
+    PLANNER_STANDALONE_ALLERGEN_INTRODUCTION_TYPES.has(focusType) &&
+    !isTrustedBase(f) &&
+    !plannerAllergenCanBeStandalone(f)
+  );
+}
 function knownBase(meal, exclude = []) {
   let pool = state.foods.filter(
     (f) =>
@@ -215,13 +239,17 @@ function chooseFocus(meal, on, exclude = [], key = "") {
         : "gezielt wiederholen",
     };
   }
-  let due = pool.filter((f) => dueAllergen(f, on) && baseExists);
+  let due = pool.filter(
+    (f) => dueAllergen(f, on) && (baseExists || plannerAllergenCanBeStandalone(f)),
+  );
   due.sort((a, b) =>
     (lastDate(a.id, true) || "").localeCompare(lastDate(b.id, true)),
   );
   if (due.length) return { f: due[0], type: "Allergen wiederholen" };
   let fresh = pool.filter(
-    (f) => rank(f) === 0 && (!f.allergenGroup || baseExists),
+    (f) =>
+      rank(f) === 0 &&
+      (!f.allergenGroup || baseExists || plannerAllergenCanBeStandalone(f)),
   );
   fresh.sort((a, b) => effectivePriority(a, on) - effectivePriority(b, on));
   if (fresh.length) return { f: fresh[0], type: fresh[0].allergenGroup ? "Allergen einführen" : "neu" };
@@ -348,16 +376,11 @@ function applyPlannedMealAmounts(meal) {
 }
 
 function companionFor(f, meal, on, focusType = "") {
-  if (f.allergenGroup) return knownBase(meal, [f.id]);
-
-  let introductionTypes = new Set([
-    "neu",
-    "gezielt wiederholen",
-    "Allergen wiederholen",
-    "manuell",
-  ]);
-  let needsTrustedBase =
-    introductionTypes.has(focusType) && !isTrustedBase(f);
+  let needsTrustedBase = plannerIntroductionNeedsTrustedBase(f, focusType);
+  if (plannerAllergenIsStandaloneIntroduction(f, focusType)) return null;
+  if (f.allergenGroup && !plannerAllergenCanBeStandalone(f)) {
+    return knownBase(meal, [f.id]);
+  }
 
   let pool = state.foods.filter((x) => {
     let normalMealMatch = eligible(x, meal, on);
@@ -462,13 +485,17 @@ function introductionCandidate(meal, on, ctx, exclude = []) {
         : "gezielt wiederholen",
     };
   }
-  let due = pool.filter((f) => dueAllergen(f, on) && baseExists);
+  let due = pool.filter(
+    (f) => dueAllergen(f, on) && (baseExists || plannerAllergenCanBeStandalone(f)),
+  );
   due.sort((a, b) =>
     (lastDate(a.id, true) || "").localeCompare(lastDate(b.id, true)),
   );
   if (due.length) return { f: due[0], type: "Allergen wiederholen" };
   let fresh = pool.filter(
-    (f) => rank(f) === 0 && (!f.allergenGroup || baseExists),
+    (f) =>
+      rank(f) === 0 &&
+      (!f.allergenGroup || baseExists || plannerAllergenCanBeStandalone(f)),
   );
   fresh.sort((a, b) => effectivePriority(a, on) - effectivePriority(b, on));
   return fresh.length ? { f: fresh[0], type: fresh[0].allergenGroup ? "Allergen einführen" : "neu" } : null;
@@ -926,7 +953,18 @@ function buildDay(date, index, ctx) {
     if (!introduction && meal !== "breakfast" && AMOUNT_LEVELS[currentAmountLevel()].rank >= 1 && !mealContainsMilkProduct(ids)) { let oil = food("rapsoel"); if (oil?.active) optionalAddons.push(oil.id); }
     let baseFoodIds = introduction ? companions.map((x) => x.id) : ids.filter((id) => id !== f.id);
     let sampleFoodIds = introduction ? [f.id] : [];
-    let note = c.type === "neu" ? "Neue Einführung separat oder in kleiner Menge mit der sicheren Basis anbieten." : c.type === "gezielt wiederholen" ? "Wiederholung nach Pause erneut klein und getrennt bewerten." : c.type === "Allergen wiederholen" ? "Allergen mit bekannter Basis gezielt wiederholen." : "Bekannte Lebensmittel sinnvoll rotieren; Vorrat bevorzugt nutzen.";
+    let standaloneAllergen = plannerAllergenCanBeStandalone(f) && !isTrustedBase(f);
+    let note = c.type === "neu"
+      ? standaloneAllergen
+        ? `Neue ${f.name}-Einführung als eigenständige, gut durchgegarte altersgerechte Speise anbieten.`
+        : "Neue Einführung separat oder in kleiner Menge mit der sicheren Basis anbieten."
+      : c.type === "gezielt wiederholen"
+        ? "Wiederholung nach Pause erneut klein und getrennt bewerten."
+        : c.type === "Allergen wiederholen"
+          ? standaloneAllergen
+            ? `${f.name} als eigenständige, gut durchgegarte altersgerechte Speise gezielt wiederholen.`
+            : "Allergen mit bekannter Basis gezielt wiederholen."
+          : "Bekannte Lebensmittel sinnvoll rotieren; Vorrat bevorzugt nutzen.";
     let generated = applyPlannedMealAmounts({ meal, active: true, focusId: f.id, foodIds: ids, baseFoodIds, sampleFoodIds, optionalAddons, milkMeal: mealContainsMilkProduct(ids) ? (introduction ? "small" : "full") : "", type: c.type, note });
     if (mealMilkLevel(generated) === "full") ctx.fullMilkDates?.add(date);
     reserveMealInventory(generated, ctx); meals.push(generated);

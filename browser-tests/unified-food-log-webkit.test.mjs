@@ -81,6 +81,13 @@ async function searchRecipe(page, name) {
   await search.fill(name);
 }
 
+// Mobile sheets keep long-form controls outside the viewport after a rerender.
+async function selectLogOption(page, selector, value) {
+  const control = page.locator(selector);
+  await control.scrollIntoViewIfNeeded();
+  await control.selectOption(value);
+}
+
 async function reset(page) {
   await page.evaluate(() => {
     const state = window.__beikostTest.reset();
@@ -113,7 +120,7 @@ try {
   assert.equal(await page.locator("#logMeal").count(), 0, "Freier Eintrag darf keine Mahlzeitenauswahl anzeigen");
   assert.equal(await page.locator("#logTexture").inputValue(), "", "Neue Textur darf nicht vorausgewählt sein");
   await selectFood(page, "Karotte");
-  await page.locator("#logTexture").selectOption("1");
+  await selectLogOption(page, "#logTexture", "1");
   await page.locator("#logAmount").fill("5");
   await page.locator("#saveLog").click();
   await page.waitForFunction(() => window.__beikostTest.getState().logs.length === 1);
@@ -131,7 +138,7 @@ try {
   // Bearbeiten ersetzt denselben Log und behält Rollen; Reload behält echte Textur.
   const freeId = freeLog.id;
   await page.evaluate((id) => window.editLogEntry(id), freeId);
-  await page.locator("#logTexture").selectOption("2");
+  await selectLogOption(page, "#logTexture", "2");
   await page.locator("#logAmount").fill("8");
   await page.locator("#saveLog").click();
   await page.waitForFunction(() => window.__beikostTest.getState().logs.length === 1);
@@ -176,7 +183,7 @@ try {
   assert.ok(recipeResultLayout.addOffset >= recipeResultLayout.width * 0.75, "Plus-Aktion muss am rechten Rand des Rezepttreffers liegen");
   await recipeResult.click();
   assert.match(await page.locator("#logForm").innerText(), /Birne-Hirse-Pancakes/);
-  await page.locator("#logTexture").selectOption("2");
+  await selectLogOption(page, "#logTexture", "2");
   await page.locator("#saveLog").click();
   await page.waitForFunction(() => window.__beikostTest.getState().logs.length === 1);
   const retrospectiveRecipe = await page.evaluate(() => window.__beikostTest.getState().logs[0]);
@@ -199,8 +206,8 @@ try {
   assert.equal(await page.locator("[data-log-recipe-confirm]").count(), 0);
   assert.equal(await page.locator("[data-log-recipe-required]").first().inputValue(), "");
   assert.equal(await page.locator("#saveLog").isDisabled(), true);
-  await page.locator("[data-log-recipe-oneof]").selectOption("mango");
-  await page.locator("#logTexture").selectOption("2");
+  await selectLogOption(page, "[data-log-recipe-oneof]", "mango");
+  await selectLogOption(page, "#logTexture", "2");
   assert.equal(await page.locator("#saveLog").isDisabled(), false);
   await page.locator("#saveLog").click();
   await page.waitForFunction(() => window.__beikostTest.getState().logs.length === 1);
@@ -248,7 +255,7 @@ try {
   await reset(page);
   await page.evaluate(() => window.openLog(null));
   await selectFood(page, "Karotte");
-  await page.locator('[data-sample-result="karotte"]').selectOption("not_offered");
+  await selectLogOption(page, '[data-sample-result="karotte"]', "not_offered");
   await page.locator("#saveLog").click();
   await page.waitForFunction(() => window.__beikostTest.getState().logs.length === 1);
   let notOffered = await page.evaluate(() => window.__beikostTest.getState().logs[0]);
@@ -258,13 +265,13 @@ try {
 
   // Wird ein solcher Eintrag später tatsächlich zu „Probiert“, ist eine Konsistenz neu erforderlich.
   await page.evaluate((id) => window.editLogEntry(id), notOffered.id);
-  await page.locator('[data-sample-result="karotte"]').selectOption("tried");
+  await selectLogOption(page, '[data-sample-result="karotte"]', "tried");
   await page.locator("#saveLog").click();
   assert.equal(await page.locator("#logModal").evaluate((node) => node.classList.contains("open")), true);
   assert.equal(await page.locator(".unified-texture-error").count(), 1);
   let stillNotOffered = await page.evaluate(() => window.__beikostTest.getState().logs[0]);
   assert.equal(stillNotOffered.foodOutcomes.karotte, "not_offered");
-  await page.locator("#logTexture").selectOption("2");
+  await selectLogOption(page, "#logTexture", "2");
   await page.locator("#saveLog").click();
   await page.waitForFunction(() => document.getElementById("logModal") && !document.getElementById("logModal").classList.contains("open"));
   let changedToTried = await page.evaluate(() => window.__beikostTest.getState().logs[0]);
@@ -277,7 +284,7 @@ try {
     await reset(page);
     await page.evaluate(() => window.openLog(null));
     await selectFood(page, "Karotte");
-    await page.locator('[data-sample-result="karotte"]').selectOption(outcome);
+    await selectLogOption(page, '[data-sample-result="karotte"]', outcome);
     await page.locator("#saveLog").click();
     await page.waitForFunction(() => window.__beikostTest.getState().logs.length === 1);
     const saved = await page.evaluate(() => window.__beikostTest.getState().logs[0]);
@@ -338,7 +345,9 @@ try {
   assert.equal(await page.locator("#addCustomLogFood").evaluate((element) => element.classList.contains("btn")), false, "Eigenes Lebensmittel bleibt eine tertiäre Aktion");
   assert.doesNotMatch(await page.locator("#logForm").innerText(), /Lebensmittelrollen und getrennte Bewertungen bleiben/);
 
+  await page.locator("#logAmount").evaluate((element) => { element.dataset.contextRenderSentinel = "stable"; });
   await page.getByRole("button", { name: "Ändern", exact: true }).click();
+  assert.equal(await page.locator("#logAmount").getAttribute("data-context-render-sentinel"), "stable", "Kontext öffnen darf das Formular nicht vollständig neu rendern");
   assert.equal(await page.locator("#logMeal").isVisible(), true);
   assert.equal(await page.locator("#logDate").isVisible(), true);
   assert.deepEqual(
@@ -350,9 +359,9 @@ try {
 
   await page.getByRole("button", { name: "Zutaten einzeln bewerten ›", exact: true }).click();
   assert.equal(await page.locator("[data-individual-result]").count(), 2);
-  await page.locator('[data-individual-result="karotte"]').selectOption("eaten");
-  await page.locator('[data-individual-result="brokkoli"]').selectOption("not_accepted");
-  await page.locator("#logTexture").selectOption("1");
+  await selectLogOption(page, '[data-individual-result="karotte"]', "eaten");
+  await selectLogOption(page, '[data-individual-result="brokkoli"]', "not_accepted");
+  await selectLogOption(page, "#logTexture", "1");
   await page.locator("#saveLog").click();
   await page.waitForFunction(() => window.__beikostTest.getState().logs.length === 1);
   let planned = await page.evaluate(() => window.__beikostTest.getState().logs[0]);
@@ -374,14 +383,18 @@ try {
   // Beim Bearbeiten darf eine fehlgeschlagene Validierung weder den gespeicherten Kontext noch plannedMealId verändern.
   await page.evaluate((id) => window.editLogEntry(id), planned.id);
   assert.doesNotMatch(await page.locator("#logForm").innerText(), /aus dem Plan/);
+  await page.locator("#logAmount").evaluate((element) => { element.dataset.contextRenderSentinel = "stable"; });
   await page.getByRole("button", { name: "Ändern", exact: true }).click();
   await page.locator("#logDate").fill(movedDateIso);
   await page.locator("#logDate").dispatchEvent("change");
-  await page.locator("#moveDraftDay").click();
-  await page.waitForFunction(() => document.getElementById("logModal")?.classList.contains("open"));
-  await page.locator("#logMeal").selectOption("dinner");
+  assert.equal(await page.locator("#logDate").inputValue(), movedDateIso, "Datumsänderung muss ohne Rückfrage sofort übernommen werden");
+  assert.equal(await page.locator("#logAmount").getAttribute("data-context-render-sentinel"), "stable", "Datumswechsel darf das Formular nicht vollständig neu rendern");
+  assert.equal(await page.getByText("Entwurf verschieben?", { exact: true }).count(), 0, "Datumsänderung darf keine Rückfrage öffnen");
+  assert.equal(await page.locator("#logModal").evaluate((node) => node.classList.contains("open")), true, "Datumsänderung muss im Formular bleiben");
+  await selectLogOption(page, "#logMeal", "dinner");
+  assert.equal(await page.locator("#logAmount").getAttribute("data-context-render-sentinel"), "stable", "Mahlzeitenänderung darf das Formular nicht vollständig neu rendern");
   assert.doesNotMatch(await page.locator("#logForm").innerText(), /aus dem Plan/, "Nach einer Kontextkorrektur ist die ursprüngliche Planung nicht mehr relevant");
-  await page.locator("#logTexture").selectOption("");
+  await selectLogOption(page, "#logTexture", "");
   await page.locator("#saveLog").click();
   assert.equal(await page.locator("#logModal").evaluate((node) => node.classList.contains("open")), true, "Ungültige Korrektur muss im Formular bleiben");
   assert.equal(await page.locator(".unified-texture-error").count(), 1);
@@ -391,7 +404,7 @@ try {
   assert.equal(failedEditState.plannedMealId, plannedMealId, "Fehlgeschlagener Save darf die Plan-Verknüpfung nicht lösen");
 
   // Gültige Korrektur speichert den tatsächlichen Kontext und lässt den ursprünglichen Plan offen.
-  await page.locator("#logTexture").selectOption("1");
+  await selectLogOption(page, "#logTexture", "1");
   await page.locator("#saveLog").click();
   await page.waitForFunction(() => document.getElementById("logModal") && !document.getElementById("logModal").classList.contains("open"));
   planned = await page.evaluate(() => window.__beikostTest.getState().logs[0]);
@@ -411,7 +424,7 @@ try {
   await page.evaluate((id) => window.editLogEntry(id), planned.id);
   assert.doesNotMatch(await page.locator("#logForm").innerText(), /aus dem Plan/);
   await page.getByRole("button", { name: "Ändern", exact: true }).click();
-  await page.locator("#logMeal").selectOption("breakfast");
+  await selectLogOption(page, "#logMeal", "breakfast");
   await page.locator("#saveLog").click();
   await page.waitForFunction(() => document.getElementById("logModal") && !document.getElementById("logModal").classList.contains("open"));
   planned = await page.evaluate(() => window.__beikostTest.getState().logs[0]);

@@ -1013,9 +1013,7 @@ nav button svg{width:var(--icon-nav);height:var(--icon-nav)}
 .log-outcome-item b{min-width:0;color:var(--muted);font-weight:500;overflow-wrap:anywhere}
 .log-outcome-item span{white-space:nowrap}
 .log-entry-meta{margin-top:4px}
-.draft-day-copy{margin:0 0 12px;color:var(--muted)}
-.draft-day-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-@media(max-width:359px){.log-outcome-grid{gap:4px 6px}.draft-day-actions{grid-template-columns:1fr}}
+@media(max-width:359px){.log-outcome-grid{gap:4px 6px}}
 .log-outcome-item:only-child,.log-outcome-item:last-child:nth-child(odd){grid-column:1/-1}
 .log-outcome-item{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:5px;row-gap:1px}
 .log-outcome-item b{white-space:nowrap;overflow-wrap:normal;word-break:normal}

@@ -540,6 +540,21 @@ body.mobile-foundation .today-everyday-meal > .manual-meal > summary .row {
   align-items: flex-start;
 }
 
+body.mobile-foundation .today-everyday-meal .meal-summary-row.has-recipe-visual {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) 40px;
+  gap: 8px;
+  min-width: 0;
+}
+
+body.mobile-foundation .today-everyday-meal .meal-summary-row.has-recipe-visual > .meal-summary-main {
+  min-width: 0;
+}
+
+body.mobile-foundation .today-everyday-meal .meal-summary-row.has-recipe-visual > .meal-summary-actions {
+  min-width: 40px;
+}
+
 body.mobile-foundation .everyday-recipe-visual {
   display: grid;
   place-items: center;

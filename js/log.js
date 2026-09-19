@@ -269,6 +269,14 @@ function logRecipeChoiceHtml(recipe, choice) {
 function closeLog() {
   document.getElementById("logModal").classList.remove("open");
 }
+function preserveLogSheetScrollAfterRender(sheet, scrollTop) {
+  if (!sheet) return;
+  const restore = () => {
+    if (document.getElementById("logModal")?.classList.contains("open")) sheet.scrollTop = scrollTop;
+  };
+  if (typeof requestAnimationFrame === "function") requestAnimationFrame(restore);
+  else queueMicrotask(restore);
+}
 function logContextHasChanged(p = pendingLog) {
   return !!p && (p.date !== p.__originalDate || p.meal !== p.__originalMeal);
 }
@@ -413,9 +421,12 @@ function removeLogFoodSelection(id) {
 function addLogFoodFromResult(id) {
   captureLogDraft();
   let p = pendingLog;
+  let sheet = document.querySelector("#logModal .sheet");
+  let scrollTop = sheet?.scrollTop || 0;
   if (selectedLogFoods.has(id)) {
     removeLogFoodSelection(id);
     renderLogForm();
+    preserveLogSheetScrollAfterRender(sheet, scrollTop);
     return;
   }
   let item = food(id);
@@ -434,6 +445,7 @@ function addLogFoodFromResult(id) {
   if (!selectedRecipeInventoryId && inventoryPortions(id) > 0) selectedInventoryFoods.add(id);
   logFoodQuery = "";
   renderLogForm();
+  preserveLogSheetScrollAfterRender(sheet, scrollTop);
 }
 
 function applyLogRecipeChoice(recipe, choice) {
@@ -461,6 +473,8 @@ function selectLogRecipeFromResult(name) {
   captureLogDraft();
   let recipe = recipeByName(name);
   if (!recipe) return;
+  let sheet = document.querySelector("#logModal .sheet");
+  let scrollTop = sheet?.scrollTop || 0;
   let choice = logRecipeChoiceState(recipe);
   choice.__explicit = {};
   choice.confirmed = !logRecipeNeedsExplicitChoice(recipe);
@@ -468,6 +482,7 @@ function selectLogRecipeFromResult(name) {
   applyLogRecipeChoice(recipe, choice);
   document.activeElement?.blur?.();
   renderLogForm();
+  preserveLogSheetScrollAfterRender(sheet, scrollTop);
   if (logRecipeNeedsExplicitChoice(recipe)) queueMicrotask(focusFirstRequiredRecipeChoice);
 }
 function updateLogRecipeChoice(patch) {

@@ -129,6 +129,7 @@ function copyLogEntry(id) {
   delete copied.updatedAt;
   delete copied.reactionFoodId;
   delete copied.editId;
+  copied.__copySource = true;
   copied.date = today();
   openLog(copied);
   pendingLog.__copySource = true;
@@ -343,6 +344,7 @@ function openLog(plan) {
   pendingLog.__legacyTextureUnknown = !!pendingLog.editId && logTextureStage(plan) === null && logPositiveOutcome(plan, outcomeForFood);
   pendingLog.__recipeQuery = "";
   pendingLog.__recipeChoice = pendingLog.__recipeChoice || null;
+  pendingLog.__deferLogSuggestions = !!pendingLog.__copySource;
   pendingLog.foodRoles = { ...foodRolesFor(roles.ids, roles.bases, roles.samples), ...(pendingLog.foodRoles || {}) };
   pendingLog.foodOutcomes = { ...(pendingLog.foodOutcomes || {}) };
   pendingLog.individualRatings = !!pendingLog.individualRatings;
@@ -350,8 +352,12 @@ function openLog(plan) {
   selectedLogFoods = new Set(pendingLog.foodIds || []);
   selectedRecipeInventoryId = !pendingLog.editId && pendingLog.recipeInventoryId && state.inventory.some((item) => item.id === pendingLog.recipeInventoryId && item.kind === "recipe" && Number(item.portions) > 0) ? pendingLog.recipeInventoryId : "";
   selectedInventoryFoods = new Set(pendingLog.editId || selectedRecipeInventoryId ? [] : [...selectedLogFoods].filter((id) => inventoryPortions(id) > 0));
-  document.getElementById("logModal").classList.add("open");
+  const logModal = document.getElementById("logModal");
+  const logSheet = logModal?.querySelector(".sheet");
+  if (logSheet) logSheet.scrollTop = 0;
+  logModal.classList.add("open");
   renderLogForm();
+  if (logSheet) logSheet.scrollTop = 0;
 }
 
 function conditionalQuestionsHtml(focusOutcome) {
@@ -607,7 +613,6 @@ function renderLogForm() {
   let logContext = p.__mealContext
     ? `<div class="field" style="margin-bottom:10px"><div class="row"><div class="grow"><b id="logContextSummary">${esc(nice(p.date, true))} · ${esc(mealName(p.meal))}</b><div id="logContextPlanHint"${contextHint ? "" : " hidden"}>${contextHint ? "aus dem Plan" : ""}</div></div><button class="text-button" id="editLogContext" type="button" aria-expanded="${p.__contextEditing ? "true" : "false"}">${p.__contextEditing ? "Fertig" : "Ändern"}</button></div><div id="logContextFields" style="display:${p.__contextEditing ? "block" : "none"};margin-top:10px"><div class="grid2"><div class="field"><label>Datum</label><input type="date" id="logDate" value="${p.date}"></div><div class="field"><label>Mahlzeit</label><select id="logMeal">${mealOptions}</select></div></div></div></div>`
     : `<div class="log-date-grid"><div class="field"><label>Datum</label><input type="date" id="logDate" value="${p.date}"></div></div>`;
-  let freeRecipePicker = !p.editId && !p.__mealContext ? `<div class="field log-recipe-picker"><label>Rezept auswählen (optional)</label><input id="logRecipeSearch" value="${esc(p.__recipeQuery || "")}" placeholder="Rezeptnamen eingeben" autocomplete="off"><div class="small log-recipe-results-label">${p.__recipeQuery ? "Suchergebnisse" : "Rezeptnamen eingeben"}</div><div class="log-recipe-results">${logRecipeResultsHtml(p.__recipeQuery || "")}</div></div>` : "";
   let freeRecipe = !p.editId && !p.__mealContext && p.recipeName ? recipeByName(p.recipeName) : null;
   if (freeRecipe && !p.__recipeChoice) {
     p.__recipeChoice = logRecipeChoiceState(freeRecipe, p.foodIds || []);
@@ -617,6 +622,12 @@ function renderLogForm() {
   let freeRecipeChoice = freeRecipe ? logRecipeChoiceHtml(freeRecipe, p.__recipeChoice) : "";
   let currentTexture = logTextureStage(p);
   let textureValue = p.__textureValue !== undefined ? p.__textureValue : (currentTexture || "");
+  let deferFoodSuggestions = !!p.__deferLogSuggestions && !logFoodQuery;
+  p.__deferLogSuggestions = false;
+  let deferredSuggestionsHtml = '<div class="small log-suggestions-pending">Vorschläge werden geladen …</div>';
+  let foodResultsHtml = deferFoodSuggestions ? deferredSuggestionsHtml : logFoodResultsHtml();
+  let recipeResultsHtml = logRecipeResultsHtml(p.__recipeQuery || "");
+  let freeRecipePicker = !p.editId && !p.__mealContext ? `<div class="field log-recipe-picker"><label>Rezept auswählen (optional)</label><input id="logRecipeSearch" value="${esc(p.__recipeQuery || "")}" placeholder="Rezeptnamen eingeben" autocomplete="off"><div class="small log-recipe-results-label">${p.__recipeQuery ? "Suchergebnisse" : "Rezeptnamen eingeben"}</div><div class="log-recipe-results">${recipeResultsHtml}</div></div>` : "";
 
   document.getElementById("logForm").innerHTML = `
     ${logContext}
@@ -624,7 +635,7 @@ function renderLogForm() {
     ${p.recipeName ? `<div class="selected-target"><div class="row"><b class="grow">${esc(p.recipeName)}</b>${!p.editId && !p.__mealContext ? '<button class="iconbtn" id="clearLogRecipe" type="button" aria-label="Rezeptzuordnung entfernen">×</button>' : ""}</div><div class="small">Bekannte Bestandteile gemeinsam, Einführungen und Wiederholungen separat bewerten.</div></div>` : ""}
     ${freeRecipeChoice}
     ${mainBlock}${sampleBlock}
-    <div class="field log-food-picker"><label>Lebensmittel hinzufügen</label><input id="logFoodSearch" value="${esc(logFoodQuery)}" placeholder="Tippen und Treffer auswählen" autocomplete="off"><div class="field-error-message" id="logFoodError" style="display:none"></div><button class="text-button" id="addCustomLogFood" type="button">+ Eigenes Lebensmittel</button><div class="small log-food-results-label">${logFoodQuery ? "Suchergebnisse" : "Vorschläge aus Plan und Verlauf"}</div><div class="log-food-results">${logFoodResultsHtml()}</div></div>
+    <div class="field log-food-picker"><label>Lebensmittel hinzufügen</label><input id="logFoodSearch" value="${esc(logFoodQuery)}" placeholder="Tippen und Treffer auswählen" autocomplete="off"><div class="field-error-message" id="logFoodError" style="display:none"></div><button class="text-button" id="addCustomLogFood" type="button">+ Eigenes Lebensmittel</button><div class="small log-food-results-label">${logFoodQuery ? "Suchergebnisse" : "Vorschläge aus Plan und Verlauf"}</div><div class="log-food-results">${foodResultsHtml}</div></div>
     <div class="field"><label>Gesamtmenge in g (optional)</label><input id="logAmount" type="number" min="0" step="1" inputmode="decimal" value="${esc(p.amount || "")}" placeholder="z. B. 5"></div>
     <div class="field"><label>Konsistenz</label><select id="logTexture"><option value="">Bitte auswählen</option>${[1, 2, 3, 4].map((n) => `<option value="${n}" ${String(textureValue) === String(n) ? "selected" : ""}>Stufe ${n} – ${esc(textureName(n))}</option>`).join("")}</select></div>
     ${conditionalQuestionsHtml(focusOutcome)}

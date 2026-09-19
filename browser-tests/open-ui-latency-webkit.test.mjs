@@ -146,16 +146,35 @@ try {
 
   // Protokoll kopieren: nur ein Formular-Render im Klicktask; 7-Tage-Vorschläge erst nach Paint.
   await seedCopyLog(page);
+  const staleLogScroll = await page.evaluate(async () => {
+    window.copyLogEntry("latency-copy-source");
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    const sheet = document.querySelector("#logModal .sheet");
+    if (!sheet) throw new Error("Log-Sheet fehlt");
+    const spacer = document.createElement("div");
+    spacer.setAttribute("data-test-log-scroll-spacer", "true");
+    spacer.style.height = "2000px";
+    document.getElementById("logForm")?.appendChild(spacer);
+    sheet.scrollTop = sheet.scrollHeight;
+    const scrollTop = sheet.scrollTop;
+    window.closeLog();
+    return scrollTop;
+  });
+  assert.ok(staleLogScroll > 0, "Testaufbau muss eine vorherige Log-Scrollposition erzeugen");
   const logImmediate = await page.evaluate(() => {
     const basePrepDemand = window.prepDemand;
     const baseRenderLogForm = window.renderLogForm;
+    const baseLogFoodCandidates = window.logFoodCandidates;
     window.__openUiLatencyProbe = {
       painted: false,
       prepCalls: 0,
       prepBeforePaint: 0,
+      foodCandidateCalls: 0,
+      foodCandidateBeforePaint: 0,
       logFormCalls: 0,
       basePrepDemand,
       baseRenderLogForm,
+      baseLogFoodCandidates,
     };
     window.prepDemand = function probedPrepDemand(...args) {
       window.__openUiLatencyProbe.prepCalls += 1;
@@ -166,29 +185,42 @@ try {
       window.__openUiLatencyProbe.logFormCalls += 1;
       return baseRenderLogForm.apply(this, args);
     };
+    window.logFoodCandidates = function probedLogFoodCandidates(...args) {
+      window.__openUiLatencyProbe.foodCandidateCalls += 1;
+      if (!window.__openUiLatencyProbe.painted) window.__openUiLatencyProbe.foodCandidateBeforePaint += 1;
+      return baseLogFoodCandidates.apply(this, args);
+    };
     requestAnimationFrame(() => { window.__openUiLatencyProbe.painted = true; });
     window.copyLogEntry("latency-copy-source");
+    const sheet = document.querySelector("#logModal .sheet");
     return {
       modalOpen: document.getElementById("logModal").classList.contains("open"),
       title: document.getElementById("logTitle").textContent,
       prepCalls: window.__openUiLatencyProbe.prepCalls,
+      foodCandidateCalls: window.__openUiLatencyProbe.foodCandidateCalls,
       logFormCalls: window.__openUiLatencyProbe.logFormCalls,
+      scrollTop: sheet?.scrollTop || 0,
     };
   });
   assert.equal(logImmediate.modalOpen, true, "Kopierdialog muss im Klicktask sichtbar geöffnet werden");
   assert.equal(logImmediate.title, "Essen kopieren");
   assert.equal(logImmediate.logFormCalls, 1, "Kopieren darf das vollständige Logformular nur einmal rendern");
   assert.equal(logImmediate.prepCalls, 0, "Planbasierte Lebensmittelvorschläge dürfen Öffnen nicht blockieren");
-  await page.waitForFunction(() => window.__openUiLatencyProbe.prepCalls > 0);
+  assert.equal(logImmediate.foodCandidateCalls, 0, "Lebensmittelvorschläge dürfen den ersten Paint nicht blockieren");
+  assert.equal(logImmediate.scrollTop, 0, "Kopierdialog muss immer am Formularanfang öffnen");
+  await page.waitForFunction(() => window.__openUiLatencyProbe.prepCalls > 0 && window.__openUiLatencyProbe.foodCandidateCalls > 0);
   const logDeferred = await page.evaluate(() => ({
     painted: window.__openUiLatencyProbe.painted,
     prepBeforePaint: window.__openUiLatencyProbe.prepBeforePaint,
+    foodCandidateBeforePaint: window.__openUiLatencyProbe.foodCandidateBeforePaint,
   }));
   assert.equal(logDeferred.painted, true);
   assert.equal(logDeferred.prepBeforePaint, 0, "prepDemand muss vollständig hinter dem ersten Paint liegen");
+  assert.equal(logDeferred.foodCandidateBeforePaint, 0, "Lebensmittelvorschläge müssen vollständig hinter dem ersten Paint liegen");
   await page.evaluate(() => {
     window.prepDemand = window.__openUiLatencyProbe.basePrepDemand;
     window.renderLogForm = window.__openUiLatencyProbe.baseRenderLogForm;
+    window.logFoodCandidates = window.__openUiLatencyProbe.baseLogFoodCandidates;
     window.closeLog();
   });
 

@@ -383,6 +383,12 @@
     }
   }
 
+  function resetLogSheetScroll() {
+    const sheet = logModal.querySelector(".sheet");
+    if (sheet) sheet.scrollTop = 0;
+    return sheet;
+  }
+
   const genericStateObserver = new MutationObserver(() => {
     const open = genericModal.classList.contains("open");
     if (open === genericOpen) return;
@@ -412,8 +418,7 @@
       // Fokus auf das Suchfeld nach unten springen. Der Fokus soll erst durch
       // eine echte Nutzeraktion entstehen; dann darf WebKit den nativen
       // Sheet-Scroll an die Tastatur bzw. das fokussierte Feld anpassen.
-      const sheet = logModal.querySelector(".sheet");
-      if (sheet) sheet.scrollTop = 0;
+      resetLogSheetScroll();
     }
   });
   logStateObserver.observe(logModal, {

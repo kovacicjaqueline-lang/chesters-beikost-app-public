@@ -196,14 +196,12 @@ try {
   await familyRecipeResult.waitFor();
   await familyRecipeResult.click();
   assert.equal(await page.locator("[data-log-recipe-oneof]").count(), 1);
-  assert.equal(await page.locator("[data-log-recipe-confirm]").count(), 1);
+  assert.equal(await page.locator("[data-log-recipe-confirm]").count(), 0);
+  assert.equal(await page.locator("[data-log-recipe-required]").first().inputValue(), "");
+  assert.equal(await page.locator("#saveLog").isDisabled(), true);
   await page.locator("[data-log-recipe-oneof]").selectOption("mango");
   await page.locator("#logTexture").selectOption("2");
-  await page.locator("#saveLog").click();
-  assert.equal(await page.evaluate(() => window.__beikostTest.getState().logs.length), 0, "Mehrdeutige Rezeptzutaten dürfen nicht unbestätigt gespeichert werden");
-  assert.equal(await page.locator(".log-recipe-choice-error").isVisible(), true);
-  await page.getByText("Diese Zutaten wurden tatsächlich verwendet", { exact: true }).click();
-  assert.equal(await page.locator("[data-log-recipe-confirm]").isChecked(), true);
+  assert.equal(await page.locator("#saveLog").isDisabled(), false);
   await page.locator("#saveLog").click();
   await page.waitForFunction(() => window.__beikostTest.getState().logs.length === 1);
   const familyRecipe = await page.evaluate(() => window.__beikostTest.getState().logs[0]);

@@ -365,6 +365,7 @@ function illustrationLoadAttributes(options = {}){
 function illustrationImg(src,label,kind="food",options={}){
   if(!src) return illustrationMissingMarkup(label,kind);
   const assetSrc=revisionedIllustrationSrc(src);
+  const loadAttributes = illustrationLoadAttributes(options);
   if(isV2IllustrationPath(src)){
     return `<span class="illustration-icon illustration-icon--${kind} item-illustration ${kind}-illustration" aria-hidden="true"><img class="illustration-icon__asset" src="${assetSrc}" alt="" aria-hidden="true" ${loadAttributes} data-illustration-label="${esc(label)}" data-illustration-kind="${kind}"></span>`;
   }

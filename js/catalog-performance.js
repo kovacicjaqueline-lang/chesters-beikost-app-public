@@ -327,6 +327,24 @@
     return entry.normalizedFullText.includes(normalizedQuery);
   }
 
+  function recipePantryMatches(recipe) {
+    const stock = globalThis.__recipeFrozenIngredientStock;
+    if (stock?.recipeMatchesIngredientStock && typeof inventoryPortions === "function") {
+      return stock.recipeMatchesIngredientStock(
+        recipe,
+        state?.foods || [],
+        state?.pantry || {},
+        inventoryPortions,
+      );
+    }
+    return (recipe?.requires || []).every((name) => {
+      const item = state?.foods?.find((foodItem) => foodItem.name === name);
+      if (!item) return false;
+      const portions = typeof inventoryPortions === "function" ? inventoryPortions(item?.id) : 0;
+      return portions > 0 || state?.pantry?.[item.id];
+    });
+  }
+
   function recipeCategoryMatches(recipe) {
     return recipeFilter === "available"
       ? recipe.unlocked
@@ -334,11 +352,8 @@
         ? recipe.almost
         : recipeFilter === "all"
           ? true
-          : recipeFilter === "pantry"
-            ? (recipe.requires || []).every((name) => {
-                const item = state.foods.find((foodItem) => foodItem.name === name);
-                return item && (inventoryPortions(item.id) > 0 || state.pantry[item.id]);
-              })
+        : recipeFilter === "pantry"
+            ? recipePantryMatches(recipe)
             : recipeFilter === "freezer"
               ? !!recipe.freezable
               : recipeFilter === "philippines"
@@ -435,6 +450,10 @@
     if (countBox) {
       const context = recipeFilter === "almost"
         ? "es fehlen höchstens zwei Schritte"
+        : recipeFilter === "pantry"
+          ? "mit vorhandenen Zutaten"
+          : recipeFilter === "freezer"
+            ? "einfrierbar"
         : recipeFilter === "breakfast"
           ? "Frühstück"
           : recipeFilter === "main"

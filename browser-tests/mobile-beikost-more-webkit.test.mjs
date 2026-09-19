@@ -106,7 +106,7 @@ try {
   await page.locator('#catalogSwitch button[data-catalog-mode="recipes"]').click();
   assert.equal(await page.locator('[data-recipe-filter="almost"]').evaluate((button) => button.classList.contains("active")), true, "Fast passend soll im Rezeptkatalog standardmäßig aktiv sein");
   assert.equal(await page.locator("#recipeMealFilter").isVisible(), true, "Mahlzeiten-Schnellfilter müssen sichtbar bleiben");
-  assert.equal(await page.locator('[data-recipe-filter="pantry"]').count(), 0, "Mit Vorrat gehört nicht mehr in die normale Rezeptfilterung");
+  assert.equal(await page.locator('[data-recipe-filter="pantry"]').count(), 1, "Mit Vorrat ist als schneller Rezeptfilter erreichbar");
   assert.equal(await page.locator('[data-recipe-filter="philippines"]').count(), 0, "Philippinen gehört nicht mehr in die normale Rezeptfilterung");
 
   await page.locator("#recipeMoreFilters").click();

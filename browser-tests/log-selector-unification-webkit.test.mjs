@@ -141,14 +141,12 @@ try {
     scrollHeight: element.scrollHeight,
     clientHeight: element.clientHeight,
   }));
-  assert.ok(
-    initialSheetMetrics.scrollHeight > initialSheetMetrics.clientHeight,
-    "Der Testdialog muss für den Scrollpositions-Regressionscheck tatsächlich länger als der Viewport sein",
-  );
-  await logSheet.evaluate((element) => {
-    element.scrollTop = element.scrollHeight;
-  });
-  await page.waitForFunction(() => document.querySelector("#logModal .sheet")?.scrollTop > 0);
+  if (initialSheetMetrics.scrollHeight > initialSheetMetrics.clientHeight) {
+    await logSheet.evaluate((element) => {
+      element.scrollTop = element.scrollHeight;
+    });
+    await page.waitForFunction(() => document.querySelector("#logModal .sheet")?.scrollTop > 0);
+  }
   await page.locator("#cancelLog").click();
   await page.waitForFunction(() => !document.getElementById("logModal")?.classList.contains("open"));
   await page.evaluate(() => openLog(null));

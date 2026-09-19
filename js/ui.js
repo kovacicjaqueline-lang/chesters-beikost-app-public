@@ -871,6 +871,25 @@ function openManualMealSelector(date, meal, initialMeal = null) {
     else if (info.role === "sample") sampleFoodIds.add(id);
     // Bekannte Komponenten bleiben bewusst außerhalb von Hauptbasis und Lernrolle.
   }
+  function manualRecipeComponentIds(recipe) {
+    if (!recipe) return new Set();
+    let names = [
+      ...(recipe.requires || []),
+      ...(recipe.alternatives || []).flat(),
+      ...(recipe.oneOf || []),
+      ...(recipe.milkChoices || []),
+    ];
+    let ids = typeof recipeFoodIds === "function" ? recipeFoodIds(recipe) : [];
+    for (let name of names) {
+      let id = typeof foodByName === "function" ? foodByName(name, state.foods)?.id : "";
+      if (id) ids.push(id);
+    }
+    return new Set(ids.filter(Boolean));
+  }
+  function selectedManualRecipeAdditions(recipe) {
+    let recipeIds = manualRecipeComponentIds(recipe);
+    return [...selectedFoods].filter((id) => !recipeIds.has(id));
+  }
   function setRole(id, role) {
     if (!selectedFoods.has(id)) return;
     let info = manualMealRoleInfo(id, meal, date, { recipeName: selectedRecipe });
@@ -986,20 +1005,22 @@ function openManualMealSelector(date, meal, initialMeal = null) {
       });
     };
     document.querySelectorAll(".selectRecipe").forEach((button) => button.onclick = () => {
+      let previousRecipe = selectedRecipe ? recipeByName(selectedRecipe) : null;
+      let additions = selectedManualRecipeAdditions(previousRecipe);
       selectedRecipe = decodeURIComponent(button.dataset.recipe);
       selectedFoods.clear(); baseFoodIds.clear(); sampleFoodIds.clear();
       for (let id of recipeFoodIds(recipeByName(selectedRecipe))) { selectedFoods.add(id); assignAutomaticRole(id, true); }
+      for (let id of additions) { selectedFoods.add(id); assignAutomaticRole(id); }
       renderSelector();
     });
     document.querySelectorAll(".selectFood").forEach((button) => button.onclick = () => {
-      selectedRecipe = "";
       let id = button.dataset.food;
       if (selectedFoods.has(id)) removeSelectedFood(id);
       else { selectedFoods.add(id); assignAutomaticRole(id); }
       renderSelector();
     });
     document.querySelectorAll(".setManualRole").forEach((button) => button.onclick = () => { setRole(button.dataset.food, button.dataset.role); renderSelector(); });
-    document.querySelectorAll(".removeManualSelected").forEach((button) => button.onclick = () => { selectedRecipe = ""; removeSelectedFood(button.dataset.food); renderSelector(); });
+    document.querySelectorAll(".removeManualSelected").forEach((button) => button.onclick = () => { removeSelectedFood(button.dataset.food); renderSelector(); });
     let confirm = document.getElementById("confirmManualMeal");
     if (confirm) confirm.onclick = () => {
       let current = currentRoleData();

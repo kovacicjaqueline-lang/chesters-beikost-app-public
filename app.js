@@ -377,6 +377,27 @@ function relatedFamilyFoodIds(foodRecord, foods) {
 function familySuccessfulExposureCount(foodRecord, foods, logs, outcomeForFoodFn) {
   let ids = new Set(relatedFamilyFoodIds(foodRecord, foods));
   if (!ids.size) ids.add(foodRecord?.id);
+  if (typeof logIndexFor === "function") {
+    let exposureKeys = new Set();
+    let relevantLogs = new Set();
+    let index = logIndexFor(logs);
+    for (let id of ids) {
+      for (let log of index.byFoodId.get(id) || []) relevantLogs.add(log);
+    }
+    for (let log of relevantLogs) {
+      for (let id of new Set(log.foodIds || [])) {
+        if (!ids.has(id) || outcomeForFoodFn(log, id) !== "eaten") continue;
+        if (typeof logExposureKey === "function") exposureKeys.add(logExposureKey(log));
+        else {
+          let hasMeal = log?.entryType !== "sample" && ["breakfast", "snack", "lunch", "dinner"].includes(String(log?.meal || ""));
+          exposureKeys.add(hasMeal
+            ? `${log?.date || ""}|${log.meal}`
+            : `${log?.date || ""}|entry:${log?.id || log?.createdAt || log?.updatedAt || "free"}`);
+        }
+      }
+    }
+    return exposureKeys.size;
+  }
   return new Set(
     (logs || [])
       .flatMap((log) => (log.foodIds || [])

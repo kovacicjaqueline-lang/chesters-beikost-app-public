@@ -228,8 +228,10 @@ function mealEditorRecipeEnsureContext() {
   let meal = manualContext?.meal || mealEditorRecipeVariantContext?.meal || "";
   let date = manualContext?.targetDate || manualContext?.sourceDate || mealEditorRecipeVariantContext?.date || "";
   let recipeName = mealEditorRecipeCurrentSelectedName();
-  if (!mealEditorRecipeVariantContext) {
+  let newEditorSession = !!manualContext && mealEditorRecipeVariantContext?.manualContext !== manualContext;
+  if (!mealEditorRecipeVariantContext || newEditorSession) {
     mealEditorRecipeVariantContext = {
+      manualContext,
       date,
       meal,
       recipeName: "",

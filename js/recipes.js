@@ -693,7 +693,7 @@ function recipeStates() {
     ? memoizeViewRenderValue("recipeStates", computeRecipeStates)
     : computeRecipeStates();
 }
-function renderRecipeCard(r) {
+function renderRecipeCard(r, { priorityImage = false } = {}) {
   let optionParts = [];
   if (r.selectedVariantLabel) optionParts.push(`<div><b>Variante:</b> ${esc(r.selectedVariantLabel)}${(r.selectedVariantRequirements || []).every(recipeIngredientReady) ? "" : " · noch offen"}</div>`);
   if (r.selectedOption || r.availableOptions?.length) optionParts.push(`<div><b>${r.oneOf?.length && r.name === "Milch-Getreide-Brei" ? "Getreide" : r.selectedOption ? "Vorausgewählt" : "Jetzt mögliche Auswahl"}:</b> ${r.selectedOption ? `${esc(r.selectedOption)}${r.selectedOptionReady ? "" : " · noch offen"}` : r.availableOptions.map(esc).join(", ")}</div>`);
@@ -721,7 +721,7 @@ function renderRecipeCard(r) {
   return `<details class="recipe-card-v2">
     <summary>
       <div class="recipe-summary-grid">
-        <div class="recipe-heading-with-icon">${recipeIconSvg(r)}<div><b>${esc(r.name)}</b><div class="small recipe-type-text">${esc(type)}</div><div class="tiny recipe-tech-text">${esc(r.batch || "kleine Portion")}${familyText}</div></div></div>
+        <div class="recipe-heading-with-icon">${recipeIconSvg(r, priorityImage ? { loading: "eager", fetchPriority: "high" } : undefined)}<div><b>${esc(r.name)}</b><div class="small recipe-type-text">${esc(type)}</div><div class="tiny recipe-tech-text">${esc(r.batch || "kleine Portion")}${familyText}</div></div></div>
         <div class="recipe-summary-end">${statusBadge}<span class="recipe-chevron" aria-hidden="true">⌄</span></div>
       </div>
     </summary>

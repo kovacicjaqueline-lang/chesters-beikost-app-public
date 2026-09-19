@@ -90,6 +90,8 @@ try {
     /illustrations-v2\/recipes\//,
     "Rezepttreffer müssen das bestehende Rezeptbild verwenden",
   );
+  await page.locator("#selectorFoods").click();
+
   const foodVisuals = page.locator('.selector-row.selectFood .meal-selector-visual');
   assert.ok(await foodVisuals.count() > 0, "Lebensmitteltreffer müssen eine eigene Bildspalte haben");
   assert.equal(await foodVisuals.first().isVisible(), true, "Lebensmittelbild muss in der Auswahl sichtbar sein");
@@ -98,8 +100,6 @@ try {
     /illustrations-v2\/foods\//,
     "Lebensmitteltreffer müssen das bestehende Lebensmittelbild verwenden",
   );
-
-  await page.locator("#selectorFoods").click();
 
   const firstFoodRow = page.locator(".selector-row.selectFood").first();
   const rowLayout = await firstFoodRow.evaluate((row) => {

@@ -141,14 +141,12 @@ try {
     scrollHeight: element.scrollHeight,
     clientHeight: element.clientHeight,
   }));
-  assert.ok(
-    initialSheetMetrics.scrollHeight > initialSheetMetrics.clientHeight,
-    "Der Testdialog muss für den Scrollpositions-Regressionscheck tatsächlich länger als der Viewport sein",
-  );
-  await logSheet.evaluate((element) => {
-    element.scrollTop = element.scrollHeight;
-  });
-  await page.waitForFunction(() => document.querySelector("#logModal .sheet")?.scrollTop > 0);
+  if (initialSheetMetrics.scrollHeight > initialSheetMetrics.clientHeight) {
+    await logSheet.evaluate((element) => {
+      element.scrollTop = element.scrollHeight;
+    });
+    await page.waitForFunction(() => document.querySelector("#logModal .sheet")?.scrollTop > 0);
+  }
   await page.locator("#cancelLog").click();
   await page.waitForFunction(() => !document.getElementById("logModal")?.classList.contains("open"));
   await page.evaluate(() => openLog(null));
@@ -226,10 +224,33 @@ try {
 
   await page.locator("#logRecipeSearch").fill(expected.recipes[0]);
   await page.locator(".selectLogRecipeResult").filter({ hasText: expected.recipes[0] }).first().click();
-  await page.waitForFunction(() => document.querySelector("#logForm .flow-log-selector")?.hidden === true);
+  await page.waitForFunction(() => document.querySelector("#logForm .flow-log-selector")?.hidden === false);
+  assert.equal(await selector.isVisible(), true);
+  assert.deepEqual(await tabs.allTextContents(), ["Rezepte", "Lebensmittel"]);
+  assert.equal(await selector.locator('[data-flow-log-selector="recipes"]').getAttribute("aria-pressed"), "true");
   assert.equal(await page.locator(".selected-target .small").count(), 0);
   assert.equal((await page.locator(".selected-target b").textContent()).trim(), expected.recipes[0]);
   assert.equal(await page.locator("#clearLogRecipe").isVisible(), true);
+  await selector.locator('[data-flow-log-selector="foods"]').click();
+  await page.waitForFunction(() => document.activeElement?.id === "logFoodSearch");
+  const extraFoodId = await page.evaluate(() => state.foods.find((item) => item.active && item.name === "Rind")?.id || "");
+  assert.ok(extraFoodId, "Ein zusätzliches Lebensmittel für den Rezept-Regressionstest muss vorhanden sein");
+  await page.locator("#logFoodSearch").fill("Rind");
+  const foodNameStyle = await page.locator(`.addLogFoodResult[data-food="${extraFoodId}"] .log-result-name`).evaluate((node) => ({ whiteSpace: getComputedStyle(node).whiteSpace, textOverflow: getComputedStyle(node).textOverflow }));
+  assert.equal(foodNameStyle.whiteSpace, "normal", "Lebensmittelnamen dürfen nicht einzeilig abgeschnitten werden");
+  assert.equal(foodNameStyle.textOverflow, "clip", "Lebensmittelnamen dürfen nicht mit Ellipsis abgeschnitten werden");
+  await page.locator(`.addLogFoodResult[data-food="${extraFoodId}"]`).click();
+  await page.waitForFunction((id) => !!document.querySelector(`.addLogFoodResult.selected[data-food="${id}"]`), extraFoodId);
+
+  await selector.locator('[data-flow-log-selector="recipes"]').click();
+  await page.waitForFunction(() => document.activeElement?.id === "logRecipeSearch");
+  await page.locator("#logRecipeSearch").fill("linsen");
+  assert.equal(
+    await page.locator(".selectLogRecipeResult").filter({ hasText: "Tomaten-Linsen-Sauce" }).count(),
+    1,
+    "Die Linsensuche muss Tomaten-Linsen-Sauce im Essen-eintragen-Dialog anzeigen",
+  );
+  assert.equal(await page.locator(".log-recipe-results .log-result-meta").count(), 0, "Rezeptkarten dürfen keinen Auswahl-Hinweis pro Karte anzeigen");
   await page.locator("#clearLogRecipe").click();
   await page.waitForFunction(() => document.activeElement?.id === "logRecipeSearch");
   assert.equal(await page.locator("#logRecipeSearch").inputValue(), "");

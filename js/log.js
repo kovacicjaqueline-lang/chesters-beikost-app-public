@@ -180,17 +180,23 @@ function logRecipeSearchScore(recipe, query) {
   if (aliases.some((alias) => alias === q)) return 1;
   if (name.startsWith(q)) return 2;
   if (aliases.some((alias) => alias.startsWith(q))) return 3;
-  return normalizeName(recipeSearchText(recipe)).includes(q) ? 4 : Number.POSITIVE_INFINITY;
+  if (name.includes(q)) return 4;
+  if (aliases.some((alias) => alias.includes(q))) return 5;
+  return normalizeName(recipeSearchText(recipe)).includes(q) ? 6 : Number.POSITIVE_INFINITY;
 }
 function logRecipeCandidates(query) {
   let q = normalizeName(query);
   if (!q) return [];
-  return RECIPES
+  let matches = RECIPES
     .map((recipe) => ({ recipe, score: logRecipeSearchScore(recipe, q) }))
     .filter((item) => Number.isFinite(item.score))
-    .sort((a, b) => a.score - b.score || a.recipe.name.localeCompare(b.recipe.name, "de"))
-    .slice(0, 8)
-    .map((item) => item.recipe);
+    .sort((a, b) => a.score - b.score || a.recipe.name.localeCompare(b.recipe.name, "de"));
+  let titleMatches = matches.filter((item) => item.score <= 4);
+  let ingredientMatches = matches.filter((item) => item.score > 4);
+  return [
+    ...titleMatches,
+    ...ingredientMatches.slice(0, Math.max(0, 8 - titleMatches.length)),
+  ].map((item) => item.recipe);
 }
 function logRecipeBaseSets(recipe) {
   return [recipe?.requires || [], ...(recipe?.alternatives || [])].filter((set, index) => set.length || index === 0);
@@ -268,14 +274,6 @@ function logRecipeChoiceHtml(recipe, choice) {
 
 function closeLog() {
   document.getElementById("logModal").classList.remove("open");
-}
-function preserveLogSheetScrollAfterRender(sheet, scrollTop) {
-  if (!sheet) return;
-  const restore = () => {
-    if (document.getElementById("logModal")?.classList.contains("open")) sheet.scrollTop = scrollTop;
-  };
-  if (typeof requestAnimationFrame === "function") requestAnimationFrame(restore);
-  else queueMicrotask(restore);
 }
 function logContextHasChanged(p = pendingLog) {
   return !!p && (p.date !== p.__originalDate || p.meal !== p.__originalMeal);
@@ -406,7 +404,7 @@ function logRecipeResultsHtml(query = pendingLog?.__recipeQuery || "") {
   let q = normalizeName(query);
   let recipes = q ? logRecipeCandidates(query) : recentRecipeItems(4);
   if (q && !recipes.length) return '<div class="small log-search-empty">Kein Rezept gefunden</div>';
-  return recipes.map((recipe) => `<button type="button" class="live-result selectLogRecipeResult" data-recipe="${esc(recipe.name)}" aria-label="${esc(recipe.name)} auswählen"><span class="grow log-result-copy"><b class="log-result-name">${esc(recipe.name)}</b>${q ? '<span class="small log-result-meta">Rezept auswählen</span>' : ""}</span><span class="log-result-add" aria-hidden="true">＋</span></button>`).join("");
+  return recipes.map((recipe) => `<button type="button" class="live-result selectLogRecipeResult" data-recipe="${esc(recipe.name)}" aria-label="${esc(recipe.name)} auswählen"><span class="grow log-result-copy"><b class="log-result-name">${esc(recipe.name)}</b></span><span class="log-result-add" aria-hidden="true">＋</span></button>`).join("");
 }
 
 function removeLogFoodSelection(id) {
@@ -421,12 +419,9 @@ function removeLogFoodSelection(id) {
 function addLogFoodFromResult(id) {
   captureLogDraft();
   let p = pendingLog;
-  let sheet = document.querySelector("#logModal .sheet");
-  let scrollTop = sheet?.scrollTop || 0;
   if (selectedLogFoods.has(id)) {
     removeLogFoodSelection(id);
     renderLogForm();
-    preserveLogSheetScrollAfterRender(sheet, scrollTop);
     return;
   }
   let item = food(id);
@@ -445,7 +440,6 @@ function addLogFoodFromResult(id) {
   if (!selectedRecipeInventoryId && inventoryPortions(id) > 0) selectedInventoryFoods.add(id);
   logFoodQuery = "";
   renderLogForm();
-  preserveLogSheetScrollAfterRender(sheet, scrollTop);
 }
 
 function applyLogRecipeChoice(recipe, choice) {
@@ -473,8 +467,6 @@ function selectLogRecipeFromResult(name) {
   captureLogDraft();
   let recipe = recipeByName(name);
   if (!recipe) return;
-  let sheet = document.querySelector("#logModal .sheet");
-  let scrollTop = sheet?.scrollTop || 0;
   let choice = logRecipeChoiceState(recipe);
   choice.__explicit = {};
   choice.confirmed = !logRecipeNeedsExplicitChoice(recipe);
@@ -482,7 +474,6 @@ function selectLogRecipeFromResult(name) {
   applyLogRecipeChoice(recipe, choice);
   document.activeElement?.blur?.();
   renderLogForm();
-  preserveLogSheetScrollAfterRender(sheet, scrollTop);
   if (logRecipeNeedsExplicitChoice(recipe)) queueMicrotask(focusFirstRequiredRecipeChoice);
 }
 function updateLogRecipeChoice(patch) {
@@ -626,7 +617,7 @@ function renderLogForm() {
     ${mainBlock}${sampleBlock}
     <div class="field log-food-picker"><label>Lebensmittel hinzufügen</label><input id="logFoodSearch" value="${esc(logFoodQuery)}" placeholder="Tippen und Treffer auswählen" autocomplete="off"><div class="field-error-message" id="logFoodError" style="display:none"></div><button class="text-button" id="addCustomLogFood" type="button">+ Eigenes Lebensmittel</button><div class="small log-food-results-label">${logFoodQuery ? "Suchergebnisse" : "Vorschläge aus Plan und Verlauf"}</div><div class="log-food-results">${logFoodResultsHtml()}</div></div>
     <div class="field"><label>Gesamtmenge in g (optional)</label><input id="logAmount" type="number" min="0" step="1" inputmode="decimal" value="${esc(p.amount || "")}" placeholder="z. B. 5"></div>
-    <div class="field"><label>Konsistenz</label><select id="logTexture"><option value="">Bitte auswählen</option>${[1, 2, 3, 4].map((n) => `<option value="${n}" ${String(textureValue) === String(n) ? "selected" : ""}>Stufe ${n} – ${esc(textureName(n))}</option>`).join("")}</select></div>
+    <div class="field"><label>Konsistenz</label><select id="logTexture"><option value="">Bitte auswählen</option>${[1, 2, 3, 4].map((n) => `<option value="${n}" ${String(textureValue) === String(n) ? "selected" : ""}>Stufe ${n} – ${esc(textureName(n))}</option>`).join("")}</select><div class="small" style="margin-top:5px">Bei „Probiert“ oder „Gegessen“ erforderlich. Bei Ablehnung, Reaktion oder „Nicht angeboten“ optional; alte Einträge ohne dokumentierte Konsistenz bleiben unverändert.</div></div>
     ${conditionalQuestionsHtml(focusOutcome)}
     <details class="accordion"><summary>Notiz ergänzen</summary><div class="field"><label>Notiz oder Reaktion</label><textarea id="logNote">${esc(p.note || "")}</textarea></div></details>
     ${!p.editId && recipeItem ? `<div class="field"><label>Aus dem Rezeptvorrat verwendet</label><label class="toggleline"><input class="ds-toggle-input" type="checkbox" id="useRecipeInventory" checked><span class="toggle-copy"><b>1 ${esc(recipeItem.size || "Portion")} ${esc(recipeItem.recipeName)}</b><span class="small">Eingefroren am ${shortDate(recipeItem.frozenDate)}</span></span><span class="toggle-state" aria-hidden="true"></span></label></div>` : ""}

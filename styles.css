@@ -1134,6 +1134,36 @@ nav button svg{width:var(--icon-nav);height:var(--icon-nav)}
   border-color:#fff;
 }
 .selector-row:active,.live-result:active{filter:brightness(.97);transform:none}
+/* Mahlzeit hinzufügen: Rezept- und Lebensmittelkarten führen ihre Illustration
+ * immer in einer eigenen, stabilen Spalte. Dadurch bleiben die Bilder sichtbar,
+ * auch wenn Name oder Such-Metadaten auf kleinen Viewports umbrechen. */
+.meal-selector-visual{
+  width:44px;
+  min-width:44px;
+  height:44px;
+  flex:0 0 44px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+}
+.meal-selector-visual .illustration-icon--recipe,
+.meal-selector-visual .recipe-illustration{
+  width:44px;
+  height:44px;
+  flex-basis:44px;
+}
+.meal-selector-visual .illustration-icon--food,
+.meal-selector-visual .food-illustration{
+  width:36px;
+  height:36px;
+  flex-basis:36px;
+}
+.meal-selector-visual .illustration-icon__asset,
+.meal-selector-visual > img{
+  max-width:100%;
+  max-height:100%;
+}
+
 
 /* Feste Zwei-Aktions-Leiste für lange Formulare und Sheets. */
 .ds-actionbar{

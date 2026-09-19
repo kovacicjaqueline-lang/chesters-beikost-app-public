@@ -181,17 +181,23 @@ function logRecipeSearchScore(recipe, query) {
   if (aliases.some((alias) => alias === q)) return 1;
   if (name.startsWith(q)) return 2;
   if (aliases.some((alias) => alias.startsWith(q))) return 3;
-  return normalizeName(recipeSearchText(recipe)).includes(q) ? 4 : Number.POSITIVE_INFINITY;
+  if (name.includes(q)) return 4;
+  if (aliases.some((alias) => alias.includes(q))) return 5;
+  return normalizeName(recipeSearchText(recipe)).includes(q) ? 6 : Number.POSITIVE_INFINITY;
 }
 function logRecipeCandidates(query) {
   let q = normalizeName(query);
   if (!q) return [];
-  return RECIPES
+  let matches = RECIPES
     .map((recipe) => ({ recipe, score: logRecipeSearchScore(recipe, q) }))
     .filter((item) => Number.isFinite(item.score))
-    .sort((a, b) => a.score - b.score || a.recipe.name.localeCompare(b.recipe.name, "de"))
-    .slice(0, 8)
-    .map((item) => item.recipe);
+    .sort((a, b) => a.score - b.score || a.recipe.name.localeCompare(b.recipe.name, "de"));
+  let titleMatches = matches.filter((item) => item.score <= 4);
+  let ingredientMatches = matches.filter((item) => item.score > 4);
+  return [
+    ...titleMatches,
+    ...ingredientMatches.slice(0, Math.max(0, 8 - titleMatches.length)),
+  ].map((item) => item.recipe);
 }
 function logRecipeBaseSets(recipe) {
   return [recipe?.requires || [], ...(recipe?.alternatives || [])].filter((set, index) => set.length || index === 0);
@@ -412,7 +418,7 @@ function logRecipeResultsHtml(query = pendingLog?.__recipeQuery || "") {
   let q = normalizeName(query);
   let recipes = q ? logRecipeCandidates(query) : recentRecipeItems(4);
   if (q && !recipes.length) return '<div class="small log-search-empty">Kein Rezept gefunden</div>';
-  return recipes.map((recipe) => `<button type="button" class="live-result selectLogRecipeResult" data-recipe="${esc(recipe.name)}" aria-label="${esc(recipe.name)} auswählen"><span class="grow log-result-copy"><b class="log-result-name">${esc(recipe.name)}</b>${q ? '<span class="small log-result-meta">Rezept auswählen</span>' : ""}</span><span class="log-result-add" aria-hidden="true">＋</span></button>`).join("");
+  return recipes.map((recipe) => `<button type="button" class="live-result selectLogRecipeResult" data-recipe="${esc(recipe.name)}" aria-label="${esc(recipe.name)} auswählen"><span class="grow log-result-copy"><b class="log-result-name">${esc(recipe.name)}</b></span><span class="log-result-add" aria-hidden="true">＋</span></button>`).join("");
 }
 
 function removeLogFoodSelection(id) {

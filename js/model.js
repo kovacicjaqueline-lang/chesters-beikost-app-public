@@ -41,26 +41,132 @@ function recipeStructuredFoodSearchTerms(recipe) {
 if (typeof RECIPES !== "undefined" && typeof FOOD_DB !== "undefined") canonicalizeRecipeFoodLabels(RECIPES, FOOD_DB);
 
 let logsForCache = new WeakMap();
-function logsFor(id) {
-  let logs = Array.isArray(state.logs) ? state.logs : [];
-  let cached = logsForCache.get(logs);
-  if (cached?.length !== logs.length) {
-    let byFoodId = new Map();
-    for (let log of logs) {
-      for (let foodId of new Set(log.foodIds || [])) {
-        if (!byFoodId.has(foodId)) byFoodId.set(foodId, []);
-        byFoodId.get(foodId).push(log);
-      }
-    }
-    for (let entries of byFoodId.values()) {
-      entries.sort((a, b) =>
-        (a.date + a.createdAt).localeCompare(b.date + b.createdAt),
-      );
-    }
-    cached = { length: logs.length, byFoodId };
-    logsForCache.set(logs, cached);
+function logIndexCombinationKey(ids) {
+  return [...new Set(ids || [])].filter(Boolean).sort().join("+");
+}
+function logIndexCompletion(log) {
+  if (!log) return false;
+  if (log.foodOutcomes && typeof log.foodOutcomes === "object") {
+    return Object.values(log.foodOutcomes).some((outcome) => outcome !== "not_offered");
   }
-  return cached.byFoodId.get(id) || [];
+  return log.outcome !== "not_offered";
+}
+function logIndexFor(logs = typeof state !== "undefined" ? state.logs : []) {
+  let list = Array.isArray(logs) ? logs : [];
+  let cached = logsForCache.get(list);
+  if (cached?.length === list.length) return cached;
+
+  let byFoodId = new Map();
+  let usageCountByFoodId = new Map();
+  let eatenExposureCountByFoodId = new Map();
+  let refusalByFoodId = new Map();
+  let latestByFoodId = new Map();
+  let byCombinationKey = new Map();
+  let byDate = new Map();
+  let byDateMealCompletion = new Map();
+  let byPlannedMealId = new Map();
+  let exposureKeyFor = (log) => {
+    if (typeof logExposureKey === "function") return logExposureKey(log);
+    let hasMeal = log?.entryType !== "sample" && ["breakfast", "snack", "lunch", "dinner"].includes(String(log?.meal || ""));
+    return hasMeal
+      ? `${log?.date || ""}|${log.meal}`
+      : `${log?.date || ""}|entry:${log?.id || log?.createdAt || log?.updatedAt || "free"}`;
+  };
+  let latestFirst = (a, b) =>
+    `${b.date || ""}${b.updatedAt || b.createdAt || ""}`.localeCompare(
+      `${a.date || ""}${a.updatedAt || a.createdAt || ""}`,
+    );
+  let dateMealOrder = (a, b) => {
+    let mealOrder = { breakfast: 1, lunch: 2, snack: 3, dinner: 4 };
+    let order = (mealOrder[a.meal] || 99) - (mealOrder[b.meal] || 99);
+    return order || String(a.createdAt || "").localeCompare(String(b.createdAt || ""));
+  };
+
+  for (let log of list) {
+    let ids = new Set(log?.foodIds || []);
+    for (let foodId of ids) {
+      if (!byFoodId.has(foodId)) byFoodId.set(foodId, []);
+      byFoodId.get(foodId).push(log);
+      let outcome = outcomeForFood(log, foodId);
+      if (outcome === "eaten") {
+        usageCountByFoodId.set(foodId, (usageCountByFoodId.get(foodId) || 0) + 1);
+        let exposures = eatenExposureCountByFoodId.get(foodId) || new Set();
+        exposures.add(exposureKeyFor(log));
+        eatenExposureCountByFoodId.set(foodId, exposures);
+      }
+      if (outcome === "not_accepted") {
+        if (!refusalByFoodId.has(foodId)) refusalByFoodId.set(foodId, []);
+        refusalByFoodId.get(foodId).push(log);
+      }
+      let previous = latestByFoodId.get(foodId);
+      if (!previous || latestFirst(log, previous) < 0) latestByFoodId.set(foodId, log);
+    }
+
+    let combinationKey = logIndexCombinationKey(log?.foodIds);
+    if (!byCombinationKey.has(combinationKey)) byCombinationKey.set(combinationKey, []);
+    byCombinationKey.get(combinationKey).push(log);
+    if (!byDate.has(log?.date)) byDate.set(log?.date, []);
+    byDate.get(log?.date).push(log);
+    if (log?.date && log?.meal && logIndexCompletion(log)) {
+      let key = `${log.date}|${log.meal}`;
+      if (!byDateMealCompletion.has(key)) byDateMealCompletion.set(key, []);
+      byDateMealCompletion.get(key).push(log);
+    }
+    if (log?.plannedMealId) {
+      if (!byPlannedMealId.has(log.plannedMealId)) byPlannedMealId.set(log.plannedMealId, []);
+      byPlannedMealId.get(log.plannedMealId).push(log);
+    }
+  }
+
+  for (let entries of byFoodId.values()) entries.sort((a, b) =>
+    (a.date + a.createdAt).localeCompare(b.date + b.createdAt),
+  );
+  for (let entries of refusalByFoodId.values()) entries.sort((a, b) =>
+    (a.date + a.createdAt).localeCompare(b.date + b.createdAt),
+  );
+  for (let entries of byCombinationKey.values()) entries.sort((a, b) =>
+    `${a.date}|${a.createdAt || ""}`.localeCompare(`${b.date}|${b.createdAt || ""}`),
+  );
+  for (let entries of byDate.values()) entries.sort(dateMealOrder);
+  for (let entries of byDateMealCompletion.values()) entries.sort((a, b) =>
+    String(b.createdAt || "").localeCompare(String(a.createdAt || "")),
+  );
+  for (let entries of byPlannedMealId.values()) entries.sort((a, b) =>
+    String(b.createdAt || "").localeCompare(String(a.createdAt || "")),
+  );
+
+  cached = {
+    length: list.length,
+    byFoodId,
+    usageCountByFoodId,
+    eatenExposureCountByFoodId,
+    refusalByFoodId,
+    latestByFoodId,
+    byCombinationKey,
+    byDate,
+    byDateMealCompletion,
+    byPlannedMealId,
+  };
+  logsForCache.set(list, cached);
+  return cached;
+}
+function invalidateLogsForCache(logs = typeof state !== "undefined" ? state.logs : null) {
+  if (Array.isArray(logs)) logsForCache.delete(logs);
+}
+function logsFor(id) {
+  return logIndexFor().byFoodId.get(id) || [];
+}
+function foodLogAggregate(id) {
+  return {
+    usageCount: foodUsageCount(id),
+    eatenExposureCount: foodEatenExposureCount(id),
+  };
+}
+function foodUsageCount(id) {
+  return logIndexFor().usageCountByFoodId.get(id) || 0;
+}
+function foodEatenExposureCount(id) {
+  return logIndexFor().eatenExposureCountByFoodId.get(id)?.size || 0;
 }
 function outcomeForFood(log, id) {
   if (log.foodOutcomes && log.foodOutcomes[id]) return log.foodOutcomes[id];
@@ -298,6 +404,7 @@ function inventoryName(item) {
     : food(item.foodId)?.name || item.foodName || "Lebensmittel";
 }
 function recipeInventoryPortions(recipeName) {
+  if (typeof inventoryRecipePortions === "function") return inventoryRecipePortions(recipeName);
   return state.inventory
     .filter(
       (i) =>
@@ -333,5 +440,6 @@ function consumeInventoryItem(id) {
   item.portions = Math.max(0, Math.floor(Number(item.portions) || 0) - 1);
   if (item.portions <= 0)
     state.inventory = state.inventory.filter((i) => i.id !== id);
+  if (typeof invalidateInventoryAggregateCache === "function") invalidateInventoryAggregateCache();
   return true;
 }

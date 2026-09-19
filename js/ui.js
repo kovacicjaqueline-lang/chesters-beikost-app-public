@@ -1445,6 +1445,7 @@ function addInventoryForm(preset = {}) {
       if (gramsPerPortion > 0) values.gramsPerPortion = gramsPerPortion;
       if (editing) { let item = state.inventory.find((entry) => entry.id === preset.editId); if (!item) return; Object.assign(item, values); if (!gramsPerPortion) delete item.gramsPerPortion; }
       else state.inventory.push({ id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, ...values });
+      if (typeof invalidateInventoryAggregateCache === "function") invalidateInventoryAggregateCache();
       let label = candidateName(selectedKey);
       save(); closeGeneric(); renderAll(); showToast(editing ? "Vorratseintrag aktualisiert." : `${label} als neuer Vorrat hinzugefügt.`);
     });

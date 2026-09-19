@@ -38,21 +38,56 @@ function inventoryUnitGrams(item) {
 function inventoryPortionCount(item) {
   return Math.max(0, Math.floor(Number(item?.portions) || 0));
 }
+let inventoryAggregateCache = new WeakMap();
+function inventoryRecipeKey(name) {
+  let canonical = typeof canonicalRecipeName === "function"
+    ? canonicalRecipeName(name || "")
+    : String(name || "");
+  return typeof normalizeName === "function" ? normalizeName(canonical) : canonical;
+}
+function inventoryAggregateIndex(inventory = typeof state !== "undefined" ? state.inventory : []) {
+  let list = Array.isArray(inventory) ? inventory : [];
+  let cached = inventoryAggregateCache.get(list);
+  if (cached?.length === list.length) return cached;
+  let byFoodId = new Map();
+  let byRecipeName = new Map();
+  for (let item of list) {
+    let portions = inventoryPortionCount(item);
+    if (portions <= 0) continue;
+    if (item.kind === "recipe") {
+      let name = inventoryRecipeKey(item.recipeName);
+      byRecipeName.set(name, (byRecipeName.get(name) || 0) + portions);
+      continue;
+    }
+    let current = byFoodId.get(item.foodId) || { grams: 0, portions: 0 };
+    current.portions += portions;
+    current.grams += portions * inventoryUnitGrams(item);
+    byFoodId.set(item.foodId, current);
+  }
+  cached = { length: list.length, byFoodId, byRecipeName };
+  inventoryAggregateCache.set(list, cached);
+  return cached;
+}
+function invalidateInventoryAggregateCache(inventory = typeof state !== "undefined" ? state.inventory : null) {
+  if (Array.isArray(inventory)) inventoryAggregateCache.delete(inventory);
+}
 function inventoryGrams(foodId) {
-  return state.inventory
-    .filter((i) => i.kind !== "recipe" && i.foodId === foodId)
-    .reduce((sum, i) => sum + inventoryPortionCount(i) * inventoryUnitGrams(i), 0);
+  return inventoryAggregateIndex().byFoodId.get(foodId)?.grams || 0;
 }
 function inventoryPortions(foodId) {
-  return state.inventory
-    .filter((i) => i.kind !== "recipe" && i.foodId === foodId)
-    .reduce((sum, i) => sum + inventoryPortionCount(i), 0);
+  return inventoryAggregateIndex().byFoodId.get(foodId)?.portions || 0;
+}
+function inventoryRecipePortions(recipeName) {
+  return inventoryAggregateIndex().byRecipeName.get(inventoryRecipeKey(recipeName)) || 0;
 }
 function formatPrepNumber(value) {
   let rounded = Math.round((Number(value) || 0) * 10) / 10;
   return Number.isInteger(rounded) ? String(rounded) : rounded.toLocaleString("de-AT", { maximumFractionDigits: 1 });
 }
 function completedLog(date, meal) {
+  if (typeof logIndexFor === "function") {
+    return (logIndexFor().byDateMealCompletion.get(`${date}|${meal}`) || [])[0] || null;
+  }
   return state.logs
     .filter(
       (l) =>
@@ -104,6 +139,7 @@ function consumeInventoryPortion(foodId) {
   batch.portions = Math.max(0, Number(batch.portions) - 1);
   if (batch.portions <= 0)
     state.inventory = state.inventory.filter((i) => i.id !== batch.id);
+  invalidateInventoryAggregateCache();
   return true;
 }
 function freshAtMealFood(f) {
@@ -347,6 +383,7 @@ function calculateBatch() {
           frozenDate: today(),
           note: "Restportion aus derselben Kochmenge",
         });
+      invalidateInventoryAggregateCache();
       save();
       renderAll();
       showToast(`${storedPortions} ${storedPortions === 1 ? "Portion" : "Portionen"} ${f.name} zum Vorrat hinzugefügt.`);
@@ -624,6 +661,7 @@ function renderPrepCore() {
       (button.onclick = () => {
         let id = button.closest("[data-inv]").dataset.inv;
         state.inventory = state.inventory.filter((i) => i.id !== id);
+        invalidateInventoryAggregateCache();
         save();
         renderAll();
       }),

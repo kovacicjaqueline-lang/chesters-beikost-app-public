@@ -563,7 +563,8 @@ body.mobile-foundation #foods .recipe-chevron::after{content:"›";font-size:26p
 body.mobile-foundation #foods .recipe-card-v2[open] .recipe-chevron{transform:rotate(90deg)}
 
 /* Recipe-Assets bleiben auch gegen die ältere Media-Regel des Katalogs kompakt. */
-body.mobile-foundation #foods .recipe-heading-with-icon > .recipe-illustration > img.illustration-icon__asset {
+body.mobile-foundation #foods .recipe-heading-with-icon > .recipe-illustration > img.illustration-icon__asset,
+body.mobile-foundation #foods .recipe-heading-with-icon > img.recipe-illustration {
   width: 52px !important;
   height: 52px !important;
   max-width: 52px;

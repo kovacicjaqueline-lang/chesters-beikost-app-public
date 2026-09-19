@@ -1137,6 +1137,28 @@ nav button svg{width:var(--icon-nav);height:var(--icon-nav)}
 /* Mahlzeit hinzufügen: Rezept- und Lebensmittelkarten führen ihre Illustration
  * immer in einer eigenen, stabilen Spalte. Dadurch bleiben die Bilder sichtbar,
  * auch wenn Name oder Such-Metadaten auf kleinen Viewports umbrechen. */
+.selector-row{
+  display:grid;
+  grid-template-columns:44px minmax(0,1fr) 26px;
+  column-gap:10px;
+}
+.selector-row.selectFood{
+  grid-template-columns:44px minmax(0,1fr) minmax(0,112px) 26px;
+}
+.selector-row > .grow{
+  display:block;
+  width:auto;
+  min-width:0;
+  overflow-wrap:anywhere;
+}
+.selector-row > .manual-role-type{
+  width:auto;
+  min-width:0;
+}
+.selector-row > .selector-check{
+  margin-left:0;
+  order:initial;
+}
 .meal-selector-visual{
   width:44px;
   min-width:44px;
@@ -1197,6 +1219,8 @@ h1,h2,h3,.panel-details summary b,.help-topic>summary{color:var(--ink)}
 @media(max-width:390px){
   .ds-actionbar{grid-template-columns:1fr 1fr}
   .selector-row,.live-result{gap:8px;padding:10px}
+  .selector-row{column-gap:8px}
+  .selector-row.selectFood{grid-template-columns:44px minmax(0,1fr) minmax(0,92px) 26px}
 }
 
 .settings-groups{display:grid;gap:12px}

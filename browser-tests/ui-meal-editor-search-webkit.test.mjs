@@ -90,6 +90,8 @@ try {
     /illustrations-v2\/recipes\//,
     "Rezepttreffer müssen das bestehende Rezeptbild verwenden",
   );
+  await page.locator("#selectorFoods").click();
+
   const foodVisuals = page.locator('.selector-row.selectFood .meal-selector-visual');
   assert.ok(await foodVisuals.count() > 0, "Lebensmitteltreffer müssen eine eigene Bildspalte haben");
   assert.equal(await foodVisuals.first().isVisible(), true, "Lebensmittelbild muss in der Auswahl sichtbar sein");
@@ -99,7 +101,27 @@ try {
     "Lebensmitteltreffer müssen das bestehende Lebensmittelbild verwenden",
   );
 
-  await page.locator("#selectorFoods").click();
+  const firstFoodRow = page.locator(".selector-row.selectFood").first();
+  const rowLayout = await firstFoodRow.evaluate((row) => {
+    const rect = (selector) => {
+      const box = row.querySelector(selector)?.getBoundingClientRect();
+      return box ? { left: box.left, right: box.right, width: box.width } : null;
+    };
+    const rowBox = row.getBoundingClientRect();
+    const rowStyle = getComputedStyle(row);
+    const contentRight = rowBox.right - Number.parseFloat(rowStyle.paddingRight) - Number.parseFloat(rowStyle.borderRightWidth);
+    return {
+      row: { left: rowBox.left, right: contentRight, width: rowBox.width },
+      visual: rect(".meal-selector-visual"),
+      copy: rect(".grow"),
+      role: rect(".manual-role-type"),
+      check: rect(".selector-check"),
+    };
+  });
+  assert.ok(rowLayout.visual?.width >= 40, "Die Lebensmittelkarte muss eine stabile Bildspalte besitzen");
+  assert.ok(rowLayout.copy?.width >= 80, "Die Lebensmittelkarte muss dem Namen eine nutzbare Textbreite geben");
+  assert.ok(rowLayout.check && rowLayout.row && rowLayout.check.right >= rowLayout.row.right - 2, "Das Häkchen muss am rechten Kartenrand stehen");
+  assert.ok(rowLayout.copy && rowLayout.check && rowLayout.copy.right < rowLayout.check.left, "Text und Häkchen dürfen nicht in derselben schmalen Spalte kollabieren");
 
   const search = page.locator("#mealSelectorSearch");
   await search.click();

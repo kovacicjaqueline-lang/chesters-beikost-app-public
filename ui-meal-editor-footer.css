@@ -32,6 +32,7 @@
  * Protokollieren. Gerade auf iOS vermeidet das Fokus-Panning in einem verschachtelten
  * Scrollcontainer und hält die horizontalen Sheet-Kanten stabil. */
 #genericModal:has(#cancelManualMeal) .sheet {
+  --manual-editor-footer-reserve: calc(118px + env(safe-area-inset-bottom));
   position: relative;
   z-index: 1;
   display: block;
@@ -63,6 +64,7 @@
 #genericModal:has(#cancelManualMeal) .selector-results {
   max-height: none;
   overflow: visible;
+  padding-bottom: var(--manual-editor-footer-reserve);
 }
 
 /* Sticky im nativen Sheet-Scroll statt als eigener/fixed Viewport: Speichern und

@@ -449,6 +449,9 @@
     }
     if (event.target.closest?.("#clearLogRecipe") || event.target.closest?.(".addLogFoodResult")) {
       queueMicrotask(syncLog);
+      if (event.target.closest?.(".addLogFoodResult")) {
+        queueMicrotask(() => logBody.querySelector("#logFoodSearch")?.focus());
+      }
     }
   });
 

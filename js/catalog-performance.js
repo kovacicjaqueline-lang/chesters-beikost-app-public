@@ -373,9 +373,12 @@
     recipeCardHtmlCache = new Map();
   }
 
-  function recipeCardHtml(recipe) {
-    const key = recipe?.name || "";
-    if (!recipeCardHtmlCache.has(key)) recipeCardHtmlCache.set(key, renderRecipeCard(recipe));
+  function recipeCardHtml(recipe, { priorityImage = false } = {}) {
+    const name = recipe?.name || "";
+    const key = `${name}|${priorityImage ? "priority" : "deferred"}`;
+    if (!recipeCardHtmlCache.has(key)) {
+      recipeCardHtmlCache.set(key, renderRecipeCard(recipe, { priorityImage }));
+    }
     return recipeCardHtmlCache.get(key);
   }
 
@@ -476,9 +479,9 @@
         : "Alle Rezepte anzeigen";
 
     const entries = recipes.length
-      ? recipes.map((recipe) => ({
+      ? recipes.map((recipe, index) => ({
           key: `${recipeNodePrefix}${recipe.name}`,
-          html: recipeCardHtml(recipe),
+          html: recipeCardHtml(recipe, { priorityImage: index < 4 }),
         }))
       : [{
           key: `${recipeNodePrefix}empty`,

@@ -678,7 +678,7 @@ main{padding-bottom:28px}
 .log-result-copy{display:block;min-width:0}
 .log-result-name{display:block;overflow-wrap:anywhere;white-space:normal}
 .log-result-meta{display:block;margin-top:2px;overflow-wrap:anywhere;white-space:normal}
-.log-result-add{font-size:18px;text-align:center}.selectLogRecipeResult{min-height:60px}
+.log-result-add{font-size:18px;text-align:center}.selectLogRecipeResult{min-height:88px}
 @media(max-width:359px){.log-food-result{grid-template-columns:27px minmax(0,1fr) 25px;gap:7px;padding-left:9px;padding-right:9px}.log-result-emoji{font-size:19px}.log-result-meta{font-size:11px}}
 
 

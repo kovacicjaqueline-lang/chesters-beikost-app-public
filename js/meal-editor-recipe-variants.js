@@ -601,8 +601,6 @@ function mealEditorRecipeHandleCapture(event) {
     return;
   }
   if (target.classList.contains("selectFood") || target.classList.contains("removeManualSelected")) {
-    context.recipeName = "";
-    context.selections = {};
     return;
   }
   if (target.classList.contains("selectRecipe")) {

@@ -777,7 +777,12 @@ select,
   overflow-wrap:anywhere;
   word-break:normal;
 }
-.compact-role-row{grid-template-columns:minmax(0,1fr) auto;gap:8px}
+.compact-role-row{
+  display:flex;
+  align-items:baseline;
+  flex-wrap:wrap;
+  gap:4px 7px;
+}
 .compact-role-row b{
   font-size:13px;
   font-weight:600;
@@ -788,9 +793,10 @@ select,
   font-size:10px;
   font-weight:500;
   white-space:normal;
-  text-align:right;
+  text-align:left;
   line-height:1.2;
 }
+.compact-role-row span::before{content:"·";margin-right:5px;color:var(--muted)}
 .food-outcome-name{grid-template-columns:minmax(0,1fr) auto}
 .food-outcome-name b{
   font-size:13px;

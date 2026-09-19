@@ -464,7 +464,16 @@ function applyLogRecipeChoice(recipe, choice) {
   if (!recipe || !pendingLog) return;
   let p = pendingLog;
   let previousOutcomes = { ...(p.foodOutcomes || {}) };
-  let ids = logRecipeActualFoodIds(recipe, choice).filter((id) => !!food(id));
+  let previousRecipe = p.recipeName ? recipeByName(p.recipeName) : null;
+  let previousChoice = previousRecipe
+    ? (p.__recipeChoice || logRecipeChoiceState(previousRecipe, p.foodIds || []))
+    : null;
+  let previousRecipeIds = previousRecipe
+    ? logRecipeActualFoodIds(previousRecipe, previousChoice)
+    : [];
+  let additionalIds = (p.foodIds || []).filter((id) => !previousRecipeIds.includes(id));
+  let recipeIds = logRecipeActualFoodIds(recipe, choice);
+  let ids = [...new Set([...recipeIds, ...additionalIds])].filter((id) => !!food(id));
   let samples = ids.filter((id) => rank(food(id)) < 2);
   let bases = ids.filter((id) => !samples.includes(id));
   p.recipeName = recipe.name;
@@ -474,7 +483,6 @@ function applyLogRecipeChoice(recipe, choice) {
   p.foodRoles = foodRolesFor(ids, bases, samples);
   p.foodOutcomes = Object.fromEntries(ids.map((id) => [id, previousOutcomes[id] || (rank(food(id)) >= 1 ? "eaten" : "tried")]));
   p.focusId = samples.includes(p.focusId) || bases.includes(p.focusId) ? p.focusId : (samples[0] || bases[0] || ids[0] || "");
-  p.individualRatings = false;
   p.__recipeChoice = choice;
   selectedLogFoods = new Set(ids);
   selectedRecipeInventoryId = "";

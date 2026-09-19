@@ -646,7 +646,7 @@ body.mobile-foundation #genericModal .sheet {
     const allergen = /allergen/i.test(type) || samples.some((item) => item.allergenGroup);
     const repeat = /wiederholen|repeat/i.test(type);
     const action = repeat ? "wiederholen" : "einführen";
-    return `<div class="everyday-task-hint ${allergen ? "allergen" : "new-food"}"><span>${allergen ? "Allergen-Aufgabe" : "Neue Kostprobe"}</span><b>${esc(samples.map((item) => item.name).join(" · "))}</b><small>${allergen ? `Heute ${action}` : "Als neue Zutat vorgesehen"}</small></div>`;
+    return `<div class="everyday-task-hint ${allergen ? "allergen" : "new-food"}"><span>${allergen ? "Allergen-Aufgabe" : "Neue Kostprobe"}</span><b>${esc(samples.map((item) => item.name).join(" · "))}</b><small>${allergen ? `Heute ${action}` : "Neu"}</small></div>`;
   }
 
   function decorateEverydayMeal(mealBox, meal) {
@@ -665,6 +665,20 @@ body.mobile-foundation #genericModal .sheet {
       visual.innerHTML = recipeIconSvg(recipe, { loading: "eager", fetchPriority: "high" });
       row.classList.add("has-recipe-visual");
       row.insertBefore(visual, title);
+      mealBox.classList.add("has-planned-recipe");
+      visual.setAttribute("role", "button");
+      visual.setAttribute("tabindex", "0");
+      visual.setAttribute("aria-label", `Rezept ${recipe.name} öffnen`);
+      const openRecipe = (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        root.__plannedRecipeDetails?.openPlannedRecipeDetails?.(meal.recipeName, meal.foodIds || []);
+      };
+      visual.addEventListener("click", openRecipe);
+      visual.addEventListener("keydown", (event) => {
+        if (!["Enter", " "].includes(event.key)) return;
+        openRecipe(event);
+      });
     }
 
     if (!title.querySelector(".everyday-task-hint")) {
@@ -672,18 +686,6 @@ body.mobile-foundation #genericModal .sheet {
       if (task) title.insertAdjacentHTML("beforeend", task);
     }
 
-    if (recipe && !title.querySelector(".everyday-recipe-open")) {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "btn secondary smallbtn everyday-recipe-open";
-      button.textContent = "Rezept öffnen";
-      button.addEventListener("click", (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        root.__plannedRecipeDetails?.openPlannedRecipeDetails?.(meal.recipeName, meal.foodIds || []);
-      });
-      title.appendChild(button);
-    }
   }
 
   function renderTodayFocus() {

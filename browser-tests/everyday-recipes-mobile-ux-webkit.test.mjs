@@ -132,7 +132,8 @@ try {
   assert.match(await todayCard.innerText(), /Bananen-Ei-Pancakes/);
   assert.match(await todayCard.innerText(), /Neue Kostprobe|Allergen-Aufgabe/);
   assert.equal(await todayCard.locator(".everyday-recipe-visual .recipe-illustration").count(), 1, "Vorhandenes Recipe-V2-Bild wird an der geplanten Rezeptmahlzeit gezeigt");
-  assert.equal(await todayCard.locator(".everyday-recipe-open").count(), 1, "Geplantes Rezept bleibt direkt öffnbar");
+  assert.equal(await todayCard.locator(".everyday-recipe-open").count(), 0, "Die Rezeptkarte braucht keinen zusätzlichen Öffnen-Button");
+  assert.equal(await todayCard.locator(".planned-recipe-title").count(), 1, "Der Rezeptname bleibt direkt öffnbar");
 
   const everydayLayout = await todayCard.locator(".today-everyday-meal").first().evaluate((meal) => {
     const row = meal.querySelector(".meal-summary-row");
@@ -143,32 +144,49 @@ try {
     const visualRect = visual?.getBoundingClientRect();
     const mainRect = main?.getBoundingClientRect();
     const actionsRect = actions?.getBoundingClientRect();
+    const rowStyle = row ? getComputedStyle(row) : null;
+    const visualStyle = visual ? getComputedStyle(visual) : null;
     return {
       hasRecipeClass: row?.classList.contains("has-recipe-visual"),
+      rowDisplay: rowStyle?.display || "",
       rowClientWidth: row?.clientWidth || 0,
       rowScrollWidth: row?.scrollWidth || 0,
+      rowLeft: rowRect?.left || 0,
       rowRight: rowRect?.right || 0,
       visualRight: visualRect?.right || 0,
       mainLeft: mainRect?.left || 0,
       mainRight: mainRect?.right || 0,
       mainWidth: mainRect?.width || 0,
       actionsLeft: actionsRect?.left || 0,
+      actionsRight: actionsRect?.right || 0,
+      visualBackground: visualStyle?.backgroundColor || "",
+      visualBorderRadius: visualStyle?.borderRadius || "",
       pageScrollWidth: document.documentElement.scrollWidth,
       viewportWidth: window.innerWidth,
       imageLoading: visual?.querySelector("img")?.getAttribute("loading") || "",
     };
   });
-  assert.equal(everydayLayout.hasRecipeClass, true, "Rezeptmahlzeit markiert ihre dreispaltige Kartenzeile");
+  assert.equal(everydayLayout.hasRecipeClass, true, "Rezeptmahlzeit markiert ihre Kartenzeile");
+  assert.equal(everydayLayout.rowDisplay, "flex", "Rezeptkarte verwendet keine starre Spaltenzeile mehr");
   assert.ok(everydayLayout.rowScrollWidth <= everydayLayout.rowClientWidth + 1, "Alltags-Rezeptkarte darf horizontal nicht überlaufen");
-  assert.ok(everydayLayout.mainWidth >= 120, "Rezeptname und Alltagshinweis müssen eine nutzbare Textspalte behalten");
-  assert.ok(everydayLayout.mainLeft >= everydayLayout.visualRight - 1, "Text muss rechts neben dem Rezeptbild beginnen");
+  assert.ok(everydayLayout.mainWidth >= everydayLayout.rowClientWidth - 2, "Rezepttext nutzt die gesamte Kartenbreite");
+  assert.ok(everydayLayout.mainLeft >= everydayLayout.rowLeft - 1, "Rezepttext bleibt innerhalb der Karte");
   assert.ok(everydayLayout.mainRight <= everydayLayout.rowRight + 1, "Text darf nicht aus der Kartenzeile laufen");
-  assert.ok(everydayLayout.actionsLeft >= everydayLayout.mainRight - 1, "Schloss muss rechts neben der Textspalte bleiben");
+  assert.ok(everydayLayout.actionsRight <= everydayLayout.rowRight + 1, "Schloss bleibt innerhalb der Kartenzeile");
+  assert.equal(everydayLayout.visualBackground, "rgba(0, 0, 0, 0)", "Rezeptbild erhält keinen grünen Container");
+  assert.equal(everydayLayout.visualBorderRadius, "0px", "Rezeptbild erhält keinen zusätzlichen Rahmen");
   assert.ok(everydayLayout.pageScrollWidth <= everydayLayout.viewportWidth + 1, "Alltagsansicht darf keinen Seiten-Overflow erzeugen");
   assert.equal(everydayLayout.imageLoading, "eager", "Das sichtbare Alltags-Rezeptbild wird priorisiert geladen");
   assert.equal(await todayCard.locator(".today-everyday-meal .logMeal").count(), 2, "Essen eintragen bleibt für jede geplante Mahlzeit erreichbar");
+  const foodRoleRow = todayCard.locator(".today-everyday-meal").nth(1).locator(".compact-role-row").first();
+  const foodRoleLayout = await foodRoleRow.evaluate((row) => {
+    const style = getComputedStyle(row);
+    return { display: style.display, gridTemplateColumns: style.gridTemplateColumns };
+  });
+  assert.equal(foodRoleLayout.display, "flex", "Lebensmittelrollen werden als ruhige Inline-Zeile statt als Spalten dargestellt");
+  assert.equal(foodRoleLayout.gridTemplateColumns, "none", "Lebensmittelrollen erzeugen keine zweite Statusspalte");
 
-  await todayCard.locator(".everyday-recipe-open").click();
+  await todayCard.locator(".planned-recipe-title").click();
   await page.locator("#genericModal.open").waitFor();
   assert.equal(await page.locator("#genericTitle").innerText(), "Rezept");
   assert.match(await page.locator("#genericBody").innerText(), /Bananen-Ei-Pancakes/);

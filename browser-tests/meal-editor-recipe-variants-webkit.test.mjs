@@ -133,11 +133,21 @@ try {
   await fruitSlot.selectOption("apfel");
   await page.locator('[data-recipe-component-slot="oneOf"]').waitFor();
   assert.equal(await page.locator('[data-recipe-component-slot="oneOf"]').inputValue(), "apfel");
+  await page.locator("#selectorFoods").click();
+  await page.locator('.selectFood[data-food="karotte"]').click();
+  await page.locator("#selectorRecipes").click();
+  assert.equal(await page.locator('.selectRecipe.selected[data-recipe]').count(), 1, "Lebensmittel-Tab darf die Rezeptauswahl nicht aufheben");
+  assert.match(await page.locator("#genericBody").innerText(), /Karotte/, "Zusätzliches Lebensmittel muss beim Tabwechsel erhalten bleiben");
+  await fruitSlot.selectOption("birne");
+  await page.locator('[data-recipe-component-slot="oneOf"]').waitFor();
+  assert.equal(await page.locator('[data-recipe-component-slot="oneOf"]').inputValue(), "birne");
+  assert.match(await page.locator("#genericBody").innerText(), /Karotte/, "Rezeptvariante darf zusätzliche Lebensmittel nicht löschen");
   await page.locator("#confirmManualMeal").click();
   await page.waitForFunction((date) => !!window.__beikostTest.getState().planLocks?.[`${date}|breakfast`], today);
   let saved = await page.evaluate(() => window.__beikostTest.getState());
   assert.ok(saved.planLocks[`${today}|breakfast`].foodIds.includes("hafer"));
-  assert.ok(saved.planLocks[`${today}|breakfast`].foodIds.includes("apfel"));
+  assert.ok(saved.planLocks[`${today}|breakfast`].foodIds.includes("birne"));
+  assert.ok(saved.planLocks[`${today}|breakfast`].foodIds.includes("karotte"));
   assert.equal(saved.planLocks[`${today}|breakfast`].foodIds.includes("banane"), false);
 
   await page.evaluate((date) => {
@@ -145,7 +155,8 @@ try {
     window.__beikostTest.openManualMealSelector(date, "breakfast", lock);
   }, today);
   await page.locator('[data-recipe-component-slot="oneOf"]').waitFor();
-  assert.equal(await page.locator('[data-recipe-component-slot="oneOf"]').inputValue(), "apfel", "gespeicherte Obstauswahl muss beim Wiederöffnen vorausgefüllt sein");
+  assert.equal(await page.locator('[data-recipe-component-slot="oneOf"]').inputValue(), "birne", "gespeicherte Obstauswahl muss beim Wiederöffnen vorausgefüllt sein");
+  assert.match(await page.locator("#genericBody").innerText(), /Karotte/, "Gespeicherte Rezeptkombination muss zusätzliche Lebensmittel behalten");
 
   await page.evaluate((date) => {
     window.__beikostTest.openManualMealSelector(date, "breakfast", {

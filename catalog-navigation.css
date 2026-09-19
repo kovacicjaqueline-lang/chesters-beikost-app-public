@@ -541,36 +541,51 @@ body.mobile-foundation .today-everyday-meal > .manual-meal > summary .row {
 }
 
 body.mobile-foundation .today-everyday-meal .meal-summary-row.has-recipe-visual {
-  display: grid;
-  grid-template-columns: 56px minmax(0, 1fr) 40px;
-  gap: 8px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 7px;
   min-width: 0;
 }
 
 body.mobile-foundation .today-everyday-meal .meal-summary-row.has-recipe-visual > .meal-summary-main {
   min-width: 0;
+  width: 100%;
+  text-align: center;
 }
 
 body.mobile-foundation .today-everyday-meal .meal-summary-row.has-recipe-visual > .meal-summary-actions {
+  position: absolute;
+  top: -4px;
+  right: -4px;
   min-width: 40px;
 }
 
 body.mobile-foundation .everyday-recipe-visual {
   display: grid;
   place-items: center;
-  width: 56px;
-  height: 56px;
-  flex: 0 0 56px;
-  border-radius: 15px;
-  background: var(--accent2);
-  overflow: hidden;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto;
+  flex: 0 0 64px;
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
+  cursor: pointer;
 }
 
 body.mobile-foundation .everyday-recipe-visual .recipe-illustration,
 body.mobile-foundation .everyday-recipe-visual .illustration-icon,
 body.mobile-foundation .everyday-recipe-visual img {
-  width: 50px;
-  height: 50px;
+  width: 64px;
+  height: 64px;
+}
+
+body.mobile-foundation .everyday-recipe-visual:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 50%;
 }
 
 body.mobile-foundation .today-everyday-meal .dish-title,
@@ -580,12 +595,14 @@ body.mobile-foundation .today-everyday-meal .manual-meal-title {
 }
 
 body.mobile-foundation .today-everyday-meal .everyday-task-hint {
-  display: grid;
-  gap: 1px;
-  margin-top: 9px;
-  padding: 8px 9px;
-  border-radius: 11px;
-  background: #f7f1e8;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 3px 6px;
+  margin-top: 8px;
+  padding: 0;
+  background: transparent;
 }
 
 body.mobile-foundation .today-everyday-meal .everyday-task-hint span,
@@ -594,8 +611,13 @@ body.mobile-foundation .today-everyday-meal .everyday-task-hint small {
   font-size: 11px;
 }
 
+body.mobile-foundation .today-everyday-meal .everyday-task-hint b {
+  color: var(--terracotta);
+  font-size: 12px;
+}
+
 body.mobile-foundation .today-everyday-meal .everyday-task-hint.allergen {
-  background: var(--terrabg);
+  background: transparent;
 }
 
 body.mobile-foundation .today-everyday-meal .everyday-task-hint.allergen span {
@@ -604,8 +626,11 @@ body.mobile-foundation .today-everyday-meal .everyday-task-hint.allergen span {
 }
 
 body.mobile-foundation .today-everyday-meal .everyday-recipe-open {
-  width: 100%;
-  margin-top: 10px;
+  display: none;
+}
+
+body.mobile-foundation .today-everyday-meal.has-planned-recipe .compact-role-list {
+  display: none;
 }
 
 body.mobile-foundation .today-everyday-meal .logMeal,

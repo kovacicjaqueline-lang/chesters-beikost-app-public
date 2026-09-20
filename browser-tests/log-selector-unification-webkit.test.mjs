@@ -175,6 +175,7 @@ try {
   assert.equal(await recipeRows.count(), 4);
   assert.deepEqual(await recipeRows.locator(".log-result-name").allTextContents(), expected.recipes);
   assert.equal(await recipeRows.locator(".log-result-meta").count(), 0);
+  assert.equal(await recipeRows.locator(".recipe-illustration img").count(), 4, "Zuletzt verwendete Rezepte müssen ihre bestehenden Illustrationen zeigen");
   assert.equal(await page.locator("#logForm").getByText("Zuletzt eingetragen", { exact: true }).count(), 0);
   assert.equal(await page.locator(".log-recipe-results-label").isVisible(), false);
 
@@ -192,11 +193,34 @@ try {
   assert.equal(await foodRows.count(), 4);
   assert.deepEqual(await foodRows.locator(".log-result-name").allTextContents(), expected.foods.map((item) => item.name));
   assert.equal(await foodRows.locator(".log-result-meta").count(), 0);
+  assert.equal(await foodRows.locator(".food-illustration img").count(), 4, "Zuletzt verwendete Lebensmittel müssen ihre bestehenden Illustrationen zeigen");
   assert.equal(await page.locator(".log-food-results-label").isVisible(), false);
   assert.equal(await page.locator("#addCustomLogFood").isVisible(), false, "Custom-Food darf im leeren Zustand nicht sichtbar sein");
 
   await page.locator("#logFoodSearch").fill(expected.foods[0].name);
   await page.locator(`.addLogFoodResult[data-food="${expected.foods[0].id}"]`).waitFor();
+  assert.equal(await page.locator(`.addLogFoodResult[data-food="${expected.foods[0].id}"] .food-illustration img`).count(), 1);
+  const duplicateFoodSearch = await page.evaluate(() => {
+    const input = document.getElementById("logFoodSearch");
+    const first = document.querySelector(".log-food-results .addLogFoodResult");
+    const original = logFoodCandidates;
+    let calls = 0;
+    logFoodCandidates = (...args) => {
+      calls += 1;
+      return original(...args);
+    };
+    try {
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      return {
+        sameNode: first === document.querySelector(".log-food-results .addLogFoodResult"),
+        candidateCalls: calls,
+      };
+    } finally {
+      logFoodCandidates = original;
+    }
+  });
+  assert.equal(duplicateFoodSearch.sameNode, true, "Identische Lebensmittel-Suche darf Ergebnis-DOM nicht erneut aufbauen");
+  assert.equal(duplicateFoodSearch.candidateCalls, 0, "Identische Lebensmittel-Suche darf Kandidaten nicht erneut vorbereiten");
   assert.equal(await page.locator("#addCustomLogFood").isVisible(), false);
   await page.locator("#logFoodSearch").fill("eigenes-testfood-xyz");
   assert.equal(await page.locator(".log-food-results").textContent(), "Kein Lebensmittel gefunden");
@@ -245,11 +269,21 @@ try {
   await selector.locator('[data-flow-log-selector="recipes"]').click();
   await page.waitForFunction(() => document.activeElement?.id === "logRecipeSearch");
   await page.locator("#logRecipeSearch").fill("linsen");
+  const tomatoLentilResult = page.locator(".selectLogRecipeResult").filter({ hasText: "Tomaten-Linsen-Sauce" });
   assert.equal(
-    await page.locator(".selectLogRecipeResult").filter({ hasText: "Tomaten-Linsen-Sauce" }).count(),
+    await tomatoLentilResult.count(),
     1,
     "Die Linsensuche muss Tomaten-Linsen-Sauce im Essen-eintragen-Dialog anzeigen",
   );
+  assert.equal(await tomatoLentilResult.locator(".recipe-illustration img").count(), 1, "Tomaten-Linsen-Sauce muss die vorhandene Rezeptillustration zeigen");
+  assert.match(await tomatoLentilResult.locator(".recipe-illustration img").getAttribute("src"), /tomaten-linsen-sauce\.svg/);
+  const recipeResultNodeStable = await page.evaluate(() => {
+    const input = document.getElementById("logRecipeSearch");
+    const first = document.querySelector(".log-recipe-results .selectLogRecipeResult");
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    return first === document.querySelector(".log-recipe-results .selectLogRecipeResult");
+  });
+  assert.equal(recipeResultNodeStable, true, "Identische Rezept-Suche darf Ergebnis-DOM nicht erneut aufbauen");
   assert.equal(await page.locator(".log-recipe-results .log-result-meta").count(), 0, "Rezeptkarten dürfen keinen Auswahl-Hinweis pro Karte anzeigen");
   await page.locator("#clearLogRecipe").click();
   await page.waitForFunction(() => document.activeElement?.id === "logRecipeSearch");

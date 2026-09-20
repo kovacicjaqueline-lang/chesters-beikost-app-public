@@ -104,9 +104,9 @@ function plannerSelectStandaloneRecipe(candidates, ctx = {}) {
       used: ctx.recipePlannedUse?.get(recipe.name) || 0,
     }))
     .sort((a, b) =>
-      (preferInventory ? a.stockRank - b.stockRank : a.formRank - b.formRank) ||
+      (preferInventory ? a.stockRank - b.stockRank : a.used - b.used) ||
+      (preferInventory ? a.used - b.used : a.formRank - b.formRank) ||
       (preferInventory ? a.formRank - b.formRank : a.stockRank - b.stockRank) ||
-      a.used - b.used ||
       String(a.recipe?.name || "").localeCompare(String(b.recipe?.name || ""), "de"),
     );
   return ranked[0]?.recipe || null;

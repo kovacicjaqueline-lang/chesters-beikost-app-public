@@ -139,6 +139,7 @@ const PLAN_CHECK_PRECACHE = [
 // Der bisherige CSS-Schlüssel bleibt für einen Update-Zyklus dabei: Bereits geöffnete
 // PWA-Clients mit dem alten index.html erhalten beim nächsten Start trotzdem den Fix.
 const UI_PRECACHE = [
+  "./js/planner-week-cache.js?v=10.1.26",
   "./ui-meal-editor-footer.css?v=10.1.26-circle-r2",
   "./ui-meal-editor-footer.css?v=10.1.26",
   "./flow-dialog-ui.css?v=10.1.26-compact-r1",

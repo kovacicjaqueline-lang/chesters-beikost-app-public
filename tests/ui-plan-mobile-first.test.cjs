@@ -142,7 +142,7 @@ test("Mobile-Plan bleibt lazy, wird als letzte Plan-UI-Erweiterung geladen und n
   assert.match(source, /plan-week-overview/);
   assert.match(source, /plan-secondary-actions/);
   assert.match(source, /document\.getElementById\("plan"\)\?\.classList\.contains\("active"\)/);
-  assert.match(source, /state\.settings\.planFrom = nextFrom;[\s\S]*?save\(\);[\s\S]*?renderPlan\(\);/);
+  assert.match(source, /state\.settings\.planFrom = nextFrom;[\s\S]*?save\(\{ preservePlanCache: true \}\);[\s\S]*?renderPlan\(\);/);
   assert.doesNotMatch(source, /save\(\);\s*renderAll\(\);/);
   assert.match(css, /#plan \.plan-week-days/);
   assert.match(css, /#plan #blockPlan\s*\{[\s\S]*?touch-action:pan-y/);

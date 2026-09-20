@@ -8,14 +8,8 @@ const test = require("node:test");
 const vm = require("node:vm");
 
 const root = path.resolve(__dirname, "..");
-
-function source(file) {
-  return fs.readFileSync(path.join(root, file), "utf8");
-}
-
-function clone(value) {
-  return JSON.parse(JSON.stringify(value));
-}
+const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
+const clone = (value) => JSON.parse(JSON.stringify(value));
 
 function numericConstant(text, name) {
   const match = text.match(new RegExp(`const\\s+${name}\\s*=\\s*(\\d+)\\s*;`));
@@ -23,71 +17,37 @@ function numericConstant(text, name) {
   return Number(match[1]);
 }
 
-const versionMeta = JSON.parse(source("VERSION.json"));
-const stateSource = source("js/state.js");
-const storageSource = source("js/storage.js");
-const productSource = source("js/product-allergens.js");
-const guardSource = source("js/product-allergens-guards.js");
-
-const STATE_SCHEMA_VERSION = numericConstant(stateSource, "SCHEMA_VERSION");
-const BACKUP_SCHEMA_VERSION = numericConstant(guardSource, "PRODUCT_ALLERGEN_BACKUP_SCHEMA_VERSION");
-const PRODUCT_ALLERGEN_SCHEMA_VERSION = numericConstant(guardSource, "PRODUCT_ALLERGEN_DATA_SCHEMA_VERSION");
-
-function sulfiteSnapshot(status = "present") {
-  return {
-    foodId: "rosine",
-    productId: "product-rosine-1",
-    productName: "Bio-Rosinen",
-    brand: "Testmarke",
-    productAllergens: { sulfites: status },
-  };
-}
+const versionMeta = JSON.parse(read("VERSION.json"));
+const stateSource = read("js/state.js");
+const storageSource = read("js/storage.js");
+const recipeSource = read("js/recipe-inventory-ingredients.js");
+const stateSchemaVersion = numericConstant(stateSource, "SCHEMA_VERSION");
 
 function fixtureState() {
-  const snapshot = sulfiteSnapshot();
   return {
     settings: { phaseSelected: "aufbau" },
     foods: [{ id: "rosine", name: "Rosine", active: true, allergenGroup: "" }],
     logs: [{
       id: "log-1",
       date: "2026-08-20",
-      meal: "breakfast",
       foodIds: ["rosine"],
-      focusId: "rosine",
-      outcome: "eaten",
       foodOutcomes: { rosine: "eaten" },
-      productAllergenSnapshots: { rosine: snapshot },
+      productAllergenSnapshots: { rosine: { productId: "p1", productAllergens: { sulfites: "present" } } },
     }],
     inventory: [{
       id: "inventory-1",
-      kind: "food",
-      foodId: "rosine",
-      portions: 2,
-      productAllergenSnapshot: snapshot,
+      kind: "recipe",
+      recipeName: "Obstbrei",
+      foodIds: ["rosine"],
+      actualRecipeIngredientsConfirmed: true,
+      ingredientProductSnapshots: { rosine: { productId: "p1", productAllergens: { sulfites: "present" } } },
     }],
-    products: [{
-      id: "product-rosine-1",
-      foodId: "rosine",
-      foodName: "Rosine",
-      name: "Bio-Rosinen",
-      brand: "Testmarke",
-      productAllergens: { sulfites: "present" },
-    }],
-    overrides: {},
-    deferred: {},
-    pantry: {},
-    planLocks: {},
-    autoLockExcluded: {},
-    manualMeals: {},
-    inactivePlanKept: {},
-    combinationPauses: {},
-    followUps: {},
-    shoppingHints: {},
+    products: [{ id: "p1", foodId: "rosine", name: "Bio-Rosinen", productAllergens: { sulfites: "present" } }],
     backupMeta: {},
   };
 }
 
-function loadBackupRuntime(initialState = fixtureState()) {
+function loadRuntime(initialState = fixtureState()) {
   const localWrites = new Map();
   const context = {
     console,
@@ -96,29 +56,26 @@ function loadBackupRuntime(initialState = fixtureState()) {
     clone,
     KEY: "test-state",
     APP_VERSION: versionMeta.version,
-    SCHEMA_VERSION: STATE_SCHEMA_VERSION,
+    SCHEMA_VERSION: stateSchemaVersion,
     DB_NAME: "test-db",
     DB_VERSION: 1,
     DB_STORE: "app",
     STATE_RECORD: "state",
     SNAPSHOT_RECORD: "snapshots",
     LEGACY_KEYS: [],
-    DEFAULT: {},
+    DEFAULT: { foods: [], logs: [], inventory: [] },
     state: clone(initialState),
     localStorage: {
       setItem(key, value) { localWrites.set(key, value); },
       getItem(key) { return localWrites.get(key) || null; },
     },
-    migrateState(sourceState) {
-      const migrated = clone(sourceState || {});
-      delete migrated.schemaVersion;
-      return migrated;
+    migrateState(source) {
+      return clone(source || {});
     },
   };
   vm.createContext(context);
   vm.runInContext(storageSource, context, { filename: "js/storage.js" });
-  vm.runInContext(productSource, context, { filename: "js/product-allergens.js" });
-  vm.runInContext(guardSource, context, { filename: "js/product-allergens-guards.js" });
+  vm.runInContext(recipeSource, context, { filename: "js/recipe-inventory-ingredients.js" });
   return { context, localWrites };
 }
 
@@ -126,95 +83,58 @@ async function checksum(context, payload) {
   return context.sha256Text(JSON.stringify(payload));
 }
 
-test("CR-002: VERSION metadata names the three actual schema contracts explicitly", () => {
-  assert.equal(Object.hasOwn(versionMeta, "schemaVersion"), false, "mehrdeutige generische schemaVersion darf keine Kompatibilitätsaussage mehr vortäuschen");
-  assert.equal(versionMeta.stateSchemaVersion, STATE_SCHEMA_VERSION);
-  assert.equal(versionMeta.backupSchemaVersion, BACKUP_SCHEMA_VERSION);
-  assert.equal(versionMeta.productAllergenSchemaVersion, PRODUCT_ALLERGEN_SCHEMA_VERSION);
-  assert.match(versionMeta.schemaCompatibility, /State-Schema 5/);
-  assert.match(versionMeta.schemaCompatibility, /Backup-Schema 6/);
-  assert.match(versionMeta.schemaCompatibility, /Produktallergen-Datenschema 1/);
+test("aktueller Export verwendet wieder das kanonische Backup-Schema 5", async () => {
+  assert.equal(versionMeta.stateSchemaVersion, stateSchemaVersion);
+  assert.equal(versionMeta.backupSchemaVersion, stateSchemaVersion);
+  assert.equal(Object.hasOwn(versionMeta, "productAllergenSchemaVersion"), false);
+
+  const { context } = loadRuntime();
+  const pack = await context.buildBackupPackage();
+  assert.equal(pack.schemaVersion, stateSchemaVersion);
+  assert.equal(pack.payload.schemaVersion, stateSchemaVersion);
+  assert.equal(Object.hasOwn(pack, "productAllergenSchemaVersion"), false);
+  assert.equal(Object.hasOwn(pack.payload, "productAllergenSchemaVersion"), false);
+  assert.equal(Object.hasOwn(pack.payload, "products"), false);
+  assert.equal(Object.hasOwn(pack.payload.logs[0], "productAllergenSnapshots"), false);
+  assert.equal(Object.hasOwn(pack.payload.inventory[0], "ingredientProductSnapshots"), false);
+  assert.equal(pack.checksum, await checksum(context, pack.payload));
 });
 
-test("CR-002: aktueller Export validiert in derselben Runtime und bleibt nach Migration importierbar", async () => {
-  const original = fixtureState();
-  const { context, localWrites } = loadBackupRuntime(original);
-
-  const pack = await context.buildBackupPackage();
-  assert.equal(pack.schemaVersion, BACKUP_SCHEMA_VERSION);
-  assert.equal(pack.payload.schemaVersion, BACKUP_SCHEMA_VERSION);
-  assert.equal(pack.productAllergenSchemaVersion, PRODUCT_ALLERGEN_SCHEMA_VERSION);
-  assert.equal(pack.payload.productAllergenSchemaVersion, PRODUCT_ALLERGEN_SCHEMA_VERSION);
+test("früheres Sulfit-Backup-Schema 6 bleibt importierbar und wird bereinigt", async () => {
+  const { context } = loadRuntime();
+  const payload = fixtureState();
+  payload.schemaVersion = 6;
+  payload.productAllergenSchemaVersion = 1;
+  const pack = {
+    type: "chester-beikost-backup",
+    appVersion: "10.1.26",
+    schemaVersion: 6,
+    productAllergenSchemaVersion: 1,
+    checksum: await checksum(context, payload),
+    payload,
+  };
 
   const validated = await context.validateBackup(JSON.stringify(pack));
   const restored = context.migrateState(validated.payload);
-  const plainRestored = clone(restored);
-
-  assert.deepEqual(plainRestored.products, original.products);
-  assert.deepEqual(plainRestored.logs[0].productAllergenSnapshots, original.logs[0].productAllergenSnapshots);
-  assert.deepEqual(plainRestored.inventory[0].productAllergenSnapshot, original.inventory[0].productAllergenSnapshot);
-  assert.equal(plainRestored.productAllergenSchemaVersion, PRODUCT_ALLERGEN_SCHEMA_VERSION);
-
-  context.state = restored;
-  await context.save();
-  assert.equal(JSON.parse(localWrites.get("test-state")).schemaVersion, STATE_SCHEMA_VERSION, "nach dem Import bleibt der lokale Persistenzmarker State-Schema 5");
+  assert.equal(restored.products, undefined);
+  assert.equal(restored.logs[0].productAllergenSnapshots, undefined);
+  assert.equal(restored.inventory[0].ingredientProductSnapshots, undefined);
+  assert.equal(restored.inventory[0].actualRecipeIngredientsConfirmed, true);
 });
 
-test("CR-002: unterstütztes Vorgänger-Backup-Schema 5 bleibt importierbar", async () => {
-  const { context } = loadBackupRuntime();
-  const payload = fixtureState();
-  payload.schemaVersion = STATE_SCHEMA_VERSION;
-  delete payload.productAllergenSchemaVersion;
-  const pack = {
-    type: "chester-beikost-backup",
-    appVersion: "10.1.25",
-    schemaVersion: STATE_SCHEMA_VERSION,
-    createdAt: "2026-08-19T12:00:00.000Z",
-    checksum: await checksum(context, payload),
-    payload,
-  };
-
-  const validated = await context.validateBackup(JSON.stringify(pack));
-  assert.equal(validated.schemaVersion, STATE_SCHEMA_VERSION);
-  const restored = clone(context.migrateState(validated.payload));
-  assert.equal(restored.productAllergenSchemaVersion, PRODUCT_ALLERGEN_SCHEMA_VERSION);
+test("Legacy-Sulfit in einem Custom-Allergen wird ohne Verlust echter Allergene entfernt", () => {
+  const { context } = loadRuntime();
+  const migrated = context.migrateState({ foods: [
+    { id: "custom-1", name: "Eigenes Produkt", allergenGroup: "Milch / Sulfite" },
+    { id: "custom-2", name: "Eigenes Produkt 2", allergenGroup: "Schwefeldioxid / Sulfite" },
+  ] });
+  assert.equal(migrated.foods.find((item) => item.id === "custom-1").allergenGroup, "Milch");
+  assert.equal(migrated.foods.find((item) => item.id === "custom-2").allergenGroup, "");
 });
 
-test("CR-002: Backup-Schema 6 bleibt an den Produktallergen-Marker gebunden", async () => {
-  const { context } = loadBackupRuntime();
-  const payload = fixtureState();
-  payload.schemaVersion = BACKUP_SCHEMA_VERSION;
-  const pack = {
-    type: "chester-beikost-backup",
-    appVersion: versionMeta.version,
-    schemaVersion: BACKUP_SCHEMA_VERSION,
-    checksum: await checksum(context, payload),
-    payload,
-  };
-
-  await assert.rejects(
-    () => context.validateBackup(JSON.stringify(pack)),
-    /neueren App-Version/,
-  );
-});
-
-test("CR-002: eine unbekannte zukünftige Backup-Version wird kontrolliert abgelehnt", async () => {
-  const { context } = loadBackupRuntime();
-  const futureVersion = BACKUP_SCHEMA_VERSION + 1;
-  const payload = fixtureState();
-  payload.schemaVersion = futureVersion;
-  payload.productAllergenSchemaVersion = PRODUCT_ALLERGEN_SCHEMA_VERSION;
-  const pack = {
-    type: "chester-beikost-backup",
-    appVersion: "99.0.0",
-    schemaVersion: futureVersion,
-    productAllergenSchemaVersion: PRODUCT_ALLERGEN_SCHEMA_VERSION,
-    checksum: await checksum(context, payload),
-    payload,
-  };
-
-  await assert.rejects(
-    () => context.validateBackup(JSON.stringify(pack)),
-    /neueren App-Version/,
-  );
+test("Migration behält die tatsächliche Rezeptzutaten-Bestätigung", () => {
+  const { context } = loadRuntime();
+  const migrated = context.migrateState(fixtureState());
+  assert.equal(migrated.inventory[0].actualRecipeIngredientsConfirmed, true);
+  assert.deepEqual(migrated.inventory[0].foodIds, ["rosine"]);
 });

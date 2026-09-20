@@ -130,9 +130,6 @@
     const more = document.getElementById("more");
     if (!more || more.dataset.mobileMore === "true") return;
 
-    const products = document.getElementById("productAllergenCard");
-    if (!products) return false;
-
     more.dataset.mobileMore = "true";
 
     const log = document.getElementById("logSection");
@@ -145,14 +142,13 @@
     const ids = {
       log: moreDestinationId(log, "logSection"),
       statistics: moreDestinationId(statistics, "statisticsSection"),
-      products: moreDestinationId(products, "productAllergenCard"),
       allergen: moreDestinationId(allergen, "allergenSection"),
       settings: moreDestinationId(settings, "settingsSection"),
       help: moreDestinationId(help, "helpSection"),
       data: moreDestinationId(data, "dataSection"),
     };
 
-    const destinations = [log, statistics, products, allergen, settings, help, data].filter(Boolean);
+    const destinations = [log, statistics, allergen, settings, help, data].filter(Boolean);
     if (!destinations.length) return;
 
     const navScreen = document.createElement("div");
@@ -171,7 +167,6 @@
         title: "Beikost",
         items: [
           [ids.allergen, "Allergene", "Einführen und wiederholen", ""],
-          [ids.products, "Konkrete Produkte", "Produktkennzeichnung und Sulfite", ""],
           [ids.settings, "Baby & Beikostphase", "Start, Phase und Tagesablauf", "baby"],
           [ids.settings, "Konsistenz", "Mengenorientierung und Struktur", "texture"],
         ],

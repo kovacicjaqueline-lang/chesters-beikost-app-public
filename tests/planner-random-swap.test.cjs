@@ -140,3 +140,26 @@ test('RANDOM-SWAP-07: bekannte Mahlzeiten werden nicht gegen neue Sample-Mahlzei
   assert.equal(swap.learningCandidateCompatible(learning, { sampleFoodIds: ['birne'] }, 'birne'), true);
   assert.equal(swap.learningCandidateCompatible(learning, alternativeKnown, 'birne'), false);
 });
+
+test('RANDOM-SWAP-08: Rezepttausch lässt das aktuelle Rezept aus und erhält eine laufende Einführung', () => {
+  const current = { recipeName: 'Birnen-Polentabrei', sampleFoodIds: ['ei'] };
+  assert.equal(
+    swap.recipeAlternativeCompatible(current, { name: 'Birnen-Polentabrei' }, ['birne', 'polenta']),
+    false,
+  );
+  assert.equal(
+    swap.recipeAlternativeCompatible(current, { name: 'Eierspeise mit Polenta' }, ['ei', 'polenta']),
+    true,
+  );
+  assert.equal(
+    swap.recipeAlternativeCompatible(current, { name: 'Apfel-Polenta' }, ['apfel', 'polenta']),
+    false,
+  );
+});
+
+test('RANDOM-SWAP-09: Rezeptalternativen wechseln keine volle Milchmahlzeit gegen eine andere Milchstufe', () => {
+  const current = { milkMeal: 'full' };
+  assert.equal(swap.recipeAlternativeMilkCompatible(current, { milkMeal: '' }, ['apfel', 'polenta']), false);
+  assert.equal(swap.recipeAlternativeMilkCompatible(current, { milkMeal: 'full' }, ['apfel', 'joghurt']), true);
+  assert.equal(swap.recipeAlternativeMilkCompatible({ milkMeal: '' }, { milkMeal: '' }, ['apfel', 'polenta']), true);
+});

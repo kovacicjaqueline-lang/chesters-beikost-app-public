@@ -306,6 +306,12 @@ function applyFoodPolicyData(foodDb, idAliases = {}) {
     if (item) item.plannerRole = "component";
   }
 
+  // Kräuter und Gewürze werden ausschließlich als kleine Bestandteile
+  // eines geeigneten Lebensmittels verwendet, nie als automatische Hauptbasis.
+  for (let item of foodDb) {
+    if (item?.category === "Kraut/Gewürz") item.plannerRole = "component";
+  }
+
   // Der ausdrücklich freigegebene gemeinsame Milch-Allergenstamm.
   let cottage = upsert("huettenkaese", "Hüttenkäse", "Milchprodukt", FOOD_POLICY_MAIN_MEALS);
   cottage.name = "Hüttenkäse";
@@ -714,10 +720,12 @@ function pruneIneligibleAutomaticPlanState(currentState, recipes = typeof RECIPE
     if (lock?.mode !== "auto") continue;
     let date = key.split("|")[0];
     let automaticIds = [...new Set([...(lock.foodIds || []), ...(lock.optionalAddons || [])])];
-    let blocked = automaticIds.some((id) => {
-      let f = currentState.foods?.find((item) => item.id === id);
-      return f && !automaticFoodEligibility(f, date, currentState.settings || {});
-    }) ||
+    let knownIds = new Set((currentState.foods || []).map((item) => item.id));
+    let blocked = automaticIds.some((id) => !knownIds.has(id)) ||
+      automaticIds.some((id) => {
+        let f = currentState.foods?.find((item) => item.id === id);
+        return f && !automaticFoodEligibility(f, date, currentState.settings || {});
+      }) ||
       plannerAutomaticLockRoleViolation(lock, currentState.foods) ||
       plannerAutomaticRecipeLockMealViolation(key, lock, recipes);
     if (!blocked) continue;

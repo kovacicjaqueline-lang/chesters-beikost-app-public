@@ -1,9 +1,11 @@
 "use strict";
 
-/* PLAN-08 Recipe-first für bekannte FOOD-Kombinationen.
+/* PLAN-08 Recipe-first für FOOD-Kombinationen und strukturierte Einführungen.
  *
  * Grundsatz:
- * - Einführungen/Kostproben bleiben FOOD-first.
+ * - Eine Einführung darf ein passendes vorhandenes Rezept verwenden.
+ * - Dabei darf ausschließlich das neue Sample-FOOD noch unerprobt sein;
+ *   alle übrigen Rezeptzutaten müssen weiterhin bereit sein.
  * - Eine bekannte FOOD-only-Mahlzeit darf zu einem vorhandenen Rezept werden,
  *   wenn eine aktuell geeignete Rezeptvariante EXAKT dieselben FOOD-IDs enthält.
  * - Es werden keine zusätzlichen Zutaten erfunden, nur um ein Rezept passend zu machen.
@@ -58,6 +60,109 @@ function plannerRecipeVariantIdSets(recipe, foods, ingredientReadyFn = null) {
   return result;
 }
 
+function plannerRecipeIngredientReadyForMeal(name, meal, foods, ingredientReadyFn = null) {
+  if (typeof ingredientReadyFn !== "function" || ingredientReadyFn(name)) return true;
+  let sampleIds = new Set(meal?.sampleFoodIds || []);
+  if (!sampleIds.size) return false;
+  return (foods || []).some((food) => sampleIds.has(food?.id) && food?.name === name);
+}
+
+function plannerStandaloneRecipeCandidates(
+  foodId,
+  meal,
+  recipes,
+  foods,
+  recipeSuitableFn,
+  ingredientReadyFn = null,
+  recipeAllowedFn = null,
+) {
+  if (!foodId) return [];
+  return plannerExactRecipeCandidates(
+    [foodId],
+    meal,
+    recipes,
+    foods,
+    recipeSuitableFn,
+    ingredientReadyFn,
+    recipeAllowedFn,
+  );
+}
+
+function plannerStandaloneRecipeFormRank(recipe) {
+  let category = String(recipe?.category || "").toLowerCase();
+  if (category === "family" || category === "porridge") return 0;
+  if (category === "pancakes") return 1;
+  if (category === "baking") return 2;
+  if (category === "balls") return 3;
+  return 4;
+}
+
+function plannerSelectStandaloneRecipe(candidates, ctx = {}) {
+  let inventoryPortions = typeof ctx.inventoryPortionsFn === "function"
+    ? ctx.inventoryPortionsFn
+    : () => 0;
+  let preferInventory = !!ctx.preferInventory;
+  let ranked = (candidates || [])
+    .map((recipe) => ({
+      recipe,
+      formRank: plannerStandaloneRecipeFormRank(recipe),
+      stockRank: preferInventory &&
+        inventoryPortions(recipe.name) > (ctx.recipeReserved?.get(recipe.name) || 0)
+        ? 0
+        : 1,
+      used: ctx.recipePlannedUse?.get(recipe.name) || 0,
+    }))
+    .sort((a, b) =>
+      (preferInventory ? a.stockRank - b.stockRank : a.used - b.used) ||
+      (preferInventory ? a.used - b.used : a.formRank - b.formRank) ||
+      (preferInventory ? a.formRank - b.formRank : a.stockRank - b.stockRank) ||
+      String(a.recipe?.name || "").localeCompare(String(b.recipe?.name || ""), "de"),
+    );
+  if (!ranked.length) return null;
+  let offset = Number(ctx.standaloneRecipeOffset) || 0;
+  let index = ((offset % ranked.length) + ranked.length) % ranked.length;
+  return ranked[index]?.recipe || null;
+}
+
+function plannerPromoteStandaloneMealToRecipe(meal, recipe, ctx, reserveMealInventoryFn = null) {
+  if (!meal || !recipe || !meal.focusId) return meal;
+  let focusId = String(meal.focusId);
+  let isSample = (meal.sampleFoodIds || []).includes(focusId);
+
+  if (typeof plannerReleaseFoodInventoryReservations === "function") {
+    plannerReleaseFoodInventoryReservations(meal, ctx);
+  }
+
+  meal.foodIds = [focusId];
+  meal.baseFoodIds = isSample ? [] : [focusId];
+  meal.sampleFoodIds = isSample ? [focusId] : [];
+  meal.foodRoles = {
+    [focusId]: isSample ? "sample" : "base",
+  };
+  meal.recipeName = recipe.name;
+  meal.recipeInventoryId = "";
+  meal.type = isSample ? meal.type : "Rezept";
+
+  if (typeof applyPlannedMealAmounts === "function") {
+    applyPlannedMealAmounts(meal);
+  }
+
+  if (ctx?.recipePlannedUse) {
+    ctx.recipePlannedUse.set(
+      recipe.name,
+      (ctx.recipePlannedUse.get(recipe.name) || 0) + 1,
+    );
+  }
+
+  let recipeNote = `Passendes vorhandenes Rezept: ${recipe.name} statt einer freien FOOD-Kombination.`;
+  meal.note = meal.note ? `${meal.note} ${recipeNote}` : recipeNote;
+
+  if (typeof reserveMealInventoryFn === "function") {
+    reserveMealInventoryFn(meal, ctx);
+  }
+  return meal;
+}
+
 function plannerRecipeMilkContextCompatible(meal, recipe) {
   if (!meal || !recipe) return false;
   let plannedLevel = String(meal.milkMeal || "");
@@ -75,7 +180,7 @@ function plannerExactRecipeCandidates(
   recipeAllowedFn = null,
 ) {
   let target = plannerRecipeCanonicalIds(ids);
-  if (target.length < 2) return [];
+  if (target.length < 1) return [];
   let suitable = typeof recipeSuitableFn === "function" ? recipeSuitableFn : () => true;
   let allowed = typeof recipeAllowedFn === "function" ? recipeAllowedFn : () => true;
 
@@ -109,11 +214,15 @@ function plannerSelectExactRecipe(
       String(a.recipe.name).localeCompare(String(b.recipe.name), "de"),
     );
   if (!ranked.length) return null;
-  if (
-    ranked.length > 1 &&
-    ranked[0].stockRank === ranked[1].stockRank &&
-    ranked[0].used === ranked[1].used
-  ) return null;
+  let offset = Number(ctx?.recipeSelectionOffset) || 0;
+  let tied = ranked.length > 1 &&
+      ranked[0].stockRank === ranked[1].stockRank &&
+      ranked[0].used === ranked[1].used;
+  if (offset && ranked.length > 1) {
+    let index = ((offset % ranked.length) + ranked.length) % ranked.length;
+    return ranked[index]?.recipe || null;
+  }
+  if (tied) return null;
   return ranked[0].recipe;
 }
 
@@ -370,39 +479,86 @@ function installPlannerRecipeFirstRuntime() {
     let day = originalBuildDay(date, index, ctx);
     for (let meal of day?.meals || []) {
       if (!meal?.active || meal.empty || meal.recipeName || meal.manualAdded || meal.lockedMode) continue;
-      if ((meal.sampleFoodIds || []).length) continue;
       let ids = plannerRecipeCanonicalIds(meal.foodIds);
-      if (ids.length < 2) continue;
+      if (!ids.length) continue;
 
-      let candidates = plannerExactRecipeCandidates(
-        ids,
-        meal.meal,
-        recipeStates(),
-        state?.foods || [],
-        plannerRecipeSuitableForMeal,
-        recipeIngredientReady,
-        (candidate) =>
-          plannerRecipeMilkContextCompatible(meal, candidate) &&
-          !(candidate?.milkMeal === "full" &&
-            typeof recipeContainsMeatOrFish === "function" &&
-            recipeContainsMeatOrFish(candidate)),
-      );
+      let recipes = recipeStates();
+      let ingredientReadyForMeal = (name) =>
+        plannerRecipeIngredientReadyForMeal(
+          name,
+          meal,
+          state?.foods || [],
+          recipeIngredientReady,
+        );
+      let recipeAllowed = (candidate) =>
+        plannerRecipeMilkContextCompatible(meal, candidate) &&
+        !(candidate?.milkMeal === "full" &&
+          typeof recipeContainsMeatOrFish === "function" &&
+          recipeContainsMeatOrFish(candidate));
+
+      let candidates = ids.length
+        ? plannerExactRecipeCandidates(
+            ids,
+            meal.meal,
+            recipes,
+            state?.foods || [],
+            plannerRecipeSuitableForMeal,
+            ingredientReadyForMeal,
+            recipeAllowed,
+          )
+        : [];
+      if (ctx && Number(state?.__plannerStandaloneRecipeOffset)) {
+        ctx.recipeSelectionOffset = Number(state.__plannerStandaloneRecipeOffset);
+      }
       let recipe = plannerSelectExactRecipe(
         candidates,
         ctx,
         !!state?.settings?.preferInventoryInPlan,
         typeof recipeInventoryPortions === "function" ? recipeInventoryPortions : null,
       );
-      if (!recipe) continue;
+      if (recipe) {
+        plannerPromoteMealToRecipe(
+          meal,
+          recipe,
+          date,
+          ctx,
+          !!state?.settings?.preferInventoryInPlan,
+          originalReserveMealInventory,
+          typeof recipeInventoryPortions === "function" ? recipeInventoryPortions : null,
+        );
+        continue;
+      }
 
-      plannerPromoteMealToRecipe(
+      // Wenn der Planner ein bekanntes FOOD mit einer beliebigen Komponente
+      // kombiniert, darf ein eindeutiges Ein-Zutat-Rezept diese freie
+      // Kombination ersetzen. Exakte Mehrfachrezepte haben weiterhin Vorrang.
+      let focusId = String(meal.focusId || "");
+      if (!focusId || !ids.includes(focusId)) continue;
+      let standaloneCandidates = plannerStandaloneRecipeCandidates(
+        focusId,
+        meal.meal,
+        recipes,
+        state?.foods || [],
+        plannerRecipeSuitableForMeal,
+        ingredientReadyForMeal,
+        recipeAllowed,
+      );
+      let standalone = plannerSelectStandaloneRecipe(standaloneCandidates, {
+        preferInventory: !!state?.settings?.preferInventoryInPlan,
+        inventoryPortionsFn: typeof recipeInventoryPortions === "function"
+          ? recipeInventoryPortions
+          : null,
+        recipeReserved: ctx.recipeReserved,
+        recipePlannedUse: ctx.recipePlannedUse,
+        standaloneRecipeOffset: Number(state?.__plannerStandaloneRecipeOffset) || 0,
+      });
+      if (!standalone) continue;
+
+      plannerPromoteStandaloneMealToRecipe(
         meal,
-        recipe,
-        date,
+        standalone,
         ctx,
-        !!state?.settings?.preferInventoryInPlan,
-        originalReserveMealInventory,
-        typeof recipeInventoryPortions === "function" ? recipeInventoryPortions : null,
+        reserveMealInventory,
       );
     }
     return day;
@@ -422,6 +578,11 @@ if (typeof module !== "undefined" && module.exports) {
     plannerRecipeIdsEqual,
     plannerRecipeNameVariants,
     plannerRecipeVariantIdSets,
+    plannerRecipeIngredientReadyForMeal,
+    plannerStandaloneRecipeCandidates,
+    plannerStandaloneRecipeFormRank,
+    plannerSelectStandaloneRecipe,
+    plannerPromoteStandaloneMealToRecipe,
     plannerRecipeMilkContextCompatible,
     plannerExactRecipeCandidates,
     plannerSelectExactRecipe,

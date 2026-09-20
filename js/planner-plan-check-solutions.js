@@ -628,12 +628,13 @@
     });
   }
 
-  function simulateGoalSlot(item, days, slot, forcedFoodId = "") {
+  function simulateGoalSlot(item, days, slot, forcedFoodId = "", options = {}) {
     const before = slot.shownMeal;
     const meta = snapshotMeta(slot.date, slot.meal, before);
     return withTemporaryState(() => {
       const release = new Set([meta.key]);
       freezeVisiblePlan(days, release);
+      state.__plannerStandaloneRecipeOffset = Number(options?.standaloneRecipeOffset) || 0;
       if (forcedFoodId) state.overrides[meta.key] = forcedFoodId;
       const proposedDays = buildSimulatedVisibleDays(days);
       const proposedMap = planMealMap(proposedDays);
@@ -651,14 +652,12 @@
         goalKey: goalKey(item),
         date: slot.date,
         meal: slot.meal,
-        forcedFoodId,
         after: {
           focusId: snapshot.focusId,
           foodIds: snapshot.foodIds,
           baseFoodIds: snapshot.baseFoodIds,
           sampleFoodIds: snapshot.sampleFoodIds,
           recipeName: snapshot.recipeName,
-          type: snapshot.type,
         },
         protected: meta.protected,
       };
@@ -680,11 +679,12 @@
 
   function findSolution(item, days = [], options = {}) {
     const rejected = new Set(options.rejectedSolutionIds || []);
+    const standaloneRecipeOffset = rejected.size;
     for (const slot of candidateSlots(days)) {
-      const natural = simulateGoalSlot(item, days, slot, "");
+      const natural = simulateGoalSlot(item, days, slot, "", { standaloneRecipeOffset });
       if (natural && !rejected.has(natural.id)) return natural;
       for (const foodId of preferredGoalFoodIds(item, slot)) {
-        const candidate = simulateGoalSlot(item, days, slot, foodId);
+        const candidate = simulateGoalSlot(item, days, slot, foodId, { standaloneRecipeOffset });
         if (candidate && !rejected.has(candidate.id)) return candidate;
       }
     }

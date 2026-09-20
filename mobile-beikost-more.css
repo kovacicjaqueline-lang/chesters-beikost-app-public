@@ -572,6 +572,31 @@ body.mobile-foundation #foods .recipe-filter-toolbar .recipe-filter-field,
 body.mobile-foundation #foods .recipe-filter-toolbar .recipe-meal-filter-field{margin:0}
 body.mobile-foundation #foods .recipe-filter-toolbar .recipe-filters,
 body.mobile-foundation #foods .recipe-filter-toolbar .recipe-meal-filters{display:grid;gap:4px;margin:0;padding:0;overflow:visible}
+/* Die globalen #recipeFilter-Regeln sind spezifischer als die generischen
+ * .seg-Regeln. Im geöffneten Auswahlfeld müssen sie deshalb ausdrücklich
+ * überschrieben werden, sonst bleibt die Filterliste horizontal und läuft
+ * auf kleinen Viewports aus dem Menü heraus. */
+body.mobile-foundation #foods .mobile-filter-select-menu #recipeFilter,
+body.mobile-foundation #foods .mobile-filter-select-menu #recipeMealFilter{
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  gap:4px;
+  width:100%;
+  max-width:none;
+  margin:0;
+  padding:0;
+  overflow:visible;
+}
+body.mobile-foundation #foods .mobile-filter-select-menu #recipeFilter>button,
+body.mobile-foundation #foods .mobile-filter-select-menu #recipeMealFilter>button{
+  display:block;
+  width:100%;
+  min-width:0;
+  max-width:none;
+  flex:0 0 auto;
+  text-align:left;
+  white-space:normal;
+}
 body.mobile-foundation #foods .food-filter-toolbar .mobile-filter-select:first-child{flex:1.05 1 0}
 body.mobile-foundation #foods .food-filter-toolbar .mobile-filter-select:nth-child(2){flex:1 1 0}
 body.mobile-foundation #foods .food-filter-toolbar .mobile-filter-select-menu{min-width:175px}

@@ -95,6 +95,7 @@ function plannerRecipeFoodCompositionCandidates(
         recipe,
         recipeIngredientFoodIds: ids,
         additionalFoodId,
+        additionalFoodName: additionalFood.name,
         priority: Number(pairing.priority) || 0,
       });
     }
@@ -139,9 +140,10 @@ function plannerApplyRecipeFoodComposition(meal, candidate) {
 
   if (typeof applyPlannedMealAmounts === "function") applyPlannedMealAmounts(meal);
 
-  let additionalName = typeof food === "function"
-    ? food(candidate.additionalFoodId)?.name || candidate.additionalFoodId
-    : candidate.additionalFoodId;
+  let additionalName = candidate.additionalFoodName ||
+    (typeof food === "function"
+      ? food(candidate.additionalFoodId)?.name || candidate.additionalFoodId
+      : candidate.additionalFoodId);
   let message = `${additionalName} wird mit dem Rezept ${candidate.recipe.name} kombiniert; das zusätzliche Lebensmittel bleibt separat protokollierbar.`;
   meal.note = meal.note ? `${meal.note} ${message}` : message;
   return meal;

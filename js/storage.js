@@ -329,7 +329,7 @@ async function validateBackup(raw) {
   if (parsed?.type === "chester-beikost-backup" && parsed.payload) {
     let checksum = await sha256Text(JSON.stringify(parsed.payload));
     if (parsed.checksum !== "unsupported" && checksum !== "unsupported" && checksum !== parsed.checksum) throw new Error("Die Backup-Datei scheint beschädigt oder verändert zu sein.");
-    let maxBackupSchema = typeof PRODUCT_ALLERGEN_BACKUP_SCHEMA_VERSION !== "undefined" ? PRODUCT_ALLERGEN_BACKUP_SCHEMA_VERSION : SCHEMA_VERSION;
+    let maxBackupSchema = SCHEMA_VERSION;
     if (Number(parsed.schemaVersion) > maxBackupSchema) throw new Error("Dieses Backup stammt aus einer neueren App-Version.");
     validateBackupPayloadShape(parsed.payload);
     parsed.summary = stateSummary(parsed.payload);

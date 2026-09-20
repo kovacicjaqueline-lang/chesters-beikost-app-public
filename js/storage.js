@@ -52,15 +52,86 @@ async function idbPut(key, value) {
     tx.onerror = () => reject(tx.error);
   });
 }
+const BACKUP_FOOD_PERSONAL_FIELDS = [
+  "priority",
+  "active",
+  "liked",
+  "manualStatus",
+  "notes",
+  "reactionPauseSourceLogId",
+  "reactionPausePreviousStatus",
+];
+
+function backupCanonicalFoods() {
+  return typeof FOOD_DB !== "undefined" && Array.isArray(FOOD_DB) ? FOOD_DB : [];
+}
+function backupFoodPreferences(data = {}) {
+  let canonical = new Map(backupCanonicalFoods().map((food) => [food.id, food]));
+  return (data.foods || []).filter((food) => canonical.has(food.id)).map((food) => {
+    let base = canonical.get(food.id);
+    let changes = { id: food.id };
+    for (let key of BACKUP_FOOD_PERSONAL_FIELDS) {
+      if (Object.hasOwn(food, key) && JSON.stringify(food[key]) !== JSON.stringify(base[key])) changes[key] = clone(food[key]);
+    }
+    return changes;
+  }).filter((food) => Object.keys(food).length > 1);
+}
+function backupCustomFoods(data = {}) {
+  let canonicalIds = new Set(backupCanonicalFoods().map((food) => food.id));
+  return (data.foods || []).filter((food) => !canonicalIds.has(food.id)).map(clone);
+}
+function backupPayloadToState(payload = {}) {
+  let source = clone(payload || {});
+  if (Array.isArray(source.foods)) return source;
+  let canonicalFoods = backupCanonicalFoods().map(clone);
+  let preferences = Array.isArray(source.foodPreferences) ? source.foodPreferences : [];
+  let preferenceById = new Map(preferences.filter((food) => food && food.id).map((food) => [food.id, food]));
+  for (let food of canonicalFoods) {
+    let changes = preferenceById.get(food.id);
+    if (!changes) continue;
+    for (let key of BACKUP_FOOD_PERSONAL_FIELDS) if (Object.hasOwn(changes, key)) food[key] = clone(changes[key]);
+  }
+  source.foods = canonicalFoods.concat(Array.isArray(source.customFoods) ? source.customFoods.map(clone) : []);
+  delete source.customFoods;
+  delete source.foodPreferences;
+  delete source.schemaVersion;
+  delete source.appVersion;
+  delete source.productAllergenSchemaVersion;
+  return source;
+}
 function stateSummary(data = state) {
+  let foods = Array.isArray(data.foods) ? data.foods : [];
+  let canonicalIds = new Set(backupCanonicalFoods().map((food) => food.id));
   return {
-    foods: (data.foods || []).length,
+    customFoods: Array.isArray(data.customFoods) ? data.customFoods.length : foods.filter((food) => !canonicalIds.has(food.id)).length,
+    foodPreferences: Array.isArray(data.foodPreferences) ? data.foodPreferences.length : backupFoodPreferences(data).length,
     logs: (data.logs || []).length,
     inventoryBatches: (data.inventory || []).length,
     planLocks: Object.keys(data.planLocks || {}).length,
     manualMeals: Object.keys(data.manualMeals || {}).length,
     settings: Object.keys(data.settings || {}).length,
+    products: (data.products || []).length,
+    followUps: Object.keys(data.followUps || {}).length,
   };
+}
+function isBackupObject(value) {
+  return value && typeof value === "object" && !Array.isArray(value);
+}
+function validateBackupPayloadShape(payload) {
+  if (!isBackupObject(payload)) throw new Error("Die Backup-Nutzdaten sind ungültig.");
+  for (let key of ["foods", "customFoods", "foodPreferences", "logs", "inventory", "products"]) {
+    if (payload[key] !== undefined && !Array.isArray(payload[key])) throw new Error("Die Backup-Nutzdaten sind ungültig.");
+  }
+  for (let key of ["settings", "overrides", "deferred", "pantry", "planLocks", "autoLockExcluded", "manualMeals", "inactivePlanKept", "combinationPauses", "followUps", "shoppingHints", "backupMeta"]) {
+    if (payload[key] !== undefined && !isBackupObject(payload[key])) throw new Error("Die Backup-Nutzdaten sind ungültig.");
+  }
+  for (let food of [...(payload.foods || []), ...(payload.customFoods || [])]) {
+    if (!isBackupObject(food) || (!food.id && !food.name)) throw new Error("Die Backup-Nutzdaten sind ungültig.");
+  }
+  for (let preference of payload.foodPreferences || []) {
+    if (!isBackupObject(preference) || !preference.id) throw new Error("Die Backup-Nutzdaten sind ungültig.");
+  }
+  return true;
 }
 async function sha256Text(text) {
   if (!crypto?.subtle) return "unsupported";
@@ -68,11 +139,26 @@ async function sha256Text(text) {
   let digest = await crypto.subtle.digest("SHA-256", bytes);
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
+const SNAPSHOT_FALLBACK_KEY = `${KEY}-snapshots-fallback`;
+function readFallbackSnapshots() {
+  try {
+    let raw = localStorage.getItem(SNAPSHOT_FALLBACK_KEY);
+    let parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (_) {
+    return [];
+  }
+}
+function writeFallbackSnapshots(snapshots) {
+  try { localStorage.setItem(SNAPSHOT_FALLBACK_KEY, JSON.stringify(snapshots.slice(-5))); } catch (_) {}
+}
 async function createSnapshot(reason = "automatisch") {
-  let snapshots = (await idbGet(SNAPSHOT_RECORD).catch(() => [])) || [];
+  let snapshots = await idbGet(SNAPSHOT_RECORD).catch(() => null);
+  if (!Array.isArray(snapshots)) snapshots = readFallbackSnapshots();
   snapshots.push({ id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, createdAt: new Date().toISOString(), reason, state: clone(state) });
   snapshots = snapshots.slice(-5);
-  await idbPut(SNAPSHOT_RECORD, snapshots).catch(() => {});
+  let persisted = await idbPut(SNAPSHOT_RECORD, snapshots).then(() => true).catch(() => false);
+  if (!persisted) writeFallbackSnapshots(snapshots);
   return snapshots;
 }
 let saveQueue = Promise.resolve();
@@ -216,8 +302,15 @@ function renderStorageStatus() {
   if(reminder){ let stale=!last || (Date.now()-new Date(last).getTime())>14*86400000; reminder.style.display=stale?"block":"none"; }
 }
 async function buildBackupPackage() {
-  let payload=clone(state); payload.schemaVersion=SCHEMA_VERSION; payload.appVersion=APP_VERSION;
-  let payloadText=JSON.stringify(payload);
+  let payload = clone(state);
+  payload.customFoods = backupCustomFoods(state);
+  payload.foodPreferences = backupFoodPreferences(state);
+  delete payload.foods;
+  delete payload.backupMeta;
+  delete payload.schemaVersion;
+  delete payload.appVersion;
+  delete payload.productAllergenSchemaVersion;
+  let payloadText = JSON.stringify(payload);
   return { type:"chester-beikost-backup", appVersion:APP_VERSION, schemaVersion:SCHEMA_VERSION, createdAt:new Date().toISOString(), summary:stateSummary(payload), checksum:await sha256Text(payloadText), payload };
 }
 async function exportBackup() {
@@ -236,12 +329,16 @@ async function validateBackup(raw) {
   if (parsed?.type === "chester-beikost-backup" && parsed.payload) {
     let checksum = await sha256Text(JSON.stringify(parsed.payload));
     if (parsed.checksum !== "unsupported" && checksum !== "unsupported" && checksum !== parsed.checksum) throw new Error("Die Backup-Datei scheint beschädigt oder verändert zu sein.");
-    if (Number(parsed.schemaVersion) > SCHEMA_VERSION) throw new Error("Dieses Backup stammt aus einer neueren App-Version.");
+    let maxBackupSchema = typeof PRODUCT_ALLERGEN_BACKUP_SCHEMA_VERSION !== "undefined" ? PRODUCT_ALLERGEN_BACKUP_SCHEMA_VERSION : SCHEMA_VERSION;
+    if (Number(parsed.schemaVersion) > maxBackupSchema) throw new Error("Dieses Backup stammt aus einer neueren App-Version.");
+    validateBackupPayloadShape(parsed.payload);
+    parsed.summary = stateSummary(parsed.payload);
     return parsed;
   }
   let looksLegacy = parsed && typeof parsed === "object" && !Array.isArray(parsed) && (Array.isArray(parsed.foods) || Array.isArray(parsed.logs) || parsed.settings || parsed.inventory || parsed.overrides);
   if (!looksLegacy) throw new Error("Keine gültige Beikost-Backup-Datei.");
   let payload = parsed;
+  validateBackupPayloadShape(payload);
   return {
     type: "chester-beikost-legacy-backup",
     appVersion: parsed.appVersion || "8.8 oder älter",
@@ -256,7 +353,7 @@ async function validateBackup(raw) {
 function backupPreviewHtml(pack) {
   let s = pack.summary || stateSummary(pack.payload);
   let legacy = pack.legacy ? `<div class="notice olive"><b>Älteres Backup erkannt.</b> Beim Wiederherstellen werden die Daten an den aktuellen Stand angepasst. Der frühere gemeinsame Eintrag Kuhmilch/Joghurt wird vorsichtig getrennt und zur Kontrolle markiert.</div>` : "";
-  return `${legacy}<div class="notice warn"><b>Vorhandene Daten werden ersetzt.</b> Davor wird automatisch ein lokaler Zwischenstand angelegt.</div><div class="backup-summary"><div><b>${s.foods||0}</b><span>Lebensmittel</span></div><div><b>${s.logs||0}</b><span>Protokolle</span></div><div><b>${s.inventoryBatches||0}</b><span>Vorratseinträge</span></div><div><b>${(s.planLocks||0)+(s.manualMeals||0)}</b><span>Plan-Daten</span></div><div><b>${s.settings||0}</b><span>Einstellungen</span></div></div><p class="small">Backup vom ${new Date(pack.createdAt).toLocaleString("de-AT")} · App ${esc(pack.appVersion||"unbekannt")}${pack.legacy ? " · älteres Backupformat" : ""}</p><div class="sticky-form-actions ds-actionbar"><button class="btn secondary" id="cancelBackupRestore" type="button">Abbrechen</button><button class="btn danger" id="confirmBackupRestore">Backup wiederherstellen</button></div>`;
+  return `${legacy}<div class="notice warn"><b>Persönliche Daten werden ersetzt.</b> Der integrierte Lebensmittel- und Rezeptkatalog der App bleibt erhalten. Davor wird automatisch ein lokaler Zwischenstand angelegt.</div><div class="backup-summary"><div><b>${s.customFoods||0}</b><span>Eigene Lebensmittel</span></div><div><b>${s.foodPreferences||0}</b><span>Lebensmittel-Einstellungen</span></div><div><b>${s.logs||0}</b><span>Protokolle</span></div><div><b>${s.inventoryBatches||0}</b><span>Vorratseinträge</span></div><div><b>${(s.planLocks||0)+(s.manualMeals||0)}</b><span>Plan-Daten</span></div><div><b>${s.settings||0}</b><span>Einstellungen</span></div><div><b>${s.products||0}</b><span>Konkrete Produkte</span></div></div><p class="small">Backup vom ${new Date(pack.createdAt).toLocaleString("de-AT")} · App ${esc(pack.appVersion||"unbekannt")}${pack.legacy ? " · älteres Backupformat" : ""}</p><div class="sticky-form-actions ds-actionbar"><button class="btn secondary" id="cancelBackupRestore" type="button">Abbrechen</button><button class="btn danger" id="confirmBackupRestore" type="button">Backup wiederherstellen</button></div>`;
 }
 async function handleBackupImport(file) {
   let storageError = document.getElementById("storageError");
@@ -265,21 +362,21 @@ async function handleBackupImport(file) {
     let pack=await validateBackup(await file.text());
     openGeneric("Backup prüfen",backupPreviewHtml(pack));
     document.getElementById("cancelBackupRestore").onclick=closeGeneric;
-    document.getElementById("confirmBackupRestore").onclick=async()=>{ await createSnapshot("vor Wiederherstellung"); state=migrateState(pack.payload); await save(); closeGeneric(); renderCurrentView(); renderStorageStatus(); showToast("Backup wiederhergestellt."); };
+    document.getElementById("confirmBackupRestore").onclick=async()=>{ await createSnapshot("vor Wiederherstellung"); state=migrateState(backupPayloadToState(pack.payload)); await save(); closeGeneric(); renderCurrentView(); renderStorageStatus(); showToast("Backup wiederhergestellt."); };
   } catch(error) {
     showStorageError(error.message || "Datei konnte nicht importiert werden.");
     document.getElementById("storageError")?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }
 }
 async function openSnapshots() {
-  let snapshots=(await idbGet(SNAPSHOT_RECORD).catch(()=>[]))||[];
+  let snapshots=await idbGet(SNAPSHOT_RECORD).catch(()=>null); if (!Array.isArray(snapshots)) snapshots=readFallbackSnapshots();
   openGeneric("Lokale Zwischenstände",snapshots.length?snapshots.slice().reverse().map((snap)=>`<button class="snapshot-row" data-snapshot="${snap.id}"><b>${new Date(snap.createdAt).toLocaleString("de-AT")}</b><span>${esc(snap.reason)}</span></button>`).join(""):'<div class="empty">Noch keine Zwischenstände vorhanden.</div>');
   document.querySelectorAll("[data-snapshot]").forEach((button)=>button.onclick=()=>{
     let snap=snapshots.find((x)=>x.id===button.dataset.snapshot);
     if(!snap)return;
     openGeneric("Zwischenstand wiederherstellen?", `<div class="notice warn"><b>Der aktuelle Stand wird ersetzt.</b><br>Davor wird automatisch ein neuer Zwischenstand angelegt.</div><p class="small">Ausgewählt: ${new Date(snap.createdAt).toLocaleString("de-AT")} · ${esc(snap.reason)}</p><div class="sticky-form-actions ds-actionbar"><button class="btn secondary" id="cancelSnapshotRestore" type="button">Abbrechen</button><button class="btn danger" id="confirmSnapshotRestore" type="button">Wiederherstellen</button></div>`);
     document.getElementById("cancelSnapshotRestore").onclick=()=>{ closeGeneric(); openSnapshots(); };
-    document.getElementById("confirmSnapshotRestore").onclick=async()=>{ await createSnapshot("vor Zwischenstand-Wiederherstellung"); state=migrateState(snap.state); await save(); closeGeneric(); renderCurrentView(); showToast("Zwischenstand wiederhergestellt."); };
+    document.getElementById("confirmSnapshotRestore").onclick=async()=>{ await createSnapshot("vor Zwischenstand-Wiederherstellung"); state=migrateState(backupPayloadToState(snap.state)); await save(); closeGeneric(); renderCurrentView(); showToast("Zwischenstand wiederhergestellt."); };
   });
 }
 

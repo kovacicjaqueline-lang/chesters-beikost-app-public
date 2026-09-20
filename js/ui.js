@@ -1053,6 +1053,7 @@ function openManualMealSelector(date, meal, initialMeal = null) {
     };
   }
   renderSelector();
+  if (typeof mealEditorRecipeEnhance === "function") mealEditorRecipeEnhance();
 }
 function chooseReplacement(date, meal, currentId) {
   let current = buildDays(date, 1)[0]?.meals.find(

@@ -200,13 +200,27 @@ try {
   await page.locator("#logFoodSearch").fill(expected.foods[0].name);
   await page.locator(`.addLogFoodResult[data-food="${expected.foods[0].id}"]`).waitFor();
   assert.equal(await page.locator(`.addLogFoodResult[data-food="${expected.foods[0].id}"] .food-illustration img`).count(), 1);
-  const foodResultNodeStable = await page.evaluate(() => {
+  const duplicateFoodSearch = await page.evaluate(() => {
     const input = document.getElementById("logFoodSearch");
     const first = document.querySelector(".log-food-results .addLogFoodResult");
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-    return first === document.querySelector(".log-food-results .addLogFoodResult");
+    const original = logFoodCandidates;
+    let calls = 0;
+    logFoodCandidates = (...args) => {
+      calls += 1;
+      return original(...args);
+    };
+    try {
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      return {
+        sameNode: first === document.querySelector(".log-food-results .addLogFoodResult"),
+        candidateCalls: calls,
+      };
+    } finally {
+      logFoodCandidates = original;
+    }
   });
-  assert.equal(foodResultNodeStable, true, "Identische Lebensmittel-Suche darf Ergebnis-DOM nicht erneut aufbauen");
+  assert.equal(duplicateFoodSearch.sameNode, true, "Identische Lebensmittel-Suche darf Ergebnis-DOM nicht erneut aufbauen");
+  assert.equal(duplicateFoodSearch.candidateCalls, 0, "Identische Lebensmittel-Suche darf Kandidaten nicht erneut vorbereiten");
   assert.equal(await page.locator("#addCustomLogFood").isVisible(), false);
   await page.locator("#logFoodSearch").fill("eigenes-testfood-xyz");
   assert.equal(await page.locator(".log-food-results").textContent(), "Kein Lebensmittel gefunden");

@@ -140,3 +140,57 @@ test('RANDOM-SWAP-07: bekannte Mahlzeiten werden nicht gegen neue Sample-Mahlzei
   assert.equal(swap.learningCandidateCompatible(learning, { sampleFoodIds: ['birne'] }, 'birne'), true);
   assert.equal(swap.learningCandidateCompatible(learning, alternativeKnown, 'birne'), false);
 });
+
+test('RANDOM-SWAP-08: Rezepttausch lässt das aktuelle Rezept aus, erhält Einführungen und erlaubt ein neues Lebensmittel', () => {
+  const current = { recipeName: 'Birnen-Polentabrei', sampleFoodIds: ['ei'] };
+  const known = new Set(['polenta']);
+  assert.deepEqual(
+    swap.recipeAlternativeNewFoodIds(['apfel', 'polenta'], (id) => known.has(id)),
+    ['apfel'],
+  );
+  assert.deepEqual(
+    swap.recipeAlternativeNewFoodIds(['apfel', 'banane', 'polenta'], (id) => known.has(id)),
+    ['apfel', 'banane'],
+  );
+  assert.equal(
+    swap.recipeAlternativeCompatible(current, { name: 'Birnen-Polentabrei' }, ['birne', 'polenta'], (id) => known.has(id)),
+    false,
+  );
+  assert.equal(
+    swap.recipeAlternativeCompatible(current, { name: 'Eierspeise mit Polenta' }, ['ei', 'polenta'], (id) => known.has(id)),
+    true,
+  );
+  assert.equal(
+    swap.recipeAlternativeCompatible(current, { name: 'Apfel-Polenta' }, ['apfel', 'polenta'], (id) => known.has(id)),
+    false,
+  );
+  assert.equal(
+    swap.recipeAlternativeCompatible(current, { name: 'Ei-Apfel-Polenta' }, ['ei', 'apfel', 'polenta'], (id) => known.has(id)),
+    false,
+  );
+  assert.equal(
+    swap.recipeAlternativeCompatible(
+      { recipeName: 'Birnen-Polentabrei', sampleFoodIds: [] },
+      { name: 'Apfel-Polenta' },
+      ['apfel', 'polenta'],
+      (id) => known.has(id),
+    ),
+    true,
+  );
+  assert.equal(
+    swap.recipeAlternativeCompatible(
+      { recipeName: 'Birnen-Polentabrei', sampleFoodIds: [] },
+      { name: 'Apfel-Banane-Polenta' },
+      ['apfel', 'banane', 'polenta'],
+      (id) => known.has(id),
+    ),
+    false,
+  );
+});
+
+test('RANDOM-SWAP-09: Rezeptalternativen wechseln keine volle Milchmahlzeit gegen eine andere Milchstufe', () => {
+  const current = { milkMeal: 'full' };
+  assert.equal(swap.recipeAlternativeMilkCompatible(current, { milkMeal: '' }, ['apfel', 'polenta']), false);
+  assert.equal(swap.recipeAlternativeMilkCompatible(current, { milkMeal: 'full' }, ['apfel', 'joghurt']), true);
+  assert.equal(swap.recipeAlternativeMilkCompatible({ milkMeal: '' }, { milkMeal: '' }, ['apfel', 'polenta']), true);
+});

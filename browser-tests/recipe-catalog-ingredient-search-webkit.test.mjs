@@ -79,6 +79,7 @@ try {
   });
   assert.equal(fastDefaultMatchesAvailability, true, "Fast passend muss passende und fast passende Rezepte einschließen");
 
+  await page.locator(".recipe-match-select > summary").click();
   await page.locator('[data-recipe-filter="all"]').click();
   const beforeSearch = await recipeNames();
   assert.ok(beforeSearch.includes("Obst-Hafer-Pancakes"), "Ei-Rezept muss vor der Suche im Alle-Filter vorhanden sein");
@@ -97,6 +98,7 @@ try {
   await page.locator(".recipe-meal-select > summary").click();
   assert.equal(await page.locator("#recipeMealFilter").isVisible(), true, "Die Mahlzeitenfilter müssen im Auswahlfeld erreichbar sein");
 
+  await page.locator(".recipe-match-select > summary").click();
   await page.locator('[data-recipe-filter="all"]').click();
   await page.locator(".recipe-meal-select > summary").click();
   await page.locator('[data-recipe-meal="breakfast"]').click();

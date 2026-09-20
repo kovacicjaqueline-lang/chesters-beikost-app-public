@@ -86,6 +86,23 @@ test("PLAN-08 recipe-first: exakte Rezeptkandidaten werden erkannt, aber mehrdeu
   assert.ok(lunchNames.includes("Geflügel-Gemüse-Hafer-Bällchen"));
 });
 
+test("PLAN-08 recipe-first: vorhandene Ein-Zutat-Ei-Rezepte werden erkannt", () => {
+  const singleEggRecipes = candidates(["Ei"], "lunch").map((recipe) => recipe.name);
+  assert.ok(singleEggRecipes.includes("Weiches Rührei"));
+  assert.ok(singleEggRecipes.includes("Omelettstreifen"));
+});
+
+test("PLAN-08 recipe-first: löffelbares Ein-Zutat-Rezept wird vor Fingerfood bevorzugt", () => {
+  const selected = recipeFirst.plannerSelectStandaloneRecipe([
+    { name: "Omelettstreifen", category: "balls" },
+    { name: "Weiches Rührei", category: "family" },
+  ], {
+    recipePlannedUse: new Map(),
+    recipeReserved: new Map(),
+  });
+  assert.equal(selected.name, "Weiches Rührei");
+});
+
 test("PLAN-08 recipe-first: eindeutige Zweierrezepte werden erkannt, mehrdeutige bleiben FOOD-only", () => {
   assert.equal(exact(["Lachs", "Kartoffel"], "lunch")?.name, "Lachs-Kartoffel-Bällchen");
   const broccoliNames = candidates(["Brokkoli", "Kartoffel"], "lunch").map((recipe) => recipe.name);
@@ -156,6 +173,42 @@ test("PLAN-08 recipe-first: Runtime bucht Promotion in Rezeptrotation und bevorz
   assert.equal(ctx.recipeReserved.get(recipe.name), 1);
   assert.equal(ctx.recipePlannedUse.get(recipe.name), 1);
   assert.match(planned.note, /Passendes vorhandenes Rezept/);
+});
+
+test("PLAN-08 recipe-first: Ein-Zutat-Rezept ersetzt freie Ei-Komponente", () => {
+  const meal = {
+    meal: "lunch",
+    active: true,
+    focusId: "ei",
+    foodIds: ["ei", "polenta"],
+    baseFoodIds: ["polenta"],
+    sampleFoodIds: [],
+    inventoryFoodIds: ["ei", "polenta"],
+    recipeName: "",
+    note: "Bekannte Lebensmittel sinnvoll rotieren.",
+  };
+  const recipe = {
+    name: "Weiches Rührei",
+    category: "family",
+    requires: ["ei"],
+    requirementMissing: [],
+  };
+  const context = runtimeContext({ meal, recipe });
+  assert.equal(context.__installRecipeFirst(), true);
+  const ctx = {
+    inventoryReserved: new Map([["ei", 1], ["polenta", 1]]),
+    recipeReserved: new Map(),
+    recipePlannedUse: new Map(),
+  };
+  const planned = context.buildDay("2026-08-18", 0, ctx).meals[0];
+  assert.equal(planned.recipeName, "Weiches Rührei");
+  assert.deepEqual(Array.from(planned.foodIds), ["ei"]);
+  assert.deepEqual(Array.from(planned.baseFoodIds), ["ei"]);
+  assert.deepEqual(JSON.parse(JSON.stringify(planned.foodRoles)), { ei: "base" });
+  assert.equal(planned.type, "Rezept");
+  assert.equal(ctx.inventoryReserved.get("polenta"), undefined);
+  assert.equal(ctx.recipePlannedUse.get("Weiches Rührei"), 1);
+  assert.match(planned.note, /statt einer freien FOOD-Kombination/);
 });
 
 test("PLAN-08 recipe-first: frisches Rezept wird ohne erfundene Vorratsportion als Rezept geführt", () => {

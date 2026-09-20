@@ -189,7 +189,7 @@ try {
   await page.locator('nav button[data-view="more"]').click();
   await page.waitForFunction(() => (document.getElementById("statisticsBody")?.childElementCount || 0) > 0);
   assert.ok(await page.locator("#more.view.active").count(), "Mehr muss nach Navigation aktiv und gerendert sein");
-  assert.ok(await page.locator("#productAllergenCard").count(), "Mehr muss die Produktkennzeichnung beim ersten Lazy-Render mit aufbauen");
+  assert.equal(await page.locator("#productAllergenCard").count(), 0, "Die entfernte Produktkennzeichnung darf nicht mehr gerendert werden");
 
   assert.deepEqual(pageErrors, [], `Beim Start und Lazy-Render dürfen keine JavaScript-Fehler auftreten: ${pageErrors.join(" | ")}`);
 

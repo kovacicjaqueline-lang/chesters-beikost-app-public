@@ -119,42 +119,6 @@ try {
   );
   await waitForDeferredRender(page, foodImmediate.before);
 
-  // Konkretes Produkt speichern und löschen: Modal-Close bleibt unabhängig vom Voll-Render.
-  const productFoodId = await page.evaluate(() => window.__beikostTest.getState().foods[0].id);
-  await page.evaluate((foodId) => window.openProductAllergenForm(foodId), productFoodId);
-  await page.locator("#productName").fill("Latency-Testprodukt");
-  const productSaveImmediate = await page.evaluate(() => {
-    const before = window.__saveUiLatencyProbe.renderCalls;
-    document.getElementById("saveConcreteProduct").click();
-    return {
-      before,
-      after: window.__saveUiLatencyProbe.renderCalls,
-      modalOpen: document.getElementById("genericModal").classList.contains("open"),
-      count: window.__beikostTest.getState().products?.length || 0,
-    };
-  });
-  assert.equal(productSaveImmediate.after, productSaveImmediate.before, "Produkt-Save darf nicht synchron voll rendern");
-  assert.equal(productSaveImmediate.modalOpen, false);
-  assert.equal(productSaveImmediate.count, 1);
-  await waitForDeferredRender(page, productSaveImmediate.before);
-
-  const productId = await page.evaluate(() => window.__beikostTest.getState().products[0].id);
-  await page.evaluate((id) => window.openProductAllergenForm("", id), productId);
-  const productDeleteImmediate = await page.evaluate(() => {
-    const before = window.__saveUiLatencyProbe.renderCalls;
-    document.getElementById("deleteConcreteProduct").click();
-    return {
-      before,
-      after: window.__saveUiLatencyProbe.renderCalls,
-      modalOpen: document.getElementById("genericModal").classList.contains("open"),
-      count: window.__beikostTest.getState().products?.length || 0,
-    };
-  });
-  assert.equal(productDeleteImmediate.after, productDeleteImmediate.before, "Produkt-Löschen darf nicht synchron voll rendern");
-  assert.equal(productDeleteImmediate.modalOpen, false);
-  assert.equal(productDeleteImmediate.count, 0);
-  await waitForDeferredRender(page, productDeleteImmediate.before);
-
   // Eigenes Lebensmittel: Persistenz und Dialogschluss passieren vor dem Voll-Render.
   const foodsBeforeCustom = await page.evaluate(() => window.__beikostTest.getState().foods.length);
   await page.evaluate(() => window.addCustomFoodForm());

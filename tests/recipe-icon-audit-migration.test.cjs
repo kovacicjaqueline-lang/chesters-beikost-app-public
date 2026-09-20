@@ -11,14 +11,14 @@ const iconSource = fs.readFileSync(path.join(ROOT, "js", "icons.js"), "utf8");
 const serviceWorkerCore = fs.readFileSync(path.join(ROOT, "sw-core.js"), "utf8");
 
 const APPROVED_RECIPE_ICONS = Object.freeze({
-  "Baby-Linsen-Bolognese": ["baby-linsen-bolognese", "194806d22d64a90109e93cf41db80230c62cf9861d048f502e56a5d1ef17b1a2"],
-  "Bohnen-Kartoffel-Stampf": ["bohnen-kartoffel-stampf", "9128dbbbeebe80058b7639ceecfcf935e5feeb0de109079359d23c48adfa9aca"],
-  "Buttermilch-Hirse-Obstbrei": ["buttermilch-hirse-obstbrei", "0adc786fc7f817718d2bed9094a32866c04009765f36d51e2824b8b452979f47"],
-  "Huhn-Brokkoli-Reis": ["huhn-brokkoli-reis", "9dcac2fa7b58e669b43e3aa194258f850e65f8058b342126ce2a768e3d79e9c9"],
-  "Kalabasa mit Kokos": ["kalabasa-mit-kokos", "2f05ca46f2acec64fa2c6d980216973b380bb5b96a0bef8d2114dec123a22984"],
-  "Obst-Hafer-Joghurt": ["obst-hafer-joghurt", "25d35610e3ed546b35c02efebd3af9a2bd99bab1c1ada1992aa43159227eac68"],
-  "Obst-Haferbrei": ["obst-haferbrei", "7085c81889ab889ad90e32b24ed7ba1d798c727a5be96a9f358bf2c6c2ad75f5"],
-  "Rind-Gemüse-Bolognese": ["rind-gemuese-bolognese", "78597c49013033df34236f5add71c8e1aaedc00f4fe8adce46d56af0e087d41b"],
+  "Baby-Linsen-Bolognese": ["baby-linsen-bolognese", "bbe9acba946bdfc17c55997c4dea939a55b0bc735acbb419166da38ea528483c"],
+  "Bohnen-Kartoffel-Stampf": ["bohnen-kartoffel-stampf", "0aa5b33ad434bcc7b57287da8fa6a5543585c0a52d94d092e9054b6032d845d9"],
+  "Buttermilch-Hirse-Obstbrei": ["buttermilch-hirse-obstbrei", "2da12512713ef0778dd5f2c2c05b6ad6104e846b9ca4e15af9663381ece29b8a"],
+  "Huhn-Brokkoli-Reis": ["huhn-brokkoli-reis", "0e2e42777072927e9b573a7f56d654b4155fce5f3ba2eafb7cfd19121945ee65"],
+  "Kalabasa mit Kokos": ["kalabasa-mit-kokos", "e5b8084cd16b79a3527134b5e5a17873a389f11ecbffee7f711742b370cdc649"],
+  "Obst-Hafer-Joghurt": ["obst-hafer-joghurt", "666c38942fd019e3bca21c0804798df30805cf162ec94b22296cf208cc6f76de"],
+  "Obst-Haferbrei": ["obst-haferbrei", "866bcf6f234f0bbc6b6e65e3d66617320f77055c8b988d06c5d621f08e82f5c4"],
+  "Rind-Gemüse-Bolognese": ["rind-gemuese-bolognese", "a7c1819f24fb256aa99e24133c36881c66b2c341539e624e17158d038c45e00f"],
   "Weiches Rührei": ["weiches-ruehrei", "e97df2635b49be396be300a6e0dbcf9ec6ac4a2b4abc79a32483ce215ab90225"],
 });
 

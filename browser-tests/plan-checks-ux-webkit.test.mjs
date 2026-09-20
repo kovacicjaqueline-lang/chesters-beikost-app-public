@@ -324,7 +324,20 @@ try {
   await showView(page, "plan");
   await page.locator("#openPlanGoalSolution").click();
   const firstSolutionText = (await page.locator("#genericBody .plan-solution-card").textContent()).trim();
+  const firstSolutionDebug = await page.evaluate(() => {
+    const days = planDisplayDays(visiblePlanStart(), 7);
+    const item = PlannerPlanCheckSolutions.openGoalItems(PlannerPlanCheckSolutions.report(days), days)[0];
+    const solution = PlannerPlanCheckSolutions.findSolution(item, days, {});
+    return { goal: PlannerPlanCheckSolutions.goalKey(item), solution };
+  });
   await page.locator("#otherPlanGoalSolution").click();
+  const secondSolutionDebug = await page.evaluate((first) => {
+    const days = planDisplayDays(visiblePlanStart(), 7);
+    const item = PlannerPlanCheckSolutions.openGoalItems(PlannerPlanCheckSolutions.report(days), days)[0];
+    const solution = PlannerPlanCheckSolutions.findSolution(item, days, { rejectedSolutionIds: [first.solution?.id] });
+    return { goal: PlannerPlanCheckSolutions.goalKey(item), solution };
+  }, firstSolutionDebug);
+  console.log(`[plan-check-alternative-debug] ${JSON.stringify({ first: firstSolutionDebug, second: secondSolutionDebug })}`);
   await page.waitForFunction((before) => {
     const card = document.querySelector("#genericBody .plan-solution-card");
     return card && card.textContent.trim() !== before;

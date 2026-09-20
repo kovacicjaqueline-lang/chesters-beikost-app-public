@@ -143,16 +143,21 @@ test('RANDOM-SWAP-07: bekannte Mahlzeiten werden nicht gegen neue Sample-Mahlzei
 
 test('RANDOM-SWAP-08: Rezepttausch lässt das aktuelle Rezept aus und erhält eine laufende Einführung', () => {
   const current = { recipeName: 'Birnen-Polentabrei', sampleFoodIds: ['ei'] };
+  const known = new Set(['polenta']);
   assert.equal(
-    swap.recipeAlternativeCompatible(current, { name: 'Birnen-Polentabrei' }, ['birne', 'polenta']),
+    swap.recipeAlternativeCompatible(current, { name: 'Birnen-Polentabrei' }, ['birne', 'polenta'], (id) => known.has(id)),
     false,
   );
   assert.equal(
-    swap.recipeAlternativeCompatible(current, { name: 'Eierspeise mit Polenta' }, ['ei', 'polenta']),
+    swap.recipeAlternativeCompatible(current, { name: 'Eierspeise mit Polenta' }, ['ei', 'polenta'], (id) => known.has(id)),
     true,
   );
   assert.equal(
-    swap.recipeAlternativeCompatible(current, { name: 'Apfel-Polenta' }, ['apfel', 'polenta']),
+    swap.recipeAlternativeCompatible(current, { name: 'Apfel-Polenta' }, ['apfel', 'polenta'], (id) => known.has(id)),
+    false,
+  );
+  assert.equal(
+    swap.recipeAlternativeCompatible(current, { name: 'Ei-Apfel-Polenta' }, ['ei', 'apfel', 'polenta'], (id) => known.has(id)),
     false,
   );
 });

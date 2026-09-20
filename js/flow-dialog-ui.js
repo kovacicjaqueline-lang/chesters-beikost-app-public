@@ -161,6 +161,25 @@
     );
   }
 
+  function switchLogSelector(nextMode) {
+    const mode = nextMode === "recipes" ? "recipes" : "foods";
+    if (mode === "recipes") {
+      const foodPicker = logBody.querySelector(".log-food-picker");
+      const foodError = logBody.querySelector("#logFoodError");
+      foodPicker?.classList.remove("field-error");
+      if (foodError) {
+        foodError.textContent = "";
+        foodError.style.display = "none";
+      }
+    }
+    logSelectorMode = mode;
+    // Den aktiven Picker sofort synchronisieren. Das ist besonders auf WebKit
+    // wichtig: Der delegierte Dialog-Listener kann nach einem DOM-Rebuild sonst
+    // erst nach dem nächsten Observer-Durchlauf den richtigen Tab sichtbar machen.
+    ensureLogSelector();
+    if (typeof clearLogSelectorSearch === "function") clearLogSelectorSearch(mode);
+  }
+
   function ensureLogSelector() {
     const foodPicker = logBody.querySelector(".log-food-picker");
     const recipePicker = logBody.querySelector(".log-recipe-picker");
@@ -236,6 +255,11 @@
         button.classList.toggle("active", active);
         const pressed = active ? "true" : "false";
         if (button.getAttribute("aria-pressed") !== pressed) button.setAttribute("aria-pressed", pressed);
+        button.onclick = (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          switchLogSelector(button.dataset.flowLogSelector);
+        };
       });
     }
     setHidden(recipePicker, mode !== "recipes");
@@ -446,21 +470,7 @@
     const button = event.target.closest?.("[data-flow-log-selector]");
     if (button && logBody.contains(button)) {
       const nextMode = button.dataset.flowLogSelector === "recipes" ? "recipes" : "foods";
-      if (nextMode === "recipes") {
-        const foodPicker = logBody.querySelector(".log-food-picker");
-        const foodError = logBody.querySelector("#logFoodError");
-        foodPicker?.classList.remove("field-error");
-        if (foodError) {
-          foodError.textContent = "";
-          foodError.style.display = "none";
-        }
-      }
-      logSelectorMode = nextMode;
-      // WebKit can deliver the tab click before the observer has applied the
-      // panel visibility. Apply the selected mode synchronously so the next
-      // interaction never sees a hidden search field.
-      ensureLogSelector();
-      if (typeof clearLogSelectorSearch === "function") clearLogSelectorSearch(nextMode);
+      switchLogSelector(nextMode);
       return;
     }
 

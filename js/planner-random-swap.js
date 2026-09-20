@@ -281,7 +281,6 @@
     const uniqueIds = [...new Set(ids || [])];
     const unknown = uniqueIds.filter((id) => !isKnown(id));
     if (unknown.length > 1) return false;
-    if (unknown.length === 1) return samples.length === 1 && samples[0] === unknown[0];
     return samples.every((id) => uniqueIds.includes(id));
   }
 

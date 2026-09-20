@@ -292,7 +292,7 @@ test("fällige Allergen-Wiederholung bleibt exklusiv und wird nicht als bekannte
   });
 });
 
-test("geschützte Nicht-Allergen-Kostprobe erlaubt weitere Nicht-Allergen-Einführungen, aber kein Allergen wird dazugemischt", () => {
+test("geschützte Nicht-Allergen-Kostprobe bleibt erhalten, erzeugt aber keine weiteren automatischen Einführungen", () => {
   withRuntimeGlobals(() => {
     installFakePlanner({
       foods: [
@@ -317,7 +317,7 @@ test("geschützte Nicht-Allergen-Kostprobe erlaubt weitere Nicht-Allergen-Einfü
   }, () => {
     const day = global.buildDay("2026-08-23", 1, blankContext());
     const learning = day.meals.filter(policy.plannerIntroductionMealIsLearning);
-    assert.deepEqual(learning.map((meal) => meal.focusId), ["birne", "mittag", "abend"]);
+    assert.deepEqual(learning.map((meal) => meal.focusId), ["birne"]);
     assert.equal(day.meals.some((meal) => (meal.foodIds || []).includes("hafer")), false);
     const breakfast = day.meals.find((meal) => meal.meal === "breakfast");
     assert.deepEqual(breakfast.sampleFoodIds, ["birne"], "geschützte Rollen müssen nach interner Normalisierung unverändert sichtbar bleiben");

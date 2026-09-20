@@ -364,6 +364,8 @@ if (typeof validateBackup === "function") {
         let checksum = await sha256Text(JSON.stringify(parsed.payload));
         if (parsed.checksum !== "unsupported" && checksum !== "unsupported" && checksum !== parsed.checksum) throw new Error("Die Backup-Datei scheint beschädigt oder verändert zu sein.");
       }
+      if (typeof validateBackupPayloadShape === "function") validateBackupPayloadShape(parsed.payload);
+      if (typeof stateSummary === "function") parsed.summary = stateSummary(parsed.payload);
       return parsed;
     }
     return baseValidateBackup(raw);
@@ -380,6 +382,7 @@ if (typeof buildBackupPackage === "function") {
     delete pack.productAllergenSchemaVersion;
     delete pack.payload.productAllergenSchemaVersion;
     pack.checksum = await sha256Text(JSON.stringify(pack.payload));
+    if (typeof stateSummary === "function") pack.summary = stateSummary(pack.payload);
     return pack;
   };
 }

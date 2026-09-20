@@ -139,7 +139,7 @@ const PLAN_CHECK_PRECACHE = [
 const UI_PRECACHE = [
   "./ui-meal-editor-footer.css?v=10.1.26-circle-r2",
   "./ui-meal-editor-footer.css?v=10.1.26",
-  "./flow-dialog-ui.css?v=10.1.26",
+  "./flow-dialog-ui.css?v=10.1.26-compact-r1",
   "./catalog-navigation.css",
   "./mobile-beikost-more.css?v=10.1.26",
   "./plan-checks-ui.css?v=10.1.26",

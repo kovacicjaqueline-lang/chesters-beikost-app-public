@@ -591,3 +591,45 @@ body.mobile-foundation #foods .recipe-heading-with-icon > img.recipe-illustratio
 body.mobile-foundation #foods .recipe-card-v2 .illustration-icon--recipe > .illustration-icon__asset[src*="/recipes/"] {
   transform: translate(var(--recipe-circle-shift-x, 0), var(--recipe-circle-shift-y, 0)) scale(min(1.153846, var(--recipe-circle-scale, 1)));
 }
+
+/* Rezeptfilter auf einer kompakten, gemeinsamen Touch-Leiste bündeln. */
+body.mobile-foundation #foods .recipe-filter-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 10px;
+  padding: 0 0 2px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+body.mobile-foundation #foods .recipe-filter-toolbar::-webkit-scrollbar {
+  display: none;
+}
+
+body.mobile-foundation #foods .recipe-filter-toolbar .recipe-filter-field,
+body.mobile-foundation #foods .recipe-filter-toolbar .recipe-meal-filter-field {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+body.mobile-foundation #foods .recipe-filter-toolbar .seg {
+  display: flex;
+  gap: 6px;
+  overflow: visible;
+  padding: 0;
+}
+
+body.mobile-foundation #foods .recipe-filter-toolbar .seg button {
+  flex: 0 0 auto;
+  min-height: 40px;
+  white-space: nowrap;
+}
+
+body.mobile-foundation #foods .recipe-filter-toolbar .recipe-more-filter-button {
+  flex: 0 0 auto;
+  min-height: 40px;
+  margin: 0;
+  padding: 8px 13px;
+}

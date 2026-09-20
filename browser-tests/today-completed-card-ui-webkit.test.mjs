@@ -136,6 +136,7 @@ try {
     return true;
   });
   assert.equal(seeded, true, "Testzutaten müssen im aktuellen FOOD-Stamm vorhanden sein");
+  const today = await page.evaluate(() => window.__beikostTest.today());
 
   assert.equal(await page.locator("#appBarTitle").innerText(), "Heute");
   assert.equal(await page.locator(".app-header .brand-orb").count(), 0, "Der große Marken-Orb entfällt im App-Alltag");
@@ -176,6 +177,72 @@ try {
   assert.match((await timeline.nth(2).innerText()).replace(/\s+/g, " "), /Abendessen .* Später/);
   assert.equal(await timeline.nth(0).locator(".timeline-marker").innerText(), "✓");
 
+  assert.equal(await todayCard.getAttribute("data-today-date"), today);
+  const nextDate = await page.evaluate((date) => window.__beikostTest.addDays(date, 1), today);
+  await todayCard.evaluate((node) => {
+    node.dispatchEvent(new PointerEvent("pointerdown", {
+      bubbles: true,
+      pointerId: 52,
+      pointerType: "touch",
+      clientX: 280,
+      clientY: 260,
+      button: 0,
+    }));
+    node.dispatchEvent(new PointerEvent("pointerup", {
+      bubbles: true,
+      pointerId: 52,
+      pointerType: "touch",
+      clientX: 120,
+      clientY: 266,
+      button: 0,
+    }));
+  });
+  await page.waitForFunction((date) => document.getElementById("todayCard")?.dataset.todayDate === date, nextDate);
+  assert.equal(await todayCard.getAttribute("data-today-date"), nextDate, "Wisch nach links zeigt den nächsten Tag");
+
+  await todayCard.evaluate((node) => {
+    node.dispatchEvent(new PointerEvent("pointerdown", {
+      bubbles: true,
+      pointerId: 53,
+      pointerType: "touch",
+      clientX: 120,
+      clientY: 260,
+      button: 0,
+    }));
+    node.dispatchEvent(new PointerEvent("pointerup", {
+      bubbles: true,
+      pointerId: 53,
+      pointerType: "touch",
+      clientX: 280,
+      clientY: 266,
+      button: 0,
+    }));
+  });
+  await page.waitForFunction((date) => document.getElementById("todayCard")?.dataset.todayDate === date, today);
+  assert.equal(await todayCard.getAttribute("data-today-date"), today, "Wisch nach rechts zeigt den vorherigen Tag");
+
+  await todayCard.evaluate((node) => {
+    node.dispatchEvent(new PointerEvent("pointerdown", {
+      bubbles: true,
+      pointerId: 54,
+      pointerType: "touch",
+      clientX: 280,
+      clientY: 260,
+      button: 0,
+    }));
+    node.dispatchEvent(new PointerEvent("pointerup", {
+      bubbles: true,
+      pointerId: 54,
+      pointerType: "touch",
+      clientX: 120,
+      clientY: 266,
+      button: 0,
+    }));
+  });
+  await page.waitForFunction((date) => document.getElementById("todayCard")?.dataset.todayDate === date, nextDate);
+  await page.locator("#homeToday").click();
+  await page.waitForFunction((date) => document.getElementById("todayCard")?.dataset.todayDate === date, today);
+
   const edit = timeline.nth(0).locator(".timeline-edit");
   await edit.waitFor();
   assert.ok(await edit.evaluate((node) => node.getBoundingClientRect().height) >= 44, "Erledigte Mahlzeiten bleiben direkt bearbeitbar");
@@ -190,6 +257,7 @@ try {
   assert.equal(await page.locator("#appBarTitle").innerText(), "Plan");
   await page.locator('nav button[data-view="home"]').click();
   assert.equal(await page.locator("#appBarTitle").innerText(), "Heute");
+  assert.equal(await todayCard.getAttribute("data-today-date"), today, "Der Heute-Tab setzt die Tageskarte zurück");
 
   const mainOverflow = await page.locator("main").evaluate((node) => ({
     scrollWidth: node.scrollWidth,

@@ -424,6 +424,7 @@ function logRecipeResultsHtml(query = pendingLog?.__recipeQuery || "") {
 function removeLogFoodSelection(id) {
   let p = pendingLog;
   selectedLogFoods.delete(id);
+  p.foodIds = [...selectedLogFoods];
   selectedInventoryFoods.delete(id);
   p.sampleFoodIds = (p.sampleFoodIds || []).filter((foodId) => foodId !== id);
   p.baseFoodIds = (p.baseFoodIds || []).filter((foodId) => foodId !== id);
@@ -443,6 +444,7 @@ function addLogFoodFromResult(id) {
   }
   let item = food(id);
   selectedLogFoods.add(id);
+  p.foodIds = [...selectedLogFoods];
   let learning = !item || rank(item) < 2;
   if (learning) {
     p.sampleFoodIds = [...new Set([...(p.sampleFoodIds || []), id])];

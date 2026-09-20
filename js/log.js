@@ -384,16 +384,16 @@ function updateConditionalQuestions() {
   box.querySelector(".rejection-question").style.display = value === "not_accepted" ? "block" : "none";
   box.querySelector(".missed-question").style.display = value === "not_offered" ? "block" : "none";
 }
-function logFoodResultsHtml() {
+function logFoodResultsHtml(candidates = logFoodCandidates(logFoodQuery)) {
   let query = normalizeName(logFoodQuery);
-  let candidates = logFoodCandidates(logFoodQuery);
   if (query && !candidates.length) return '<div class="small log-search-empty">Kein Lebensmittel gefunden</div>';
   return candidates.map((f) => {
     let stock = inventoryPortions(f.id);
     let selected = selectedLogFoods.has(f.id);
-    if (!query) return `<button type="button" class="live-result addLogFoodResult log-food-result ${selected ? "selected" : ""}" data-food="${f.id}" aria-label="${esc(f.name)} ${selected ? "entfernen" : "hinzufügen"}"><span class="grow log-result-copy"><b class="log-result-name">${esc(f.name)}</b></span><span class="log-result-add" aria-hidden="true">${selected ? "✓" : "＋"}</span></button>`;
+    let icon = foodIconSvg(f);
+    if (!query) return `<button type="button" class="live-result addLogFoodResult log-food-result ${selected ? "selected" : ""}" data-food="${f.id}" aria-label="${esc(f.name)} ${selected ? "entfernen" : "hinzufügen"}"><span class="log-result-emoji" aria-hidden="true">${icon}</span><span class="grow log-result-copy"><b class="log-result-name">${esc(f.name)}</b></span><span class="log-result-add" aria-hidden="true">${selected ? "✓" : "＋"}</span></button>`;
     let meta = `${foodCategoryLabel(f.category)} · ${displayStatus(f)}${stock ? ` · ${stock} im Vorrat` : ""}`;
-    return `<button class="live-result addLogFoodResult log-food-result ${selected ? "selected" : ""}" data-food="${f.id}" aria-label="${esc(f.name)} ${selected ? "entfernen" : "hinzufügen"}, ${esc(meta)}"><span class="log-result-emoji" aria-hidden="true">${foodEmoji(f)}</span><span class="grow log-result-copy"><b class="log-result-name">${esc(f.name)}</b><span class="small log-result-meta">${esc(meta)}</span></span><span class="log-result-add" aria-hidden="true">${selected ? "✓" : "＋"}</span></button>`;
+    return `<button type="button" class="live-result addLogFoodResult log-food-result ${selected ? "selected" : ""}" data-food="${f.id}" aria-label="${esc(f.name)} ${selected ? "entfernen" : "hinzufügen"}, ${esc(meta)}"><span class="log-result-emoji" aria-hidden="true">${icon}</span><span class="grow log-result-copy"><b class="log-result-name">${esc(f.name)}</b><span class="small log-result-meta">${esc(meta)}</span></span><span class="log-result-add" aria-hidden="true">${selected ? "✓" : "＋"}</span></button>`;
   }).join("");
 }
 function recentRecipeItems(limit = 4) {
@@ -418,7 +418,7 @@ function logRecipeResultsHtml(query = pendingLog?.__recipeQuery || "") {
   let q = normalizeName(query);
   let recipes = q ? logRecipeCandidates(query) : recentRecipeItems(4);
   if (q && !recipes.length) return '<div class="small log-search-empty">Kein Rezept gefunden</div>';
-  return recipes.map((recipe) => `<button type="button" class="live-result selectLogRecipeResult" data-recipe="${esc(recipe.name)}" aria-label="${esc(recipe.name)} auswählen"><span class="grow log-result-copy"><b class="log-result-name">${esc(recipe.name)}</b></span><span class="log-result-add" aria-hidden="true">＋</span></button>`).join("");
+  return recipes.map((recipe) => `<button type="button" class="live-result selectLogRecipeResult log-recipe-result" data-recipe="${esc(recipe.name)}" aria-label="${esc(recipe.name)} auswählen"><span class="log-result-emoji" aria-hidden="true">${recipeIconSvg(recipe)}</span><span class="grow log-result-copy"><b class="log-result-name">${esc(recipe.name)}</b></span><span class="log-result-add" aria-hidden="true">＋</span></button>`).join("");
 }
 
 function removeLogFoodSelection(id) {
@@ -544,11 +544,11 @@ function bindLogRecipeChoiceActions(root = document) {
   root.querySelector("[data-log-recipe-milk]")?.addEventListener("change", (event) => updateLogRecipeChoice({ milkChoiceId: event.target.value }));
 }
 
-function syncCustomFoodAction() {
+function syncCustomFoodAction(candidates = null) {
   let button = document.getElementById("addCustomLogFood");
   if (!button) return;
   let rawQuery = String(logFoodQuery || "").trim();
-  let hasMatches = rawQuery ? logFoodCandidates(rawQuery).length > 0 : true;
+  let hasMatches = rawQuery ? (candidates || logFoodCandidates(rawQuery)).length > 0 : true;
   button.hidden = !rawQuery || hasMatches;
   let results = document.querySelector("#logForm .log-food-results");
   if (results && button.previousElementSibling !== results) results.after(button);
@@ -562,9 +562,14 @@ function renderLogFoodResults() {
   if (!label || !results) return;
   label.textContent = logFoodQuery ? "Suchergebnisse" : "";
   label.hidden = !logFoodQuery;
-  results.innerHTML = logFoodResultsHtml();
-  bindLogFoodResultActions(results);
-  syncCustomFoodAction();
+  let candidates = logFoodCandidates(logFoodQuery);
+  let renderKey = `${normalizeName(logFoodQuery)}|${candidates.map((item) => item.id).join(",")}|${[...selectedLogFoods].sort().join(",")}`;
+  if (results.dataset.renderKey !== renderKey) {
+    results.innerHTML = logFoodResultsHtml(candidates);
+    results.dataset.renderKey = renderKey;
+    bindLogFoodResultActions(results);
+  }
+  syncCustomFoodAction(candidates);
 }
 function renderLogRecipeResults() {
   let input = document.getElementById("logRecipeSearch");
@@ -574,8 +579,12 @@ function renderLogRecipeResults() {
   pendingLog.__recipeQuery = input.value;
   label.textContent = pendingLog.__recipeQuery ? "Suchergebnisse" : "";
   label.hidden = !pendingLog.__recipeQuery;
-  results.innerHTML = logRecipeResultsHtml(pendingLog.__recipeQuery);
-  bindLogRecipeResultActions(results);
+  let renderKey = normalizeName(pendingLog.__recipeQuery);
+  if (results.dataset.renderKey !== renderKey) {
+    results.innerHTML = logRecipeResultsHtml(pendingLog.__recipeQuery);
+    results.dataset.renderKey = renderKey;
+    bindLogRecipeResultActions(results);
+  }
 }
 function clearLogSelectorSearch(nextMode) {
   if (!pendingLog) return;

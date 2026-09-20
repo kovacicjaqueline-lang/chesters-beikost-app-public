@@ -30,7 +30,7 @@
     const result = [];
     for (const day of days || []) {
       for (const meal of day.meals || []) {
-        if (!meal?.active || meal.empty || !meal.focusId) continue;
+        if (!meal?.active || meal.empty || (!meal.focusId && !meal.recipeName)) continue;
         if (slotKey(day.date, meal.meal) === targetKey) continue;
         result.push(meal);
       }
@@ -132,6 +132,8 @@
     chooseAlternative,
     automaticFocusAllowed,
     learningCandidateCompatible,
+    recipeAlternativeCompatible,
+    recipeAlternativeMilkCompatible,
     pinVisibleAutomaticMeals,
   };
 
@@ -273,6 +275,113 @@
     return alternatives;
   }
 
+  function recipeAlternativeCompatible(current, recipe, ids) {
+    if (!current || !recipe || !recipe.name || recipe.name === current.recipeName) return false;
+    const samples = [...new Set(current.sampleFoodIds || [])];
+    return samples.every((id) => (ids || []).includes(id));
+  }
+
+  function recipeAlternativeMilkCompatible(current, recipe, ids = []) {
+    const currentMilk = String(current?.milkMeal || (typeof mealMilkLevel === "function" ? mealMilkLevel(current) : ""));
+    const inferredMilk = typeof mealContainsMilkProduct === "function" && mealContainsMilkProduct(ids)
+      ? "full"
+      : "";
+    const recipeMilk = String(recipe?.milkMeal || inferredMilk);
+    return currentMilk === recipeMilk;
+  }
+
+  function recipeAlternativeFoodReady(id, meal, date) {
+    const item = typeof food === "function" ? food(id) : null;
+    if (!item || (typeof status === "function" && status(item) === "Pausiert")) return false;
+    if (typeof plannerAutomaticFoodMealEligible === "function") {
+      return plannerAutomaticFoodMealEligible(
+        item,
+        meal,
+        date,
+        state.settings || {},
+        typeof automaticFoodEligibility === "function" ? automaticFoodEligibility : null,
+      );
+    }
+    if (typeof plannerFoodMealEligible === "function" && !plannerFoodMealEligible(item, meal)) return false;
+    return typeof automaticFoodEligibility !== "function" ||
+      automaticFoodEligibility(item, date, state.settings || {});
+  }
+
+  function buildRecipeAlternativeMeal(recipe, date, meal, ctx) {
+    if (!recipe || typeof recipeFoodIds !== "function") return null;
+    const ids = recipeFoodIds(recipe);
+    if (!ids.length) return null;
+
+    const reserved = Number(ctx?.recipeReserved?.get(recipe.name) || 0);
+    const availableStock =
+      typeof recipeInventoryPortions === "function" &&
+      recipeInventoryPortions(recipe.name) > reserved;
+    const batch =
+      state.settings?.preferInventoryInPlan && availableStock && typeof oldestRecipeBatch === "function"
+        ? oldestRecipeBatch(recipe.name)
+        : null;
+    const generated = applyPlannedMealAmounts({
+      meal,
+      active: true,
+      focusId: ids[0],
+      foodIds: ids,
+      baseFoodIds: ids,
+      sampleFoodIds: [],
+      optionalAddons: [],
+      inventoryFoodIds: [],
+      recipeName: recipe.name,
+      recipeInventoryId: batch?.id || "",
+      milkMeal: recipe.milkMeal || "",
+      type: batch ? "Rezeptvorrat" : "Rezept",
+      note: batch
+        ? "Eine alternative vorbereitete Portion aus dem Gefriervorrat verwenden."
+        : "Passendes alternatives Rezept statt der bisherigen Rezeptmahlzeit.",
+    });
+    if (typeof reserveMealInventory === "function") reserveMealInventory(generated, ctx);
+    return generated;
+  }
+
+  function recipeAlternatives(days, date, meal, current) {
+    const targetKey = slotKey(date, meal);
+    const baseline = reservationContext(days, targetKey);
+    const alternatives = [];
+    const seen = new Set();
+    const recipes = typeof recipeStates === "function" ? recipeStates() : [];
+    const suitable = typeof plannerRecipeSuitableForMeal === "function"
+      ? plannerRecipeSuitableForMeal
+      : recipeSuitableForMeal;
+
+    for (const recipe of shuffle(recipes)) {
+      if (!recipe?.unlocked || recipe.name === current.recipeName) continue;
+      if (Array.isArray(recipe.requirementMissing) && recipe.requirementMissing.length) continue;
+      if (!suitable(recipe, meal) || !recipeAlternativeMilkCompatible(current, recipe, recipeFoodIds(recipe))) continue;
+      if (recipe.milkMeal === "full" && recipeContainsMeatOrFish(recipe)) continue;
+      if (recipe.milkMeal === "full" && baseline.fullMilkDates?.has(date)) continue;
+
+      const ids = recipeFoodIds(recipe);
+      if (
+        !ids.length ||
+        !ids.every((id) => recipeAlternativeFoodReady(id, meal, date)) ||
+        !recipeAlternativeCompatible(current, recipe, ids)
+      ) continue;
+      const combination = canonicalCombination(ids);
+      const identity = `${recipe.name}|${combination}`;
+      if (!combination || seen.has(identity)) continue;
+
+      const generated = buildRecipeAlternativeMeal(
+        recipe,
+        date,
+        meal,
+        reservationContext(days, targetKey),
+      );
+      if (!generated || generated.recipeName === current.recipeName) continue;
+      seen.add(identity);
+      alternatives.push(generated);
+      if (alternatives.length >= 12) break;
+    }
+    return alternatives;
+  }
+
   function automaticRecipeFoodReady(id, date) {
     const item = food(id);
     if (!item || status(item) === "Pausiert") return false;
@@ -291,7 +400,7 @@
     const ctx = freshPlanContext();
     for (const day of days || []) {
       for (const meal of day.meals || []) {
-        if (!meal?.active || meal.empty || !meal.focusId) continue;
+        if (!meal?.active || meal.empty || (!meal.focusId && !meal.recipeName)) continue;
         if (slotKey(day.date, meal.meal) === targetKey) continue;
         if (mealMilkLevel(meal) === "full") ctx.fullMilkDates?.add(day.date);
         if (meal.recipeName && meal.recipeInventoryId) {
@@ -353,7 +462,9 @@
     const dependency = hasFutureLearningDependency(contextDays, date, current);
     const alternatives = meal === "snack"
       ? snackAlternatives(contextDays, date, current)
-      : mainMealAlternatives(targetDays, contextDays, date, meal, current);
+      : current.recipeName
+        ? recipeAlternatives(contextDays, date, meal, current)
+        : mainMealAlternatives(targetDays, contextDays, date, meal, current);
     const chosen = chooseAlternative(alternatives, otherMealsForSlot(contextDays, key));
     if (!chosen) {
       showToast(

@@ -85,6 +85,8 @@ nativeAddEventListener("fetch", (event) => {
 // schon beim Service-Worker-Install in denselben App-Cache, damit der erste
 // Offline-Start nach einer frischen Installation die vollständige Policy-Kette hat.
 const PLAN08_PRECACHE = [
+  "./data/recipe-food-pairings.js?v=10.1.26",
+  "./js/planner-recipe-food-composition.js?v=10.1.26",
   "./js/planner-meal-eligibility.js",
   "./js/planner-milk-policy.js",
   "./js/planner-iron-preference.js",

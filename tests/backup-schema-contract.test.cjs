@@ -47,7 +47,10 @@ function fixtureState() {
   const snapshot = sulfiteSnapshot();
   return {
     settings: { phaseSelected: "aufbau" },
-    foods: [{ id: "rosine", name: "Rosine", active: true, allergenGroup: "" }],
+    foods: [
+      { id: "rosine", name: "Rosine", active: true, liked: false, notes: "persönlich notiert", allergenGroup: "" },
+      { id: "custom-oat", name: "Haferbrei selbst", active: true, custom: true },
+    ],
     logs: [{
       id: "log-1",
       date: "2026-08-20",
@@ -104,6 +107,7 @@ function loadBackupRuntime(initialState = fixtureState()) {
     SNAPSHOT_RECORD: "snapshots",
     LEGACY_KEYS: [],
     DEFAULT: {},
+    FOOD_DB: [{ id: "rosine", name: "Rosine", active: true, liked: true, notes: "" }],
     state: clone(initialState),
     localStorage: {
       setItem(key, value) { localWrites.set(key, value); },
@@ -146,10 +150,17 @@ test("CR-002: aktueller Export validiert in derselben Runtime und bleibt nach Mi
   assert.equal(pack.productAllergenSchemaVersion, PRODUCT_ALLERGEN_SCHEMA_VERSION);
   assert.equal(pack.payload.productAllergenSchemaVersion, PRODUCT_ALLERGEN_SCHEMA_VERSION);
 
+  assert.equal(Object.hasOwn(pack.payload, "foods"), false, "der integrierte Katalog gehört nicht in den externen Payload");
+  assert.deepEqual(pack.payload.customFoods, [original.foods[1]]);
+  assert.deepEqual(pack.payload.foodPreferences, [{ id: "rosine", liked: false, notes: "persönlich notiert" }]);
+  pack.summary = { customFoods: 999 };
+
   const validated = await context.validateBackup(JSON.stringify(pack));
-  const restored = context.migrateState(validated.payload);
+  const restored = context.migrateState(context.backupPayloadToState(validated.payload));
   const plainRestored = clone(restored);
 
+  assert.equal(validated.summary.customFoods, 1, "die Vorschau wird aus den Nutzdaten neu berechnet");
+  assert.deepEqual(plainRestored.foods, original.foods);
   assert.deepEqual(plainRestored.products, original.products);
   assert.deepEqual(plainRestored.logs[0].productAllergenSnapshots, original.logs[0].productAllergenSnapshots);
   assert.deepEqual(plainRestored.inventory[0].productAllergenSnapshot, original.inventory[0].productAllergenSnapshot);
@@ -176,7 +187,8 @@ test("CR-002: unterstütztes Vorgänger-Backup-Schema 5 bleibt importierbar", as
 
   const validated = await context.validateBackup(JSON.stringify(pack));
   assert.equal(validated.schemaVersion, STATE_SCHEMA_VERSION);
-  const restored = clone(context.migrateState(validated.payload));
+  const restored = clone(context.migrateState(context.backupPayloadToState(validated.payload)));
+  assert.deepEqual(restored.foods, payload.foods);
   assert.equal(restored.productAllergenSchemaVersion, PRODUCT_ALLERGEN_SCHEMA_VERSION);
 });
 
@@ -216,5 +228,17 @@ test("CR-002: eine unbekannte zukünftige Backup-Version wird kontrolliert abgel
   await assert.rejects(
     () => context.validateBackup(JSON.stringify(pack)),
     /neueren App-Version/,
+  );
+});
+
+
+test("CR-002: manipulierte Zusammenfassungen und ungültige normalisierte Payloads werden abgelehnt", async () => {
+  const { context } = loadBackupRuntime();
+  const pack = await context.buildBackupPackage();
+  pack.payload.foodPreferences = [{ liked: false }];
+  pack.checksum = await checksum(context, pack.payload);
+  await assert.rejects(
+    () => context.validateBackup(JSON.stringify(pack)),
+    /Nutzdaten sind ungültig/,
   );
 });

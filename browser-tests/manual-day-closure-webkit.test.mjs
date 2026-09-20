@@ -103,7 +103,7 @@ try {
   const closedDay = page.locator("#blockPlan > details.manual-day-closure");
   await closedDay.waitFor();
   assert.match(await closedDay.innerText(), /abgeschlossen/i);
-  assert.match(await closedDay.innerText(), /nicht dokumentiert/i);
+  assert.match(await closedDay.innerText(), /Tag wieder öffnen/i);
   assert.equal(
     await page.evaluate((current) => window.__plannerLogRolloverCore.openPlanInstances(window.__beikostTest.getState(), (plan) => plan.date === current && plan.meal === "lunch").length, date),
     1,

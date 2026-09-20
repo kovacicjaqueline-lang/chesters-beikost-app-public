@@ -114,6 +114,18 @@ test("PLAN-08 recipe-first: gleichartige Ein-Zutat-Rezepte rotieren nach Nutzung
   assert.equal(selected.name, "Omelettstreifen");
 });
 
+test("PLAN-08 recipe-first: Alternativvorschlag kann das nächste Ein-Zutat-Rezept wählen", () => {
+  const selected = recipeFirst.plannerSelectStandaloneRecipe([
+    { name: "Omelettstreifen", category: "balls" },
+    { name: "Weiches Rührei", category: "family" },
+  ], {
+    recipePlannedUse: new Map(),
+    recipeReserved: new Map(),
+    standaloneRecipeOffset: 1,
+  });
+  assert.equal(selected.name, "Omelettstreifen");
+});
+
 test("PLAN-08 recipe-first: eindeutige Zweierrezepte werden erkannt, mehrdeutige bleiben FOOD-only", () => {
   assert.equal(exact(["Lachs", "Kartoffel"], "lunch")?.name, "Lachs-Kartoffel-Bällchen");
   const broccoliNames = candidates(["Brokkoli", "Kartoffel"], "lunch").map((recipe) => recipe.name);

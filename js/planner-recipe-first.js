@@ -109,7 +109,10 @@ function plannerSelectStandaloneRecipe(candidates, ctx = {}) {
       (preferInventory ? a.formRank - b.formRank : a.stockRank - b.stockRank) ||
       String(a.recipe?.name || "").localeCompare(String(b.recipe?.name || ""), "de"),
     );
-  return ranked[0]?.recipe || null;
+  if (!ranked.length) return null;
+  let offset = Number(ctx.standaloneRecipeOffset) || 0;
+  let index = ((offset % ranked.length) + ranked.length) % ranked.length;
+  return ranked[index]?.recipe || null;
 }
 
 function plannerPromoteStandaloneMealToRecipe(meal, recipe, ctx, reserveMealInventoryFn = null) {
@@ -525,6 +528,7 @@ function installPlannerRecipeFirstRuntime() {
           : null,
         recipeReserved: ctx.recipeReserved,
         recipePlannedUse: ctx.recipePlannedUse,
+        standaloneRecipeOffset: Number(state?.__plannerStandaloneRecipeOffset) || 0,
       });
       if (!standalone) continue;
 

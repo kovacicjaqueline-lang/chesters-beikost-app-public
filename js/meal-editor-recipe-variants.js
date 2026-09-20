@@ -238,7 +238,7 @@ function mealEditorRecipeEnsureContext() {
       initialRecipeName: recipeName || "",
       selections: {},
       searchQuery: "",
-      resetSearchQuery: false,
+      lastRecipeMode: null,
       refreshingSlot: false,
     };
   } else {
@@ -316,15 +316,16 @@ function mealEditorRecipeFilterResults() {
   let input = document.getElementById("mealSelectorSearch");
   let results = document.querySelector("#genericBody .selector-results");
   if (!input || !results) return;
-  if (context.resetSearchQuery) {
+  let recipeMode = document.getElementById("selectorRecipes")?.classList.contains("active");
+  let tabChanged = context.lastRecipeMode !== null && context.lastRecipeMode !== recipeMode;
+  if (tabChanged) {
     input.value = "";
     context.searchQuery = "";
-    context.resetSearchQuery = false;
   }
+  context.lastRecipeMode = recipeMode;
   let searchQuery = input.value ?? context.searchQuery ?? "";
   context.searchQuery = searchQuery;
   let normalized = mealEditorRecipeNormalize(searchQuery);
-  let recipeMode = document.getElementById("selectorRecipes")?.classList.contains("active");
   let visible = 0;
   results.querySelectorAll(".selector-row").forEach((row) => {
     let matches = true;
@@ -605,7 +606,6 @@ function mealEditorRecipeHandleCapture(event) {
   if (!context) return;
   if (target.id === "selectorRecipes" || target.id === "selectorFoods") {
     context.searchQuery = "";
-    context.resetSearchQuery = true;
     return;
   }
   if (target.classList.contains("selectFood") || target.classList.contains("removeManualSelected")) {

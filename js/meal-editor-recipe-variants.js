@@ -437,20 +437,17 @@ function mealEditorRecipeApplySelectionThroughExistingHandler(recipe, slot, sele
   let activeRecipe = document.querySelector("#genericBody .selectRecipe.selected");
   if (!context || !activeRecipe || !recipe || !selectedId) return;
   context.selections[slot.field] = selectedId;
-  let slots = mealEditorRecipeComponentSlots(recipe, mealEditorRecipeRuntimeLookup());
-  let originals = new Map();
+  let configuredIds = mealEditorRecipeConfiguredIdsFor(recipe, context.selections);
+  let baseRecipeFoodIds = recipeFoodIds;
   try {
-    for (let currentSlot of slots) {
-      originals.set(currentSlot.field, recipe[currentSlot.field]);
-      let id = context.selections[currentSlot.field] || currentSlot.foodIds[0];
-      let choice = currentSlot.choices.find((item) => item.food.id === id);
-      recipe[currentSlot.field] = choice ? [choice.sourceName] : recipe[currentSlot.field];
-    }
     context.refreshingSlot = true;
+    recipeFoodIds = function mealEditorConfiguredRecipeFoodIds(currentRecipe) {
+      return currentRecipe === recipe ? [...configuredIds] : baseRecipeFoodIds(currentRecipe);
+    };
     activeRecipe.click();
   } finally {
+    recipeFoodIds = baseRecipeFoodIds;
     context.refreshingSlot = false;
-    for (let [field, value] of originals) recipe[field] = value;
   }
 }
 

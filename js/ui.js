@@ -931,6 +931,7 @@ function openManualMealSelector(date, meal, initialMeal = null) {
   function renderSelector() {
     let roleData = currentRoleData();
     let validation = manualMealValidation(roleData, meal, date);
+    let recipeRoleContext = selectedRecipe ? { recipeName: selectedRecipe } : {};
     let recipeRows = recipeStates()
       .filter(
         (r) =>
@@ -942,7 +943,7 @@ function openManualMealSelector(date, meal, initialMeal = null) {
     let foodRows = state.foods
       .filter((f) => {
         let alreadySelected = selectedFoods.has(f.id);
-        let selectable = manualMealRoleInfo(f, meal, date).role !== "excluded";
+        let selectable = manualMealRoleInfo(f, meal, date, recipeRoleContext).role !== "excluded";
         return (alreadySelected || selectable) && (!query || foodSearchMatches(f, query));
       })
       .sort(
@@ -975,7 +976,7 @@ function openManualMealSelector(date, meal, initialMeal = null) {
             : foodRows.length
               ? foodRows.map((f) => {
                 let selected = selectedFoods.has(f.id), role = sampleFoodIds.has(f.id) ? "sample" : baseFoodIds.has(f.id) ? "base" : selected ? "component" : "";
-                let roleInfo = manualMealRoleInfo(f, meal, date), pausedManual = roleInfo.reason === "paused_manual";
+                let roleInfo = manualMealRoleInfo(f, meal, date, recipeRoleContext), pausedManual = roleInfo.reason === "paused_manual";
                 let learningLabel = manualLearningRoleText(f, existing?.type || "");
                 let roleLabel = pausedManual
                   ? "Pausiert · manuell"
@@ -1052,6 +1053,7 @@ function openManualMealSelector(date, meal, initialMeal = null) {
     };
   }
   renderSelector();
+  if (typeof mealEditorRecipeEnhance === "function") mealEditorRecipeEnhance();
 }
 function chooseReplacement(date, meal, currentId) {
   let current = buildDays(date, 1)[0]?.meals.find(

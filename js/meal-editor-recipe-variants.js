@@ -228,14 +228,17 @@ function mealEditorRecipeEnsureContext() {
   let meal = manualContext?.meal || mealEditorRecipeVariantContext?.meal || "";
   let date = manualContext?.targetDate || manualContext?.sourceDate || mealEditorRecipeVariantContext?.date || "";
   let recipeName = mealEditorRecipeCurrentSelectedName();
-  if (!mealEditorRecipeVariantContext) {
+  let newEditorSession = !!manualContext && mealEditorRecipeVariantContext?.manualContext !== manualContext;
+  if (!mealEditorRecipeVariantContext || newEditorSession) {
     mealEditorRecipeVariantContext = {
+      manualContext,
       date,
       meal,
       recipeName: "",
       initialRecipeName: recipeName || "",
       selections: {},
       searchQuery: "",
+      lastRecipeMode: null,
       refreshingSlot: false,
     };
   } else {
@@ -313,8 +316,17 @@ function mealEditorRecipeFilterResults() {
   let input = document.getElementById("mealSelectorSearch");
   let results = document.querySelector("#genericBody .selector-results");
   if (!input || !results) return;
-  let normalized = mealEditorRecipeNormalize(context.searchQuery || "");
   let recipeMode = document.getElementById("selectorRecipes")?.classList.contains("active");
+  let tabChanged = context.lastRecipeMode !== null && context.lastRecipeMode !== recipeMode;
+  if (tabChanged) {
+    input.value = "";
+    context.searchQuery = "";
+  }
+  context.lastRecipeMode = recipeMode;
+  let searchQuery = context.searchQuery ?? input.value ?? "";
+  context.searchQuery = searchQuery;
+  if (input.value !== searchQuery) input.value = searchQuery;
+  let normalized = mealEditorRecipeNormalize(searchQuery);
   let visible = 0;
   results.querySelectorAll(".selector-row").forEach((row) => {
     let matches = true;
@@ -435,20 +447,17 @@ function mealEditorRecipeApplySelectionThroughExistingHandler(recipe, slot, sele
   let activeRecipe = document.querySelector("#genericBody .selectRecipe.selected");
   if (!context || !activeRecipe || !recipe || !selectedId) return;
   context.selections[slot.field] = selectedId;
-  let slots = mealEditorRecipeComponentSlots(recipe, mealEditorRecipeRuntimeLookup());
-  let originals = new Map();
+  let configuredIds = mealEditorRecipeConfiguredIdsFor(recipe, context.selections);
+  let baseRecipeFoodIds = recipeFoodIds;
   try {
-    for (let currentSlot of slots) {
-      originals.set(currentSlot.field, recipe[currentSlot.field]);
-      let id = context.selections[currentSlot.field] || currentSlot.foodIds[0];
-      let choice = currentSlot.choices.find((item) => item.food.id === id);
-      recipe[currentSlot.field] = choice ? [choice.sourceName] : recipe[currentSlot.field];
-    }
     context.refreshingSlot = true;
+    recipeFoodIds = function mealEditorConfiguredRecipeFoodIds(currentRecipe) {
+      return currentRecipe === recipe ? [...configuredIds] : baseRecipeFoodIds(currentRecipe);
+    };
     activeRecipe.click();
   } finally {
+    recipeFoodIds = baseRecipeFoodIds;
     context.refreshingSlot = false;
-    for (let [field, value] of originals) recipe[field] = value;
   }
 }
 

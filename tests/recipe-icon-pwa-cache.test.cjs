@@ -8,6 +8,7 @@ const path = require("node:path");
 const ROOT = path.resolve(__dirname, "..");
 const index = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
 const worker = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
+const core = fs.readFileSync(path.join(ROOT, "sw-core.js"), "utf8");
 const icons = fs.readFileSync(path.join(ROOT, "js/icons.js"), "utf8");
 const recipeCss = fs.readFileSync(path.join(ROOT, "ui-meal-editor-footer.css"), "utf8");
 const plannedRecipeDetails = fs.readFileSync(
@@ -42,6 +43,13 @@ test("graded-bite-Wraps haben eigene Recipe-V2-Assets und werden beim ersten Off
     assert.ok(worker.includes(`"./${asset}"`), `${name}: PWA-Precache fehlt`);
   }
   assert.notEqual(expected["Pizza Wrap"], expected["Chicken Fajita Wrap"]);
+});
+
+test("Hirsotto hat ein eigenes Recipe-V2-Asset, Mapping und Core-Precache", () => {
+  const asset = "assets/illustrations-v2/recipes/hirsotto.svg";
+  assert.ok(fs.existsSync(path.join(ROOT, asset)), "Hirsotto: eigenes Recipe-V2-Asset fehlt");
+  assert.ok(icons.includes(`"Hirsotto": "${asset}"`), "Hirsotto: kanonisches Mapping fehlt");
+  assert.ok(core.includes(`"./${asset}"`), "Hirsotto: Core-Precache fehlt");
 });
 
 test("der frisch gecachte Stylesheet enthält die zentrierte Recipe-V2-Brei-Normalisierung", () => {

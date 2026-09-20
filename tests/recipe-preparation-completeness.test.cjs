@@ -97,12 +97,24 @@ const REQUIRED_NOTE_FRAGMENTS = Object.freeze({
   "Süßkartoffel-Linsen-Muffins": [/Süßkartoffel/i, /Linsen/i, /Hafer/i, /vermeng/i],
 });
 
-test("recipe preparation audit covers the full 123-recipe runtime catalog", () => {
+test("recipe preparation audit covers the full 124-recipe runtime catalog", () => {
   const recipes = loadCatalog();
-  assert.equal(recipes.length, 123);
+  assert.equal(recipes.length, 124);
   assert.equal(INCOMPLETE_PREPARATIONS.length, 20);
   assert.equal(TERSE_PREPARATIONS.length, 23);
   assert.equal(new Set([...INCOMPLETE_PREPARATIONS, ...TERSE_PREPARATIONS]).size, 43);
+});
+
+test("recipe preparation completeness: Hirsotto enthält Mengen, Aromatik und weiche Zubereitung", () => {
+  const recipe = loadCatalog().find((item) => item.name === "Hirsotto");
+  assert.ok(recipe, "Hirsotto: Rezept fehlt");
+  for (const fragment of [/60 g Goldhirse/i, /20 g rote Linsen/i, /100 g gegarte[rn]? und pürierte[rn]? Kürbis/i, /350 ml salzfreie Gemüsebrühe/i, /1 TL .*Öl/i, /1 TL fein gehackte Petersilie/i, /1 TL Butter/i]) {
+    assert.match(recipe.ingredients, fragment, `Hirsotto: Zutat fehlt (${fragment})`);
+  }
+  for (const fragment of [/gründlich waschen/i, /höchstens optional/i, /sehr weich kochen/i, /Kürbispüree einarbeiten/i, /Butter unterrühren/i, /risottoartige Struktur/i]) {
+    assert.match(recipe.note, fragment, `Hirsotto: Zubereitungshinweis fehlt (${fragment})`);
+  }
+  assert.match(recipe.note, /Keine gesalzene Brühe/i);
 });
 
 test("recipe preparation completeness: the 20 incomplete recipes now explain their missing preparation steps", () => {

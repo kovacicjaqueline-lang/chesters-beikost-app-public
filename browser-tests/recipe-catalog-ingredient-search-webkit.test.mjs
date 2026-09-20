@@ -79,7 +79,8 @@ try {
   });
   assert.equal(fastDefaultMatchesAvailability, true, "Fast passend muss passende und fast passende Rezepte einschließen");
 
-  await page.locator('[data-recipe-filter="all"]').click();
+  await page.locator(".recipe-match-select > summary").click();
+  await page.locator('[data-recipe-filter="all"]').click({ force: true });
   const beforeSearch = await recipeNames();
   assert.ok(beforeSearch.includes("Obst-Hafer-Pancakes"), "Ei-Rezept muss vor der Suche im Alle-Filter vorhanden sein");
   assert.ok(beforeSearch.includes("Milch-Getreide-Brei"), "Kontrollrezept muss vor der Suche im Alle-Filter vorhanden sein");
@@ -94,10 +95,15 @@ try {
     "Passend",
     "Die Verfügbarkeitsfilter brauchen eine eigene Zeile",
   );
-  assert.equal(await page.locator("#recipeMealFilter").isVisible(), true, "Die Mahlzeitenfilterzeile muss sichtbar sein");
+  await page.locator(".recipe-meal-select > summary").click();
+  assert.equal(await page.locator("#recipeMealFilter").isVisible(), true, "Die Mahlzeitenfilter müssen im Auswahlfeld erreichbar sein");
+  await page.locator(".recipe-meal-select").evaluate((details) => { details.open = false; });
 
-  await page.locator('[data-recipe-filter="all"]').click();
-  await page.locator('[data-recipe-meal="breakfast"]').click();
+  await page.locator(".recipe-match-select > summary").click();
+  await page.locator(".recipe-match-select").evaluate((details) => { details.open = true; });
+  await page.locator('[data-recipe-filter="all"]').click({ force: true });
+  await page.locator(".recipe-meal-select > summary").click();
+  await page.locator('[data-recipe-meal="breakfast"]').click({ force: true });
   const breakfastRecipes = await recipeNames();
   assert.ok(
     breakfastRecipes.includes("Obst-Hafer-Pancakes"),
@@ -114,7 +120,8 @@ try {
   );
   assert.match(await page.locator("#recipeCount").textContent(), /Rezept/);
 
-  await page.locator('[data-recipe-meal="main"]').click();
+  await page.locator(".recipe-meal-select > summary").click();
+  await page.locator('[data-recipe-meal="main"]').click({ force: true });
   const mainMealRecipes = await recipeNames();
   assert.ok(
     mainMealRecipes.includes("Rind-Hafer-Bällchen"),
@@ -126,7 +133,8 @@ try {
   );
   assert.match(await page.locator("#recipeCount").textContent(), /Rezept/);
 
-  await page.locator('[data-recipe-meal="snack"]').click();
+  await page.locator(".recipe-meal-select > summary").click();
+  await page.locator('[data-recipe-meal="snack"]').click({ force: true });
   const snackRecipes = await recipeNames();
   assert.ok(
     snackRecipes.includes("Weiche Apfel-Hafer-Riegel"),
@@ -139,7 +147,8 @@ try {
   );
   assert.match(await page.locator("#recipeCount").textContent(), /Rezept/);
 
-  await page.locator('[data-recipe-filter="all"]').click();
+  await page.locator(".recipe-match-select > summary").click();
+  await page.locator('[data-recipe-filter="all"]').click({ force: true });
   await search.fill("Ei");
   const afterEggSearch = await recipeNames();
 

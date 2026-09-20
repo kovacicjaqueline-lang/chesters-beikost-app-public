@@ -162,6 +162,22 @@
       button.classList.toggle("active", button.dataset.recipeMeal === recipeMealFilter));
     document.querySelectorAll("[data-recipe-extra-filter]").forEach((button) =>
       button.classList.toggle("active", recipeExtraFilters.has(button.dataset.recipeExtraFilter)));
+    const matchSummary = document.querySelector("[data-recipe-match-summary]");
+    if (matchSummary) {
+      const labels = {
+        available: "Jetzt passend",
+        almost: "Fast passend",
+        pantry: "Mit Vorrat",
+        freezer: "Einfrierbar",
+        all: "Alle",
+      };
+      matchSummary.textContent = labels[recipeFilter] || "Fast passend";
+    }
+    const mealSummary = document.querySelector("[data-recipe-meal-summary]");
+    if (mealSummary) {
+      const labels = { breakfast: "Frühstück", main: "Hauptmahlzeit", snack: "Snack" };
+      mealSummary.textContent = labels[recipeMealFilter] || "Mahlzeit";
+    }
     const more = document.getElementById("recipeMoreFilters");
     if (more) more.textContent = recipeExtraFilters.size ? `Filter (${recipeExtraFilters.size})` : "Filter";
     const apply = document.getElementById("recipeFilterApply");
@@ -175,11 +191,16 @@
 
   function bindRecipeFilterControls() {
     document.querySelectorAll("#recipeFilter [data-recipe-filter]").forEach((button) => {
-      button.onclick = () => { recipeFilter = button.dataset.recipeFilter; renderRecipeCatalog(); };
+      button.onclick = () => {
+        recipeFilter = button.dataset.recipeFilter;
+        button.closest("details")?.removeAttribute("open");
+        renderRecipeCatalog();
+      };
     });
     document.querySelectorAll("#recipeMealFilter [data-recipe-meal]").forEach((button) => {
       button.onclick = () => {
         recipeMealFilter = recipeMealFilter === button.dataset.recipeMeal ? "" : button.dataset.recipeMeal;
+        button.closest("details")?.removeAttribute("open");
         renderRecipeCatalog();
       };
     });

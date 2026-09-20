@@ -66,20 +66,21 @@ try {
   await page.locator('nav button[data-view="foods"]').click();
 
   assert.equal(
-    await page.locator("#foodFilters > .mobile-filter-primary > button").count(),
+    await page.locator("#foodFilters > .food-filter-toolbar > .food-primary-select .mobile-filter-primary > button").count(),
     3,
     "Lebensmittel sollen nur drei häufige Primärfilter direkt zeigen",
   );
   assert.equal(
-    await page.locator("#foodFilters > .mobile-filter-secondary .mobile-filter-secondary-list > button").count(),
+    await page.locator("#foodFilters > .food-filter-toolbar > .food-secondary-select .mobile-filter-secondary-list > button").count(),
     4,
     "weitere Lebensmittelfilter sollen in der sekundären Filteroberfläche liegen",
   );
   assert.equal(
-    await page.locator("#foodFilters > .mobile-filter-secondary").evaluate((details) => details.open),
+    await page.locator("#foodFilters > .food-filter-toolbar > .food-secondary-select").evaluate((details) => details.open),
     false,
     "sekundäre Lebensmittelfilter sollen standardmäßig geschlossen sein",
   );
+  assert.equal(await page.locator("#foodFilters > .food-filter-toolbar > .food-primary-select").count(), 1, "Primärfilter sollen als Auswahlfeld kompakt zusammengefasst sein");
 
   const firstFoodRow = page.locator("#foodList .mobile-food-row").first();
   await firstFoodRow.waitFor({ state: "visible" });
@@ -105,7 +106,9 @@ try {
 
   await page.locator('#catalogSwitch button[data-catalog-mode="recipes"]').click();
   assert.equal(await page.locator('[data-recipe-filter="almost"]').evaluate((button) => button.classList.contains("active")), true, "Fast passend soll im Rezeptkatalog standardmäßig aktiv sein");
-  assert.equal(await page.locator("#recipeMealFilter").isVisible(), true, "Mahlzeiten-Schnellfilter müssen sichtbar bleiben");
+  assert.equal(await page.locator(".recipe-filter-toolbar").count(), 1, "Rezeptfilter sollen in einer kompakten Toolbar liegen");
+  await page.locator(".recipe-meal-select > summary").click();
+  assert.equal(await page.locator("#recipeMealFilter").isVisible(), true, "Mahlzeitenfilter müssen im Auswahlfeld erreichbar bleiben");
   assert.equal(await page.locator('[data-recipe-filter="pantry"]').count(), 1, "Mit Vorrat ist als schneller Rezeptfilter erreichbar");
   assert.equal(await page.locator('[data-recipe-filter="philippines"]').count(), 0, "Philippinen gehört nicht mehr in die normale Rezeptfilterung");
 
@@ -116,6 +119,7 @@ try {
   await page.locator("#recipeFilterApply").click();
   assert.equal(await page.locator("#recipeFilterSheet").isHidden(), true, "Rezepte anzeigen soll das Filter-Sheet schließen");
 
+  await page.locator(".recipe-match-select > summary").click();
   await page.locator('[data-recipe-filter="all"]').click();
   const firstRecipe = page.locator("#recipeList .recipe-card-v2").first();
   await firstRecipe.waitFor({ state: "visible" });

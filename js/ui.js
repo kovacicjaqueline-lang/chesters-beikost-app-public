@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 21061)
-Total output lines: 1598
-
 "use strict";
 
 /* Allgemeine Oberfläche
@@ -868,7 +865,84 @@ function openManualMealSelector(date, meal, initialMeal = null) {
   }
   function assignAutomaticRole(id, recipeContext = false) {
     let info = manualMealRoleInfo(id, meal, date, { recipeName: recipeContext ? selectedRecipe : "" });
-    baseFoodIds…1061 tokens truncated…ed = selectedFoods.has(f.id);
+    baseFoodIds.delete(id);
+    sampleFoodIds.delete(id);
+    if (info.role === "base") baseFoodIds.add(id);
+    else if (info.role === "sample") sampleFoodIds.add(id);
+    // Bekannte Komponenten bleiben bewusst außerhalb von Hauptbasis und Lernrolle.
+  }
+  function manualRecipeComponentIds(recipe) {
+    if (!recipe) return new Set();
+    let names = [
+      ...(recipe.requires || []),
+      ...(recipe.alternatives || []).flat(),
+      ...(recipe.oneOf || []),
+      ...(recipe.milkChoices || []),
+    ];
+    let ids = typeof recipeFoodIds === "function" ? recipeFoodIds(recipe) : [];
+    for (let name of names) {
+      let id = typeof foodByName === "function" ? foodByName(name, state.foods)?.id : "";
+      if (id) ids.push(id);
+    }
+    return new Set(ids.filter(Boolean));
+  }
+  function selectedManualRecipeAdditions(recipe) {
+    let recipeIds = manualRecipeComponentIds(recipe);
+    return [...selectedFoods].filter((id) => !recipeIds.has(id));
+  }
+  function setRole(id, role) {
+    if (!selectedFoods.has(id)) return;
+    let info = manualMealRoleInfo(id, meal, date, { recipeName: selectedRecipe });
+    if (role === "base" && info.role !== "base") return;
+    baseFoodIds.delete(id);
+    sampleFoodIds.delete(id);
+    (role === "sample" ? sampleFoodIds : baseFoodIds).add(id);
+  }
+  function removeSelectedFood(id) {
+    selectedFoods.delete(id);
+    baseFoodIds.delete(id);
+    sampleFoodIds.delete(id);
+  }
+  function commitMeal(data) {
+    let result = isNewManualSlot || isManualAdded
+      ? saveManualMeal(date, meal, data)
+      : saveEditedPlanMeal(date, meal, data);
+    if (!result?.ok) renderSelector();
+  }
+  function selectedRolesHtml(validation) {
+    if (!validation.ids.length) return '<div class="manual-role-empty small">Noch keine Lebensmittel ausgewählt.</div>';
+    let group = (title, ids, role) => `<div class="manual-role-group ${role}"><div class="manual-role-heading">${title}</div>${ids.length ? ids.map((id) => {
+      let f = food(id), info = validation.infos[id] || manualMealRoleInfo(id, meal, date, { recipeName: selectedRecipe });
+      let canBeBase = info.role === "base";
+      let learningLabel = manualLearningRoleText(f, existing?.type || "");
+      let switchButton = role === "sample" && canBeBase
+        ? `<button class="btn secondary tinybtn setManualRole" data-food="${id}" data-role="base">Als Hauptbasis</button>`
+        : role === "base" && info.role === "sample"
+          ? `<button class="btn secondary tinybtn setManualRole" data-food="${id}" data-role="sample">Als ${esc(learningLabel === "Pausiert" ? "Einführung oder Wiederholung" : learningLabel)}</button>`
+          : "";
+      let roleDetail = role === "sample" && learningLabel !== status(f) ? ` · ${esc(learningLabel)}` : "";
+      return `<div class="manual-role-item"><div class="grow"><b>${esc(f?.name || id)}</b><span class="small">${esc(status(f))}${roleDetail}</span></div><div class="manual-role-actions">${switchButton}<button class="iconbtn removeManualSelected" data-food="${id}" aria-label="${esc(f?.name || id)} entfernen">×</button></div></div>`;
+    }).join("") : '<div class="small manual-role-none">Keine</div>'}</div>`;
+    return `<div class="manual-role-overview">${group("Hauptbasis", validation.bases, "base")}${group("Bekannte Komponente", validation.components || [], "component")}${group("Einführung und Wiederholung", validation.samples, "sample")}</div>`;
+  }
+  function mealSelectorVisual(markup, kind) {
+    return `<span class="meal-selector-visual meal-selector-visual--${kind}" aria-hidden="true">${markup}</span>`;
+  }
+  function renderSelector() {
+    let roleData = currentRoleData();
+    let validation = manualMealValidation(roleData, meal, date);
+    let recipeRoleContext = selectedRecipe ? { recipeName: selectedRecipe } : {};
+    let recipeRows = recipeStates()
+      .filter(
+        (r) =>
+          (r.unlocked || r.almost || r.name === selectedRecipe) &&
+          recipeSuitableForMeal(r, meal) &&
+          (!query || normalizeName(recipeSearchText(r)).includes(normalizeName(query))),
+      )
+      .sort((a, b) => Number(b.unlocked) - Number(a.unlocked) || a.name.localeCompare(b.name, "de"));
+    let foodRows = state.foods
+      .filter((f) => {
+        let alreadySelected = selectedFoods.has(f.id);
         let selectable = manualMealRoleInfo(f, meal, date, recipeRoleContext).role !== "excluded";
         return (alreadySelected || selectable) && (!query || foodSearchMatches(f, query));
       })

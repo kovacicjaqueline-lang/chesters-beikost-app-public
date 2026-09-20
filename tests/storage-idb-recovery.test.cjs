@@ -74,11 +74,16 @@ function createStorageRuntime({ localStorage, idb, initialState }) {
     setState: (next) => { state = clone(next); },
     setIdbGet: (fn) => { idbGet = fn; },
     setIdbPut: (fn) => { idbPut = fn; },
+    createSnapshot,
   };`, context);
 
   const runtime = context.__storageTest;
   runtime.setIdbGet(async (key) => key === STATE_RECORD ? clone(idb.state) : []);
   runtime.setIdbPut(async (key, value) => {
+    if (key === SNAPSHOT_RECORD && idb.failNextSnapshot) {
+      idb.failNextSnapshot = false;
+      throw new Error("transient IndexedDB snapshot failure");
+    }
     if (key !== STATE_RECORD) return true;
     if (idb.failNextWrite) {
       idb.failNextWrite = false;
@@ -121,4 +126,24 @@ test("CR-001: newer local emergency copy wins after transient IndexedDB write fa
   assert.equal(idb.state.revision, "v3");
   assert.equal(JSON.parse(localStorage.getItem(KEY)).revision, "v3");
   assert.equal(localStorage.getItem(RECOVERY_KEY), null);
+});
+
+
+test("CR-001: Zwischenstände bleiben bei einem IndexedDB-Fehler lokal verfügbar", async () => {
+  const state = stateWithRevision("snapshot-v1");
+  const localStorage = createLocalStorage();
+  const idb = { state: clone(state), failNextWrite: false, failNextSnapshot: true };
+  const runtime = createStorageRuntime({ localStorage, idb, initialState: state });
+
+  const first = await runtime.createSnapshot("vor Backup");
+  assert.equal(first.length, 1);
+  const fallbackKey = `${KEY}-snapshots-fallback`;
+  const savedFallback = JSON.parse(localStorage.getItem(fallbackKey));
+  assert.equal(savedFallback.length, 1);
+  assert.equal(savedFallback[0].state.revision, "snapshot-v1");
+
+  runtime.setIdbGet(async () => null);
+  const second = await runtime.createSnapshot("zweiter Zwischenstand");
+  assert.equal(second.length, 2);
+  assert.equal(second[0].state.revision, "snapshot-v1");
 });

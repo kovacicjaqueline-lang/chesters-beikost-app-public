@@ -329,20 +329,26 @@ function removeLegacyProductData(migrated) {
   if (!migrated || typeof migrated !== "object") return migrated;
   delete migrated.products;
   delete migrated.productAllergenSchemaVersion;
-  migrated.foods = (Array.isArray(migrated.foods) ? migrated.foods : []).map((item) => {
-    let allergenGroup = item?.allergenGroup;
-    if (!legacySulfiteValue(allergenGroup)) return item;
-    return { ...item, allergenGroup: stripLegacySulfiteValue(allergenGroup) };
-  });
-  migrated.logs = (Array.isArray(migrated.logs) ? migrated.logs : []).map((log) => {
-    let { productAllergenSnapshots, ...rest } = log || {};
-    return rest;
-  });
-  migrated.inventory = (Array.isArray(migrated.inventory) ? migrated.inventory : []).map((item) => {
-    if (!item || typeof item !== "object") return item;
-    let { productAllergenSnapshot, ingredientProductSnapshots, ...rest } = item;
-    return rest;
-  });
+  if (Array.isArray(migrated.foods)) {
+    migrated.foods = migrated.foods.map((item) => {
+      let allergenGroup = item?.allergenGroup;
+      if (!legacySulfiteValue(allergenGroup)) return item;
+      return { ...item, allergenGroup: stripLegacySulfiteValue(allergenGroup) };
+    });
+  }
+  if (Array.isArray(migrated.logs)) {
+    migrated.logs = migrated.logs.map((log) => {
+      let { productAllergenSnapshots, ...rest } = log || {};
+      return rest;
+    });
+  }
+  if (Array.isArray(migrated.inventory)) {
+    migrated.inventory = migrated.inventory.map((item) => {
+      if (!item || typeof item !== "object") return item;
+      let { productAllergenSnapshot, ingredientProductSnapshots, ...rest } = item;
+      return rest;
+    });
+  }
   return migrated;
 }
 
@@ -364,6 +370,8 @@ if (typeof validateBackup === "function") {
         let checksum = await sha256Text(JSON.stringify(parsed.payload));
         if (parsed.checksum !== "unsupported" && checksum !== "unsupported" && checksum !== parsed.checksum) throw new Error("Die Backup-Datei scheint beschädigt oder verändert zu sein.");
       }
+      if (typeof validateBackupPayloadShape === "function") validateBackupPayloadShape(parsed.payload);
+      if (typeof stateSummary === "function") parsed.summary = stateSummary(parsed.payload);
       return parsed;
     }
     return baseValidateBackup(raw);
@@ -380,6 +388,7 @@ if (typeof buildBackupPackage === "function") {
     delete pack.productAllergenSchemaVersion;
     delete pack.payload.productAllergenSchemaVersion;
     pack.checksum = await sha256Text(JSON.stringify(pack.payload));
+    if (typeof stateSummary === "function") pack.summary = stateSummary(pack.payload);
     return pack;
   };
 }

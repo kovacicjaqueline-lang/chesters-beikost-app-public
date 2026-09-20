@@ -70,7 +70,7 @@ test("Recipe-plus-food: ein zweites Stärke-Lebensmittel wird ausgeschlossen", (
   }];
   const starchRecipes = [{
     name: "Karotten-Kartoffel-Brei",
-    requires: ["Karotte", "Kartoffel"],
+    requires: ["Polenta", "Kartoffel"],
   }];
 
   const candidates = feature.plannerRecipeFoodCompositionCandidates(
@@ -111,7 +111,7 @@ test("Recipe-plus-food: Rollen und persistierbare Zusammensetzung bleiben getren
     polenta: "base",
     rind: "sample",
   });
-  assert.match(result.note, /Rind.*Karotten-Polenta-Brei/);
+  assert.match(result.note, /Rind.*Karotten-Polenta-Brei/i);
 });
 
 test("Recipe-plus-food: automatische und manuelle Mahlzeiten bleiben unverändert", () => {

@@ -651,6 +651,7 @@ body.mobile-foundation .today-everyday-meal .compact-role-list {
 
 body.mobile-foundation .today-everyday-meal .compact-role-row {
   display: flex;
+  grid-template-columns: none;
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;

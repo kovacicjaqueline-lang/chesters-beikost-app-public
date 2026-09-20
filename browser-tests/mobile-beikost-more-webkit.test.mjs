@@ -66,21 +66,21 @@ try {
   await page.locator('nav button[data-view="foods"]').click();
 
   assert.equal(
-    await page.locator("#foodFilters > .food-primary-select .mobile-filter-primary > button").count(),
+    await page.locator("#foodFilters > .food-filter-toolbar > .food-primary-select .mobile-filter-primary > button").count(),
     3,
     "Lebensmittel sollen nur drei häufige Primärfilter direkt zeigen",
   );
   assert.equal(
-    await page.locator("#foodFilters > .food-secondary-select .mobile-filter-secondary-list > button").count(),
+    await page.locator("#foodFilters > .food-filter-toolbar > .food-secondary-select .mobile-filter-secondary-list > button").count(),
     4,
     "weitere Lebensmittelfilter sollen in der sekundären Filteroberfläche liegen",
   );
   assert.equal(
-    await page.locator("#foodFilters > .food-secondary-select").evaluate((details) => details.open),
+    await page.locator("#foodFilters > .food-filter-toolbar > .food-secondary-select").evaluate((details) => details.open),
     false,
     "sekundäre Lebensmittelfilter sollen standardmäßig geschlossen sein",
   );
-  assert.equal(await page.locator("#foodFilters > .food-primary-select").count(), 1, "Primärfilter sollen als Auswahlfeld kompakt zusammengefasst sein");
+  assert.equal(await page.locator("#foodFilters > .food-filter-toolbar > .food-primary-select").count(), 1, "Primärfilter sollen als Auswahlfeld kompakt zusammengefasst sein");
 
   const firstFoodRow = page.locator("#foodList .mobile-food-row").first();
   await firstFoodRow.waitFor({ state: "visible" });

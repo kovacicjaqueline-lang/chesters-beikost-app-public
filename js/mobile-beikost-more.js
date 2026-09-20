@@ -130,6 +130,9 @@
     toolbar.className = "mobile-filter-toolbar recipe-filter-toolbar";
     toolbar.append(matchSelect, mealSelect, more);
     document.getElementById("recipeSearch")?.closest(".field")?.after(toolbar);
+    section.querySelectorAll("#recipeFilter button, #recipeMealFilter button").forEach((button) => {
+      button.addEventListener("click", () => button.closest("details")?.removeAttribute("open"));
+    });
   }
 
   function installFoodCatalogStructure() {

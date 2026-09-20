@@ -109,6 +109,22 @@ try {
   assert.equal(await page.locator(".recipe-filter-toolbar").count(), 1, "Rezeptfilter sollen in einer kompakten Toolbar liegen");
   await page.locator(".recipe-meal-select > summary").click();
   assert.equal(await page.locator("#recipeMealFilter").isVisible(), true, "Mahlzeitenfilter müssen im Auswahlfeld erreichbar bleiben");
+  await page.locator(".recipe-match-select > summary").click();
+  const recipeFilterMenuPresentation = await page.locator("#recipeFilter").evaluate((filter) => {
+    const style = getComputedStyle(filter);
+    const rect = filter.getBoundingClientRect();
+    return {
+      display: style.display,
+      overflowX: style.overflowX,
+      width: rect.width,
+      scrollWidth: filter.scrollWidth,
+      buttonWidths: [...filter.children].map((button) => button.getBoundingClientRect().width),
+    };
+  });
+  assert.equal(recipeFilterMenuPresentation.display, "grid", "Verfügbarkeitsfilter sollen im Auswahlfeld untereinander stehen");
+  assert.equal(recipeFilterMenuPresentation.overflowX, "visible", "Das geöffnete Filterfeld darf nicht horizontal scrollen");
+  assert.ok(recipeFilterMenuPresentation.scrollWidth <= recipeFilterMenuPresentation.width + 1, "Verfügbarkeitsfilter dürfen das Auswahlfeld nicht verbreitern");
+  assert.ok(recipeFilterMenuPresentation.buttonWidths.every((width) => width <= recipeFilterMenuPresentation.width + 1), "Filterbeschriftungen müssen vollständig innerhalb des Auswahlfelds bleiben");
   assert.equal(await page.locator('[data-recipe-filter="pantry"]').count(), 1, "Mit Vorrat ist als schneller Rezeptfilter erreichbar");
   assert.equal(await page.locator('[data-recipe-filter="philippines"]').count(), 0, "Philippinen gehört nicht mehr in die normale Rezeptfilterung");
 
@@ -119,7 +135,10 @@ try {
   await page.locator("#recipeFilterApply").click();
   assert.equal(await page.locator("#recipeFilterSheet").isHidden(), true, "Rezepte anzeigen soll das Filter-Sheet schließen");
 
-  await page.locator(".recipe-match-select > summary").click();
+  const recipeMatchSelect = page.locator(".recipe-match-select");
+  if (!(await recipeMatchSelect.evaluate((select) => select.open))) {
+    await recipeMatchSelect.locator("> summary").click();
+  }
   await page.locator('[data-recipe-filter="all"]').click();
   const firstRecipe = page.locator("#recipeList .recipe-card-v2").first();
   await firstRecipe.waitFor({ state: "visible" });

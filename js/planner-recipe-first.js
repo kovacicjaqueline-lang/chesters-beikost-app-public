@@ -218,7 +218,7 @@ function plannerSelectExactRecipe(
   let tied = ranked.length > 1 &&
       ranked[0].stockRank === ranked[1].stockRank &&
       ranked[0].used === ranked[1].used;
-  if (tied && offset) {
+  if (offset && ranked.length > 1) {
     let index = ((offset % ranked.length) + ranked.length) % ranked.length;
     return ranked[index]?.recipe || null;
   }

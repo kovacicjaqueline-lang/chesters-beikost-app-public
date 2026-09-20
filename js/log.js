@@ -544,11 +544,11 @@ function bindLogRecipeChoiceActions(root = document) {
   root.querySelector("[data-log-recipe-milk]")?.addEventListener("change", (event) => updateLogRecipeChoice({ milkChoiceId: event.target.value }));
 }
 
-function syncCustomFoodAction(candidates = null) {
+function syncCustomFoodAction(hasMatches = null) {
   let button = document.getElementById("addCustomLogFood");
   if (!button) return;
   let rawQuery = String(logFoodQuery || "").trim();
-  let hasMatches = rawQuery ? (candidates || logFoodCandidates(rawQuery)).length > 0 : true;
+  if (hasMatches === null) hasMatches = rawQuery ? logFoodCandidates(rawQuery).length > 0 : true;
   button.hidden = !rawQuery || hasMatches;
   let results = document.querySelector("#logForm .log-food-results");
   if (results && button.previousElementSibling !== results) results.after(button);
@@ -562,14 +562,17 @@ function renderLogFoodResults() {
   if (!label || !results) return;
   label.textContent = logFoodQuery ? "Suchergebnisse" : "";
   label.hidden = !logFoodQuery;
-  let candidates = logFoodCandidates(logFoodQuery);
-  let renderKey = `${normalizeName(logFoodQuery)}|${candidates.map((item) => item.id).join(",")}|${[...selectedLogFoods].sort().join(",")}`;
-  if (results.dataset.renderKey !== renderKey) {
-    results.innerHTML = logFoodResultsHtml(candidates);
-    results.dataset.renderKey = renderKey;
-    bindLogFoodResultActions(results);
+  let renderKey = `${normalizeName(logFoodQuery)}|${[...selectedLogFoods].sort().join(",")}`;
+  if (results.dataset.renderKey === renderKey) {
+    syncCustomFoodAction(results.dataset.hasMatches === "true");
+    return;
   }
-  syncCustomFoodAction(candidates);
+  let candidates = logFoodCandidates(logFoodQuery);
+  results.innerHTML = logFoodResultsHtml(candidates);
+  results.dataset.renderKey = renderKey;
+  results.dataset.hasMatches = candidates.length ? "true" : "false";
+  bindLogFoodResultActions(results);
+  syncCustomFoodAction(candidates.length > 0);
 }
 function renderLogRecipeResults() {
   let input = document.getElementById("logRecipeSearch");

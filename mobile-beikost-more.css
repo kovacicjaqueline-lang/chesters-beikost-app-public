@@ -618,6 +618,7 @@ body.mobile-foundation #foods .recipe-filter-toolbar .seg {
   display: flex;
   gap: 6px;
   overflow: visible;
+  margin: 0;
   padding: 0;
 }
 

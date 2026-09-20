@@ -103,11 +103,11 @@
       <div role="radiogroup" aria-label="App-Schwerpunkt">
         <label class="app-focus-option">
           <input type="radio" name="appFocusMode" value="${MODE_EVERYDAY}">
-          <span class="toggle-copy"><b>Alltag &amp; Rezepte</b><span class="small">– Tagesideen und Rezepte stehen im Vordergrund</span></span>
+          <span class="toggle-copy"><b>Alltag &amp; Rezepte</b><span class="small">– Tagesideen &amp; Rezepte im Vordergrund</span></span>
         </label>
         <label class="app-focus-option">
           <input type="radio" name="appFocusMode" value="${MODE_PLANNING}">
-          <span class="toggle-copy"><b>Planen &amp; Dokumentieren</b><span class="small">– Planung, Fortschritt und Protokollierung stehen stärker im Vordergrund</span></span>
+          <span class="toggle-copy"><b>Planen &amp; Dokumentieren</b><span class="small">– Planung &amp; Fortschritt im Vordergrund</span></span>
         </label>
       </div>`;
     host.appendChild(field);

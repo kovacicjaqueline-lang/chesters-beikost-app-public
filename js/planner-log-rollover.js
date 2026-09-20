@@ -784,8 +784,11 @@
 
       if (manuallyClosed) {
         let logCount = CORE.logsForDate(state, day.date).length;
-        let summary = plans.length
-          ? `${completedPlans.length}/${plans.length} geplant dokumentiert${openPlans.length ? ` · ${openPlans.length} nicht dokumentiert` : ""}`
+        let visiblePlanEntries = entries.filter((entry) => entry.kind === "plan" || entry.completedPlan);
+        let openVisiblePlans = visiblePlanEntries.filter((entry) => entry.kind === "plan").length;
+        let completedVisiblePlans = visiblePlanEntries.filter((entry) => entry.completedPlan).length;
+        let summary = visiblePlanEntries.length
+          ? `${completedVisiblePlans}/${visiblePlanEntries.length} geplant dokumentiert${openVisiblePlans ? ` · ${openVisiblePlans} nicht dokumentiert` : ""}`
           : `${logCount} ${logCount === 1 ? "Protokolleintrag" : "Protokolleinträge"}`;
         let label = day.date === today() ? "Heute" : nice(day.date, true);
         return `<details class="card block completed-day manual-day-closure"><summary><span><span class="completed-day-title">${esc(label)} abgeschlossen</span><span class="small">${summary}</span></span><span class="completed-day-chevron">▼</span></summary><div class="completed-day-body">${renderedEntries}${extra.length ? `<div class="add-meal-row"><button class="btn secondary smallbtn addExtraMeal" data-date="${day.date}">+ Mahlzeit hinzufügen</button></div>` : ""}<div class="day-closure-actions"><button class="btn secondary smallbtn reopenDay" data-date="${day.date}">Tag wieder öffnen</button></div></div></details>`;

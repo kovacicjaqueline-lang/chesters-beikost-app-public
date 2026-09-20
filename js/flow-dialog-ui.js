@@ -436,7 +436,7 @@
   genericModal.addEventListener("click", (event) => {
     const tab = event.target.closest?.("#selectorRecipes, #selectorFoods");
     if (tab) mealSelectorQuery = "";
-  });
+  }, true);
 
   genericModal.addEventListener("change", (event) => {
     if (event.target?.id === "manualMealTargetDate") syncGeneric();

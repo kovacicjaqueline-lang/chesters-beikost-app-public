@@ -2,17 +2,37 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const vm = require("node:vm");
 
 const {
   RECIPE_WATER_INSTRUCTION_FIXES,
   installRecipeWaterInstructionFixes,
 } = require("../js/planned-recipe-details.js");
 
-test("audited recipe water instructions state how the water is used", () => {
-  assert.equal(Object.keys(RECIPE_WATER_INSTRUCTION_FIXES).length, 33);
+function currentRuntimeRecipes() {
+  let context = vm.createContext({ console });
+  let dataSource = fs.readFileSync(path.join(__dirname, "../data/recipes.js"), "utf8");
+  let runtimeSource = fs.readFileSync(path.join(__dirname, "../js/recipes.js"), "utf8");
+  vm.runInContext(dataSource, context, { filename: "data/recipes.js" });
+  vm.runInContext(runtimeSource, context, { filename: "js/recipes.js" });
+  return vm.runInContext("RECIPES.map((recipe) => ({ ...recipe }))", context);
+}
 
-  for (let [name, note] of Object.entries(RECIPE_WATER_INSTRUCTION_FIXES)) {
-    assert.match(note, /Wasser/i, `${name} must explicitly mention its listed water`);
+test("every runtime recipe that lists water explains its use", () => {
+  let recipes = currentRuntimeRecipes();
+  assert.equal(installRecipeWaterInstructionFixes(recipes), true);
+
+  let waterRecipes = recipes.filter((recipe) => /Wasser/i.test(String(recipe.ingredients || "")));
+  assert.ok(waterRecipes.some((recipe) => recipe.name === "Rind-Gemüse-Bolognese"));
+
+  for (let recipe of waterRecipes) {
+    assert.match(
+      String(recipe.note || ""),
+      /Wasser/i,
+      `${recipe.name} lists water but does not explain it in the preparation`,
+    );
   }
 
   assert.match(

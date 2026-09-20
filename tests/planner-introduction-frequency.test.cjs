@@ -183,10 +183,11 @@ test("bekannt kombinieren ist kein Lernslot; echte Kostprobe bleibt Lernslot", (
   assert.equal(policy.plannerIntroductionMealIsLearning({ active: true, type: "manuell", sampleFoodIds: ["brokkoli"] }), true);
 });
 
-test("erfolgreich Probiert blockiert keine frische Einführung, echte Ablehnung bleibt zulässig", () => {
+test("gewöhnliche automatische Einführung wird übersprungen, echte Ablehnung bleibt zulässig", () => {
   const tried = { f: { id: "zucchini", allergenGroup: "" }, type: "bekannt kombinieren" };
-  assert.equal(policy.plannerIntroductionCandidateShouldSkip(tried, () => 1, () => "eaten", true), true);
-  assert.equal(policy.plannerIntroductionCandidateShouldSkip(tried, () => 1, () => "not_accepted", true), false);
+  assert.equal(policy.plannerIntroductionCandidateShouldSkip(tried, () => 1, () => "eaten", true, false), true);
+  assert.equal(policy.plannerIntroductionCandidateShouldSkip(tried, () => 1, () => "not_accepted", true, false), false);
+  assert.equal(policy.plannerIntroductionCandidateShouldSkip({ f: { id: "neu", allergenGroup: "" }, type: "manuell" }, () => 0, () => "", true, false), false);
 });
 
 test("fälliges Allergen wird auch aus altem 'bekannt kombinieren'-Ergebnis als Allergen-Wiederholung erkannt", () => {
@@ -212,7 +213,7 @@ test("Snack-FOOD-Pfad ist eng auf bekanntes geeignetes Obst begrenzt", () => {
   assert.equal(policy.plannerIntroductionKnownSnackFruitEligible({ id: "kartoffel", active: true, category: "Wurzel/Knolle", allergenGroup: "", known: true }, "2026-08-23", options), false);
 });
 
-test("Runtime plant täglich je ein neues Nicht-Allergen pro Hauptmahlzeit; Probiert blockiert nicht", () => {
+test("Runtime erzwingt keine automatische Nicht-Allergen-Einführung mehr", () => {
   withRuntimeGlobals(() => {
     installFakePlanner({
       foods: [
@@ -229,17 +230,21 @@ test("Runtime plant täglich je ein neues Nicht-Allergen pro Hauptmahlzeit; Prob
   }, () => {
     const day = global.buildDay("2026-08-23", 1, blankContext());
     const byMeal = Object.fromEntries(day.meals.map((meal) => [meal.meal, meal]));
-    assert.deepEqual(byMeal.breakfast.sampleFoodIds, ["frueh"]);
-    assert.deepEqual(byMeal.lunch.sampleFoodIds, ["mittag"]);
-    assert.deepEqual(byMeal.dinner.sampleFoodIds, ["abend"]);
+    assert.deepEqual(byMeal.breakfast.sampleFoodIds, []);
+    assert.deepEqual(byMeal.lunch.sampleFoodIds, []);
+    assert.deepEqual(byMeal.dinner.sampleFoodIds, []);
+    assert.equal(byMeal.breakfast.focusId, "basis");
+    assert.equal(byMeal.lunch.focusId, "basis");
+    assert.equal(byMeal.dinner.focusId, "basis");
     assert.equal(byMeal.breakfast.stackApplied, true);
-    assert.equal(byMeal.lunch.stackApplied, true, "zusätzliche Einführung muss erneut den vollständigen Planner-Stack durchlaufen");
+    assert.equal(byMeal.lunch.stackApplied, true);
     assert.equal(byMeal.dinner.stackApplied, true);
     assert.equal(byMeal.snack.focusId, "banane");
     assert.deepEqual(byMeal.snack.sampleFoodIds, []);
     assert.equal(global.manualMealRoleInfo("banane", "snack").role, "base");
     assert.equal(global.manualMealRoleInfo("frueh", "snack").role, "excluded");
     assert.equal(global.state.settings.newFoodEvery, 4, "Legacy-Einstellung darf nicht mutiert werden");
+    assert.equal(policy.PLANNER_INTRODUCTION_AUTOPLAN_NON_ALLERGENS, false);
   });
 });
 

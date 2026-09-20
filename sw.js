@@ -188,6 +188,11 @@ const RECIPE_RUNTIME_PRECACHE = [
   "./assets/illustrations-v2/recipes/lachs-brokkoli-kartoffel-auflauf.svg",
   "./assets/illustrations-v2/recipes/mildes-bohnen-suesskartoffel-chili.svg",
   "./assets/illustrations-v2/recipes/gefuellte-paprika-mit-linsenreis.svg",
+  "./assets/illustrations-v2/recipes/apfel-pflaumen-kompott.svg",
+  "./assets/illustrations-v2/recipes/birne-pfirsich-kompott.svg",
+  "./assets/illustrations-v2/recipes/mango-bananen-creme.svg",
+  "./assets/illustrations-v2/recipes/kartoffel-karotten-stampf.svg",
+  "./assets/illustrations-v2/recipes/gemuese-reis-brei.svg",
 ];
 
 self.addEventListener("install", (event) => {

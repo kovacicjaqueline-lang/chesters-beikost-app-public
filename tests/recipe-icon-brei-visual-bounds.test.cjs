@@ -11,8 +11,8 @@ const RECIPE_DIR = path.join(ROOT, "assets", "illustrations-v2", "recipes");
 const CSS_FILE = path.join(ROOT, "ui-meal-editor-footer.css");
 const ALPHA_THRESHOLD = 16;
 const RECIPE_MIN_MARGIN_PX = 2;
-const EXPECTED_BREI_COUNT = 24;
-const EXPECTED_STAMPF_COUNT = 5;
+const EXPECTED_BREI_COUNT = 25;
+const EXPECTED_STAMPF_COUNT = 6;
 const EXPECTED_PANCAKES_COUNT = 7;
 const EXPECTED_TALER_COUNT = 5;
 const EXPECTED_MUFFINS_COUNT = 6;
@@ -24,11 +24,6 @@ const NORMALIZED_BAELLCHEN_IDS = new Set([
   "rote-linsen-gemuesebaellchen",
   "tofu-brokkoli-baellchen",
 ]);
-const NORMALIZED_LUGAW_IDS = new Set([
-  "kuerbis-lugaw",
-  "lugaw-basis",
-]);
-
 function paeth(a, b, c) {
   const p = a + b - c;
   const pa = Math.abs(p - a);
@@ -164,9 +159,9 @@ function escapeRegExp(value) {
 
 function cssGeometry(css, id) {
   const selector = `\\.illustration-icon__asset\\[src\\*="/recipes/${escapeRegExp(id)}\\.svg"\\]`;
-  const blocks = Array.from(css.matchAll(new RegExp(`${selector}\\s*\\{([\\s\\S]*?)\\}`, "g")));
+  const blocks = Array.from(css.matchAll(new RegExp(`${selector}(?:\\s*,[\\s\\S]*?)?\\s*\\{([\\s\\S]*?)\\}`, "g")));
   const numericScaleDeclaration = /--recipe-circle-scale:\s*-?[0-9.]+/;
-  const block = blocks.find((candidate) => numericScaleDeclaration.test(candidate[1]));
+  const block = blocks.reverse().find((candidate) => numericScaleDeclaration.test(candidate[1]));
   assert.ok(block, `${id}: CSS-Normalisierung fehlt`);
 
   function numeric(variable, suffix = "") {
@@ -320,7 +315,7 @@ test("Recipe-V2 Bällchen: nur klar zu kleine kompakte Motive werden familienbez
   }
 });
 
-test("Recipe-V2 Lugaw: nur die zwei zu kleinen Schüssel-Motive werden an Huhn-Lugaw angeglichen", () => {
+test("Recipe-V2 Lugaw: alle drei Schüssel-Motive verwenden die Master-Schüssel", () => {
   const css = fs.readFileSync(CSS_FILE, "utf8");
   const files = fs.readdirSync(RECIPE_DIR)
     .filter((name) => name.endsWith(".svg") && name.includes("lugaw"))
@@ -330,25 +325,10 @@ test("Recipe-V2 Lugaw: nur die zwei zu kleinen Schüssel-Motive werden an Huhn-L
 
   for (const name of files) {
     const source = measure(path.join(RECIPE_DIR, name));
-    if (!NORMALIZED_LUGAW_IDS.has(source.id)) {
-      assertMargins(source.id, source);
-      const selector = `\\.illustration-icon__asset\\[src\\*="/recipes/${escapeRegExp(source.id)}\\.svg"\\]`;
-      assert.doesNotMatch(
-        css,
-        new RegExp(`${selector}\\s*\\{[^}]*--recipe-lugaw-(?:size|left|top)`, "s"),
-        `${source.id}: Familienreferenz soll unverändert bleiben`,
-      );
-      continue;
-    }
-
     const geometry = cssGeometry(css, source.id);
     const bounds = renderedBounds(source, geometry);
     assertMargins(source.id, bounds);
-    const renderedWidth = bounds.maxX - bounds.minX;
-    assert.ok(
-      renderedWidth >= 91.9 && renderedWidth <= 92.1,
-      `${source.id}: sichtbare Zielbreite ${renderedWidth.toFixed(2)} px liegt nicht bei der Huhn-Lugaw-Familienreferenz von 92 px`,
-    );
+    assert.equal(geometry.scale, 0.94, `${source.id}: Master-Schüssel-Skalierung fehlt`);
   }
 });
 

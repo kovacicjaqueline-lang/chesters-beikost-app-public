@@ -137,7 +137,8 @@ const RECIPE_CONTRACT_GROUPS = Object.freeze({
     "Obst-Grieß-Joghurt",
     "Buttermilch-Hafer-Obstbrei",
     "Buttermilch-Hirse-Obstbrei",
-    "Buttermilch-Grieß-Obstbrei"
+    "Buttermilch-Grieß-Obstbrei",
+    "Gemüse-Reis-Brei"
   ]),
   spoonSoftLumpyLater: Object.freeze([
     "Gemüse-Nudel-Sauce",
@@ -171,7 +172,10 @@ const RECIPE_CONTRACT_GROUPS = Object.freeze({
     "Joghurt-Nussmus-Miniportion",
     "Karotten-Linsen-Aufstrich",
     "Weiße-Bohnen-Paprika-Aufstrich",
-    "Erbsen-Basilikum-Pesto ohne Salz"
+    "Erbsen-Basilikum-Pesto ohne Salz",
+    "Apfel-Pflaumen-Kompott",
+    "Birne-Pfirsich-Kompott",
+    "Mango-Bananen-Creme"
   ]),
   spoonMashLumpy: Object.freeze([
     "Arroz-caldo-inspiriert",
@@ -185,7 +189,8 @@ const RECIPE_CONTRACT_GROUPS = Object.freeze({
     "Kabeljau-Tomaten-Gemüse",
     "Weiches Rührei",
     "Tofu-Zucchini-Reis",
-    "Bohnen-Kartoffel-Stampf"
+    "Bohnen-Kartoffel-Stampf",
+    "Kartoffel-Karotten-Stampf"
   ]),
   fingerEasyLater: Object.freeze([
     "Ei-Champignon-Cups"
@@ -314,6 +319,21 @@ const RECIPE_CONTRACT_OVERRIDES = Object.freeze({
   }),
   "Gefüllte Paprika mit Linsenreis": Object.freeze({
     servingRequirement: "Paprika sehr weich und ohne harte Haut anbieten. Füllung weich garen und Babyportion in kleine, leicht zerdrückbare Stücke teilen.",
+  }),
+  "Apfel-Pflaumen-Kompott": Object.freeze({
+    servingRequirement: "Sehr weich dünsten und glatt pürieren oder passend zur aktuellen Konsistenz zerdrücken. Ohne Zucker, Honig und Salz vom Löffel anbieten.",
+  }),
+  "Birne-Pfirsich-Kompott": Object.freeze({
+    servingRequirement: "Sehr weich dünsten und glatt pürieren oder passend zur aktuellen Konsistenz zerdrücken. Ohne Zucker, Honig und Salz vom Löffel anbieten.",
+  }),
+  "Mango-Bananen-Creme": Object.freeze({
+    servingRequirement: "Reife Früchte glatt pürieren oder sehr fein zerdrücken und frisch vom Löffel anbieten. Keine zusätzlichen Süßungsmittel; bei nicht sofortigem Servieren gekühlt aufbewahren.",
+  }),
+  "Kartoffel-Karotten-Stampf": Object.freeze({
+    servingRequirement: "Kartoffel und Karotte vollständig weich garen und glatt pürieren oder weich zerdrücken. Feucht vom Löffel anbieten; Rapsöl erst in die servierte Portion geben. Keine Brühe und kein Salz.",
+  }),
+  "Gemüse-Reis-Brei": Object.freeze({
+    servingRequirement: "Reis und Gemüse vollständig weich garen und glatt pürieren oder weich zerdrücken. Feucht vom Löffel anbieten; keine trockenen Körner und keine gesalzene Brühe. Rapsöl erst in die servierte Portion geben.",
   }),
 });
 

@@ -353,6 +353,12 @@
   --recipe-circle-shift-y: -10.834%;
 }
 
+.illustration-icon__asset[src*="/recipes/gemuese-reis-brei.svg"] {
+  --recipe-circle-scale: 1;
+  --recipe-circle-shift-x: 0%;
+  --recipe-circle-shift-y: 0%;
+}
+
 .illustration-icon__asset[src*="/recipes/bohnen-kartoffel-stampf.svg"] {
   --recipe-circle-scale: 1.024000;
   --recipe-circle-shift-x: 0.000%;
@@ -372,6 +378,11 @@
   --recipe-circle-scale: 1.113040;
   --recipe-circle-shift-x: 0.000%;
   --recipe-circle-shift-y: 0.000%;
+}
+.illustration-icon__asset[src*="/recipes/kartoffel-karotten-stampf.svg"] {
+  --recipe-circle-scale: 1;
+  --recipe-circle-shift-x: 0%;
+  --recipe-circle-shift-y: 0%;
 }
 .illustration-icon__asset[src*="/recipes/lachs-suesskartoffel-stampf.svg"] {
   --recipe-circle-scale: 1.248780;
@@ -452,4 +463,67 @@
   color: var(--muted);
   font-size: 12px;
   line-height: 1.35;
+}
+
+/* Recipe-V2 master bowl: every bowl recipe keeps the same generous vessel
+ * size; only the recipe content changes. */
+  .illustration-icon__asset[src*="/recipes/obst-haferbrei.svg"],
+  .illustration-icon__asset[src*="/recipes/obst-hirsebrei.svg"],
+  .illustration-icon__asset[src*="/recipes/obst-polentabrei.svg"],
+  .illustration-icon__asset[src*="/recipes/obst-reisbrei.svg"],
+  .illustration-icon__asset[src*="/recipes/obst-quinoabrei.svg"],
+  .illustration-icon__asset[src*="/recipes/obst-buchweizenbrei.svg"],
+  .illustration-icon__asset[src*="/recipes/obst-griessbrei.svg"],
+  .illustration-icon__asset[src*="/recipes/milch-getreide-brei.svg"],
+  .illustration-icon__asset[src*="/recipes/kuerbis-hafer-brei.svg"],
+  .illustration-icon__asset[src*="/recipes/monggo-kalabasa-brei.svg"],
+  .illustration-icon__asset[src*="/recipes/karotten-polenta-brei.svg"],
+  .illustration-icon__asset[src*="/recipes/suesskartoffel-rote-linsen-brei.svg"],
+  .illustration-icon__asset[src*="/recipes/zucchini-quinoa-brei.svg"],
+  .illustration-icon__asset[src*="/recipes/bananen-haferbrei-mit-erdnussmus.svg"],
+  .illustration-icon__asset[src*="/recipes/karotten-hirse-brei-mit-tahin.svg"],
+  .illustration-icon__asset[src*="/recipes/apfel-hirse-brei-mit-mandelmus.svg"],
+  .illustration-icon__asset[src*="/recipes/karotte-suesskartoffel-brei.svg"],
+  .illustration-icon__asset[src*="/recipes/zucchini-kartoffel-brei.svg"],
+  .illustration-icon__asset[src*="/recipes/kuerbis-kichererbsen-creme.svg"],
+  .illustration-icon__asset[src*="/recipes/monggo-suesskartoffel-brei.svg"],
+  .illustration-icon__asset[src*="/recipes/ube-hafer-brei.svg"],
+  .illustration-icon__asset[src*="/recipes/obst-joghurt.svg"],
+  .illustration-icon__asset[src*="/recipes/obst-hafer-joghurt.svg"],
+  .illustration-icon__asset[src*="/recipes/obst-hirse-joghurt.svg"],
+  .illustration-icon__asset[src*="/recipes/obst-griess-joghurt.svg"],
+  .illustration-icon__asset[src*="/recipes/buttermilch-hafer-obstbrei.svg"],
+  .illustration-icon__asset[src*="/recipes/buttermilch-hirse-obstbrei.svg"],
+  .illustration-icon__asset[src*="/recipes/buttermilch-griess-obstbrei.svg"],
+  .illustration-icon__asset[src*="/recipes/gemuese-reis-brei.svg"],
+  .illustration-icon__asset[src*="/recipes/baby-linsen-bolognese.svg"],
+  .illustration-icon__asset[src*="/recipes/sayote-huhn-reis.svg"],
+  .illustration-icon__asset[src*="/recipes/gemuese-kichererbsen-couscous.svg"],
+  .illustration-icon__asset[src*="/recipes/rind-gemuese-bolognese.svg"],
+  .illustration-icon__asset[src*="/recipes/lugaw-basis.svg"],
+  .illustration-icon__asset[src*="/recipes/kuerbis-lugaw.svg"],
+  .illustration-icon__asset[src*="/recipes/kalabasa-mit-kokos.svg"],
+  .illustration-icon__asset[src*="/recipes/tilapia-reis-brei.svg"],
+  .illustration-icon__asset[src*="/recipes/apfel-birnen-kompott.svg"],
+  .illustration-icon__asset[src*="/recipes/mildes-rote-linsen-dhal.svg"],
+  .illustration-icon__asset[src*="/recipes/tomaten-linsen-sauce.svg"],
+  .illustration-icon__asset[src*="/recipes/lachs-suesskartoffel-stampf.svg"],
+  .illustration-icon__asset[src*="/recipes/avocado-bananen-creme.svg"],
+  .illustration-icon__asset[src*="/recipes/huhn-lugaw.svg"],
+  .illustration-icon__asset[src*="/recipes/joghurt-nussmus-miniportion.svg"],
+  .illustration-icon__asset[src*="/recipes/erbsen-basilikum-pesto-ohne-salz.svg"],
+  .illustration-icon__asset[src*="/recipes/apfel-pflaumen-kompott.svg"],
+  .illustration-icon__asset[src*="/recipes/birne-pfirsich-kompott.svg"],
+  .illustration-icon__asset[src*="/recipes/mango-bananen-creme.svg"],
+  .illustration-icon__asset[src*="/recipes/brokkoli-kartoffel-stampf.svg"],
+  .illustration-icon__asset[src*="/recipes/karfiol-kartoffel-stampf.svg"],
+  .illustration-icon__asset[src*="/recipes/erbsen-kartoffel-stampf.svg"],
+  .illustration-icon__asset[src*="/recipes/huhn-brokkoli-reis.svg"],
+  .illustration-icon__asset[src*="/recipes/lachs-reis-erbsen.svg"],
+  .illustration-icon__asset[src*="/recipes/tofu-zucchini-reis.svg"],
+  .illustration-icon__asset[src*="/recipes/bohnen-kartoffel-stampf.svg"],
+  .illustration-icon__asset[src*="/recipes/kartoffel-karotten-stampf.svg"] {
+  --recipe-circle-scale: 0.94;
+  --recipe-circle-shift-x: 0%;
+  --recipe-circle-shift-y: 0%;
 }

@@ -26,7 +26,10 @@ const stateSchemaVersion = numericConstant(stateSource, "SCHEMA_VERSION");
 function fixtureState() {
   return {
     settings: { phaseSelected: "aufbau" },
-    foods: [{ id: "rosine", name: "Rosine", active: true, allergenGroup: "" }],
+    foods: [
+      { id: "rosine", name: "Rosine", active: true, liked: false, notes: "persönlich notiert", allergenGroup: "" },
+      { id: "custom-oat", name: "Haferbrei selbst", active: true, custom: true },
+    ],
     logs: [{
       id: "log-1",
       date: "2026-08-20",
@@ -64,6 +67,7 @@ function loadRuntime(initialState = fixtureState()) {
     SNAPSHOT_RECORD: "snapshots",
     LEGACY_KEYS: [],
     DEFAULT: { foods: [], logs: [], inventory: [] },
+    FOOD_DB: [{ id: "rosine", name: "Rosine", active: true, liked: true, notes: "", allergenGroup: "" }],
     state: clone(initialState),
     localStorage: {
       setItem(key, value) { localWrites.set(key, value); },
@@ -98,6 +102,14 @@ test("aktueller Export verwendet wieder das kanonische Backup-Schema 5", async (
   assert.equal(Object.hasOwn(pack.payload.logs[0], "productAllergenSnapshots"), false);
   assert.equal(Object.hasOwn(pack.payload.inventory[0], "ingredientProductSnapshots"), false);
   assert.equal(pack.checksum, await checksum(context, pack.payload));
+  assert.equal(Object.hasOwn(pack.payload, "foods"), false, "der integrierte Katalog gehört nicht in den externen Payload");
+  assert.deepEqual(clone(pack.payload.customFoods), [fixtureState().foods[1]]);
+  assert.deepEqual(clone(pack.payload.foodPreferences), [{ id: "rosine", liked: false, notes: "persönlich notiert" }]);
+  pack.summary = { customFoods: 999 };
+  const validated = await context.validateBackup(JSON.stringify(pack));
+  const restored = context.migrateState(context.backupPayloadToState(validated.payload));
+  assert.equal(validated.summary.customFoods, 1);
+  assert.deepEqual(clone(restored.foods), fixtureState().foods);
 });
 
 test("früheres Sulfit-Backup-Schema 6 bleibt importierbar und wird bereinigt", async () => {
@@ -137,4 +149,16 @@ test("Migration behält die tatsächliche Rezeptzutaten-Bestätigung", () => {
   const migrated = context.migrateState(fixtureState());
   assert.equal(migrated.inventory[0].actualRecipeIngredientsConfirmed, true);
   assert.deepEqual(migrated.inventory[0].foodIds, ["rosine"]);
+});
+
+
+test("normalisierte Backup-Payloads validieren Struktur und berechnen die Zusammenfassung neu", async () => {
+  const { context } = loadRuntime();
+  const pack = await context.buildBackupPackage();
+  pack.payload.foodPreferences = [{ liked: false }];
+  pack.checksum = await checksum(context, pack.payload);
+  await assert.rejects(
+    () => context.validateBackup(JSON.stringify(pack)),
+    /Nutzdaten sind ungültig/,
+  );
 });

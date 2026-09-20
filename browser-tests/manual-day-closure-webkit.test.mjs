@@ -70,8 +70,11 @@ try {
   await waitForApp(page);
 
   const date = await page.evaluate(() => {
-    window.__beikostTest.reset();
-    const state = window.__beikostTest.getState();
+    const state = window.__beikostTest.reset();
+    state.logs = [];
+    state.planLocks = {};
+    state.manualMeals = {};
+    state.dayClosures = {};
     const current = window.__beikostTest.today();
     state.settings.phaseSelected = "aufbau";
     state.planLocks[`${current}|lunch`] = {

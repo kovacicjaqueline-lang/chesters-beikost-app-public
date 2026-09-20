@@ -238,6 +238,7 @@ function mealEditorRecipeEnsureContext() {
       initialRecipeName: recipeName || "",
       selections: {},
       searchQuery: "",
+      resetSearchQuery: false,
       refreshingSlot: false,
     };
   } else {
@@ -315,6 +316,11 @@ function mealEditorRecipeFilterResults() {
   let input = document.getElementById("mealSelectorSearch");
   let results = document.querySelector("#genericBody .selector-results");
   if (!input || !results) return;
+  if (context.resetSearchQuery) {
+    input.value = "";
+    context.searchQuery = "";
+    context.resetSearchQuery = false;
+  }
   let searchQuery = input.value ?? context.searchQuery ?? "";
   context.searchQuery = searchQuery;
   let normalized = mealEditorRecipeNormalize(searchQuery);
@@ -599,6 +605,7 @@ function mealEditorRecipeHandleCapture(event) {
   if (!context) return;
   if (target.id === "selectorRecipes" || target.id === "selectorFoods") {
     context.searchQuery = "";
+    context.resetSearchQuery = true;
     return;
   }
   if (target.classList.contains("selectFood") || target.classList.contains("removeManualSelected")) {

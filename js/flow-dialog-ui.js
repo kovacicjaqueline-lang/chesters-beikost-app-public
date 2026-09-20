@@ -456,6 +456,10 @@
         }
       }
       logSelectorMode = nextMode;
+      // WebKit can deliver the tab click before the observer has applied the
+      // panel visibility. Apply the selected mode synchronously so the next
+      // interaction never sees a hidden search field.
+      ensureLogSelector();
       if (typeof clearLogSelectorSearch === "function") clearLogSelectorSearch(nextMode);
       return;
     }

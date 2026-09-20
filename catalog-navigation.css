@@ -559,7 +559,7 @@ body.mobile-foundation .today-everyday-meal .meal-summary-row.has-recipe-visual 
 body.mobile-foundation .today-everyday-meal .meal-summary-row.has-recipe-visual > .meal-summary-actions {
   position: absolute;
   top: -4px;
-  right: -4px;
+  right: 0;
   min-width: 40px;
 }
 
@@ -647,6 +647,18 @@ body.mobile-foundation .today-everyday-meal .meal-plan-actions {
 
 body.mobile-foundation .today-everyday-meal .compact-role-list {
   margin-top: 9px;
+}
+
+body.mobile-foundation .today-everyday-meal .compact-role-row {
+  display: flex;
+  grid-template-columns: none;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+body.mobile-foundation .today-everyday-meal .compact-role-row b {
+  min-width: 0;
 }
 
 body.mobile-foundation .today-everyday-meal .today-timeline,

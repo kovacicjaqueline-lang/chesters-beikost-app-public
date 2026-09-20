@@ -75,9 +75,9 @@ test("Log-Selector bleibt mobil einspaltig und blendet inaktive Panels aus", () 
 });
 
 test("Mahlzeit-Editor nutzt kompakte Zeilen für Lebensmittel und Rezepte", () => {
-  assert.match(css, /#genericModal:has\\(#cancelManualMeal\\) \\.selector-row\\s*\\{[^}]*min-height:\\s*46px;[^}]*padding:\\s*6px 10px;[^}]*box-shadow:\\s*none;/s);
-  assert.match(css, /#genericModal:has\\(#cancelManualMeal\\) \\.selector-row\\.selectFood\\s*\\{[^}]*grid-template-columns:\\s*32px minmax\\(0, 1fr\\) 24px;/s);
-  assert.match(css, /#genericModal:has\\(#cancelManualMeal\\) \\.selector-row\\.selectRecipe\\s*\\{[^}]*grid-template-columns:\\s*36px minmax\\(0, 1fr\\) 24px;/s);
-  assert.match(css, /#genericModal:has\\(#cancelManualMeal\\) \\.selector-row > \\.manual-role-type\\s*\\{[^}]*display:\\s*none;/s);
-  assert.match(css, /#genericModal:has\\(#cancelManualMeal\\) \\.manual-role-overview\\s*\\{[^}]*display:\\s*block;/s);
+  assert.match(css, /#genericModal:has\(#cancelManualMeal\) \.selector-row\s*\{[^}]*min-height:\s*46px;[^}]*padding:\s*6px 10px;[^}]*box-shadow:\s*none;/s);
+  assert.match(css, /#genericModal:has\(#cancelManualMeal\) \.selector-row\.selectFood\s*\{[^}]*grid-template-columns:\s*44px minmax\(0, 1fr\) 24px;/s);
+  assert.match(css, /#genericModal:has\(#cancelManualMeal\) \.selector-row\.selectRecipe\s*\{[^}]*grid-template-columns:\s*44px minmax\(0, 1fr\) 24px;/s);
+  assert.match(css, /#genericModal:has\(#cancelManualMeal\) \.selector-row > \.manual-role-type\s*\{[^}]*display:\s*none;/s);
+  assert.match(css, /#genericModal:has\(#cancelManualMeal\) \.manual-role-overview\s*\{[^}]*display:\s*block;/s);
 });

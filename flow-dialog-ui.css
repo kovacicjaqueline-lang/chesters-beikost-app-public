@@ -238,11 +238,11 @@
 }
 
 #genericModal:has(#cancelManualMeal) .selector-row.selectFood {
-  grid-template-columns: 32px minmax(0, 1fr) 24px;
+  grid-template-columns: 44px minmax(0, 1fr) 24px;
 }
 
 #genericModal:has(#cancelManualMeal) .selector-row.selectRecipe {
-  grid-template-columns: 36px minmax(0, 1fr) 24px;
+  grid-template-columns: 44px minmax(0, 1fr) 24px;
 }
 
 #genericModal:has(#cancelManualMeal) .selector-row > .manual-role-type {
@@ -250,10 +250,10 @@
 }
 
 #genericModal:has(#cancelManualMeal) .meal-selector-visual {
-  width: 32px;
-  min-width: 32px;
-  height: 32px;
-  flex-basis: 32px;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  flex-basis: 44px;
 }
 
 #genericModal:has(#cancelManualMeal) .meal-selector-visual .illustration-icon--recipe,

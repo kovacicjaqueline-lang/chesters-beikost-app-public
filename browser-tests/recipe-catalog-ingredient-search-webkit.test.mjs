@@ -94,9 +94,11 @@ try {
     "Passend",
     "Die Verfügbarkeitsfilter brauchen eine eigene Zeile",
   );
-  assert.equal(await page.locator("#recipeMealFilter").isVisible(), true, "Die Mahlzeitenfilterzeile muss sichtbar sein");
+  await page.locator(".recipe-meal-select > summary").click();
+  assert.equal(await page.locator("#recipeMealFilter").isVisible(), true, "Die Mahlzeitenfilter müssen im Auswahlfeld erreichbar sein");
 
   await page.locator('[data-recipe-filter="all"]').click();
+  await page.locator(".recipe-meal-select > summary").click();
   await page.locator('[data-recipe-meal="breakfast"]').click();
   const breakfastRecipes = await recipeNames();
   assert.ok(
@@ -114,6 +116,7 @@ try {
   );
   assert.match(await page.locator("#recipeCount").textContent(), /Rezept/);
 
+  await page.locator(".recipe-meal-select > summary").click();
   await page.locator('[data-recipe-meal="main"]').click();
   const mainMealRecipes = await recipeNames();
   assert.ok(
@@ -126,6 +129,7 @@ try {
   );
   assert.match(await page.locator("#recipeCount").textContent(), /Rezept/);
 
+  await page.locator(".recipe-meal-select > summary").click();
   await page.locator('[data-recipe-meal="snack"]').click();
   const snackRecipes = await recipeNames();
   assert.ok(
@@ -139,6 +143,7 @@ try {
   );
   assert.match(await page.locator("#recipeCount").textContent(), /Rezept/);
 
+  await page.locator(".recipe-match-select > summary").click();
   await page.locator('[data-recipe-filter="all"]').click();
   await search.fill("Ei");
   const afterEggSearch = await recipeNames();

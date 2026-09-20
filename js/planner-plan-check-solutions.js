@@ -659,7 +659,6 @@
           baseFoodIds: snapshot.baseFoodIds,
           sampleFoodIds: snapshot.sampleFoodIds,
           recipeName: snapshot.recipeName,
-          type: snapshot.type,
         },
         protected: meta.protected,
       };

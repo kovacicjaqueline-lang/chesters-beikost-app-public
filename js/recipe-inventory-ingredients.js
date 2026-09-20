@@ -329,20 +329,26 @@ function removeLegacyProductData(migrated) {
   if (!migrated || typeof migrated !== "object") return migrated;
   delete migrated.products;
   delete migrated.productAllergenSchemaVersion;
-  migrated.foods = (Array.isArray(migrated.foods) ? migrated.foods : []).map((item) => {
-    let allergenGroup = item?.allergenGroup;
-    if (!legacySulfiteValue(allergenGroup)) return item;
-    return { ...item, allergenGroup: stripLegacySulfiteValue(allergenGroup) };
-  });
-  migrated.logs = (Array.isArray(migrated.logs) ? migrated.logs : []).map((log) => {
-    let { productAllergenSnapshots, ...rest } = log || {};
-    return rest;
-  });
-  migrated.inventory = (Array.isArray(migrated.inventory) ? migrated.inventory : []).map((item) => {
-    if (!item || typeof item !== "object") return item;
-    let { productAllergenSnapshot, ingredientProductSnapshots, ...rest } = item;
-    return rest;
-  });
+  if (Array.isArray(migrated.foods)) {
+    migrated.foods = migrated.foods.map((item) => {
+      let allergenGroup = item?.allergenGroup;
+      if (!legacySulfiteValue(allergenGroup)) return item;
+      return { ...item, allergenGroup: stripLegacySulfiteValue(allergenGroup) };
+    });
+  }
+  if (Array.isArray(migrated.logs)) {
+    migrated.logs = migrated.logs.map((log) => {
+      let { productAllergenSnapshots, ...rest } = log || {};
+      return rest;
+    });
+  }
+  if (Array.isArray(migrated.inventory)) {
+    migrated.inventory = migrated.inventory.map((item) => {
+      if (!item || typeof item !== "object") return item;
+      let { productAllergenSnapshot, ingredientProductSnapshots, ...rest } = item;
+      return rest;
+    });
+  }
   return migrated;
 }
 

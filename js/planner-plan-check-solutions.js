@@ -652,7 +652,6 @@
         goalKey: goalKey(item),
         date: slot.date,
         meal: slot.meal,
-        forcedFoodId,
         after: {
           focusId: snapshot.focusId,
           foodIds: snapshot.foodIds,

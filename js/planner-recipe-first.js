@@ -214,11 +214,15 @@ function plannerSelectExactRecipe(
       String(a.recipe.name).localeCompare(String(b.recipe.name), "de"),
     );
   if (!ranked.length) return null;
-  if (
-    ranked.length > 1 &&
-    ranked[0].stockRank === ranked[1].stockRank &&
-    ranked[0].used === ranked[1].used
-  ) return null;
+  let offset = Number(ctx?.recipeSelectionOffset) || 0;
+  let tied = ranked.length > 1 &&
+      ranked[0].stockRank === ranked[1].stockRank &&
+      ranked[0].used === ranked[1].used;
+  if (tied && offset) {
+    let index = ((offset % ranked.length) + ranked.length) % ranked.length;
+    return ranked[index]?.recipe || null;
+  }
+  if (tied) return null;
   return ranked[0].recipe;
 }
 
@@ -503,6 +507,9 @@ function installPlannerRecipeFirstRuntime() {
             recipeAllowed,
           )
         : [];
+      if (ctx && Number(state?.__plannerStandaloneRecipeOffset)) {
+        ctx.recipeSelectionOffset = Number(state.__plannerStandaloneRecipeOffset);
+      }
       let recipe = plannerSelectExactRecipe(
         candidates,
         ctx,

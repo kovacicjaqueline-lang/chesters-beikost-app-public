@@ -298,6 +298,12 @@ test("PLAN-08 recipe-first: mehrere exakte Treffer werden nur durch bestehende R
     recipeReserved: new Map(),
   });
   assert.equal(selected.name, "Puffer");
+  const alternate = recipeFirst.plannerSelectExactRecipe(fake, {
+    recipePlannedUse: new Map(),
+    recipeReserved: new Map(),
+    recipeSelectionOffset: 1,
+  });
+  assert.equal(alternate.name, "Puffer");
 });
 
 test("PLAN-08 recipe-first: vorhandener Rezeptvorrat gewinnt bei aktivierter Vorratspräferenz", () => {

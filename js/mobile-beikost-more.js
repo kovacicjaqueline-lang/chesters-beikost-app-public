@@ -11,6 +11,15 @@
   root.__mobileBeikostMoreInstalled = true;
 
   const FOOD_PRIMARY_FILTERS = new Set(["all", "open", "allergen"]);
+  const FOOD_FILTER_LABELS = {
+    all: "Alle",
+    open: "Offen",
+    allergen: "Allergene",
+    ph: "Philippinen",
+    iron: "Eisenreich",
+    paused: "Pause",
+    inactive: "Deaktiviert",
+  };
 
   function syncGroupedFilterVisibility() {
     document.querySelectorAll(".mobile-filter-secondary").forEach((secondary) => {
@@ -45,6 +54,84 @@
     syncGroupedFilterVisibility();
   }
 
+  function updateFoodFilterSelectorLabels() {
+    const filters = document.getElementById("foodFilters");
+    if (!filters) return;
+
+    const primary = filters.querySelector(".mobile-filter-primary");
+    const secondary = filters.querySelector(".mobile-filter-secondary");
+    const primarySummary = filters.querySelector("[data-food-primary-summary]");
+    const secondarySummary = filters.querySelector("[data-food-secondary-summary]");
+    const primaryActive = primary?.querySelector("button.active");
+    const secondaryActive = secondary?.querySelector("button.active");
+
+    if (primarySummary) {
+      primarySummary.textContent = FOOD_FILTER_LABELS[primaryActive?.dataset.filter] || "Offen";
+    }
+    if (secondarySummary) {
+      const count = secondary?.querySelectorAll("button.active").length || 0;
+      secondarySummary.textContent = count ? `Filter (${count})` : "Filter";
+    }
+  }
+
+  function installFoodFilterSelectors() {
+    const filters = document.getElementById("foodFilters");
+    if (!filters || filters.dataset.mobileCompactSelectors === "true") return;
+
+    const primary = filters.querySelector(".mobile-filter-primary");
+    const secondary = filters.querySelector(".mobile-filter-secondary");
+    const secondaryList = secondary?.querySelector(".mobile-filter-secondary-list");
+    if (!primary || !secondary || !secondaryList) return;
+
+    filters.dataset.mobileCompactSelectors = "true";
+    secondary.classList.add("mobile-filter-select", "food-secondary-select");
+
+    const primarySelect = document.createElement("details");
+    primarySelect.className = "mobile-filter-select food-primary-select";
+    primarySelect.innerHTML = `<summary><span data-food-primary-summary>Offen</span><span aria-hidden="true">⌄</span></summary><div class="mobile-filter-select-menu"></div>`;
+    primarySelect.querySelector(".mobile-filter-select-menu").appendChild(primary);
+
+    const secondarySummary = secondary.querySelector("summary");
+    if (secondarySummary) {
+      secondarySummary.innerHTML = `<span data-food-secondary-summary>Filter</span><span aria-hidden="true">⌄</span>`;
+    }
+    secondaryList.classList.add("mobile-filter-select-menu");
+
+    const toolbar = document.createElement("div");
+    toolbar.className = "mobile-filter-toolbar food-filter-toolbar";
+    toolbar.append(primarySelect, secondary);
+    filters.replaceChildren(toolbar);
+    filters.querySelectorAll("button").forEach((button) => {
+      button.addEventListener("click", () => button.closest("details")?.removeAttribute("open"));
+    });
+    updateFoodFilterSelectorLabels();
+  }
+
+  function installRecipeFilterSelectors() {
+    const section = document.getElementById("recipesSection");
+    const categoryField = document.getElementById("recipeFilter")?.closest(".recipe-filter-field");
+    const mealField = document.getElementById("recipeMealFilter")?.closest(".recipe-meal-filter-field");
+    const more = document.getElementById("recipeMoreFilters");
+    if (!section || !categoryField || !mealField || !more || section.dataset.mobileCompactSelectors === "true") return;
+
+    section.dataset.mobileCompactSelectors = "true";
+
+    const matchSelect = document.createElement("details");
+    matchSelect.className = "mobile-filter-select recipe-match-select";
+    matchSelect.innerHTML = `<summary><span data-recipe-match-summary>Fast passend</span><span aria-hidden="true">⌄</span></summary><div class="mobile-filter-select-menu"></div>`;
+    matchSelect.querySelector(".mobile-filter-select-menu").appendChild(categoryField);
+
+    const mealSelect = document.createElement("details");
+    mealSelect.className = "mobile-filter-select recipe-meal-select";
+    mealSelect.innerHTML = `<summary><span data-recipe-meal-summary>Mahlzeit</span><span aria-hidden="true">⌄</span></summary><div class="mobile-filter-select-menu"></div>`;
+    mealSelect.querySelector(".mobile-filter-select-menu").appendChild(mealField);
+
+    const toolbar = document.createElement("div");
+    toolbar.className = "mobile-filter-toolbar recipe-filter-toolbar";
+    toolbar.append(matchSelect, mealSelect, more);
+    document.getElementById("recipeSearch")?.closest(".field")?.after(toolbar);
+  }
+
   function installFoodCatalogStructure() {
     const section = document.getElementById("foodsCatalogSection");
     if (!section || section.dataset.mobileCatalog === "true") return;
@@ -60,6 +147,7 @@
       "data-filter",
       "Weitere Filter",
     );
+    installFoodFilterSelectors();
   }
 
   function installRecipeCatalogStructure() {
@@ -69,6 +157,7 @@
     section.classList.add("mobile-recipe-catalog");
 
     document.getElementById("recipeSearch")?.closest(".field")?.classList.add("mobile-catalog-search");
+    installRecipeFilterSelectors();
   }
 
   function decorateFoodRows() {
@@ -290,6 +379,7 @@
   root.MobileUiLifecycle.onRender("foods", () => {
     decorateFoodRows();
     syncGroupedFilterVisibility();
+    updateFoodFilterSelectorLabels();
   });
   root.MobileUiLifecycle.onRender("prep", syncGroupedFilterVisibility);
   root.MobileUiLifecycle.onRender("more", () => {

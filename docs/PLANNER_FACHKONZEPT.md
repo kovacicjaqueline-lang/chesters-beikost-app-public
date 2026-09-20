@@ -110,7 +110,7 @@ Für jeden aktiven Mahlzeitenslot gilt fachlich folgende Reihenfolge:
 
 1. **bestehende manuelle/feste Planung respektieren**;
 2. **harte Auto-Eignung prüfen**;
-3. in Frühstück, Mittagessen und Abendessen bei geeigneten offenen Nicht-Allergenen **pro Mahlzeit höchstens eine Kostprobe/Einführung** vor einer rein bekannten Planung bevorzugen; eine Allergen-Einführung oder gezielte Allergen-Wiederholung bleibt dagegen die einzige Lernaufgabe des Tages;
+3. in Frühstück, Mittagessen und Abendessen vorhandene geeignete Rezept-/FOOD-Planung verwenden; gewöhnliche offene Nicht-Allergene werden nicht automatisch als Lernaufgabe eingeschoben;
 4. ansonsten vorhandenen geeigneten Rezeptvorrat bzw. bekannte Planung verwenden;
 5. FOOD-Begleiter nur innerhalb der bestehenden Gates auswählen;
 6. Recipe-first darf eine fachlich passende Rezeptdarstellung herstellen;
@@ -218,20 +218,18 @@ Die bestehende strenge Editor-Validierung wird nicht gelockert. Der Planner muss
 
 # 5. Einführung neuer Lebensmittel und Wiederholungen
 
-## 5.1 Tägliche Einführung pro Hauptmahlzeit ✅ main
+## 5.1 Gewöhnliche Lebensmittel ohne automatische Einführung ✅ main
 
-Für **Nicht-Allergene** gilt:
+Für gewöhnliche Nicht-Hauptallergene gilt:
 
-- an jedem Planungstag dürfen geeignete offene FOODs eingeführt werden;
-- Frühstück, Mittagessen und Abendessen dürfen jeweils **höchstens ein** neues bzw. als Kostprobe behandeltes FOOD enthalten;
-- wenn für einen freien automatischen Hauptmahlzeitenslot ein geeignetes offenes Nicht-Allergen vorhanden ist, wird dieses gegenüber einer rein bekannten Mahlzeit bevorzugt;
-- ein bereits erfolgreich probiertes FOOD darf bekannt kombiniert werden, blockiert aber keine neue Einführung und wird nicht allein wegen `Probiert` zur Pflicht-Wiederholung;
-- eine echte Ablehnung (`not_accepted`), ein bewusstes Follow-up oder ein expliziter Override darf weiterhin eine gezielte Wiederholung auslösen;
-- manuelle Mahlzeiten, Locks, protokollierte Mahlzeiten, Overrides und bestehende harte Gates bleiben geschützt.
+- der Planner erzeugt keine automatische Kostprobe nur deshalb, weil ein FOOD noch offen ist;
+- ein offenes FOOD darf weiterhin über eine manuelle Mahlzeit oder ein passendes Rezept erstmals angeboten werden;
+- ein erfolgreich probiertes FOOD wird danach normal kombinierbar und erzeugt keine Pflicht-Wiederholung;
+- „Probiert“ blockiert keine normale Rezept- oder FOOD-Planung, wird aber auch nicht mehr als tägliche Lernaufgabe priorisiert;
+- eine echte Ablehnung (`not_accepted`) bleibt als gezieltes bewusstes Follow-up möglich;
+- explizite manuelle Mahlzeiten, Locks, Overrides und harte Eignungs-/Safety-Gates bleiben unverändert geschützt.
 
-Pro Mahlzeit bleibt damit höchstens **ein unbekanntes FOOD** zulässig. Recipe-first darf diesen einen Sample-Pfad darstellen oder mit bekannten geeigneten Zutaten ergänzen, aber kein zweites unbekanntes FOOD hinzufügen.
-
-Für **Allergene** gilt die strengere Tagesregel aus Abschnitt 6: Eine Allergen-Einführung oder gezielte Allergen-Wiederholung ist die einzige automatische Lernaufgabe dieses Tages. Bekannte Mahlzeiten und bekannter Snack bleiben daneben möglich.
+Die App dokumentiert weiterhin tatsächliche Angebote und Ergebnisse, verwendet die Einführung gewöhnlicher Lebensmittel aber nicht mehr als automatische Planer-Warteschlange.
 
 ## 5.2 Einführungsarten ✅ main
 
@@ -249,15 +247,11 @@ Eine neue Kostprobe bleibt als `sampleFoodId` erkennbar und wird nicht durch Rec
 
 `bekannt kombinieren` ist dabei ausdrücklich **keine neue Einführung**. Es darf deshalb keinen weiteren freien Hauptmahlzeitenslot desselben Tages als angeblich verbrauchten Lernslot blockieren.
 
-## 5.3 Kein allgemeiner Mehrtages-Takt für Nicht-Allergene ✅ main
+## 5.3 Keine automatische Wiederholungslogik für gewöhnliche Lebensmittel ✅ main
 
-Der frühere `newFoodEvery`-Takt steuert die normale automatische Einführung von Nicht-Allergenen nicht mehr. Geeignete offene Nicht-Allergene können täglich und je freier aktiver Hauptmahlzeit geplant werden.
+Das frühere automatische Einführungs- und Wiederholungsmodell für gewöhnliche Lebensmittel steuert den normalen Planner nicht mehr. Das historische Setting `newFoodEvery` bleibt ausschließlich aus Daten-/Backup-Kompatibilitätsgründen im State erhalten und wird nicht als Mindestabstand oder Lernrhythmus verwendet.
 
-Das bestehende Setting bleibt ausschließlich aus Daten-/Backup-Kompatibilitätsgründen im State erhalten und wird in der Oberfläche nicht mehr als wirksame Planner-Einstellung angeboten. Es darf nicht stillschweigend wieder als Mindestabstand zwischen normalen Nicht-Allergen-Einführungen verwendet werden.
-
-Allergen-Einführungen und -Wiederholungen behalten ihre eigene strengere Logik und werden nicht aus dieser Lockerung abgeleitet.
-
----
+Allergen-Einführungen, echte gezielte Wiederholungen nach Ablehnung und langfristige Allergenpflege behalten ihre jeweils getrennte Logik.
 
 # 6. Allergene
 
@@ -689,7 +683,9 @@ Weitere offene FOOD-Datenfragen werden separat im FOOD-Fachregel-Track geklärt 
 
 - Phasenmodell und Mahlzeitenslots;
 - PHASE-TRANSITION: Readiness ist read-only; `recommended` setzt `currentPatternAccepted`, `additionalMealCue` und `routineCompatible` gemeinsam voraus; Alter, Grammwerte, Loganzahl, Phasendauer und Textur verändern die Empfehlung nicht und lösen niemals einen Phasenwechsel aus; fehlende qualitative Signale bleiben explizit `unknown`;
-- tägliche Nicht-Allergen-Einführung mit höchstens einem unbekannten FOOD je Frühstück/Mittag/Abend;
+- gewöhnliche Nicht-Allergene werden nicht automatisch als tägliche Lernaufgabe eingeschoben;
+- ein offenes gewöhnliches FOOD bleibt über manuelle Planung oder passende Rezepte erstmals anbietbar;
+- erfolgreiche gewöhnliche FOODs erzeugen keine Pflicht-Wiederholung; echte Ablehnung bleibt als gezieltes Follow-up erhalten;
 - ein erfolgreich `Probiert`-FOOD blockiert keine geeignete offene Neueinführung; echte Ablehnung bleibt gezielter Wiederholungspfad;
 - Allergen-Einführung oder gezielte Allergen-Wiederholung bleibt die einzige automatische Lernaufgabe des Tages;
 - langfristige Allergenpflege ist keine Lernaufgabe, kein `sample` und verbraucht keinen FOOD-Einführungsslot;

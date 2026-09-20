@@ -206,7 +206,6 @@ function mealEditorRecipeManualContext() {
 let mealEditorRecipeVariantContext = null;
 let mealEditorRecipeVariantObserver = null;
 let mealEditorRecipeVariantEnhancing = false;
-let mealEditorRecipeFoodTabRoleOverride = null;
 
 function mealEditorRecipeCurrentSelectedName() {
   let selected = document.querySelector("#genericBody .selectRecipe.selected");
@@ -218,26 +217,6 @@ function mealEditorRecipeSelectedFoodIds() {
   return mealEditorRecipeUnique(
     [...document.querySelectorAll("#genericBody .removeManualSelected[data-food]")].map((button) => button.dataset.food),
   );
-}
-
-function mealEditorRecipePrimeFoodTabRoleContext(context) {
-  if (!context?.recipeName || typeof manualMealRoleInfo !== "function" || mealEditorRecipeFoodTabRoleOverride) return;
-  let original = manualMealRoleInfo;
-  let wrapped = function mealEditorRecipeFoodTabRoleInfo(foodOrId, meal, on, roleContext = {}) {
-    let hasRecipeContext = !!roleContext?.recipeName || roleContext?.recipe === true;
-    return original(
-      foodOrId,
-      meal,
-      on,
-      hasRecipeContext ? roleContext : { ...roleContext, recipeName: context.recipeName },
-    );
-  };
-  mealEditorRecipeFoodTabRoleOverride = { original, wrapped };
-  manualMealRoleInfo = wrapped;
-  queueMicrotask(() => {
-    if (manualMealRoleInfo === wrapped) manualMealRoleInfo = original;
-    if (mealEditorRecipeFoodTabRoleOverride?.wrapped === wrapped) mealEditorRecipeFoodTabRoleOverride = null;
-  });
 }
 
 function mealEditorRecipeEnsureContext() {
@@ -618,7 +597,6 @@ function mealEditorRecipeHandleCapture(event) {
   if (!context) return;
   if (target.id === "selectorRecipes" || target.id === "selectorFoods") {
     context.searchQuery = "";
-    if (target.id === "selectorFoods") mealEditorRecipePrimeFoodTabRoleContext(context);
     return;
   }
   if (target.classList.contains("selectFood") || target.classList.contains("removeManualSelected")) {

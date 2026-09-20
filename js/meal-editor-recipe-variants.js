@@ -323,8 +323,9 @@ function mealEditorRecipeFilterResults() {
     context.searchQuery = "";
   }
   context.lastRecipeMode = recipeMode;
-  let searchQuery = input.value ?? context.searchQuery ?? "";
+  let searchQuery = context.searchQuery ?? input.value ?? "";
   context.searchQuery = searchQuery;
+  if (input.value !== searchQuery) input.value = searchQuery;
   let normalized = mealEditorRecipeNormalize(searchQuery);
   let visible = 0;
   results.querySelectorAll(".selector-row").forEach((row) => {

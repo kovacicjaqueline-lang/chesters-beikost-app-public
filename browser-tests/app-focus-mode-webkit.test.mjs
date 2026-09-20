@@ -77,6 +77,19 @@ async function openSettings(page) {
   await page.locator("#appFocusModeSetting").scrollIntoViewIfNeeded();
 }
 
+async function assertCompactFocusOptions(page) {
+  const cards = page.locator("#appFocusModeSetting .app-focus-option");
+  assert.equal(await cards.count(), 2, "App-Schwerpunkt muss genau zwei Auswahlkarten zeigen");
+  const metrics = await cards.evaluateAll((elements) => elements.map((element) => ({
+    height: element.getBoundingClientRect().height,
+    hasToggleState: !!element.querySelector(".toggle-state"),
+    radioOpacity: getComputedStyle(element.querySelector('input[type="radio"]')).opacity,
+  })));
+  assert.ok(metrics.every((item) => item.height < 90), "App-Schwerpunkt-Karten müssen kompakt bleiben");
+  assert.ok(metrics.every((item) => !item.hasToggleState), "App-Schwerpunkt darf keine alten Toggle-Reste enthalten");
+  assert.ok(metrics.every((item) => item.radioOpacity === "0"), "Native Radio-Controls dürfen nicht sichtbar sein");
+}
+
 async function plannerMealSnapshot(page, key) {
   return page.evaluate((plannerKey) => {
     const state = window.__beikostTest.getState();
@@ -151,6 +164,7 @@ try {
   assert.equal(plannerBefore.manualMeal?.note, "app-focus-regression", "Planner-Testdaten müssen vor dem Fokuswechsel gesetzt sein");
 
   await openSettings(page);
+  await assertCompactFocusOptions(page);
   await page.locator('input[name="appFocusMode"][value="everyday-recipes"]').check();
   await page.locator("#saveSettings").click();
   await page.waitForFunction(() => window.__beikostTest.getState().settings.appFocusMode === "everyday-recipes");

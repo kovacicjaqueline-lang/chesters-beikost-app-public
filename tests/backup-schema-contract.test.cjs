@@ -25,7 +25,7 @@ const stateSchemaVersion = numericConstant(stateSource, "SCHEMA_VERSION");
 
 function fixtureState() {
   return {
-    settings: { phaseSelected: "aufbau" },
+    settings: { phaseSelected: "aufbau", appFocusMode: "everyday-recipes" },
     foods: [
       { id: "rosine", name: "Rosine", active: true, liked: false, notes: "persönlich notiert", allergenGroup: "" },
       { id: "custom-oat", name: "Haferbrei selbst", active: true, custom: true },
@@ -103,6 +103,7 @@ test("aktueller Export verwendet wieder das kanonische Backup-Schema 5", async (
   assert.equal(Object.hasOwn(pack.payload.inventory[0], "ingredientProductSnapshots"), false);
   assert.equal(pack.checksum, await checksum(context, pack.payload));
   assert.equal(Object.hasOwn(pack.payload, "foods"), false, "der integrierte Katalog gehört nicht in den externen Payload");
+  assert.equal(pack.payload.settings.appFocusMode, "everyday-recipes", "der App-Schwerpunkt muss im Export enthalten sein");
   assert.deepEqual(clone(pack.payload.customFoods), [fixtureState().foods[1]]);
   assert.deepEqual(clone(pack.payload.foodPreferences), [{ id: "rosine", liked: false, notes: "persönlich notiert" }]);
   pack.summary = { customFoods: 999 };
@@ -110,6 +111,15 @@ test("aktueller Export verwendet wieder das kanonische Backup-Schema 5", async (
   const restored = context.migrateState(context.backupPayloadToState(validated.payload));
   assert.equal(validated.summary.customFoods, 1);
   assert.deepEqual(clone(restored.foods), fixtureState().foods);
+  assert.equal(restored.settings.appFocusMode, "everyday-recipes", "der App-Schwerpunkt muss beim Restore erhalten bleiben");
+});
+
+test("alte Backups ohne App-Schwerpunkt verwenden den bisherigen Standard", () => {
+  const { context } = loadRuntime();
+  const payload = fixtureState();
+  delete payload.settings.appFocusMode;
+  const restored = context.migrateState(context.backupPayloadToState(payload));
+  assert.equal(restored.settings.appFocusMode, "planning-documentation");
 });
 
 test("früheres Sulfit-Backup-Schema 6 bleibt importierbar und wird bereinigt", async () => {

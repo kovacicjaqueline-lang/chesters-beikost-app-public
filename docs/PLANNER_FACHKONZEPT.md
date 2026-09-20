@@ -353,6 +353,23 @@ Ein echtes vorhandenes Rezept kann eine Kombination über seinen eigenen Rezeptv
 
 Automatische freie Kombinationen sollen nicht mehrere konkurrierende Stärkequellen erzwingen. Die bestehende Single-Starch-Schranke bleibt erhalten.
 
+## 8.4 Kulinarische Mahlzeitenqualität
+
+Automatische Vorschläge werden zusätzlich danach bewertet, ob sie als nachvollziehbares, babygeeignetes Gericht erkennbar sind. Ernährungslogische Einzelpaare reichen für eine freie Hauptmahlzeit nicht aus.
+
+Als bevorzugte Struktur gilt:
+
+- eine sättigende Basis wie Hafer, Kartoffel, Reis, Polenta oder Bulgur;
+- Gemüse oder – insbesondere beim Frühstück – passendes Obst;
+- eine Protein-/Eisenquelle, sofern für die Mahlzeit vorgesehen;
+- eine passende Fettquelle und optional milde Kräuter/Gewürze.
+
+Die kulinarische Kompatibilität ist ein eigenes Auswahlkriterium. Freie Kombinationen ohne nachvollziehbare Struktur, etwa Mais mit Oregano oder Ei mit Polenta ohne Gemüse, werden verworfen bzw. durch passendere Kandidaten ersetzt. Das ist keine pauschale Pair-Blacklist: Ein vorhandenes, fachlich passendes Rezept kann eine reduzierte Zutatenstruktur ausdrücklich legitimieren.
+
+Einzelne Lebensmittel bleiben für bewusst geplante Kostproben und Kennenlernangebote zulässig. Sie werden dabei als `sample`/Lernangebot kenntlich gemacht und nicht als vollwertiges Gericht ausgegeben. Mengen- und Portionslogik bleiben davon getrennt; auch kleine Angebote um etwa 30 g sowie dieselbe Kombination in später größerer Portion bleiben möglich.
+
+Die Auswahlqualität ändert weder die bestehenden Safety-/Allergen-Gates noch den Handlingvertrag. Bei 7–9 Monaten können echte Mahlzeiten deshalb parallel als Brei, löffelbare Struktur oder geeignetes Fingerfood dargestellt werden; Rezeptidentität und Zutatenstruktur bleiben gleich.
+
 ---
 
 # 9. Recipe-first ✅ main
@@ -705,6 +722,7 @@ Weitere offene FOOD-Datenfragen werden separat im FOOD-Fachregel-Track geklärt 
 - keine pauschale automatische Nussmus-Zugabe zu jedem Brei;
 - andere Allergene werden durch die Nuss-/Samen-Rollenregel nicht eingeschränkt;
 - PLAN-08-X1 / kein dritter Eisenfallback;
+- kulinarische Mahlzeitenqualität: freie Hauptmahlzeiten sind als echte Gerichte strukturiert, Einzelzutaten bleiben auf bewusste Kostproben begrenzt, und passende Rezepte dürfen reduzierte Strukturen legitimieren;
 - Single-Starch;
 - Recipe-first einschließlich maximal einem neuen FOOD **pro Mahlzeit**;
 - Recipe-plus-food verwendet nur kuratierte Pairings; `Karotten-Polenta-Brei + Rind` erhält getrennte Rezept- und Zusatzlebensmittel-Identität, Rollen, Mengen und Reservierungen;

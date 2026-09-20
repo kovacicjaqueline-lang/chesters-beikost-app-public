@@ -12,6 +12,7 @@ const FAST_ONLY_FILES = new Set([
   'js/planner-food-role-stability.js',
   'js/planner-introduction-policy.js',
   'js/planner-iron-preference.js',
+  'js/planner-culinary-quality.js',
   'js/planner-log-rollover-cascade.js',
   'js/planner-log-rollover-review-fixes.js',
   'js/planner-log-rollover.js',

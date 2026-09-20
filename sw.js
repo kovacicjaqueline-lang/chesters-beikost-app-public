@@ -90,6 +90,7 @@ const PLAN08_PRECACHE = [
   "./js/planner-meal-eligibility.js",
   "./js/planner-milk-policy.js",
   "./js/planner-iron-preference.js",
+  "./js/planner-culinary-quality.js?v=10.1.26",
   "./data/food-presentation.js",
   "./js/planner-meal-presentation.js",
   "./js/planner-recipe-first.js",

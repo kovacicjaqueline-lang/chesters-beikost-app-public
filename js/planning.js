@@ -389,9 +389,11 @@ function applyRecipeFoodComposition(meal, date, ctx) {
       recipeSuitableFn: recipeSuitableForMeal,
       ingredientReadyFn: (name, item, mealKey, on) => {
         let candidate = item || foodByName(name, state.foods);
-        return !!candidate &&
-          eligible(candidate, mealKey, on) &&
-          (canCombine(candidate) || (meal.foodIds || []).includes(candidate.id));
+        if (!candidate || !eligible(candidate, mealKey, on)) return false;
+        if (typeof plannerCulinaryRecipeIngredientReady === "function") {
+          return plannerCulinaryRecipeIngredientReady(name, meal, on);
+        }
+        return canCombine(candidate) || (meal.foodIds || []).includes(candidate.id);
       },
       foodEligibleFn: (id, mealKey, on) => {
         let candidate = food(id);
@@ -611,9 +613,15 @@ function recipeStockCandidate(meal, on, ctx) {
           (ctx.recipeReserved?.get(r.name) || 0),
     )
     .sort((a, b) => {
+      let culinary = typeof plannerCulinaryRecipeScore === "function"
+        ? plannerCulinaryRecipeScore(a, recipeFoodIds(a), state.foods || [], meal)
+        : 0;
+      let culinaryB = typeof plannerCulinaryRecipeScore === "function"
+        ? plannerCulinaryRecipeScore(b, recipeFoodIds(b), state.foods || [], meal)
+        : 0;
       let ba = oldestRecipeBatch(a.name);
       let bb = oldestRecipeBatch(b.name);
-      return String(ba?.frozenDate || "9999").localeCompare(
+      return culinaryB - culinary || String(ba?.frozenDate || "9999").localeCompare(
         String(bb?.frozenDate || "9999"),
       );
     });
@@ -628,11 +636,17 @@ function snackRecipeCandidate(on, ctx) {
       !(r.milkMeal === "full" && ctx.fullMilkDates?.has(on))
     )
     .sort((a, b) => {
+      let culinary = typeof plannerCulinaryRecipeScore === "function"
+        ? plannerCulinaryRecipeScore(a, recipeFoodIds(a), state.foods || [], "snack")
+        : 0;
+      let culinaryB = typeof plannerCulinaryRecipeScore === "function"
+        ? plannerCulinaryRecipeScore(b, recipeFoodIds(b), state.foods || [], "snack")
+        : 0;
       let aStock = recipeInventoryPortions(a.name) > (ctx.recipeReserved?.get(a.name) || 0) ? 0 : 1;
       let bStock = recipeInventoryPortions(b.name) > (ctx.recipeReserved?.get(b.name) || 0) ? 0 : 1;
       let aUsed = ctx.recipePlannedUse?.get(a.name) || 0;
       let bUsed = ctx.recipePlannedUse?.get(b.name) || 0;
-      return aStock - bStock || aUsed - bUsed || a.name.localeCompare(b.name, "de");
+      return culinaryB - culinary || aStock - bStock || aUsed - bUsed || a.name.localeCompare(b.name, "de");
     });
   return candidates[0] || null;
 }

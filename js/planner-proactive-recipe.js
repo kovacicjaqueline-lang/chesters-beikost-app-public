@@ -104,6 +104,7 @@ function plannerProactiveRecipeCandidates(
       raw.push({
         recipe,
         ids,
+        meal: meal.meal,
         addedIds: plannerProactiveCanonicalIds(addedItems.map((item) => item.id)),
         sampleFoodId: sampleIds[0] || "",
       });
@@ -169,10 +170,19 @@ function plannerSelectProactiveRecipe(candidates, ctx = {}) {
   let ranked = (candidates || [])
     .map((candidate) => ({
       candidate,
+      culinaryScore: typeof plannerCulinaryRecipeScore === "function"
+        ? plannerCulinaryRecipeScore(
+          candidate.recipe,
+          candidate.ids || [],
+          typeof state !== "undefined" ? state.foods || [] : [],
+          candidate.meal || "lunch",
+        )
+        : 0,
       added: candidate.addedIds?.length || 0,
       used: ctx.recipePlannedUse?.get(candidate.recipe?.name) || 0,
     }))
     .sort((a, b) =>
+      b.culinaryScore - a.culinaryScore ||
       a.added - b.added ||
       a.used - b.used ||
       String(a.candidate.recipe?.name || "").localeCompare(String(b.candidate.recipe?.name || ""), "de"),
@@ -283,7 +293,9 @@ function installPlannerProactiveRecipeRuntime() {
         recipeStates(),
         state?.foods || [],
         plannerRecipeSuitableForMeal,
-        recipeIngredientReady,
+        (name) => typeof plannerCulinaryRecipeIngredientReady === "function"
+          ? plannerCulinaryRecipeIngredientReady(name, meal, date)
+          : recipeIngredientReady(name),
         plannerProactiveRuntimeFoodEligible,
         (recipe) =>
           (typeof plannerRecipeMilkContextCompatible !== "function" || plannerRecipeMilkContextCompatible(meal, recipe)) &&

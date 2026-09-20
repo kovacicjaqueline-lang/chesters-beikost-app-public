@@ -353,6 +353,12 @@
   --recipe-circle-shift-y: -10.834%;
 }
 
+.illustration-icon__asset[src*="/recipes/gemuese-reis-brei.svg"] {
+  --recipe-circle-scale: 1;
+  --recipe-circle-shift-x: 0%;
+  --recipe-circle-shift-y: 0%;
+}
+
 .illustration-icon__asset[src*="/recipes/bohnen-kartoffel-stampf.svg"] {
   --recipe-circle-scale: 1.024000;
   --recipe-circle-shift-x: 0.000%;
@@ -372,6 +378,11 @@
   --recipe-circle-scale: 1.113040;
   --recipe-circle-shift-x: 0.000%;
   --recipe-circle-shift-y: 0.000%;
+}
+.illustration-icon__asset[src*="/recipes/kartoffel-karotten-stampf.svg"] {
+  --recipe-circle-scale: 1;
+  --recipe-circle-shift-x: 0%;
+  --recipe-circle-shift-y: 0%;
 }
 .illustration-icon__asset[src*="/recipes/lachs-suesskartoffel-stampf.svg"] {
   --recipe-circle-scale: 1.248780;

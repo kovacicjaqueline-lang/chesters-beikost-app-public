@@ -135,7 +135,10 @@ try {
   await page.locator("#recipeFilterApply").click();
   assert.equal(await page.locator("#recipeFilterSheet").isHidden(), true, "Rezepte anzeigen soll das Filter-Sheet schließen");
 
-  await page.locator(".recipe-match-select > summary").click();
+  const recipeMatchSelect = page.locator(".recipe-match-select");
+  if (!(await recipeMatchSelect.evaluate((select) => select.open))) {
+    await recipeMatchSelect.locator("> summary").click();
+  }
   await page.locator('[data-recipe-filter="all"]').click();
   const firstRecipe = page.locator("#recipeList .recipe-card-v2").first();
   await firstRecipe.waitFor({ state: "visible" });

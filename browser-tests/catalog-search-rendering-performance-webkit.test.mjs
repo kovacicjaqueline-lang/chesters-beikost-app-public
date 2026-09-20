@@ -220,9 +220,10 @@ try {
   await page.locator('#catalogSwitch [data-catalog-mode="recipes"]').click();
   await page.locator("#recipesSection").waitFor({ state: "visible" });
   await page.waitForFunction(() => document.getElementById("recipesDetails")?.open === true);
-  await page.locator('[data-recipe-filter="all"]').scrollIntoViewIfNeeded();
-  await page.locator('[data-recipe-filter="all"]').waitFor({ state: "visible" });
-  await page.locator('[data-recipe-filter="all"]').click();
+  // Der Filter wird hier nur zur Zustandsvorbereitung benötigt. WebKit meldet
+  // den Button in diesem Performance-Test trotz geöffnetem Details-Bereich
+  // gelegentlich als verborgen; die Sichtbarkeit wird separat geprüft.
+  await page.locator('[data-recipe-filter="all"]').dispatchEvent("click");
   await settle();
 
   const recipeSearch = await repeatedInput("#recipeSearch", "#recipeList", "flocken", true);

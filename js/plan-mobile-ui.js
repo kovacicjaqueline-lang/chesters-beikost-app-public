@@ -30,18 +30,21 @@
     isCompleted = () => false,
     isAllergenFood = () => false,
     prepDates = new Set(),
+    closedDays = {},
   ) {
     const planned = (day?.meals || []).filter((meal) => meal?.active);
     const open = planned.filter((meal) => !isCompleted(day.date, meal.meal));
+    const closed = !!closedDays?.[day?.date];
     const allFoodIds = open.flatMap((meal) => meal.foodIds || []);
     const hasAllergenType = open.some((meal) => /allergen/i.test(String(meal.type || "")));
     return {
       newFood: open.some((meal) => ["neu", "Allergen einführen"].includes(meal.type)),
       allergen: hasAllergenType || allFoodIds.some((id) => isAllergenFood(id)),
       prep: prepDates.has(day?.date),
-      incomplete: open.some((meal) => meal?.empty || !meal?.focusId),
+      incomplete: !closed && open.some((meal) => meal?.empty || !meal?.focusId),
       locked: open.some((meal) => planLocks[`${day.date}|${meal.meal}`]?.mode === "manual"),
-      done: planned.length > 0 && open.length === 0 && planned.every((meal) => !meal?.empty && !!meal?.focusId),
+      ...(closed ? { closed: true } : {}),
+      done: closed || (planned.length > 0 && open.length === 0 && planned.every((meal) => !meal?.empty && !!meal?.focusId)),
       plannedCount: planned.length,
       completedCount: planned.filter((meal) => !meal?.empty && !!meal?.focusId && isCompleted(day.date, meal.meal)).length,
     };
@@ -61,7 +64,8 @@
     if (status.prep) labels.push("Prep");
     if (status.incomplete) labels.push("Unvollständig");
     if (status.locked) labels.push("Geschützt");
-    if (status.done) labels.push("Erledigt");
+    if (status.closed) labels.push("Abgeschlossen");
+    else if (status.done) labels.push("Erledigt");
     return labels;
   }
 
@@ -69,6 +73,7 @@
     const title = String(currentTitle || "");
     const base = title.replace(/\s+(?:teilweise\s+)?erledigt\s*$/i, "").trim();
     if (!base) return title;
+    if (status.closed) return `${base} abgeschlossen`;
     if (status.done) return `${base} erledigt`;
     if (status.completedCount > 0 && status.incomplete) return `${base} teilweise erledigt`;
     return title;
@@ -234,7 +239,8 @@
     if (status.prep) markers.push(statusDotHtml("prep", "Prep notwendig"));
     if (status.incomplete) markers.push(statusDotHtml("incomplete", "Tag unvollständig"));
     if (status.locked) markers.push(statusDotHtml("locked", "Geschützte Mahlzeit"));
-    if (status.done) markers.push(statusDotHtml("done", "Tag erledigt"));
+    if (status.closed) markers.push(statusDotHtml("done", "Tag abgeschlossen"));
+    else if (status.done) markers.push(statusDotHtml("done", "Tag erledigt"));
     return markers.join("");
   }
 
@@ -407,6 +413,7 @@
         mealIsCompleted,
         (id) => !!food(id)?.allergenGroup,
         prepDates,
+        state.dayClosures || {},
       ),
     );
 

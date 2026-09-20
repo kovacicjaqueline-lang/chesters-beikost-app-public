@@ -123,6 +123,7 @@ function stateSummary(data = state) {
     inventoryBatches: (data.inventory || []).length,
     planLocks: Object.keys(data.planLocks || {}).length,
     manualMeals: Object.keys(data.manualMeals || {}).length,
+    dayClosures: Object.keys(data.dayClosures || {}).length,
     settings: Object.keys(data.settings || {}).length,
     followUps: Object.keys(data.followUps || {}).length,
   };
@@ -135,7 +136,7 @@ function validateBackupPayloadShape(payload) {
   for (let key of ["foods", "customFoods", "foodPreferences", "logs", "inventory", "products"]) {
     if (payload[key] !== undefined && !Array.isArray(payload[key])) throw new Error("Die Backup-Nutzdaten sind ungültig.");
   }
-  for (let key of ["settings", "overrides", "deferred", "pantry", "planLocks", "autoLockExcluded", "manualMeals", "inactivePlanKept", "combinationPauses", "followUps", "shoppingHints", "backupMeta"]) {
+  for (let key of ["settings", "overrides", "deferred", "pantry", "planLocks", "autoLockExcluded", "manualMeals", "dayClosures", "inactivePlanKept", "combinationPauses", "followUps", "shoppingHints", "backupMeta"]) {
     if (payload[key] !== undefined && !isBackupObject(payload[key])) throw new Error("Die Backup-Nutzdaten sind ungültig.");
   }
   for (let food of [...(payload.foods || []), ...(payload.customFoods || [])]) {

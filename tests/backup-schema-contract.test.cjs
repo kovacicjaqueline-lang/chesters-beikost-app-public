@@ -46,6 +46,7 @@ function fixtureState() {
       ingredientProductSnapshots: { rosine: { productId: "p1", productAllergens: { sulfites: "present" } } },
     }],
     products: [{ id: "p1", foodId: "rosine", name: "Bio-Rosinen", productAllergens: { sulfites: "present" } }],
+    dayClosures: { "2026-08-20": { closedAt: "2026-08-20T20:00:00.000Z" } },
     backupMeta: {},
   };
 }
@@ -103,6 +104,7 @@ test("aktueller Export verwendet wieder das kanonische Backup-Schema 5", async (
   assert.equal(Object.hasOwn(pack.payload.inventory[0], "ingredientProductSnapshots"), false);
   assert.equal(pack.checksum, await checksum(context, pack.payload));
   assert.equal(Object.hasOwn(pack.payload, "foods"), false, "der integrierte Katalog gehört nicht in den externen Payload");
+  assert.deepEqual(pack.payload.dayClosures, fixtureState().dayClosures, "Tagesabschlüsse müssen im Backup enthalten sein");
   assert.equal(pack.payload.settings.appFocusMode, "everyday-recipes", "der App-Schwerpunkt muss im Export enthalten sein");
   assert.deepEqual(clone(pack.payload.customFoods), [fixtureState().foods[1]]);
   assert.deepEqual(clone(pack.payload.foodPreferences), [{ id: "rosine", liked: false, notes: "persönlich notiert" }]);

@@ -317,6 +317,13 @@ function migrateStateCore(s) {
   }
   d.autoLockExcluded = { ...(source.autoLockExcluded || {}) };
   d.inactivePlanKept = { ...(source.inactivePlanKept || {}) };
+  d.dayClosures = {};
+  for (let [date, closure] of Object.entries(source.dayClosures || {})) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date)) || !closure || typeof closure !== "object" || Array.isArray(closure)) continue;
+    d.dayClosures[date] = {
+      closedAt: String(closure.closedAt || ""),
+    };
+  }
   d.combinationPauses = {};
   for (let [rawKey, value] of Object.entries(source.combinationPauses || {})) {
     let key = rawKey.split("+").flatMap((id) => mapSourceIds(id)).filter(Boolean).sort().join("+");

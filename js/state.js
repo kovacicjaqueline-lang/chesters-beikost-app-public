@@ -433,6 +433,7 @@ const DEFAULT = {
   planLocks: {},
   autoLockExcluded: {},
   manualMeals: {},
+  dayClosures: {},
   inactivePlanKept: {},
   combinationPauses: {},
   followUps: {},

@@ -170,9 +170,21 @@ test("free unknown unified log remains unknown through another migration round",
   assert.equal(Object.hasOwn(migrated.logs[0], "textureStage"), false);
 });
 
+test("Tagesabschlüsse bleiben bei der Migration als eigener, reversibler Zustand erhalten", () => {
+  const source = defaultState();
+  source.dayClosures = {
+    "2026-08-10": { closedAt: "2026-08-10T20:00:00.000Z" },
+    invalid: { closedAt: "ignored" },
+  };
+  const migrated = clone(migrationContext().__migrateStateCore(source));
+  assert.deepEqual(migrated.dayClosures, {
+    "2026-08-10": { closedAt: "2026-08-10T20:00:00.000Z" },
+  });
+});
+
 test("unified log scopes meal correction to meal-context entries and has no current-texture fallback", () => {
   assert.equal(logSource.includes('id="logMeal"'), true);
-  assert.equal(logSource.includes('pendingLog.__mealContext && value("logMeal")'), true);
+  assert.equal(logSource.includes('document.getElementById("logMeal")'), true);
   assert.equal(logSource.includes('entryType: "food"'), true);
   assert.equal(logSource.includes('<option value="">Bitte auswählen</option>'), true);
   assert.equal(logSource.includes("log.textureStage || state.settings.textureStage"), false);

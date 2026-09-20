@@ -19,6 +19,26 @@
     return `${date}|${meal}`;
   }
 
+  function dayIsClosed(data, date) {
+    return !!data?.dayClosures?.[date];
+  }
+
+  function toggleDayClosure(date) {
+    if (!date || date > today()) return;
+    state.dayClosures ||= {};
+    if (state.dayClosures[date]) {
+      delete state.dayClosures[date];
+      save();
+      renderAll();
+      showToast("Tag wieder geöffnet.");
+      return;
+    }
+    state.dayClosures[date] = { closedAt: new Date().toISOString() };
+    save();
+    renderAll();
+    showToast("Tag abgeschlossen. Spätere Einträge bleiben möglich.");
+  }
+
   function previousIsoDate(date) {
     let [year, month, day] = String(date || "").split("-").map(Number);
     if (![year, month, day].every(Number.isFinite)) return "";
@@ -220,7 +240,7 @@
     let handled = ensurePlannerMeta(data).rolloverHandled || {};
     let previousDay = previousIsoDate(todayValue);
     if (!previousDay) return [];
-    return openPlanInstances(data, (plan) => plan.date === previousDay && !handled[plan.planId])
+    return openPlanInstances(data, (plan) => plan.date === previousDay && !handled[plan.planId] && !dayIsClosed(data, plan.date))
       .sort((a, b) => (MEAL_ORDER[a.meal] || 99) - (MEAL_ORDER[b.meal] || 99));
   }
 
@@ -594,6 +614,14 @@
       : state.logs.find((log) => !beforeIds.has(log.id));
     if (!saved || (editId && saved === beforeEditedLog)) return result;
     let changed = false;
+    if (!plannedMealId && !editId && actualDate && actualMeal) {
+      let inferredPlanId = inferPlanId({ date: actualDate, meal: actualMeal });
+      if (inferredPlanId) {
+        plannedMealId = inferredPlanId;
+        plannedDate = actualDate;
+        plannedMeal = actualMeal;
+      }
+    }
     if (plannedMealId && actualDate === plannedDate && actualMeal === plannedMeal) {
       if (saved.plannedMealId !== plannedMealId) { saved.plannedMealId = plannedMealId; changed = true; }
     } else if (saved.plannedMealId) {
@@ -722,6 +750,7 @@
       moveMealTomorrow(payload);
     });
     document.querySelectorAll(".editCompletedLog").forEach((btn) => btn.onclick = () => editLogEntry(btn.dataset.log));
+    document.querySelectorAll(".closeDay, .reopenDay").forEach((btn) => btn.onclick = () => toggleDayClosure(btn.dataset.date));
     document.querySelectorAll(".meal-lock").forEach((btn) => btn.onclick = () => toggleMealLock(btn.dataset.lockDate, btn.dataset.lockMeal, JSON.parse(decodeURIComponent(btn.dataset.lockPayload))));
     document.querySelectorAll(".addExtraMeal").forEach((btn) => btn.onclick = () => openAddMealMenu(btn.dataset.date));
     document.querySelectorAll(".removeManualMeal").forEach((btn) => btn.onclick = () => removeManualMeal(btn.dataset.date, btn.dataset.meal));
@@ -749,8 +778,18 @@
       let completedPlans = plans.filter((plan) => !!planCompletion(plan, day.date, plan.meal));
       let openPlans = plans.filter((plan) => !planCompletion(plan, day.date, plan.meal));
       let allDone = plans.length > 0 && openPlans.length === 0;
+      let manuallyClosed = dayIsClosed(state, day.date);
       let extra = day.date < today() ? [] : availableExtraMeals(day);
       let renderedEntries = entries.map((entry) => entry.kind === "log" ? plannerLogHtml(entry.log) : renderMealCore(day, entry.plan)).join("");
+
+      if (manuallyClosed) {
+        let logCount = CORE.logsForDate(state, day.date).length;
+        let summary = plans.length
+          ? `${completedPlans.length}/${plans.length} geplant dokumentiert${openPlans.length ? ` · ${openPlans.length} nicht dokumentiert` : ""}`
+          : `${logCount} ${logCount === 1 ? "Protokolleintrag" : "Protokolleinträge"}`;
+        let label = day.date === today() ? "Heute" : nice(day.date, true);
+        return `<details class="card block completed-day manual-day-closure"><summary><span><span class="completed-day-title">${esc(label)} abgeschlossen</span><span class="small">${summary}</span></span><span class="completed-day-chevron">▼</span></summary><div class="completed-day-body">${renderedEntries}${extra.length ? `<div class="add-meal-row"><button class="btn secondary smallbtn addExtraMeal" data-date="${day.date}">+ Mahlzeit hinzufügen</button></div>` : ""}<div class="day-closure-actions"><button class="btn secondary smallbtn reopenDay" data-date="${day.date}">Tag wieder öffnen</button></div></div></details>`;
+      }
 
       if (allDone) {
         let completedLogIds = new Set(completedPlans.map((plan) => planCompletion(plan, day.date, plan.meal)?.id).filter(Boolean));
@@ -764,7 +803,8 @@
       let completed = completedPlans.length;
       let dayBadge = completed && plans.length ? `<span class="pill ok">${completed}/${plans.length} erledigt</span>` : "";
       let empty = !entries.length ? '<div class="empty">Für diesen Tag gibt es weder einen offenen Plan noch einen Protokolleintrag.</div>' : "";
-      return `<div class="card block day-card"><div class="row day-head"><div class="grow"><div class="day-date">${nice(day.date, true)}</div><div class="small day-type-text">${day.introAssigned ? "Einführung und Wiederholung" : "Bekannter Tag"}</div></div>${dayBadge}</div>${renderedEntries}${empty}${extra.length ? `<div class="add-meal-row"><button class="btn secondary smallbtn addExtraMeal" data-date="${day.date}">+ Mahlzeit hinzufügen</button></div>` : ""}</div>`;
+      let closeAction = day.date <= today() ? `<div class="day-closure-actions"><button class="btn secondary smallbtn closeDay" data-date="${day.date}">Tag abschließen</button></div>` : "";
+      return `<div class="card block day-card"><div class="row day-head"><div class="grow"><div class="day-date">${nice(day.date, true)}</div><div class="small day-type-text">${day.introAssigned ? "Einführung und Wiederholung" : "Bekannter Tag"}</div></div>${dayBadge}</div>${renderedEntries}${empty}${extra.length ? `<div class="add-meal-row"><button class="btn secondary smallbtn addExtraMeal" data-date="${day.date}">+ Mahlzeit hinzufügen</button></div>` : ""}${closeAction}</div>`;
     }).join("");
     bindPlannerRenderedActions();
   };
@@ -923,6 +963,8 @@
 
   globalScope.__plannerLogRolloverCore = CORE;
   globalScope.__plannerLogRollover = {
+    dayIsClosed,
+    toggleDayClosure,
     outstanding: () => clone(outstandingNow()),
     shiftOutstanding: () => {
       let plans = outstandingNow();

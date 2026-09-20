@@ -405,6 +405,32 @@ Technische Auswahlpriorität bei proaktiven Kandidaten:
 
 ---
 
+
+## 9.5 Rezept plus einzelnes Lebensmittel ✅ Branch/Integrations-PR
+
+Der Planner darf ein vollständiges, fachlich passendes Rezept mit genau einem zusätzlich geplanten einzelnen Lebensmittel kombinieren. Das zusätzliche Lebensmittel ist keine Rezeptzutat und wird deshalb strukturell getrennt gespeichert.
+
+Verbindliche Datenstruktur:
+
+- `recipeName` bleibt die kanonische Rezeptidentität;
+- `recipeIngredientFoodIds` enthält die konkret gewählte Rezeptvariante;
+- `additionalFoodIds` enthält die separat angebotenen Lebensmittel;
+- `foodIds` enthält die Vereinigungsmenge für Protokollierung und Auswertung;
+- `compositionMode = "recipe-plus-food"` kennzeichnet die Komposition;
+- `foodRoles` und `sampleFoodIds` bleiben nach dem bestehenden Rollenvertrag gültig.
+
+Der Pfad ist bewusst kuratiert. Ein Rezept darf nicht automatisch mit beliebigen Lebensmitteln kombiniert werden. Im ersten integrierten Referenzfall wird `Karotten-Polenta-Brei` mit `Rind` für Mittag- und Abendessen kombiniert.
+
+Harte Grenzen:
+
+- manuelle Mahlzeiten, geschlossene Locks und bestehende Rezeptmahlzeiten bleiben unverändert;
+- höchstens ein zusätzliches einzelnes Lebensmittel;
+- keine zweite Stärke über Rezept und Zusatz zusammen;
+- Rezeptzutaten müssen für die konkrete Mahlzeit geeignet und bereits bereit sein;
+- das zusätzliche Lebensmittel bleibt separat für Vorrat, Einkaufsliste, Protokoll und Ablehnungslogik erfassbar;
+- Rezeptidentität und Rezeptzutaten werden bei einem fehlenden Zusatzlebensmittel nicht in ein anderes Rezept umgeschrieben.
+
+Bei frischer Zubereitung werden Rezeptzutaten und das zusätzliche Lebensmittel einzeln reserviert. Bei einer späteren fertigen Rezeptportion wird die Rezeptportion separat von dem zusätzlichen Lebensmittel reserviert.
 # 10. Automatischer Snack ✅ main
 
 - Kein automatischer Snack in Phase 1–3.
@@ -685,6 +711,7 @@ Weitere offene FOOD-Datenfragen werden separat im FOOD-Fachregel-Track geklärt 
 - PLAN-08-X1 / kein dritter Eisenfallback;
 - Single-Starch;
 - Recipe-first einschließlich maximal einem neuen FOOD **pro Mahlzeit**;
+- Recipe-plus-food verwendet nur kuratierte Pairings; `Karotten-Polenta-Brei + Rind` erhält getrennte Rezept- und Zusatzlebensmittel-Identität, Rollen, Mengen und Reservierungen;
 - Rollenstabilität `base/component/sample` Plan → Lock → Reload → Editor;
 - Vorrats-/Recipe-first-Reservierungen;
 - Replan-Semantik;
@@ -725,6 +752,9 @@ Aktuelle Kernquellen:
 - `js/planner-iron-preference.js`
 - `js/planner-recipe-first.js`
 - `js/planner-proactive-recipe.js`
+- `js/planner-recipe-food-composition.js`
+- `data/recipe-food-pairings.js`
+- `tests/planner-recipe-food-composition.test.cjs`;
 - `js/planner-food-role-stability.js`
 - `js/planner-quality-rotation.js`
 - `js/planner-introduction-policy.js`

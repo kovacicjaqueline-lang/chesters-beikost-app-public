@@ -151,8 +151,8 @@ test("CR-002: aktueller Export validiert in derselben Runtime und bleibt nach Mi
   assert.equal(pack.payload.productAllergenSchemaVersion, PRODUCT_ALLERGEN_SCHEMA_VERSION);
 
   assert.equal(Object.hasOwn(pack.payload, "foods"), false, "der integrierte Katalog gehört nicht in den externen Payload");
-  assert.deepEqual(pack.payload.customFoods, [original.foods[1]]);
-  assert.deepEqual(pack.payload.foodPreferences, [{ id: "rosine", liked: false, notes: "persönlich notiert" }]);
+  assert.deepEqual(clone(pack.payload.customFoods), [original.foods[1]]);
+  assert.deepEqual(clone(pack.payload.foodPreferences), [{ id: "rosine", liked: false, notes: "persönlich notiert" }]);
   pack.summary = { customFoods: 999 };
 
   const validated = await context.validateBackup(JSON.stringify(pack));

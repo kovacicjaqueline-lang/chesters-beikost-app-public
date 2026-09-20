@@ -182,6 +182,7 @@ try {
   assert.equal(await page.locator("#structuredChewCapability").isChecked(), true, "Structured-Chew-Fähigkeit muss Reload überleben");
 
   await page.locator('nav button[data-view="foods"]').click();
+  await page.locator("#foodFilters > .food-filter-toolbar > .food-primary-select > summary").click();
   await page.locator('#foodFilters button[data-filter="allergen"]').click();
   await page.locator("#foodSearch").fill("Ei");
   await page.locator('nav button[data-view="plan"]').click();
@@ -192,6 +193,7 @@ try {
   await page.locator('#catalogSwitch button[data-catalog-mode="recipes"]').click();
   assert.equal(await page.locator("#foodsCatalogSection").isHidden(), true, "Lebensmittelliste muss im Rezeptmodus ausgeblendet sein");
   assert.equal(await page.locator("#recipesSection").isVisible(), true, "Rezeptansicht muss im gemeinsamen Tab sichtbar sein");
+  await page.locator(".recipe-match-select > summary").click();
   await page.locator('#recipeFilter button[data-recipe-filter="all"]').click();
   await page.locator("#recipeSearch").fill("Banane");
   await page.locator('nav button[data-view="plan"]').click();

@@ -315,7 +315,9 @@ function mealEditorRecipeFilterResults() {
   let input = document.getElementById("mealSelectorSearch");
   let results = document.querySelector("#genericBody .selector-results");
   if (!input || !results) return;
-  let normalized = mealEditorRecipeNormalize(context.searchQuery || "");
+  let searchQuery = input.value ?? context.searchQuery ?? "";
+  context.searchQuery = searchQuery;
+  let normalized = mealEditorRecipeNormalize(searchQuery);
   let recipeMode = document.getElementById("selectorRecipes")?.classList.contains("active");
   let visible = 0;
   results.querySelectorAll(".selector-row").forEach((row) => {

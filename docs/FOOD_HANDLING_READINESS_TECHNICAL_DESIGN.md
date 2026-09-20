@@ -190,15 +190,15 @@ Wichtig:
 - keine Capability entsperrt eine andere;
 - Zähne sind kein Capability-Gate.
 
-## 7. Vollmigration der 123 Laufzeitrezepte
+## 7. Vollmigration der 129 Laufzeitrezepte
 
-Der Contract enthält genau **124 Rezeptnamen** und muss exakt mit dem normalisierten Laufzeitkatalog übereinstimmen.
+Der Contract enthält genau **129 Rezeptnamen** und muss exakt mit dem normalisierten Laufzeitkatalog übereinstimmen.
 
 Die bestehende Later-Matrix bleibt erhalten und wird um die zwei neuen graded-bite-Referenzfälle sowie die 18 neuen Form-/Texturrezepte ergänzt:
 
 | Gruppe | Anzahl | technische Wirkung |
 | --- | ---: | --- |
-| kein zusätzliches späteres Gate | 98 | expliziter Handling-/Bite-/Oral-Contract |
+| kein zusätzliches späteres Gate | 104 | expliziter Handling-/Bite-/Oral-Contract |
 | `structured-chew` | 4 | harte beobachtete orale Capability; Bite-Separation bleibt `easy-bite-separate` |
 | `small-soft-pieces` | 3 | harte beobachtete Handling-Capability |
 | weiche spätere Formorientierung | 16 | keine neue Capability; Form/`minMonths`-Orientierung bleibt erhalten |
@@ -313,7 +313,7 @@ Dasselbe Prinzip gilt für harte Krusten, kompakt-federnde Bällchen oder gummia
 
 Mindestens abzusichern:
 
-1. 124 Runtime-Rezepte = 124 Contract-Einträge;
+1. 129 Runtime-Rezepte = 129 Contract-Einträge;
 2. keine Doppelzuordnung;
 3. bestehende Matrix 98 / 4 / 3 / 16 plus zwei explizite graded-bite-Referenzfälle;
 4. 41 zuvor bestehende `finger-graspable` = 13 low-resistance / 28 easy-bite / 0 graded-bite;

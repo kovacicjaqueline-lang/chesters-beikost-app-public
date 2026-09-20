@@ -268,6 +268,7 @@ const RECIPE_ICON_PATHS = Object.freeze({
   "Zucchini-Kartoffel-Brei": "assets/illustrations-v2/recipes/zucchini-kartoffel-brei.svg",
   "Erbsen-Kartoffel-Stampf": "assets/illustrations-v2/recipes/erbsen-kartoffel-stampf.svg",
   "Kürbis-Linsen-Suppe": "assets/illustrations-v2/recipes/kuerbis-linsen-suppe.svg",
+  "Hirsotto": "assets/illustrations-v2/recipes/hirsotto.svg",
   "Mildes Rote-Linsen-Dhal": "assets/illustrations-v2/recipes/mildes-rote-linsen-dhal.svg",
   "Huhn-Karotte-Nudel-Topf": "assets/illustrations-v2/recipes/huhn-karotte-nudel-topf.svg",
   "Huhn-Lauch-Kartoffel-Topf": "assets/illustrations-v2/recipes/huhn-lauch-kartoffel-topf.svg",

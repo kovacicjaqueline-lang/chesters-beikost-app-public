@@ -105,20 +105,20 @@ test("HANDLING: feedingApproach sortiert nur Präferenzen und entfernt keine sic
   ]);
 });
 
-test("HANDLING: alle 123 Laufzeitrezepte sind explizit und genau einmal migriert", () => {
+test("HANDLING: alle 124 Laufzeitrezepte sind explizit und genau einmal migriert", () => {
   const runtimeNames = runtimeRecipeNames();
   const contractNames = Object.keys(RECIPE_HANDLING_CONTRACT);
   const grouped = Object.values(RECIPE_CONTRACT_GROUPS).flat();
-  assert.equal(runtimeNames.length, 123);
-  assert.equal(contractNames.length, 123);
-  assert.equal(new Set(grouped).size, 123, "Contract-Gruppen dürfen sich nicht überlappen");
+  assert.equal(runtimeNames.length, 124);
+  assert.equal(contractNames.length, 124);
+  assert.equal(new Set(grouped).size, 124, "Contract-Gruppen dürfen sich nicht überlappen");
   assert.deepEqual([...contractNames].sort(), [...runtimeNames].sort());
   assert.deepEqual([...grouped].sort(), [...runtimeNames].sort());
 });
 
 test("HANDLING: bestehende 103er Auditmatrix bleibt erhalten und zwei graded-bite-Fälle kommen explizit hinzu", () => {
   const entries = Object.values(RECIPE_HANDLING_CONTRACT);
-  assert.equal(entries.filter((entry) => !entry.laterKind).length, 98);
+  assert.equal(entries.filter((entry) => !entry.laterKind).length, 99);
   assert.equal(entries.filter((entry) => entry.laterKind === "oral-capability").length, 4);
   assert.equal(entries.filter((entry) => entry.laterKind === "handling-capability").length, 3);
   assert.equal(entries.filter((entry) => entry.laterKind === "soft-orientation").length, 16);
@@ -346,6 +346,16 @@ test("HANDLING: Nockerl werden nur durch small-soft-pieces freigeschaltet", () =
     ).eligibleModes,
     [HANDLING_MODES.FINGER_SMALL_SOFT],
   );
+});
+
+test("HANDLING: Hirsotto ist als weiche risottoartige Löffelmahlzeit vollständig eingeordnet", () => {
+  const entry = RECIPE_HANDLING_CONTRACT.Hirsotto;
+  assert.deepEqual(entry.modes, [HANDLING_MODES.SPOON_MASHED, HANDLING_MODES.SPOON_SOFT_LUMPY]);
+  assert.equal(entry.biteSeparation, undefined);
+  assert.equal(entry.oralProcessing, ORAL_PROCESSING_PROFILES.SOFT_BREAKDOWN);
+  assert.match(entry.servingRequirement, /risottoartig/i);
+  assert.match(entry.servingRequirement, /Butter/i);
+  assert.match(entry.servingRequirement, /salzfreie Brühe/i);
 });
 
 test("HANDLING: weich-stückige Formfälle bleiben soft-orientation statt künstlicher Capability", () => {

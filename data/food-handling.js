@@ -179,6 +179,7 @@ const RECIPE_CONTRACT_GROUPS = Object.freeze({
     "Karfiol-Kartoffel-Stampf",
     "Erbsen-Kartoffel-Stampf",
     "Kürbis-Linsen-Suppe",
+    "Hirsotto",
     "Huhn-Brokkoli-Reis",
     "Lachs-Reis-Erbsen",
     "Kabeljau-Tomaten-Gemüse",
@@ -229,6 +230,9 @@ const RECIPE_CONTRACT_OVERRIDES = Object.freeze({
   }),
   "Ei-Champignon-Cups": Object.freeze({
     servingRequirement: "Vollständig durchbacken und weich halten; Champignons sehr fein und weich vorbereiten. Die Cup-Form bleibt die kanonische Form; keine harte oder trockene Kruste.",
+  }),
+  "Hirsotto": Object.freeze({
+    servingRequirement: "Sehr weich und feucht als cremige, risottoartige Löffelmahlzeit anbieten. Je nach Phase fein pürieren, grob zerdrücken oder weich strukturiert servieren; Hirse und rote Linsen müssen vollständig weich sein. Butter und Öl vollständig einrühren und nur salzfreie Brühe verwenden.",
   }),
   "Weiche Joghurt-Fladen": Object.freeze({
     servingRequirement: "Vollständig, aber weich durchbacken; die Mitte darf nicht roh, klebrig oder teigig bleiben und es darf keine harte Kruste entstehen. Der abgetrennte Bissen bleibt zusammenhängend und verlangt anschließend sicheres strukturiertes Kauen.",

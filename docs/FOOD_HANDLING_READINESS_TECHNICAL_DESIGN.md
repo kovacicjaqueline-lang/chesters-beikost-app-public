@@ -127,7 +127,7 @@ Der gezielte Recheck der **41 zuvor bestehenden** zusammenhängenden `finger-gra
 - 28 × `easy-bite-separate`
 - 0 × `graded-bite-required`
 
-Im aktuellen **123er Laufzeitkatalog** kommen zu den bestehenden Karten 18 neue Form-/Texturrezepte sowie zwei individuell geprüfte graded-bite-Referenzfälle hinzu:
+Im aktuellen **124er Laufzeitkatalog** kommen zu den bestehenden Karten 18 neue Form-/Texturrezepte sowie zwei individuell geprüfte graded-bite-Referenzfälle hinzu:
 
 - `Pizza Wrap`: `graded-bite-required` + `easy-chew`, nur `graded-bite`;
 - `Chicken Fajita Wrap`: `graded-bite-required` + `structured-chew-required`, `graded-bite` + `structured-chew`.
@@ -192,7 +192,7 @@ Wichtig:
 
 ## 7. Vollmigration der 123 Laufzeitrezepte
 
-Der Contract enthält genau **123 Rezeptnamen** und muss exakt mit dem normalisierten Laufzeitkatalog übereinstimmen.
+Der Contract enthält genau **124 Rezeptnamen** und muss exakt mit dem normalisierten Laufzeitkatalog übereinstimmen.
 
 Die bestehende Later-Matrix bleibt erhalten und wird um die zwei neuen graded-bite-Referenzfälle sowie die 18 neuen Form-/Texturrezepte ergänzt:
 
@@ -313,7 +313,7 @@ Dasselbe Prinzip gilt für harte Krusten, kompakt-federnde Bällchen oder gummia
 
 Mindestens abzusichern:
 
-1. 123 Runtime-Rezepte = 123 Contract-Einträge;
+1. 124 Runtime-Rezepte = 124 Contract-Einträge;
 2. keine Doppelzuordnung;
 3. bestehende Matrix 98 / 4 / 3 / 16 plus zwei explizite graded-bite-Referenzfälle;
 4. 41 zuvor bestehende `finger-graspable` = 13 low-resistance / 28 easy-bite / 0 graded-bite;

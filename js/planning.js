@@ -374,6 +374,37 @@ function applyPlannedMealAmounts(meal) {
   meal.ingredientAmounts = allocation.amounts;
   return meal;
 }
+function applyRecipeFoodComposition(meal, date, ctx) {
+  if (typeof plannerRecipeFoodCompositionCandidates !== "function" ||
+      typeof plannerApplyRecipeFoodComposition !== "function") return meal;
+  let recipes = typeof RECIPES !== "undefined" ? RECIPES : [];
+  let pairings = typeof RECIPE_FOOD_PAIRING_DATA !== "undefined" ? RECIPE_FOOD_PAIRING_DATA : [];
+  let candidates = plannerRecipeFoodCompositionCandidates(
+    meal,
+    recipes,
+    state.foods || [],
+    pairings,
+    {
+      on: date,
+      recipeSuitableFn: recipeSuitableForMeal,
+      ingredientReadyFn: (name, item, mealKey, on) => {
+        let candidate = item || foodByName(name, state.foods);
+        return !!candidate &&
+          eligible(candidate, mealKey, on) &&
+          (canCombine(candidate) || (meal.foodIds || []).includes(candidate.id));
+      },
+      foodEligibleFn: (id, mealKey, on) => eligible(food(id), mealKey, on),
+      milkCompatibleFn: (currentMeal, recipe) => {
+        let currentMilk = String(currentMeal.milkMeal || "");
+        let recipeMilk = String(recipe.milkMeal || currentMilk);
+        return !currentMilk || !recipeMilk || currentMilk === recipeMilk;
+      },
+      singleStarchFn: (ids) => ids.filter((id) => isStarchyFood(food(id))).length <= 1,
+    },
+  );
+  let selected = plannerSelectRecipeFoodComposition(candidates);
+  return selected ? plannerApplyRecipeFoodComposition(meal, selected) : meal;
+}
 
 function companionFor(f, meal, on, focusType = "") {
   let needsTrustedBase = plannerIntroductionNeedsTrustedBase(f, focusType);
@@ -627,6 +658,25 @@ function buildSnackRecipeMeal(recipe, on, ctx) {
   return meal;
 }
 function reserveMealInventory(meal, ctx) {
+  if (meal.compositionMode === "recipe-plus-food") {
+    meal.inventoryFoodIds = [];
+    if (!state.settings.preferInventoryInPlan) return meal;
+    if (meal.recipeInventoryId) {
+      ctx.recipeReserved.set(
+        meal.recipeName,
+        (ctx.recipeReserved.get(meal.recipeName) || 0) + 1,
+      );
+    } else {
+      for (let id of [...(meal.recipeIngredientFoodIds || []), ...(meal.additionalFoodIds || [])]) {
+        let reserved = ctx.inventoryReserved.get(id) || 0;
+        if (inventoryPortions(id) > reserved) {
+          meal.inventoryFoodIds.push(id);
+          ctx.inventoryReserved.set(id, reserved + 1);
+        }
+      }
+    }
+    return meal;
+  }
   if (meal.recipeName) {
     let currentItem = state.inventory.find(
       (i) =>
@@ -692,6 +742,10 @@ function mealSnapshot(date, meal, generated, mode = "manual") {
     inventoryFoodIds: [...(generated.inventoryFoodIds || [])],
     recipeName: generated.recipeName || "",
     recipeInventoryId: generated.recipeInventoryId || "",
+    compositionMode: generated.compositionMode || "",
+    recipeIngredientFoodIds: [...(generated.recipeIngredientFoodIds || [])],
+    additionalFoodIds: [...(generated.additionalFoodIds || [])],
+    recipePairingKey: generated.recipePairingKey || "",
     milkMeal: generated.milkMeal || mealMilkLevel(generated),
     type: generated.type,
     note: generated.note,
@@ -966,6 +1020,7 @@ function buildDay(date, index, ctx) {
             : "Allergen mit bekannter Basis gezielt wiederholen."
           : "Bekannte Lebensmittel sinnvoll rotieren; Vorrat bevorzugt nutzen.";
     let generated = applyPlannedMealAmounts({ meal, active: true, focusId: f.id, foodIds: ids, baseFoodIds, sampleFoodIds, optionalAddons, milkMeal: mealContainsMilkProduct(ids) ? (introduction ? "small" : "full") : "", type: c.type, note });
+    generated = applyRecipeFoodComposition(generated, date, ctx);
     if (mealMilkLevel(generated) === "full") ctx.fullMilkDates?.add(date);
     reserveMealInventory(generated, ctx); meals.push(generated);
   }
@@ -1067,6 +1122,16 @@ function naturalMealFoodTitle(items) {
   return `${main.name} mit ${naturalFoodList(companions)}`;
 }
 function dishTitle(m) {
+  if (m.recipeName && m.compositionMode === "recipe-plus-food") {
+    let additional = (m.additionalFoodIds || [m.focusId]).map(food).filter(Boolean);
+    let title = additional.length
+      ? `${naturalFoodList(additional.map((item) => item.name))} mit ${m.recipeName}`
+      : m.recipeName;
+    if ((m.sampleFoodIds || []).some((id) => (m.additionalFoodIds || []).includes(id))) {
+      title += ` zur ${plannerLearningRoleLabel(food(m.additionalFoodIds[0]), m.type || "")}`;
+    }
+    return title;
+  }
   if (m.recipeName) return m.recipeName;
   let sample = (m.sampleFoodIds || []).map(food).filter(Boolean);
   let base = (m.baseFoodIds || []).map(food).filter(Boolean);
@@ -1087,8 +1152,13 @@ function dishTitle(m) {
 }
 
 function mealRolesHtml(m) {
-  let f = food(m.focusId),
-    companions = (m.foodIds || [])
+  let f = food(m.focusId);
+  if (m.compositionMode === "recipe-plus-food") {
+    let rows = `<div class="role-row"><div class="role-label">${esc(focusRole(m.type))}</div><div class="role-value">${esc(f?.name || "")}</div></div>`;
+    rows += `<div class="role-row"><div class="role-label">Rezept</div><div class="role-value">${esc(m.recipeName || "")}</div></div>`;
+    return `<div class="role-list">${rows}</div>`;
+  }
+  let companions = (m.foodIds || [])
       .filter((id) => id !== m.focusId)
       .map(food)
       .filter(Boolean),
@@ -1111,7 +1181,7 @@ function mealRolesHtml(m) {
   return `<div class="role-list">${rows}</div>${addonLine}`;
 }
 function mealExplanation(m) {
-  let f = food(m.focusId), companions = (m.foodIds || []).filter((id) => id !== m.focusId).map(food).filter(Boolean), addons = (m.optionalAddons || []).map(food).filter(Boolean);
+  let f = food(m.focusId), recipeIngredients = new Set(m.recipeIngredientFoodIds || []), companions = (m.foodIds || []).filter((id) => id !== m.focusId && !recipeIngredients.has(id)).map(food).filter(Boolean), addons = (m.optionalAddons || []).map(food).filter(Boolean);
   let parts = [];
   if (m.type === "neu") parts.push(`${f.name} ist heute neu.`);
   else if (m.type === "gezielt wiederholen") parts.push(`${f.name} wird gezielt noch einmal angeboten.`);
@@ -1130,6 +1200,9 @@ function mealExplanation(m) {
         ? `${companions.map((x) => x.name).join(" und ")} ${companions.length === 1 ? "ist" : "sind"} die bereits verträgliche Basis.`
         : `${companions.map((x) => x.name).join(" und ")} wurde bereits problemlos gegessen und ergänzt die Mahlzeit.`,
     );
+  }
+  if (m.compositionMode === "recipe-plus-food" && m.recipeName) {
+    parts.push(`${m.recipeName} bildet die Rezeptkomponente der Mahlzeit; ${f.name} bleibt als einzelnes Lebensmittel separat erfasst.`);
   }
   if (addons.length) parts.push(`${addons.map((x) => x.name).join(" und ")} ist nur eine optionale Zubereitungszugabe und wird nicht automatisch als gegessen protokolliert.`);
   return parts.join(" ");

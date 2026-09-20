@@ -619,7 +619,7 @@ const FOOD_DB = [
     "allergenGroup": "",
     "ironRich": false,
     "ph": false,
-    "alias": "Polenta",
+    "alias": "",
     "meals": [
       "breakfast",
       "lunch",
@@ -629,6 +629,7 @@ const FOOD_DB = [
     "prep": "ca. 35-g-Basisportionen",
     "seasonMonths": [],
     "count100": true,
+    "autoPlan": false,
     "manualStatus": "auto",
     "notes": ""
   },

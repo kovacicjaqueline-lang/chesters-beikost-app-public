@@ -278,7 +278,10 @@ function applyFoodPolicyData(foodDb, idAliases = {}) {
   }
   idAliases["mais-polenta"] = "mais";
   let mais = byId.get("mais");
-  if (mais) mais.foodFamily = "mais";
+  if (mais) {
+    mais.foodFamily = "mais";
+    mais.autoPlan = false;
+  }
   let polenta = byId.get("polenta");
   if (polenta) polenta.foodFamily = "mais";
 

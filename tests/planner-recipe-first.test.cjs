@@ -103,6 +103,17 @@ test("PLAN-08 recipe-first: löffelbares Ein-Zutat-Rezept wird vor Fingerfood be
   assert.equal(selected.name, "Weiches Rührei");
 });
 
+test("PLAN-08 recipe-first: gleichartige Ein-Zutat-Rezepte rotieren nach Nutzung", () => {
+  const selected = recipeFirst.plannerSelectStandaloneRecipe([
+    { name: "Omelettstreifen", category: "balls" },
+    { name: "Weiches Rührei", category: "family" },
+  ], {
+    recipePlannedUse: new Map([["Weiches Rührei", 1]]),
+    recipeReserved: new Map(),
+  });
+  assert.equal(selected.name, "Omelettstreifen");
+});
+
 test("PLAN-08 recipe-first: eindeutige Zweierrezepte werden erkannt, mehrdeutige bleiben FOOD-only", () => {
   assert.equal(exact(["Lachs", "Kartoffel"], "lunch")?.name, "Lachs-Kartoffel-Bällchen");
   const broccoliNames = candidates(["Brokkoli", "Kartoffel"], "lunch").map((recipe) => recipe.name);

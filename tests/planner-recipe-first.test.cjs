@@ -46,6 +46,7 @@ function runtimeContext({
   coreSuitable = () => true,
   preferInventory = false,
   inventoryPortions = 0,
+  ingredientReady = () => true,
 } = {}) {
   const state = {
     foods: (meal?.foodIds || []).map((id) => ({ id, name: id })),
@@ -60,7 +61,7 @@ function runtimeContext({
     recipeStates: () => [recipe],
     plannerRecipeSuitableForMeal: suitable,
     recipeSuitableForMeal: coreSuitable,
-    recipeIngredientReady: () => true,
+    recipeIngredientReady: ingredientReady,
     recipeContainsMeatOrFish: () => false,
     recipeInventoryPortions: () => inventoryPortions,
     reserveMealInventory: (plannedMeal, ctx) => {
@@ -261,7 +262,7 @@ test("PLAN-08 recipe-first: frisches Rezept wird ohne erfundene Vorratsportion a
   assert.equal(ctx.recipePlannedUse.get(recipe.name), 1);
 });
 
-test("PLAN-08 recipe-first: Kostprobe/Einführung bleibt FOOD-first", () => {
+test("PLAN-08 recipe-first: Einführung darf ein Rezept mit dem neuen FOOD verwenden", () => {
   const meal = {
     meal: "breakfast",
     active: true,
@@ -271,11 +272,19 @@ test("PLAN-08 recipe-first: Kostprobe/Einführung bleibt FOOD-first", () => {
     sampleFoodIds: ["ei"],
     inventoryFoodIds: [],
     recipeName: "",
+    type: "Allergen einführen",
   };
   const recipe = { name: "Fake-Rezept", requires: ["banane", "ei"], requirementMissing: [] };
-  const context = runtimeContext({ meal, recipe });
+  const context = runtimeContext({
+    meal,
+    recipe,
+    ingredientReady: (name) => name !== "ei",
+  });
   assert.equal(context.__installRecipeFirst(), true);
-  assert.equal(context.buildDay("2026-08-18", 0, { recipePlannedUse: new Map() }).meals[0].recipeName, "");
+  const planned = context.buildDay("2026-08-18", 0, { recipePlannedUse: new Map() }).meals[0];
+  assert.equal(planned.recipeName, "Fake-Rezept");
+  assert.deepEqual(Array.from(planned.sampleFoodIds), ["ei"]);
+  assert.equal(planned.type, "Rezept");
 });
 
 test("PLAN-08 recipe-first: mehrere exakte Treffer werden nur durch bestehende Rotationssignale eindeutig", () => {

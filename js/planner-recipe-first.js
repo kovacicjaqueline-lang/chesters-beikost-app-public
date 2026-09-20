@@ -1,9 +1,11 @@
 "use strict";
 
-/* PLAN-08 Recipe-first für bekannte FOOD-Kombinationen.
+/* PLAN-08 Recipe-first für FOOD-Kombinationen und strukturierte Einführungen.
  *
  * Grundsatz:
- * - Einführungen/Kostproben bleiben FOOD-first.
+ * - Eine Einführung darf ein passendes vorhandenes Rezept verwenden.
+ * - Dabei darf ausschließlich das neue Sample-FOOD noch unerprobt sein;
+ *   alle übrigen Rezeptzutaten müssen weiterhin bereit sein.
  * - Eine bekannte FOOD-only-Mahlzeit darf zu einem vorhandenen Rezept werden,
  *   wenn eine aktuell geeignete Rezeptvariante EXAKT dieselben FOOD-IDs enthält.
  * - Es werden keine zusätzlichen Zutaten erfunden, nur um ein Rezept passend zu machen.
@@ -56,6 +58,13 @@ function plannerRecipeVariantIdSets(recipe, foods, ingredientReadyFn = null) {
     if (!result.some((existing) => plannerRecipeIdsEqual(existing, ids))) result.push(ids);
   }
   return result;
+}
+
+function plannerRecipeIngredientReadyForMeal(name, meal, foods, ingredientReadyFn = null) {
+  if (typeof ingredientReadyFn !== "function" || ingredientReadyFn(name)) return true;
+  let sampleIds = new Set(meal?.sampleFoodIds || []);
+  if (!sampleIds.size) return false;
+  return (foods || []).some((food) => sampleIds.has(food?.id) && food?.name === name);
 }
 
 function plannerStandaloneRecipeCandidates(
@@ -466,25 +475,31 @@ function installPlannerRecipeFirstRuntime() {
     let day = originalBuildDay(date, index, ctx);
     for (let meal of day?.meals || []) {
       if (!meal?.active || meal.empty || meal.recipeName || meal.manualAdded || meal.lockedMode) continue;
-      if ((meal.sampleFoodIds || []).length) continue;
       let ids = plannerRecipeCanonicalIds(meal.foodIds);
       if (!ids.length) continue;
 
       let recipes = recipeStates();
+      let ingredientReadyForMeal = (name) =>
+        plannerRecipeIngredientReadyForMeal(
+          name,
+          meal,
+          state?.foods || [],
+          recipeIngredientReady,
+        );
       let recipeAllowed = (candidate) =>
         plannerRecipeMilkContextCompatible(meal, candidate) &&
         !(candidate?.milkMeal === "full" &&
           typeof recipeContainsMeatOrFish === "function" &&
           recipeContainsMeatOrFish(candidate));
 
-      let candidates = ids.length > 1
+      let candidates = ids.length
         ? plannerExactRecipeCandidates(
             ids,
             meal.meal,
             recipes,
             state?.foods || [],
             plannerRecipeSuitableForMeal,
-            recipeIngredientReady,
+            ingredientReadyForMeal,
             recipeAllowed,
           )
         : [];
@@ -518,7 +533,7 @@ function installPlannerRecipeFirstRuntime() {
         recipes,
         state?.foods || [],
         plannerRecipeSuitableForMeal,
-        recipeIngredientReady,
+        ingredientReadyForMeal,
         recipeAllowed,
       );
       let standalone = plannerSelectStandaloneRecipe(standaloneCandidates, {
@@ -556,6 +571,7 @@ if (typeof module !== "undefined" && module.exports) {
     plannerRecipeIdsEqual,
     plannerRecipeNameVariants,
     plannerRecipeVariantIdSets,
+    plannerRecipeIngredientReadyForMeal,
     plannerStandaloneRecipeCandidates,
     plannerStandaloneRecipeFormRank,
     plannerSelectStandaloneRecipe,

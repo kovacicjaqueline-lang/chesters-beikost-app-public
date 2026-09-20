@@ -213,6 +213,7 @@ try {
   for (const filter of ["available", "almost", "pantry", "freezer"]) {
     assert.equal(await page.locator(`#recipeFilter [data-recipe-filter="${filter}"]`).count(), 1, `${filter} bleibt schnell erreichbar`);
   }
+  await page.locator(".recipe-match-select > summary").click();
   await page.locator('#recipeFilter [data-recipe-filter="freezer"]').click();
   assert.ok(await page.locator('#recipeFilter [data-recipe-filter="freezer"]').evaluate((button) => button.classList.contains("active")));
   await page.locator('#catalogSwitch [data-catalog-mode="foods"]').click();

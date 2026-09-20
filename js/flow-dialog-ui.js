@@ -476,7 +476,7 @@
         queueMicrotask(() => logBody.querySelector("#logFoodSearch")?.focus());
       }
     }
-  }, true);
+  });
 
   syncGeneric();
   syncLog();

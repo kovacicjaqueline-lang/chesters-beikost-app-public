@@ -115,10 +115,11 @@ try {
   await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "domcontentloaded" });
   await waitForApp(page);
 
-  // 1. Freier Eintrag: keine künstliche Mahlzeit, bewusste Textur, Rollenpersistenz.
+  // 1. Freier Eintrag: optionale tatsächliche Mahlzeit, bewusste Textur, Rollenpersistenz.
   await reset(page);
   await page.evaluate(() => window.openLog(null));
-  assert.equal(await page.locator("#logMeal").count(), 0, "Freier Eintrag darf keine Mahlzeitenauswahl anzeigen");
+  assert.equal(await page.locator("#logMeal").count(), 1, "Freier Eintrag braucht eine optionale Mahlzeitenzuordnung");
+  assert.equal(await page.locator("#logMeal").inputValue(), "", "Freier Eintrag darf keine Mahlzeit vorauswählen");
   assert.equal(await page.locator("#logTexture").inputValue(), "", "Neue Textur darf nicht vorausgewählt sein");
   assert.equal(await page.locator("#logTexture + .small").count(), 0, "Das Konsistenzfeld darf keinen zusätzlichen Hinweistext anzeigen");
   await selectFood(page, "Karotte");
@@ -158,6 +159,40 @@ try {
   assert.equal(reloaded.textureKnown, true);
   assert.equal(reloaded.textureStage, 2);
   assert.equal(reloaded.foodRoles.karotte, "sample");
+
+  // Eine freie tatsächliche Mahlzeit schließt bei eindeutiger Zuordnung den offenen Plan-Slot ab.
+  await reset(page);
+  const freeAssignedDate = await page.evaluate(() => window.__beikostTest.today());
+  await page.evaluate((date) => {
+    const state = window.__beikostTest.getState();
+    state.planLocks[`${date}|lunch`] = {
+      planId: "free-assigned-lunch",
+      date,
+      meal: "lunch",
+      focusId: "karotte",
+      foodIds: ["karotte"],
+      baseFoodIds: [],
+      sampleFoodIds: ["karotte"],
+      foodRoles: { karotte: "sample" },
+      mode: "manual",
+      active: true,
+      type: "neu",
+    };
+    window.__beikostTest.setState(state);
+    window.openLog(null);
+  }, freeAssignedDate);
+  await selectFood(page, "Karotte");
+  await selectLogOption(page, "#logMeal", "lunch");
+  await selectLogOption(page, "#logTexture", "1");
+  await page.locator("#saveLog").click();
+  await page.waitForFunction(() => window.__beikostTest.getState().logs.length === 1);
+  const assignedFreeLog = await page.evaluate(() => window.__beikostTest.getState().logs[0]);
+  assert.equal(assignedFreeLog.meal, "lunch");
+  assert.equal(assignedFreeLog.plannedMealId, "free-assigned-lunch", "Eine eindeutige tatsächliche Mahlzeit übernimmt den offenen Plan-Slot");
+  assert.equal(
+    await page.evaluate((date) => window.__plannerLogRolloverCore.openPlanInstances(window.__beikostTest.getState(), (plan) => plan.date === date && plan.meal === "lunch").length, freeAssignedDate),
+    0,
+  );
 
   // 2. Rezept kann an einem vergangenen Datum frei protokolliert werden.
   await reset(page);

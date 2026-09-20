@@ -67,7 +67,7 @@ try {
   await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => !!window.__beikostTest?.getState && window.__flowDialogUiInstalled === true);
 
-  // Freier Essenseintrag: gleiche Shell, aber weiterhin ohne erzwungenen Mahlzeitenkontext.
+  // Freier Essenseintrag: gleiche Shell, aber ohne vorausgewählten Mahlzeitenkontext.
   const freeLogBaseline = await page.evaluate(() => {
     window.__beikostTest.reset();
     return window.__beikostTest.getState().logs;
@@ -76,7 +76,8 @@ try {
   await page.waitForFunction(() => document.getElementById("logForm")?.classList.contains("flow-dialog-body"));
   assert.equal(await page.locator("#logModal").evaluate((node) => node.classList.contains("flow-dialog")), true);
   assert.equal(await page.locator("#logTitle").textContent(), "Essen eintragen");
-  assert.equal(await page.locator("#logMeal").count(), 0);
+  assert.equal(await page.locator("#logMeal").count(), 1);
+  assert.equal(await page.locator("#logMeal").inputValue(), "");
   assert.equal(await page.locator("#logForm .flow-dialog-actions").count(), 1);
   assert.equal(await page.locator("#logFoodSearch").evaluate((node) => getComputedStyle(node).fontSize), "16px");
   assert.equal(await page.locator(".log-food-results").evaluate((node) => getComputedStyle(node).overflowY), "visible");

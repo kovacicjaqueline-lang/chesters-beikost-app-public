@@ -640,7 +640,7 @@ function renderLogForm() {
   let contextHint = p.__fromPlan && !logContextHasChanged(p);
   let logContext = p.__mealContext
     ? `<div class="field" style="margin-bottom:10px"><div class="row"><div class="grow"><b id="logContextSummary">${esc(nice(p.date, true))} · ${esc(mealName(p.meal))}</b><div id="logContextPlanHint"${contextHint ? "" : " hidden"}>${contextHint ? "aus dem Plan" : ""}</div></div><button class="text-button" id="editLogContext" type="button" aria-expanded="${p.__contextEditing ? "true" : "false"}">${p.__contextEditing ? "Fertig" : "Ändern"}</button></div><div id="logContextFields" style="display:${p.__contextEditing ? "block" : "none"};margin-top:10px"><div class="grid2"><div class="field"><label>Datum</label><input type="date" id="logDate" value="${p.date}"></div><div class="field"><label>Mahlzeit</label><select id="logMeal">${mealOptions}</select></div></div></div></div>`
-    : `<div class="log-date-grid"><div class="field"><label>Datum</label><input type="date" id="logDate" value="${p.date}"></div></div>`;
+    : `<div class="log-date-grid"><div class="field"><label>Datum</label><input type="date" id="logDate" value="${p.date}"></div><div class="field"><label>Mahlzeit (optional)</label><select id="logMeal"><option value="" ${p.meal ? "" : "selected"}>Keine Zuordnung</option>${mealOptions}</select><div class="small">Wenn für diese Mahlzeit ein offener Plan existiert, wird der tatsächliche Eintrag diesem Plan zugeordnet.</div></div></div>`;
   let freeRecipe = !p.editId && !p.__mealContext && p.recipeName ? recipeByName(p.recipeName) : null;
   if (freeRecipe && !p.__recipeChoice) {
     p.__recipeChoice = logRecipeChoiceState(freeRecipe, p.foodIds || []);
@@ -712,7 +712,7 @@ function captureLogDraft(options = {}) {
   if (!pendingLog) return;
   let value = (id) => document.getElementById(id)?.value;
   if (!options.skipDate && value("logDate")) pendingLog.date = value("logDate");
-  if (pendingLog.__mealContext && value("logMeal")) pendingLog.meal = value("logMeal");
+  if (document.getElementById("logMeal")) pendingLog.meal = value("logMeal") || "";
   pendingLog.amount = value("logAmount") || "";
   pendingLog.__textureValue = value("logTexture") ?? pendingLog.__textureValue ?? "";
   if (pendingLog.__textureValue) {
@@ -821,7 +821,7 @@ function saveLog() {
     date: document.getElementById("logDate").value,
     meal: pendingLog.editId && pendingLog.__legacyEntryType === "sample"
       ? String(pendingLog.__originalMeal ?? pendingLog.meal ?? "")
-      : (pendingLog.__mealContext ? String(pendingLog.meal || "") : ""),
+      : String(pendingLog.meal || ""),
     foodIds: ids,
     focusId: focus,
     recipeName: pendingLog.recipeName || "",

@@ -22,6 +22,7 @@
 .completed-day-body{padding:0 14px 12px;border-top:1px solid var(--line)}
 .completed-day-chevron{font-size:12px;color:var(--muted)}
 .completed-day[open] .completed-day-chevron{transform:rotate(180deg)}
+.day-closure-actions{display:flex;justify-content:center;margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
 .meal-lock{min-width:42px;padding:8px 9px;font-size:17px}
 .meal-lock.locked{background:var(--accent2);color:var(--accent)}
 .lock-label{margin-top:6px}

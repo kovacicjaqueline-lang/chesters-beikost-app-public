@@ -17,7 +17,7 @@ assert.ok(helperBlock, "Mobile-Plan-Helferblock muss vorhanden sein");
 
 const context = { Set };
 vm.runInNewContext(
-  `${helperBlock[1]}; this.api = { mobilePlanDayStatus, mobilePlanSelectedDate, mobilePlanStatusLabels, mobilePlanCompletionTitle };`,
+  `${helperBlock[1]}; this.api = { mobilePlanDayStatus, mobilePlanSelectedDate, mobilePlanStatusLabels, mobilePlanCompletionTitle, mobilePlanSwipeDirection };`,
   context,
 );
 const {
@@ -127,6 +127,13 @@ test("Tagesauswahl bleibt innerhalb der sichtbaren Woche und fällt auf Heute od
   assert.equal(mobilePlanSelectedDate(days, "2026-08-31", "2026-08-30"), "2026-09-01");
 });
 
+test("Tageskarten erkennen nur ausreichend horizontale Wischgesten", () => {
+  assert.equal(context.api.mobilePlanSwipeDirection(200, 100, 120, 105), 1, "Wisch nach links zeigt den nächsten Tag");
+  assert.equal(context.api.mobilePlanSwipeDirection(120, 100, 200, 105), -1, "Wisch nach rechts zeigt den vorherigen Tag");
+  assert.equal(context.api.mobilePlanSwipeDirection(120, 100, 150, 145), 0, "Vertikales Scrollen wechselt nicht den Tag");
+  assert.equal(context.api.mobilePlanSwipeDirection(120, 100, 155, 100), 0, "Kurze horizontale Bewegungen wechseln nicht den Tag");
+});
+
 test("Mobile-Plan bleibt lazy, wird als letzte Plan-UI-Erweiterung geladen und nutzt planspezifische Styles", () => {
   assert.match(loader, /plan-mobile-ui\.js/);
   assert.match(source, /MobileUiLifecycle\.onRender\("plan", enhanceMobilePlan\)/);
@@ -138,6 +145,7 @@ test("Mobile-Plan bleibt lazy, wird als letzte Plan-UI-Erweiterung geladen und n
   assert.match(source, /state\.settings\.planFrom = nextFrom;[\s\S]*?save\(\);[\s\S]*?renderPlan\(\);/);
   assert.doesNotMatch(source, /save\(\);\s*renderAll\(\);/);
   assert.match(css, /#plan \.plan-week-days/);
+  assert.match(css, /#plan #blockPlan\s*\{[\s\S]*?touch-action:pan-y/);
   assert.match(css, /#plan #blockPlan > \[hidden\]/);
   assert.match(css, /flex:0 0 44px/);
   assert.match(css, /overflow-x:auto/);

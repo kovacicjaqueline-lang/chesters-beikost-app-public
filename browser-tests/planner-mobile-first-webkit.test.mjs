@@ -159,6 +159,59 @@ try {
   await days.nth(1).click();
   assert.equal(await days.nth(1).getAttribute("aria-pressed"), "true", "Nach dem Heute-Sprung bleibt direkte Tagesauswahl möglich");
 
+  const swipeTarget = page.locator("#blockPlan > .day-card:not([hidden]), #blockPlan > .completed-day:not([hidden])").first();
+  const selectedBeforeSwipe = await swipeTarget.getAttribute("data-plan-date");
+  const nextDate = await page.evaluate((date) => window.__beikostTest.addDays(date, 1), selectedBeforeSwipe);
+  await swipeTarget.evaluate((node) => {
+    node.dispatchEvent(new PointerEvent("pointerdown", {
+      bubbles: true,
+      pointerId: 42,
+      pointerType: "touch",
+      clientX: 280,
+      clientY: 260,
+      button: 0,
+    }));
+    node.dispatchEvent(new PointerEvent("pointerup", {
+      bubbles: true,
+      pointerId: 42,
+      pointerType: "touch",
+      clientX: 120,
+      clientY: 266,
+      button: 0,
+    }));
+  });
+  await page.waitForFunction((date) =>
+    document.querySelector(`#planWeekOverview .plan-week-day[data-plan-date="${date}"]`)?.getAttribute("aria-pressed") === "true",
+  nextDate);
+  assert.equal(await swipeTarget.getAttribute("data-plan-date"), nextDate, "Wisch nach links zeigt den nächsten Tag");
+
+  await page.locator("#blockPlan > .day-card:not([hidden]), #blockPlan > .completed-day:not([hidden])").first().evaluate((node) => {
+    node.dispatchEvent(new PointerEvent("pointerdown", {
+      bubbles: true,
+      pointerId: 43,
+      pointerType: "touch",
+      clientX: 120,
+      clientY: 260,
+      button: 0,
+    }));
+    node.dispatchEvent(new PointerEvent("pointerup", {
+      bubbles: true,
+      pointerId: 43,
+      pointerType: "touch",
+      clientX: 280,
+      clientY: 266,
+      button: 0,
+    }));
+  });
+  await page.waitForFunction((date) =>
+    document.querySelector(`#planWeekOverview .plan-week-day[data-plan-date="${date}"]`)?.getAttribute("aria-pressed") === "true",
+  selectedBeforeSwipe);
+  assert.equal(
+    await page.locator("#blockPlan > .day-card:not([hidden]), #blockPlan > .completed-day:not([hidden])").first().getAttribute("data-plan-date"),
+    selectedBeforeSwipe,
+    "Wisch nach rechts zeigt den vorherigen Tag",
+  );
+
   await page.evaluate(() => {
     window.__mobilePlanRenderAllCalls = 0;
     window.__mobilePlanOriginalRenderAll = window.renderAll;

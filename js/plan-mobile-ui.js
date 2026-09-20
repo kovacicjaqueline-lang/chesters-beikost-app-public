@@ -73,6 +73,14 @@
     if (status.completedCount > 0 && status.incomplete) return `${base} teilweise erledigt`;
     return title;
   }
+
+  function mobilePlanSwipeDirection(startX, startY, endX, endY, threshold = 48) {
+    const deltaX = Number(endX) - Number(startX);
+    const deltaY = Number(endY) - Number(startY);
+    if (!Number.isFinite(deltaX) || !Number.isFinite(deltaY)) return 0;
+    if (Math.abs(deltaX) < threshold || Math.abs(deltaX) <= Math.abs(deltaY) + 10) return 0;
+    return deltaX < 0 ? 1 : -1;
+  }
   /* MOBILE-PLAN-HELPERS END */
 
   function parsePlanDate(date) {
@@ -317,6 +325,66 @@
     });
   }
 
+  function bindDayCardSwipe(block) {
+    if (!block || block.dataset.mobilePlanSwipeBound === "true") return;
+
+    let gesture = null;
+    const interactiveSelector = "button, a, input, select, textarea, summary, [contenteditable=\"true\"]";
+
+    block.addEventListener("pointerdown", (event) => {
+      if (event.pointerType === "mouse" || event.button !== 0) return;
+      if (event.target.closest(interactiveSelector)) return;
+      gesture = {
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+      };
+    }, { passive: true });
+
+    block.addEventListener("pointerup", (event) => {
+      if (!gesture || event.pointerId !== gesture.pointerId) return;
+      const direction = mobilePlanSwipeDirection(
+        gesture.startX,
+        gesture.startY,
+        event.clientX,
+        event.clientY,
+      );
+      gesture = null;
+      if (!direction) return;
+
+      const from = visiblePlanStart();
+      const days = planDisplayDays(from, 7);
+      const selectedDate = mobilePlanSelectedDate(
+        days,
+        globalThis.__mobilePlanSelectedDate || "",
+        today(),
+      );
+      const selectedIndex = days.findIndex((day) => day.date === selectedDate);
+      if (selectedIndex < 0) return;
+
+      const nextIndex = selectedIndex + direction;
+      if (nextIndex >= 0 && nextIndex < days.length) {
+        const nextButton = [...document.querySelectorAll("#planWeekOverview .plan-week-day")]
+          .find((button) => button.dataset.planDate === days[nextIndex].date);
+        nextButton?.click();
+        return;
+      }
+
+      const nextFrom = addDays(from, direction > 0 ? 7 : -7);
+      globalThis.__mobilePlanSelectedDate = direction > 0
+        ? addDays(nextFrom, 0)
+        : addDays(nextFrom, 6);
+      state.settings.planFrom = nextFrom;
+      save();
+      renderPlan();
+    }, { passive: true });
+
+    block.addEventListener("pointercancel", () => {
+      gesture = null;
+    }, { passive: true });
+    block.dataset.mobilePlanSwipeBound = "true";
+  }
+
   function enhanceMobilePlan() {
     const toolbar = document.querySelector("#plan > .plan-toolbar");
     const block = document.getElementById("blockPlan");
@@ -347,6 +415,7 @@
     ensureWeekNavigation(toolbar, from, selectedDate);
     ensureWeekOverview(toolbar, block, days, selectedDate, statuses);
     applySelectedDay(block, days, selectedDate, statuses);
+    bindDayCardSwipe(block);
   }
 
   globalThis.MobileUiLifecycle.onRender("plan", enhanceMobilePlan);
@@ -356,6 +425,7 @@
     mobilePlanSelectedDate,
     mobilePlanStatusLabels,
     mobilePlanCompletionTitle,
+    mobilePlanSwipeDirection,
     enhance: enhanceMobilePlan,
   };
 

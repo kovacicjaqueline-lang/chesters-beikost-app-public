@@ -417,6 +417,10 @@
 body.mobile-foundation nav button {
   min-height: 44px;
 }
+body.mobile-foundation #todayCard {
+  touch-action: pan-y;
+  overscroll-behavior-x: contain;
+}
 body.mobile-foundation #todayCard .today-focus-meal > .mealbox {
   margin: 0 !important;
   padding: 0 !important;
@@ -530,7 +534,10 @@ body.mobile-foundation #genericModal .sheet {
   installMealEditorSearchScrollGuard();
   updateAppBar("home");
 
-  root.MobileUiLifecycle.onViewChange(({ viewId }) => updateAppBar(viewId));
+  root.MobileUiLifecycle.onViewChange(({ viewId }) => {
+    updateAppBar(viewId);
+    if (viewId === "home") root.__mobileTodaySelectedDate = today();
+  });
 
   function bindRenderedMealActions(container) {
     if (!container?.querySelectorAll) return;
@@ -709,13 +716,76 @@ body.mobile-foundation #genericModal .sheet {
 
   }
 
+  function mobileTodaySwipeDirection(startX, startY, endX, endY, threshold = 48) {
+    const deltaX = Number(endX) - Number(startX);
+    const deltaY = Number(endY) - Number(startY);
+    if (!Number.isFinite(deltaX) || !Number.isFinite(deltaY)) return 0;
+    if (Math.abs(deltaX) < threshold || Math.abs(deltaX) <= Math.abs(deltaY) + 10) return 0;
+    return deltaX < 0 ? 1 : -1;
+  }
+
+  function todayResetButtonHtml(viewingToday) {
+    return viewingToday ? "" : '<button class="btn secondary smallbtn" id="homeToday" type="button">Heute</button>';
+  }
+
+  function bindTodayReset(card) {
+    const button = card?.querySelector("#homeToday");
+    if (!button) return;
+    button.onclick = () => {
+      root.__mobileTodaySelectedDate = today();
+      renderHome();
+    };
+  }
+
+  function bindTodayCardSwipe(card) {
+    if (!card || card.dataset.mobileTodaySwipeBound === "true") return;
+
+    let gesture = null;
+    const interactiveSelector = "button, a, input, select, textarea, summary, [contenteditable=\"true\"]";
+
+    card.addEventListener("pointerdown", (event) => {
+      if (event.pointerType === "mouse" || event.button !== 0) return;
+      if (event.target.closest(interactiveSelector)) return;
+      gesture = {
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+      };
+    }, { passive: true });
+
+    card.addEventListener("pointerup", (event) => {
+      if (!gesture || event.pointerId !== gesture.pointerId) return;
+      const direction = mobileTodaySwipeDirection(
+        gesture.startX,
+        gesture.startY,
+        event.clientX,
+        event.clientY,
+      );
+      gesture = null;
+      if (!direction) return;
+
+      const current = root.__mobileTodaySelectedDate || today();
+      root.__mobileTodaySelectedDate = addDays(current, direction);
+      renderHome();
+    }, { passive: true });
+
+    card.addEventListener("pointercancel", () => {
+      gesture = null;
+    }, { passive: true });
+    card.dataset.mobileTodaySwipeBound = "true";
+  }
+
   function renderTodayFocus() {
     const card = document.getElementById("todayCard");
     if (!card) return { focusMeal: null, active: [] };
 
-    const on = today();
+    const on = root.__mobileTodaySelectedDate || today();
+    const viewingToday = on === today();
+    const dateLabel = viewingToday ? "Heute" : nice(on, true);
+    const resetButton = todayResetButtonHtml(viewingToday);
     const age = monthsOld(on);
     const day = (typeof viewRenderBuildDays === "function" ? viewRenderBuildDays : buildDays)(on, 1)[0];
+    card.dataset.todayDate = on;
     const active = day.meals.filter((meal) => meal.active && meal.focusId);
     const openMeals = active.filter((meal) => !mealIsCompleted(on, meal.meal));
     const focusMeal = openMeals[0] || null;
@@ -735,15 +805,16 @@ body.mobile-foundation #genericModal .sheet {
     const everydayMode = isEverydayRecipesMode();
     card.className = `card today-card today-focus-card${everydayMode ? " today-everyday-card" : ""}`;
     if (!active.length) {
-      card.innerHTML = `<div class="row"><div class="grow"><span class="today-section-kicker">Heute</span><h2>Nichts geplant</h2><div class="small">${nice(on, true)} · ${age} Monate</div></div></div><div class="today-focus-empty"><p>Für heute ist keine Mahlzeit geplant.</p>${nextPlanned ? `<div class="small">Nächster geplanter Tag: ${nice(nextPlanned, true)}</div>` : ""}</div><button class="btn full" id="homeFreeLog">Essen eintragen</button>`;
+      card.innerHTML = `<div class="row"><div class="grow"><span class="today-section-kicker">${esc(dateLabel)}</span><h2>Nichts geplant</h2><div class="small">${nice(on, true)} · ${age} Monate</div></div>${resetButton}</div><div class="today-focus-empty"><p>Für ${viewingToday ? "heute" : "diesen Tag"} ist keine Mahlzeit geplant.</p>${nextPlanned ? `<div class="small">Nächster geplanter Tag: ${nice(nextPlanned, true)}</div>` : ""}</div><button class="btn full" id="homeFreeLog">Essen eintragen</button>`;
       document.getElementById("homeFreeLog")?.addEventListener("click", () => openLog(null));
+      bindTodayReset(card);
       return { focusMeal, active };
     }
 
     if (everydayMode) {
-      const heading = openMeals.length ? "Heute geplant" : "Heute erledigt";
+      const heading = viewingToday ? (openMeals.length ? "Heute geplant" : "Heute erledigt") : (openMeals.length ? "Geplant" : "Erledigt");
       const everydayMeals = active.map((meal) => `<div class="today-everyday-meal" data-meal="${esc(meal.meal)}">${renderMeal(day, meal)}</div>`).join("");
-      card.innerHTML = `<div class="row today-focus-head"><div class="grow"><span class="today-section-kicker">${heading}</span><h2>Geplante Mahlzeiten</h2><div class="small">${nice(on, true)} · ${active.length} ${active.length === 1 ? "Mahlzeit" : "Mahlzeiten"}</div></div></div><div class="today-everyday-meals">${everydayMeals}</div><div class="add-meal-row"><button class="btn secondary smallbtn" id="homeAddEntry">Weiteres Essen eintragen</button></div>`;
+      card.innerHTML = `<div class="row today-focus-head"><div class="grow"><span class="today-section-kicker">${heading}</span><h2>Geplante Mahlzeiten</h2><div class="small">${nice(on, true)} · ${active.length} ${active.length === 1 ? "Mahlzeit" : "Mahlzeiten"}</div></div>${resetButton}</div><div class="today-everyday-meals">${everydayMeals}</div><div class="add-meal-row"><button class="btn secondary smallbtn" id="homeAddEntry">Weiteres Essen eintragen</button></div>`;
       bindRenderedMealActions(card);
       card.querySelectorAll(".today-everyday-meal").forEach((mealNode, index) => {
         const meal = active[index];
@@ -752,17 +823,18 @@ body.mobile-foundation #genericModal .sheet {
       });
       root.__plannedRecipeDetails?.decorateHomeRecipeTitles?.();
       document.getElementById("homeAddEntry")?.addEventListener("click", () => openLog(null));
+      bindTodayReset(card);
       return { focusMeal, active };
     }
 
-    const heading = focusMeal ? "Als Nächstes" : "Heute erledigt";
+    const heading = viewingToday ? (focusMeal ? "Als Nächstes" : "Heute erledigt") : (focusMeal ? "Geplant" : "Tagesübersicht");
     const mealHeading = focusMeal ? mealName(focusMeal.meal) : "Alles eingetragen";
     const focusHtml = focusMeal
       ? `<div class="today-focus-meal">${renderMeal(day, focusMeal)}</div>`
       : '<div class="today-done-summary"><b>Alle geplanten Mahlzeiten sind eingetragen.</b><span class="small">Der Tagesüberblick bleibt unten sichtbar.</span></div>';
     const timeline = active.map((meal) => timelineRow(day, meal, focusMeal)).join("");
 
-    card.innerHTML = `<div class="row today-focus-head"><div class="grow"><span class="today-section-kicker">${heading}</span><h2>${esc(mealHeading)}</h2><div class="small">${nice(on, true)} · ${age} Monate</div></div></div>${focusHtml}<div class="today-timeline" aria-label="Tages-Timeline"><div class="today-timeline-heading"><b>Heute</b><span class="small">${active.length} ${active.length === 1 ? "Mahlzeit" : "Mahlzeiten"}</span></div>${timeline}</div><div class="add-meal-row"><button class="btn secondary smallbtn" id="homeAddEntry">Weiteres Essen eintragen</button></div>`;
+    card.innerHTML = `<div class="row today-focus-head"><div class="grow"><span class="today-section-kicker">${heading}</span><h2>${esc(mealHeading)}</h2><div class="small">${nice(on, true)} · ${age} Monate</div></div>${resetButton}</div>${focusHtml}<div class="today-timeline" aria-label="Tages-Timeline"><div class="today-timeline-heading"><b>${esc(dateLabel)}</b><span class="small">${active.length} ${active.length === 1 ? "Mahlzeit" : "Mahlzeiten"}</span></div>${timeline}</div><div class="add-meal-row"><button class="btn secondary smallbtn" id="homeAddEntry">Weiteres Essen eintragen</button></div>`;
 
     bindRenderedMealActions(card);
     ensureRenderedRandomSwapAction(card.querySelector(".today-focus-meal"), on, focusMeal);
@@ -772,6 +844,7 @@ body.mobile-foundation #genericModal .sheet {
       button.onclick = () => editLogEntry(button.dataset.log);
     });
     document.getElementById("homeAddEntry")?.addEventListener("click", () => openLog(null));
+    bindTodayReset(card);
     return { focusMeal, active };
   }
 
@@ -865,6 +938,7 @@ body.mobile-foundation #genericModal .sheet {
   function renderMobileToday() {
     renderDayContext();
     const { focusMeal } = renderTodayFocus();
+    bindTodayCardSwipe(document.getElementById("todayCard"));
     renderContextRecommendation();
     renderCompactProgress();
     renderContextRecipe(focusMeal);

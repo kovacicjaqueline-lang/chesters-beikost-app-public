@@ -118,7 +118,7 @@ function isBackupObject(value) {
 }
 function validateBackupPayloadShape(payload) {
   if (!isBackupObject(payload)) throw new Error("Die Backup-Nutzdaten sind ungültig.");
-  for (let key of ["foods", "customFoods", "foodPreferences", "logs", "inventory"]) {
+  for (let key of ["foods", "customFoods", "foodPreferences", "logs", "inventory", "products"]) {
     if (payload[key] !== undefined && !Array.isArray(payload[key])) throw new Error("Die Backup-Nutzdaten sind ungültig.");
   }
   for (let key of ["settings", "overrides", "deferred", "pantry", "planLocks", "autoLockExcluded", "manualMeals", "inactivePlanKept", "combinationPauses", "followUps", "shoppingHints", "backupMeta"]) {

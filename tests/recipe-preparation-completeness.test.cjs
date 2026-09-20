@@ -97,9 +97,9 @@ const REQUIRED_NOTE_FRAGMENTS = Object.freeze({
   "Süßkartoffel-Linsen-Muffins": [/Süßkartoffel/i, /Linsen/i, /Hafer/i, /vermeng/i],
 });
 
-test("recipe preparation audit covers the full 124-recipe runtime catalog", () => {
+test("recipe preparation audit covers the full 129-recipe runtime catalog", () => {
   const recipes = loadCatalog();
-  assert.equal(recipes.length, 124);
+  assert.equal(recipes.length, 129);
   assert.equal(INCOMPLETE_PREPARATIONS.length, 20);
   assert.equal(TERSE_PREPARATIONS.length, 23);
   assert.equal(new Set([...INCOMPLETE_PREPARATIONS, ...TERSE_PREPARATIONS]).size, 43);

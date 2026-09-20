@@ -340,7 +340,12 @@ const RECIPE_RUNTIME_ICON_ALIASES = Object.freeze({
   "Huhn-Spinat-Quinoa-Auflauf": "assets/illustrations-v2/recipes/huhn-spinat-quinoa-auflauf.svg",
   "Lachs-Brokkoli-Kartoffel-Auflauf": "assets/illustrations-v2/recipes/lachs-brokkoli-kartoffel-auflauf.svg",
   "Mildes Bohnen-Süßkartoffel-Chili": "assets/illustrations-v2/recipes/mildes-bohnen-suesskartoffel-chili.svg",
-  "Gefüllte Paprika mit Linsenreis": "assets/illustrations-v2/recipes/gefuellte-paprika-mit-linsenreis.svg"
+  "Gefüllte Paprika mit Linsenreis": "assets/illustrations-v2/recipes/gefuellte-paprika-mit-linsenreis.svg",
+  "Apfel-Pflaumen-Kompott": "assets/illustrations-v2/recipes/apfel-pflaumen-kompott.svg",
+  "Birne-Pfirsich-Kompott": "assets/illustrations-v2/recipes/birne-pfirsich-kompott.svg",
+  "Mango-Bananen-Creme": "assets/illustrations-v2/recipes/mango-bananen-creme.svg",
+  "Kartoffel-Karotten-Stampf": "assets/illustrations-v2/recipes/kartoffel-karotten-stampf.svg",
+  "Gemüse-Reis-Brei": "assets/illustrations-v2/recipes/gemuese-reis-brei.svg"
 });
 
 function foodIllustrationPath(f){

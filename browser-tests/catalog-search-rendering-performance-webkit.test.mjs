@@ -218,6 +218,8 @@ try {
   const foodSearch = await repeatedInput("#foodSearch", "#foodList", "ha", true);
 
   await page.locator('#catalogSwitch [data-catalog-mode="recipes"]').click();
+  await page.locator("#recipesSection").waitFor({ state: "visible" });
+  await page.locator('[data-recipe-filter="all"]').scrollIntoViewIfNeeded();
   await page.locator('[data-recipe-filter="all"]').click();
   await settle();
 

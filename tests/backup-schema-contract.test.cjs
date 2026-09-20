@@ -107,7 +107,7 @@ function loadBackupRuntime(initialState = fixtureState()) {
     SNAPSHOT_RECORD: "snapshots",
     LEGACY_KEYS: [],
     DEFAULT: {},
-    FOOD_DB: [{ id: "rosine", name: "Rosine", active: true, liked: true, notes: "" }],
+    FOOD_DB: [{ id: "rosine", name: "Rosine", active: true, liked: true, notes: "", allergenGroup: "" }],
     state: clone(initialState),
     localStorage: {
       setItem(key, value) { localWrites.set(key, value); },

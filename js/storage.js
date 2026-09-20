@@ -61,6 +61,16 @@ const BACKUP_FOOD_PERSONAL_FIELDS = [
   "reactionPauseSourceLogId",
   "reactionPausePreviousStatus",
 ];
+const BACKUP_APP_FOCUS_MODES = new Set(["planning-documentation", "everyday-recipes"]);
+const BACKUP_DEFAULT_APP_FOCUS_MODE = "planning-documentation";
+
+function normalizeBackupSettings(settings = {}) {
+  let normalized = isBackupObject(settings) ? clone(settings) : {};
+  if (!BACKUP_APP_FOCUS_MODES.has(normalized.appFocusMode)) {
+    normalized.appFocusMode = BACKUP_DEFAULT_APP_FOCUS_MODE;
+  }
+  return normalized;
+}
 
 function backupCanonicalFoods() {
   return typeof FOOD_DB !== "undefined" && Array.isArray(FOOD_DB) ? FOOD_DB : [];
@@ -82,7 +92,10 @@ function backupCustomFoods(data = {}) {
 }
 function backupPayloadToState(payload = {}) {
   let source = clone(payload || {});
-  if (Array.isArray(source.foods)) return source;
+  if (Array.isArray(source.foods)) {
+    source.settings = normalizeBackupSettings(source.settings);
+    return source;
+  }
   let canonicalFoods = backupCanonicalFoods().map(clone);
   let preferences = Array.isArray(source.foodPreferences) ? source.foodPreferences : [];
   let preferenceById = new Map(preferences.filter((food) => food && food.id).map((food) => [food.id, food]));
@@ -92,6 +105,7 @@ function backupPayloadToState(payload = {}) {
     for (let key of BACKUP_FOOD_PERSONAL_FIELDS) if (Object.hasOwn(changes, key)) food[key] = clone(changes[key]);
   }
   source.foods = canonicalFoods.concat(Array.isArray(source.customFoods) ? source.customFoods.map(clone) : []);
+  source.settings = normalizeBackupSettings(source.settings);
   delete source.customFoods;
   delete source.foodPreferences;
   delete source.schemaVersion;
@@ -302,6 +316,7 @@ function renderStorageStatus() {
 }
 async function buildBackupPackage() {
   let payload = clone(state);
+  payload.settings = normalizeBackupSettings(payload.settings);
   payload.customFoods = backupCustomFoods(state);
   payload.foodPreferences = backupFoodPreferences(state);
   delete payload.foods;

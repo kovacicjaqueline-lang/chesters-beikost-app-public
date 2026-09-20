@@ -19,13 +19,6 @@
     return value === MODE_EVERYDAY ? MODE_EVERYDAY : MODE_PLANNING;
   }
 
-  // migrateStateCore() baut auf clone(DEFAULT) auf und merged gespeicherte Settings
-  // darüber. Das Ergänzen des Defaults reicht daher auch für bestehende Stände;
-  // eine eigene Schema-Migration ist nicht erforderlich.
-  if (typeof DEFAULT !== "undefined" && DEFAULT?.settings) {
-    DEFAULT.settings.appFocusMode = normalizeMode(DEFAULT.settings.appFocusMode || DEFAULT_MODE);
-  }
-
   let lastAppliedMode = null;
 
   function currentMode() {
@@ -108,11 +101,11 @@
     field.innerHTML = `
       <div class="field-label"><b>App-Schwerpunkt</b></div>
       <div role="radiogroup" aria-label="App-Schwerpunkt">
-        <label class="toggleline app-focus-option">
+        <label class="app-focus-option">
           <input type="radio" name="appFocusMode" value="${MODE_EVERYDAY}">
           <span class="toggle-copy"><b>Alltag &amp; Rezepte</b><span class="small">– Tagesideen und Rezepte stehen im Vordergrund</span></span>
         </label>
-        <label class="toggleline app-focus-option">
+        <label class="app-focus-option">
           <input type="radio" name="appFocusMode" value="${MODE_PLANNING}">
           <span class="toggle-copy"><b>Planen &amp; Dokumentieren</b><span class="small">– Planung, Fortschritt und Protokollierung stehen stärker im Vordergrund</span></span>
         </label>

@@ -422,6 +422,7 @@ const DEFAULT = {
     targetFoods: 100,
     newFoodEvery: 2,
     preferInventoryInPlan: true,
+    appFocusMode: "planning-documentation",
   },
   foods: FOOD_DB,
   logs: [],

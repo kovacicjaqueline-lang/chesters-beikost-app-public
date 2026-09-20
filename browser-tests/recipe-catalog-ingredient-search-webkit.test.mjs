@@ -97,6 +97,7 @@ try {
   );
   await page.locator(".recipe-meal-select > summary").click();
   assert.equal(await page.locator("#recipeMealFilter").isVisible(), true, "Die Mahlzeitenfilter müssen im Auswahlfeld erreichbar sein");
+  await page.locator(".recipe-meal-select").evaluate((details) => { details.open = false; });
 
   await page.locator(".recipe-match-select > summary").click();
   await page.locator(".recipe-match-select").evaluate((details) => { details.open = true; });

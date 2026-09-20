@@ -275,10 +275,14 @@
     return alternatives;
   }
 
-  function recipeAlternativeCompatible(current, recipe, ids) {
+  function recipeAlternativeCompatible(current, recipe, ids, isKnown = () => true) {
     if (!current || !recipe || !recipe.name || recipe.name === current.recipeName) return false;
     const samples = [...new Set(current.sampleFoodIds || [])];
-    return samples.every((id) => (ids || []).includes(id));
+    const uniqueIds = [...new Set(ids || [])];
+    const unknown = uniqueIds.filter((id) => !isKnown(id));
+    if (unknown.length > 1) return false;
+    if (unknown.length === 1) return samples.length === 1 && samples[0] === unknown[0];
+    return samples.every((id) => uniqueIds.includes(id));
   }
 
   function recipeAlternativeMilkCompatible(current, recipe, ids = []) {
@@ -307,10 +311,36 @@
       automaticFoodEligibility(item, date, state.settings || {});
   }
 
-  function buildRecipeAlternativeMeal(recipe, date, meal, ctx) {
+  function recipeAlternativeNameVariants(recipe) {
+    if (typeof plannerRecipeNameVariants === "function") return plannerRecipeNameVariants(recipe);
+    if (!recipe) return [];
+    const bases = [recipe.requires || [], ...(recipe.alternatives || [])]
+      .filter((items, index) => items.length || index === 0)
+      .map((items) => [...items]);
+    const groups = [];
+    if (Array.isArray(recipe.oneOf) && recipe.oneOf.length) groups.push(recipe.oneOf);
+    if (Array.isArray(recipe.milkChoices) && recipe.milkChoices.length) groups.push(recipe.milkChoices);
+    let variants = bases.length ? bases : [[]];
+    for (const group of groups) variants = variants.flatMap((base) => group.map((choice) => [...base, choice]));
+    return variants.map((names) => [...new Set(names.filter(Boolean))]);
+  }
+
+  function recipeAlternativeVariantIds(recipe) {
+    return recipeAlternativeNameVariants(recipe)
+      .map((names) => names.map((name) => {
+        const item = typeof foodByName === "function"
+          ? foodByName(name, state.foods || [])
+          : (state.foods || []).find((candidate) => candidate.name === name);
+        return item?.id || "";
+      }).filter(Boolean))
+      .filter((ids) => ids.length)
+      .map((ids) => [...new Set(ids)]);
+  }
+
+  function buildRecipeAlternativeMeal(recipe, date, meal, ctx, ids = null) {
     if (!recipe || typeof recipeFoodIds !== "function") return null;
-    const ids = recipeFoodIds(recipe);
-    if (!ids.length) return null;
+    const selectedIds = ids?.length ? [...ids] : recipeFoodIds(recipe);
+    if (!selectedIds.length) return null;
 
     const reserved = Number(ctx?.recipeReserved?.get(recipe.name) || 0);
     const availableStock =
@@ -323,9 +353,9 @@
     const generated = applyPlannedMealAmounts({
       meal,
       active: true,
-      focusId: ids[0],
-      foodIds: ids,
-      baseFoodIds: ids,
+      focusId: selectedIds[0],
+      foodIds: selectedIds,
+      baseFoodIds: selectedIds,
       sampleFoodIds: [],
       optionalAddons: [],
       inventoryFoodIds: [],
@@ -352,31 +382,46 @@
       : recipeSuitableForMeal;
 
     for (const recipe of shuffle(recipes)) {
-      if (!recipe?.unlocked || recipe.name === current.recipeName) continue;
+      if (!recipe || recipe.name === current.recipeName) continue;
       if (Array.isArray(recipe.requirementMissing) && recipe.requirementMissing.length) continue;
-      if (!suitable(recipe, meal) || !recipeAlternativeMilkCompatible(current, recipe, recipeFoodIds(recipe))) continue;
-      if (recipe.milkMeal === "full" && recipeContainsMeatOrFish(recipe)) continue;
-      if (recipe.milkMeal === "full" && baseline.fullMilkDates?.has(date)) continue;
+      if (!suitable(recipe, meal)) continue;
 
-      const ids = recipeFoodIds(recipe);
-      if (
-        !ids.length ||
-        !ids.every((id) => recipeAlternativeFoodReady(id, meal, date)) ||
-        !recipeAlternativeCompatible(current, recipe, ids)
-      ) continue;
-      const combination = canonicalCombination(ids);
-      const identity = `${recipe.name}|${combination}`;
-      if (!combination || seen.has(identity)) continue;
+      for (const ids of recipeAlternativeVariantIds(recipe)) {
+        const known = (id) => {
+          const item = typeof food === "function" ? food(id) : null;
+          return !!item && (typeof recipeIngredientReady !== "function" || recipeIngredientReady(item.name));
+        };
+        if (
+          !ids.length ||
+          !ids.every((id) => recipeAlternativeFoodReady(id, meal, date)) ||
+          !recipeAlternativeCompatible(current, recipe, ids, known) ||
+          !recipeAlternativeMilkCompatible(current, recipe, ids)
+        ) continue;
 
-      const generated = buildRecipeAlternativeMeal(
-        recipe,
-        date,
-        meal,
-        reservationContext(days, targetKey),
-      );
-      if (!generated || generated.recipeName === current.recipeName) continue;
-      seen.add(identity);
-      alternatives.push(generated);
+        const candidateMilk = recipe.milkMeal ||
+          (typeof mealContainsMilkProduct === "function" && mealContainsMilkProduct(ids) ? "full" : "");
+        const hasMeatOrFish = ids.some((id) =>
+          typeof isMeatOrFish === "function" && isMeatOrFish(food(id)),
+        );
+        if (candidateMilk === "full" && hasMeatOrFish) continue;
+        if (candidateMilk === "full" && baseline.fullMilkDates?.has(date)) continue;
+
+        const combination = canonicalCombination(ids);
+        const identity = `${recipe.name}|${combination}`;
+        if (!combination || seen.has(identity)) continue;
+
+        const generated = buildRecipeAlternativeMeal(
+          recipe,
+          date,
+          meal,
+          reservationContext(days, targetKey),
+          ids,
+        );
+        if (!generated || generated.recipeName === current.recipeName) continue;
+        seen.add(identity);
+        alternatives.push(generated);
+        if (alternatives.length >= 12) break;
+      }
       if (alternatives.length >= 12) break;
     }
     return alternatives;

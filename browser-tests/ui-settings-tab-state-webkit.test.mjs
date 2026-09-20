@@ -182,7 +182,7 @@ try {
   assert.equal(await page.locator("#structuredChewCapability").isChecked(), true, "Structured-Chew-Fähigkeit muss Reload überleben");
 
   await page.locator('nav button[data-view="foods"]').click();
-  await page.locator("#foodFilters > .food-primary-select > summary").click();
+  await page.locator("#foodFilters > .food-filter-toolbar > .food-primary-select > summary").click();
   await page.locator('#foodFilters button[data-filter="allergen"]').click();
   await page.locator("#foodSearch").fill("Ei");
   await page.locator('nav button[data-view="plan"]').click();

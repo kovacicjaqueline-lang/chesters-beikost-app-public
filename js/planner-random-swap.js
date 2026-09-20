@@ -133,6 +133,7 @@
     automaticFocusAllowed,
     learningCandidateCompatible,
     recipeAlternativeCompatible,
+    recipeAlternativeNewFoodIds,
     recipeAlternativeMilkCompatible,
     pinVisibleAutomaticMeals,
   };
@@ -275,11 +276,15 @@
     return alternatives;
   }
 
+  function recipeAlternativeNewFoodIds(ids, isKnown = () => true) {
+    return [...new Set(ids || [])].filter((id) => !isKnown(id));
+  }
+
   function recipeAlternativeCompatible(current, recipe, ids, isKnown = () => true) {
     if (!current || !recipe || !recipe.name || recipe.name === current.recipeName) return false;
     const samples = [...new Set(current.sampleFoodIds || [])];
     const uniqueIds = [...new Set(ids || [])];
-    const unknown = uniqueIds.filter((id) => !isKnown(id));
+    const unknown = recipeAlternativeNewFoodIds(uniqueIds, isKnown);
     if (unknown.length > 1) return false;
     return samples.every((id) => uniqueIds.includes(id));
   }
@@ -336,9 +341,18 @@
       .map((ids) => [...new Set(ids)]);
   }
 
-  function buildRecipeAlternativeMeal(recipe, date, meal, ctx, ids = null) {
+  function buildRecipeAlternativeMeal(
+    recipe,
+    date,
+    meal,
+    ctx,
+    ids = null,
+    sampleIds = [],
+    learningType = "neu",
+  ) {
     if (!recipe || typeof recipeFoodIds !== "function") return null;
     const selectedIds = ids?.length ? [...ids] : recipeFoodIds(recipe);
+    const selectedSampleIds = [...new Set(sampleIds || [])].filter((id) => selectedIds.includes(id));
     if (!selectedIds.length) return null;
 
     const reserved = Number(ctx?.recipeReserved?.get(recipe.name) || 0);
@@ -352,19 +366,25 @@
     const generated = applyPlannedMealAmounts({
       meal,
       active: true,
-      focusId: selectedIds[0],
+      focusId: selectedSampleIds[0] || selectedIds[0],
       foodIds: selectedIds,
-      baseFoodIds: selectedIds,
-      sampleFoodIds: [],
+      baseFoodIds: selectedIds.filter((id) => !selectedSampleIds.includes(id)),
+      sampleFoodIds: selectedSampleIds,
       optionalAddons: [],
       inventoryFoodIds: [],
       recipeName: recipe.name,
       recipeInventoryId: batch?.id || "",
       milkMeal: recipe.milkMeal || "",
-      type: batch ? "Rezeptvorrat" : "Rezept",
-      note: batch
-        ? "Eine alternative vorbereitete Portion aus dem Gefriervorrat verwenden."
-        : "Passendes alternatives Rezept statt der bisherigen Rezeptmahlzeit.",
+      type: selectedSampleIds.length
+        ? learningType
+        : batch
+          ? "Rezeptvorrat"
+          : "Rezept",
+      note: selectedSampleIds.length
+        ? `Rezept mit genau einem neuen Lebensmittel; ${food(selectedSampleIds[0])?.name || selectedSampleIds[0]} bleibt die einzige Kostprobe.`
+        : batch
+          ? "Eine alternative vorbereitete Portion aus dem Gefriervorrat verwenden."
+          : "Passendes alternatives Rezept statt der bisherigen Rezeptmahlzeit.",
     });
     if (typeof reserveMealInventory === "function") reserveMealInventory(generated, ctx);
     return generated;
@@ -409,12 +429,18 @@
         const identity = `${recipe.name}|${combination}`;
         if (!combination || seen.has(identity)) continue;
 
+        const newFoodIds = recipeAlternativeNewFoodIds(ids, known);
+        const learningType = current.sampleFoodIds?.length
+          ? current.type || "neu"
+          : "neu";
         const generated = buildRecipeAlternativeMeal(
           recipe,
           date,
           meal,
           reservationContext(days, targetKey),
           ids,
+          newFoodIds,
+          learningType,
         );
         if (!generated || generated.recipeName === current.recipeName) continue;
         seen.add(identity);

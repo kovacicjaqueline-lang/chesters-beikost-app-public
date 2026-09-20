@@ -393,7 +393,10 @@ function applyRecipeFoodComposition(meal, date, ctx) {
           eligible(candidate, mealKey, on) &&
           (canCombine(candidate) || (meal.foodIds || []).includes(candidate.id));
       },
-      foodEligibleFn: (id, mealKey, on) => eligible(food(id), mealKey, on),
+      foodEligibleFn: (id, mealKey, on) => {
+        let candidate = food(id);
+        return !!candidate && eligible(candidate, mealKey, on);
+      },
       milkCompatibleFn: (currentMeal, recipe) => {
         let currentMilk = String(currentMeal.milkMeal || "");
         let recipeMilk = String(recipe.milkMeal || currentMilk);

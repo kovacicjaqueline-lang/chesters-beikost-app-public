@@ -649,6 +649,17 @@ body.mobile-foundation .today-everyday-meal .compact-role-list {
   margin-top: 9px;
 }
 
+body.mobile-foundation .today-everyday-meal .compact-role-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+body.mobile-foundation .today-everyday-meal .compact-role-row b {
+  min-width: 0;
+}
+
 body.mobile-foundation .today-everyday-meal .today-timeline,
 body.mobile-foundation .today-everyday-meal .today-recommendation {
   display: none;

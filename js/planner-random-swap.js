@@ -143,6 +143,11 @@
         pinned += 1;
       }
     }
+    for (const [visibleKey, planId] of visiblePlanIds) {
+      if (visibleKey === targetKey || !planId) continue;
+      data.planLocks[visibleKey] ||= { mode: "auto" };
+      data.planLocks[visibleKey].planId = planId;
+    }
     return pinned;
   }
 

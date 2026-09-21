@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { selectRelevantTests, TEST_GROUPS } from "./test-manifest.mjs";
 
 const scriptPath = fileURLToPath(import.meta.url);
 const defaultRoot = path.resolve(path.dirname(scriptPath), "..");
@@ -163,7 +164,7 @@ function writeSummary(artifactDir, results) {
 
 export async function runBrowserTests({
   rootDir = defaultRoot,
-  testFiles = discoverBrowserTests(rootDir),
+  testFiles = null,
   artifactDir = path.join(rootDir, "artifacts", "browser-tests"),
   childEnv = process.env,
   forwardOutput = true,
@@ -171,7 +172,20 @@ export async function runBrowserTests({
   shard = resolveBrowserTestShard(childEnv.BROWSER_TEST_SHARD),
   runTest = runOne,
 } = {}) {
-  const selectedTestFiles = selectBrowserTestShard(testFiles, shard);
+  const requestedFiles = childEnv.BROWSER_TEST_FILES
+    ? childEnv.BROWSER_TEST_FILES.split(",").map((file) => path.resolve(rootDir, file.trim())).filter(Boolean)
+    : null;
+  const changedFiles = String(childEnv.CHANGED_FILES || "").split(/\r?\n/).filter(Boolean);
+  const group = childEnv.BROWSER_TEST_GROUP || "";
+  let discoveredTestFiles = testFiles || discoverBrowserTests(rootDir);
+  if (requestedFiles?.length) discoveredTestFiles = requestedFiles;
+  else if (group === "performance") discoveredTestFiles = TEST_GROUPS.browserPerformance();
+  else if (group === "relevant") {
+    if (!changedFiles.length) throw new Error("test:browser:relevant requires CHANGED_FILES or --files.");
+    discoveredTestFiles = selectRelevantTests(changedFiles).browser;
+  }
+
+  const selectedTestFiles = selectBrowserTestShard(discoveredTestFiles, shard);
   if (selectedTestFiles.length === 0) {
     const suffix = shard ? ` for shard ${shard.index}/${shard.total}` : "";
     throw new Error(`No browser regression scripts found${suffix}.`);
@@ -219,6 +233,18 @@ export async function runBrowserTests({
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === scriptPath) {
+  const filesIndex = process.argv.indexOf("--files");
+  if (filesIndex !== -1) {
+    const files = process.argv[filesIndex + 1];
+    if (!files) throw new Error("--files requires a comma-separated list of browser test paths.");
+    process.env.BROWSER_TEST_FILES = files;
+  }
+  const changedFilesIndex = process.argv.indexOf("--changed-files");
+  if (changedFilesIndex !== -1) {
+    const files = process.argv[changedFilesIndex + 1];
+    if (!files) throw new Error("--changed-files requires a comma-separated list of changed paths.");
+    process.env.CHANGED_FILES = files.split(",").join("\n");
+  }
   const summary = await runBrowserTests();
   if (summary.failed > 0) process.exitCode = 1;
 }

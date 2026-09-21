@@ -422,9 +422,26 @@
 
     if (typeof recipeStockCandidate === "function" && !recipeStockCandidate.__missingIngredientAware) {
       const original = recipeStockCandidate;
-      const wrapped = function missingIngredientAwareRecipeStockCandidate(...args) {
-        const candidate = withPlanMissingFoodsAvailable(() => original(...args));
-        return markPreparedStockRecipe(candidate);
+      const wrapped = function missingIngredientAwareRecipeStockCandidate(meal, on, ctx, ...args) {
+        const candidate = withPlanMissingFoodsAvailable(() => original(meal, on, ctx, ...args));
+        if (candidate) return markPreparedStockRecipe(candidate);
+
+        const reserved = Number(ctx?.recipeReserved?.get?.(ctx?.recipeReserved) || 0);
+        const stocked = (state?.inventory || [])
+          .filter((item) =>
+            item?.kind === "recipe" &&
+            Number(item.portions) > 0 &&
+            typeof recipeNameMatches === "function" &&
+            (typeof recipeByName === "function" ? recipeByName(item.recipeName) : null),
+          )
+          .sort((a, b) => String(a.frozenDate || "").localeCompare(String(b.frozenDate || "")))[0];
+        if (!stocked || typeof recipeByName !== "function") return null;
+        const recipe = recipeByName(stocked.recipeName);
+        if (!recipe || recipe.freezable === false) return null;
+        if (typeof plannerRecipeSuitableForMeal === "function" && !plannerRecipeSuitableForMeal(recipe, meal)) return null;
+        const available = Number(stocked.portions) - Number(ctx?.recipeReserved?.get?.(recipe.name) || 0);
+        if (available <= 0) return null;
+        return markPreparedStockRecipe({ ...recipe, unlocked: true, missing: [], ingredientMissing: [], requirementMissing: [] });
       };
       wrapped.__missingIngredientAware = true;
       recipeStockCandidate = wrapped;

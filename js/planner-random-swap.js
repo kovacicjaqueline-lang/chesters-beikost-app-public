@@ -4,6 +4,7 @@
   const PIN_FLAG = "randomSwapPinned";
   const PRESERVE_FLAG = "randomSwapPreserved";
   const TARGET_FLAG = "randomSwapTarget";
+  let preservedVisiblePlanIds = new Map();
 
   function slotKey(date, meal) {
     return `${date}|${meal}`;
@@ -105,6 +106,7 @@
         if (payload.date && payload.meal && payload.planId) visiblePlanIds.set(slotKey(payload.date, payload.meal), payload.planId);
       } catch (_) {}
     }
+    preservedVisiblePlanIds = visiblePlanIds;
     let pinned = 0;
     for (const day of days || []) {
       if (!day?.date || day.date < todayValue) continue;
@@ -614,6 +616,17 @@
     delete state.autoLockExcluded?.[key];
     save();
     renderAll();
+    for (const button of globalScope.document?.querySelectorAll?.("#blockPlan .logMeal[data-plan]") || []) {
+      try {
+        const payload = JSON.parse(decodeURIComponent(button.dataset.plan || ""));
+        const preserved = preservedVisiblePlanIds.get(slotKey(payload.date, payload.meal));
+        if (preserved && slotKey(payload.date, payload.meal) !== key) {
+          payload.planId = preserved;
+          payload.plannedMealId = preserved;
+          button.dataset.plan = encodeURIComponent(JSON.stringify(payload));
+        }
+      } catch (_) {}
+    }
     showToast("Mahlzeit getauscht. Der restliche Wochenplan bleibt unverändert.");
     return { ok: true, meal: snapshot };
   }

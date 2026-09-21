@@ -330,6 +330,18 @@
     return true;
   }
 
+  function withUnavailableFoodsMasked(callback) {
+    if (typeof callback !== "function") return null;
+    const foods = Array.isArray(state?.foods) ? state.foods : null;
+    if (!foods) return callback();
+    state.foods = foods.filter((item) => !unavailable(item?.id));
+    try {
+      return callback();
+    } finally {
+      state.foods = foods;
+    }
+  }
+
   function structuredRecipeNames(recipe) {
     return uniqueIds([
       ...(recipe?.requires || []),
@@ -400,6 +412,51 @@
   }
 
   function installAvailabilityPolicies() {
+    if (typeof knownBase === "function" && !knownBase.__missingIngredientAware) {
+      const original = knownBase;
+      const wrapped = function missingIngredientAwareKnownBase(...args) {
+        return withUnavailableFoodsMasked(() => original(...args));
+      };
+      wrapped.__missingIngredientAware = true;
+      knownBase = wrapped;
+    }
+
+    if (typeof introductionCandidate === "function" && !introductionCandidate.__missingIngredientAware) {
+      const original = introductionCandidate;
+      const wrapped = function missingIngredientAwareIntroductionCandidate(...args) {
+        return withUnavailableFoodsMasked(() => original(...args));
+      };
+      wrapped.__missingIngredientAware = true;
+      introductionCandidate = wrapped;
+    }
+
+    if (typeof knownCandidate === "function" && !knownCandidate.__missingIngredientAware) {
+      const original = knownCandidate;
+      const wrapped = function missingIngredientAwareKnownCandidate(...args) {
+        return withUnavailableFoodsMasked(() => original(...args));
+      };
+      wrapped.__missingIngredientAware = true;
+      knownCandidate = wrapped;
+    }
+
+    if (typeof companionFor === "function" && !companionFor.__missingIngredientAware) {
+      const original = companionFor;
+      const wrapped = function missingIngredientAwareCompanionFor(...args) {
+        return withUnavailableFoodsMasked(() => original(...args));
+      };
+      wrapped.__missingIngredientAware = true;
+      companionFor = wrapped;
+    }
+
+    if (typeof ironCompanion === "function" && !ironCompanion.__missingIngredientAware) {
+      const original = ironCompanion;
+      const wrapped = function missingIngredientAwareIronCompanion(...args) {
+        return withUnavailableFoodsMasked(() => original(...args));
+      };
+      wrapped.__missingIngredientAware = true;
+      ironCompanion = wrapped;
+    }
+
     if (typeof recipeIngredientReady === "function" && !recipeIngredientReady.__missingIngredientAware) {
       const original = recipeIngredientReady;
       const wrapped = function missingIngredientAwareRecipeIngredientReady(name, ...args) {

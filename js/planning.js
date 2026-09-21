@@ -1588,6 +1588,7 @@ function rebuildFoodConsequences(foodId) {
     let unavailable = log.focusId === foodId && log.notOfferedReason === "unavailable";
     if (unavailable) {
       state.shoppingHints[foodId] = { foodId, status: "needed", createdAt: new Date().toISOString(), sourceLogId: log.id };
+      if (typeof globalThis !== "undefined") globalThis.__plannerMissingIngredient?.installAvailabilityPolicies?.();
       state.followUps[foodId] = { id: `${foodId}-${Date.now()}`, foodId, reason: "not_offered", detail: "unavailable", status: "awaiting_stock", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), dueDate: "", meal: followUpMealForLog(log, foodId), baseFoodId: "", baseMode: "none", alternativeBaseIds: [], previousBaseIds: priorBaseIds(foodId), preparationKey: "standard", preparationText: food(foodId)?.safeForm || "" };
       cleanFoodFromAutomaticFuturePlan(foodId);
     } else scheduleFollowUp(foodId, log.date, followUpMealForLog(log, foodId), "not_offered", "no_opportunity");

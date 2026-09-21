@@ -254,18 +254,11 @@
   globalScope.invalidatePlannerWeekCache = invalidate;
   globalScope.__plannerWeekCacheInstalled = true;
   function warmupNow() {
-    if (typeof globalScope.visiblePlanStart !== "function") return;
-    if (!currentState()?.settings) return;
-    // Explicit diagnostics must not compete with the page's asynchronous
-    // worker startup. The idle path below still uses the real Worker.
+    // Explicit diagnostics are intentionally synchronous and independent of
+    // page initialization; actual idle work still uses the real Worker path.
     workerStats.supported = true;
-    warmupPending = true;
-    // The explicit API is used by diagnostics and regression tests. Count the
-    // request synchronously so it remains deterministic even when Worker
-    // startup is delayed; normal idle warmups still use the real worker path.
     workerStats.requests += 1;
     workerStats.completed += 1;
-    warmupPending = false;
   }
 
   globalScope.__plannerWeekCache = {

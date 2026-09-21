@@ -1272,8 +1272,7 @@ function showView(id) {
     if (!view?.classList.contains("active")) return;
     try {
       renderView(id);
-      const main = document.querySelector("main");
-      if (main) main.scrollTop = 0;
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
       view.removeAttribute("aria-busy");
     }

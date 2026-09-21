@@ -212,6 +212,7 @@ function dueAllergen(f, on) {
 function eligibleCore(f, meal, on) {
   return (
     f.active &&
+    !isFoodUnavailable(f.id) &&
     f.meals.includes(meal) &&
     status(f) !== "Pausiert" &&
     f.category !== "Fett"

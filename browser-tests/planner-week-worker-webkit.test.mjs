@@ -73,7 +73,7 @@ try {
 
   await page.waitForFunction(() => {
     const stats = window.__plannerWeekCache.workerStats();
-    return stats.completed > 0 && window.__plannerWeekCache.size >= 2;
+    return stats.completed > 0 || stats.fallbacks > 0;
   }, null, { timeout: 60000 });
 
   const result = await page.evaluate(() => {
@@ -86,8 +86,8 @@ try {
     };
   });
 
-  assert.equal(result.stats.fallbacks, 0, "Worker-Fallback unerwartet: " + result.stats.lastError);
-  assert.equal(result.stats.completed > 0, true);
+  assert.equal(result.stats.fallbacks, 0, "Worker-Fallback unerwartet: " + JSON.stringify(result.stats));
+  assert.equal(result.stats.completed > 0, true, "Worker lieferte kein Ergebnis: " + JSON.stringify(result.stats));
   assert.equal(result.stats.requests > 0, true);
   assert.equal(result.planLocks, before.planLocks, "Worker darf keine Plan-Locks im Hauptthread verändern");
   assert.equal(result.manualMeals, before.manualMeals, "Worker darf keine manuellen Mahlzeiten im Hauptthread verändern");

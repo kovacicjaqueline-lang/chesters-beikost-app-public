@@ -12,6 +12,37 @@
 (function plannerMissingIngredientModule(globalScope) {
   const REPLACEABLE_RECIPE_FIELDS = Object.freeze(["oneOf", "milkChoices"]);
   const PREPARED_STOCK_FLAG = "__missingIngredientPreparedStock";
+  let availabilityCacheState = null;
+  let availabilityCacheHints = null;
+  let availabilityCachePantry = null;
+  let availabilityCacheIds = null;
+
+  function unavailableFoodIds() {
+    const hints = state?.shoppingHints;
+    const pantry = state?.pantry;
+    if (
+      availabilityCacheIds &&
+      availabilityCacheState === state &&
+      availabilityCacheHints === hints &&
+      availabilityCachePantry === pantry
+    ) return availabilityCacheIds;
+    const ids = new Set();
+    for (const [id, hint] of Object.entries(hints || {})) {
+      if (hint?.status === "needed" && !pantry?.[id]) ids.add(id);
+    }
+    availabilityCacheState = state;
+    availabilityCacheHints = hints;
+    availabilityCachePantry = pantry;
+    availabilityCacheIds = ids;
+    return ids;
+  }
+
+  function invalidateAvailabilityCache() {
+    availabilityCacheState = null;
+    availabilityCacheHints = null;
+    availabilityCachePantry = null;
+    availabilityCacheIds = null;
+  }
 
   function uniqueIds(values) {
     return [...new Set((values || []).filter(Boolean))];
@@ -332,16 +363,11 @@
 
   function withUnavailableFoodsMasked(callback) {
     if (typeof callback !== "function") return null;
-    const hints = state?.shoppingHints;
-    if (!hints || Object.keys(hints).length === 0) return callback();
+    const unavailableIds = unavailableFoodIds();
+    if (!unavailableIds.size) return callback();
     const foods = Array.isArray(state?.foods) ? state.foods : null;
     if (!foods) return callback();
-    const unavailableIds = new Set(
-      Object.entries(hints)
-        .filter(([id, hint]) => hint?.status === "needed" && !state?.pantry?.[id])
-        .map(([id]) => id),
-    );
-    if (!unavailableIds.size || !foods.some((item) => unavailableIds.has(item?.id))) return callback();
+    if (!foods.some((item) => unavailableIds.has(item?.id))) return callback();
     state.foods = foods.filter((item) => !unavailableIds.has(item?.id));
     try {
       return callback();
@@ -351,9 +377,7 @@
   }
 
   function hasUnavailableFoods() {
-    return Object.entries(state?.shoppingHints || {}).some(
-      ([id, hint]) => hint?.status === "needed" && !state?.pantry?.[id],
-    );
+    return unavailableFoodIds().size > 0;
   }
 
   function structuredRecipeNames(recipe) {
@@ -426,6 +450,7 @@
   }
 
   function installAvailabilityPolicies() {
+    invalidateAvailabilityCache();
     if (hasUnavailableFoods()) {
       if (typeof knownBase === "function" && !knownBase.__missingIngredientAware) {
         const original = knownBase;
@@ -591,6 +616,7 @@
       now,
     );
     state.pantry[foodId] = false;
+    invalidateAvailabilityCache();
     installAvailabilityPolicies();
     state.followUps[foodId] = awaitingStockFollowUp(
       previousFollowUp,
@@ -630,6 +656,7 @@
     const now = new Date().toISOString();
     state.shoppingHints[foodId] = { ...hint, status: "available", updatedAt: now };
     state.pantry[foodId] = true;
+    invalidateAvailabilityCache();
 
     const resume = followUpResumeRequest(state.followUps?.[foodId] || {}, hint.meal || "lunch");
     if (typeof scheduleFollowUp === "function") {
@@ -771,5 +798,6 @@
     markFoodUnavailable,
     markPlanMissingFoodAvailable,
     installAvailabilityPolicies,
+    invalidateAvailabilityCache,
   });
 })(typeof globalThis !== "undefined" ? globalThis : this);

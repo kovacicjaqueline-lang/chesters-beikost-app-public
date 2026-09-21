@@ -155,6 +155,13 @@ Diese Auto-Eignung gilt nicht nur für den Fokus, sondern auch für:
 
 Custom-FOODs erhalten keine pauschale Frühstück/Mittag/Abend-Eignung, sondern kategoriespezifische Defaults.
 
+Für den automatischen Frühstücksslot gilt zusätzlich ein Struktur-Gate: Ein Frühstück
+benötigt eine geeignete Hauptbasis, typischerweise Getreide/Stärke. Reine Obstangebote
+oder reine Obst-Rezepte sind als Kostprobe beziehungsweise Einführung zulässig, gelten
+aber nicht als Frühstück. Fehlt eine verträgliche Frühstücksbasis, führt der Planner
+zuerst eine passende Basis ein; manuelle Mahlzeiten, Locks und ausdrücklich gesetzte
+Kostproben bleiben davon unberührt.
+
 Referenzfall:
 
 - Banane + Pferdefleisch zum Frühstück war ein Mahlzeiteneignungsfehler, kein Anlass für eine allgemeine Pair-Blacklist.

@@ -829,19 +829,21 @@ function renderRecipeCard(r, { priorityImage = false } = {}) {
   let type = recipeCatalogTypeLabel(r);
   let familyText = r.familyLabel ? " · " + esc(r.familyLabel) : "";
   let encodedName = encodeURIComponent(r.name);
-  return '<article class="recipe-card-v2" data-recipe="' + encodedName + '">' +
-    '<div class="recipe-summary-grid">' +
-      '<div class="recipe-heading-with-icon">' +
-        recipeIconSvg(r, priorityImage ? { loading: "eager", fetchPriority: "high" } : undefined) +
-        '<div><b>' + esc(r.name) + '</b><div class="small recipe-type-text">' + esc(type) + '</div><div class="tiny recipe-tech-text">' + esc(r.batch || "kleine Portion") + familyText + "</div></div>" +
+  return '<details class="recipe-card-v2" open data-recipe="' + encodedName + '">' +
+    "<summary>" +
+      '<div class="recipe-summary-grid">' +
+        '<div class="recipe-heading-with-icon">' +
+          recipeIconSvg(r, priorityImage ? { loading: "eager", fetchPriority: "high" } : undefined) +
+          '<div><b>' + esc(r.name) + '</b><div class="small recipe-type-text">' + esc(type) + '</div><div class="tiny recipe-tech-text">' + esc(r.batch || "kleine Portion") + familyText + "</div></div>" +
+        "</div>" +
+        '<div class="recipe-summary-end">' + recipeCatalogStatusBadge(r) + "</div>" +
       "</div>" +
-      '<div class="recipe-summary-end">' + recipeCatalogStatusBadge(r) + "</div>" +
-    "</div>" +
+    "</summary>" +
     '<div class="catalog-card-actions">' +
       '<button class="btn catalogLogRecipe" data-recipe="' + encodedName + '" type="button">Protokollieren</button>' +
       '<button class="btn secondary catalogRecipeDetails" data-recipe="' + encodedName + '" type="button">Details</button>' +
     "</div>" +
-  "</article>";
+  "</details>";
 }
 
 if (typeof module !== "undefined" && module.exports) {

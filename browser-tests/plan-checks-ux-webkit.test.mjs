@@ -3,6 +3,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { webkit } from "playwright";
 import { closeBrowserApp, startStaticServer } from "./helpers/app-harness.mjs";
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const artifactDir = path.join(root, "artifacts", "browser-tests", "plan-checks-ux-webkit");
 
 
 

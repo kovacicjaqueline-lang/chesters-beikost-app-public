@@ -97,12 +97,45 @@ const REQUIRED_NOTE_FRAGMENTS = Object.freeze({
   "Süßkartoffel-Linsen-Muffins": [/Süßkartoffel/i, /Linsen/i, /Hafer/i, /vermeng/i],
 });
 
-test("recipe preparation audit covers the full 129-recipe runtime catalog", () => {
+test("recipe preparation audit covers the full 137-recipe runtime catalog", () => {
   const recipes = loadCatalog();
-  assert.equal(recipes.length, 129);
+  assert.equal(recipes.length, 137);
   assert.equal(INCOMPLETE_PREPARATIONS.length, 20);
   assert.equal(TERSE_PREPARATIONS.length, 23);
   assert.equal(new Set([...INCOMPLETE_PREPARATIONS, ...TERSE_PREPARATIONS]).size, 43);
+});
+
+
+test("recipe preparation completeness: new Bulgur- und Quinoa-Gerichte enthalten konkrete Schritte", () => {
+  const recipes = loadCatalog();
+  const expected = {
+    "Quinoa-Huhn-Süßkartoffel-Finger": [/Quinoa/i, /Huhn/i, /Süßkartoffel/i, /vermeng/i, /fingerlang/i, /zerdrückbar/i],
+    "Quinoa-Linsen-Gemüse-Khichdi": [/Quinoa/i, /Linsen/i, /Karotte/i, /Zucchini/i, /weich koch/i, /zerdrück/i],
+    "Quinoa-Gemüse-Puffer": [/Quinoa/i, /Zucchini/i, /Karotte/i, /Ei/i, /Puffer/i, /durchgar/i],
+    "Bulgur-Zucchini-Ei": [/Bulgur/i, /Zucchini/i, /Ei/i, /stock/i, /Löffel/i],
+    "Bulgur-Gemüse-Köfte": [/Bulgur/i, /Linsen/i, /Karotte/i, /Köfte/i, /zerdrück/i],
+    "Bulgur-Linsen-Suppe": [/Bulgur/i, /Linsen/i, /Tomate/i, /Karotte/i, /Suppe/i, /zerdrück/i],
+  };
+  for (const [name, fragments] of Object.entries(expected)) {
+    const recipe = recipes.find((item) => item.name === name);
+    assert.ok(recipe, name + ": Rezept fehlt");
+    assert.ok(recipe.note.length >= 180, name + ": Zubereitung bleibt zu knapp");
+    for (const fragment of fragments) assert.match(recipe.note, fragment, name + ": Zubereitungshinweis fehlt (" + fragment + ")");
+  }
+});
+
+test("recipe preparation completeness: Fischküchlein enthalten Gräten-, Gar- und Konsistenzhinweise", () => {
+  const recipes = loadCatalog();
+  const expected = {
+    "Forelle-Kartoffel-Bällchen": [/Forelle/i, /Kartoffel/i, /Ei/i, /entgrät|Gräten/i, /vollständig durchgar/i, /zerdrückbar/i],
+    "Kabeljau-Süßkartoffel-Fischküchlein": [/Kabeljau/i, /Süßkartoffel/i, /Ei/i, /Gräten/i, /vollständig durchgar/i, /zerdrückbar/i],
+  };
+  for (const [name, fragments] of Object.entries(expected)) {
+    const recipe = recipes.find((item) => item.name === name);
+    assert.ok(recipe, name + ": Rezept fehlt");
+    assert.ok(recipe.note.length >= 220, name + ": Zubereitung bleibt zu knapp");
+    for (const fragment of fragments) assert.match(recipe.note, fragment, name + ": Zubereitungshinweis fehlt (" + fragment + ")");
+  }
 });
 
 test("recipe preparation completeness: Hirsotto enthält Mengen, Aromatik und weiche Zubereitung", () => {

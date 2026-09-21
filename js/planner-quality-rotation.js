@@ -129,6 +129,19 @@ function plannerQualityChooseResult(results, ctx, on, diffFn, focusId = "") {
     .sort((a, b) => plannerQualityCompareTuple(a.tuple, b.tuple))[0]?.result || null;
 }
 
+function plannerQualityBreakfastCompanionResults(results, ctx, on, diffFn) {
+  if (!Array.isArray(results) || results.length < 2 || typeof diffFn !== "function") return results || [];
+  let rotated = results.filter((result) => {
+    let id = result?.f?.id || result?.id || "";
+    if (!id) return false;
+    let last = ctx?.qualityLastFoodUse?.get(id);
+    if (!last) return true;
+    let distance = Number(diffFn(on, last));
+    return !Number.isFinite(distance) || distance > 1;
+  });
+  return rotated.length ? rotated : results;
+}
+
 function plannerQualityKnownCandidatePriorityTuple(
   result,
   on,
@@ -340,6 +353,19 @@ function installPlannerQualityRotationRuntime() {
     let results = collectCompanionResults(focus, meal, on, focusType);
     if (results.length < 2) return results[0]?.f || null;
 
+    // Frühstücks-Begleiter dürfen nicht täglich denselben Frucht-/Getreidepartner
+    // wiederholen, wenn eine gleich zulässige Alternative vorhanden ist. Der
+    // Fallback auf die vollständige Liste bleibt wichtig, wenn tatsächlich nur
+    // ein FOOD verfügbar ist.
+    if (meal === "breakfast") {
+      results = plannerQualityBreakfastCompanionResults(
+        results,
+        activeQualityContext,
+        on,
+        diffDays,
+      );
+    }
+
     if (typeof plannerAutomaticPairPreferencePenalty === "function") {
       let baseline = plannerAutomaticPairPreferencePenalty(focus, results[0].f, meal);
       let sameTier = results.filter((entry) => plannerAutomaticPairPreferencePenalty(focus, entry.f, meal) <= baseline);
@@ -480,6 +506,7 @@ if (typeof module !== "undefined" && module.exports) {
     plannerQualityCandidateTuple,
     plannerQualityCompareTuple,
     plannerQualityChooseResult,
+    plannerQualityBreakfastCompanionResults,
     plannerQualityKnownCandidatePriorityTuple,
     plannerQualityChooseKnownResult,
     plannerQualityNormalizeQualityDays,

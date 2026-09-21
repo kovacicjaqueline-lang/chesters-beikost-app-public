@@ -309,6 +309,13 @@
     if (search) search.oninput = (event) => { recipeQuery = event.target.value; renderRecipeCatalog(); };
     if (typeof bindRecipeStockButtons === "function") bindRecipeStockButtons();
     const recipeByCatalogName = new Map(recipes.map((recipe) => [recipe.name, recipe]));
+    document.querySelectorAll(".recipe-card-v2 > summary").forEach((summary) => {
+      summary.onclick = (event) => {
+        event.preventDefault();
+        const recipe = recipeByCatalogName.get(decodeCatalogValue(summary.closest(".recipe-card-v2")?.dataset.recipe));
+        if (recipe && typeof showRecipeInfo === "function") showRecipeInfo(recipe);
+      };
+    });
     document.querySelectorAll(".catalogRecipeDetails").forEach((button) => {
       button.onclick = () => {
         const recipe = recipeByCatalogName.get(decodeCatalogValue(button.dataset.recipe));

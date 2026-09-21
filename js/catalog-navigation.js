@@ -297,7 +297,7 @@
     if (countBox) countBox.textContent = `${recipes.length} Rezept${recipes.length === 1 ? "" : "e"}`;
     syncRecipeFilterUi(recipes.length);
     document.getElementById("recipeList").innerHTML = recipes.length
-      ? recipes.map((recipe) => renderRecipeCard(recipe, { showDetails: false })).join("")
+      ? recipes.map((recipe, index) => renderRecipeCard(recipe, { priorityImage: index < 4, showDetails: false })).join("")
       : '<div class="empty ds-empty"><div>Keine Rezepte für diese Auswahl gefunden.</div><button class="btn" id="recipeEmptyAction" type="button">Filter zurücksetzen</button></div>';
     document.getElementById("recipeEmptyAction")?.addEventListener("click", () => {
       recipeQuery = "";

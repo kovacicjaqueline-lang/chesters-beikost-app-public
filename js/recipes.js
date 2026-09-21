@@ -388,7 +388,7 @@ const RECIPE_CATALOG_ADDITIONS = Object.freeze([
     stage: 2,
     batch: "4 kleine Portionen",
     ingredients: "60 g Quinoa, 60 g rote Linsen, 120 g Karotte, 100 g Zucchini, 450 ml Wasser, 1 TL Rapsöl, 1 TL Petersilie",
-    note: "Quinoa gründlich waschen. Quinoa und rote Linsen mit Wasser aufkochen und sehr weich köcheln lassen. Karotte und Zucchini fein würfeln, mitgaren und so lange weiterkochen, bis alles weich zerfällt. Mit Petersilie verrühren und je nach aktueller Konsistenz weich zerdrücken; Rapsöl erst in die servierte Portion geben. Keine gesalzene Brühe verwenden.",
+    note: "Quinoa gründlich waschen. Quinoa und rote Linsen mit Wasser aufkochen und sehr weich kochen lassen. Karotte und Zucchini fein würfeln, mitgaren und so lange weiterkochen, bis alles weich zerfällt. Mit Petersilie verrühren und je nach aktueller Konsistenz weich zerdrücken; Rapsöl erst in die servierte Portion geben. Keine gesalzene Brühe verwenden.",
     freezable: true,
     freezerNote: "Portionsweise rasch abkühlen, einfrieren, vollständig auftauen und mit etwas Wasser sanft erwärmen.",
     tags: Object.freeze(["Quinoa", "Linsen", "Löffelgericht"]),

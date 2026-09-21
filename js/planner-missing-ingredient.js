@@ -334,7 +334,11 @@
     if (typeof callback !== "function") return null;
     const foods = Array.isArray(state?.foods) ? state.foods : null;
     if (!foods) return callback();
-    state.foods = foods.filter((item) => !unavailable(item?.id));
+    const unavailableIds = new Set(
+      foods.filter((item) => unavailable(item?.id)).map((item) => item?.id),
+    );
+    if (!unavailableIds.size) return callback();
+    state.foods = foods.filter((item) => !unavailableIds.has(item?.id));
     try {
       return callback();
     } finally {

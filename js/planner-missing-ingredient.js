@@ -335,9 +335,11 @@
     const foods = Array.isArray(state?.foods) ? state.foods : null;
     if (!foods) return callback();
     const unavailableIds = new Set(
-      foods.filter((item) => unavailable(item?.id)).map((item) => item?.id),
+      Object.entries(state?.shoppingHints || {})
+        .filter(([id, hint]) => hint?.status === "needed" && !state?.pantry?.[id])
+        .map(([id]) => id),
     );
-    if (!unavailableIds.size) return callback();
+    if (!unavailableIds.size || !foods.some((item) => unavailableIds.has(item?.id))) return callback();
     state.foods = foods.filter((item) => !unavailableIds.has(item?.id));
     try {
       return callback();
@@ -416,15 +418,6 @@
   }
 
   function installAvailabilityPolicies() {
-    if (typeof knownBase === "function" && !knownBase.__missingIngredientAware) {
-      const original = knownBase;
-      const wrapped = function missingIngredientAwareKnownBase(...args) {
-        return withUnavailableFoodsMasked(() => original(...args));
-      };
-      wrapped.__missingIngredientAware = true;
-      knownBase = wrapped;
-    }
-
     if (typeof introductionCandidate === "function" && !introductionCandidate.__missingIngredientAware) {
       const original = introductionCandidate;
       const wrapped = function missingIngredientAwareIntroductionCandidate(...args) {

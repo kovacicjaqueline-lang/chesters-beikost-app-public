@@ -350,6 +350,12 @@
     }
   }
 
+  function hasUnavailableFoods() {
+    return Object.entries(state?.shoppingHints || {}).some(
+      ([id, hint]) => hint?.status === "needed" && !state?.pantry?.[id],
+    );
+  }
+
   function structuredRecipeNames(recipe) {
     return uniqueIds([
       ...(recipe?.requires || []),
@@ -420,6 +426,17 @@
   }
 
   function installAvailabilityPolicies() {
+    if (!hasUnavailableFoods()) return;
+
+    if (typeof knownBase === "function" && !knownBase.__missingIngredientAware) {
+      const original = knownBase;
+      const wrapped = function missingIngredientAwareKnownBase(...args) {
+        return withUnavailableFoodsMasked(() => original(...args));
+      };
+      wrapped.__missingIngredientAware = true;
+      knownBase = wrapped;
+    }
+
     if (typeof introductionCandidate === "function" && !introductionCandidate.__missingIngredientAware) {
       const original = introductionCandidate;
       const wrapped = function missingIngredientAwareIntroductionCandidate(...args) {
@@ -503,7 +520,9 @@
     const original = load;
     const wrapped = function missingIngredientAwareLoad(...args) {
       installAvailabilityPolicies();
-      return original(...args);
+      const result = original(...args);
+      installAvailabilityPolicies();
+      return result;
     };
     wrapped.__missingIngredientAware = true;
     load = wrapped;
@@ -572,6 +591,7 @@
       now,
     );
     state.pantry[foodId] = false;
+    installAvailabilityPolicies();
     state.followUps[foodId] = awaitingStockFollowUp(
       previousFollowUp,
       foodId,

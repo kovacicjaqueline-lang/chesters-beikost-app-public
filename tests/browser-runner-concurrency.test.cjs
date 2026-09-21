@@ -34,6 +34,14 @@ test('browser runner splits ordered tests deterministically across shards', asyn
   assert.deepEqual(selectBrowserTestShard(files, null), files);
   assert.deepEqual(selectBrowserTestShard(files, { index: 1, total: 2 }), ['a.mjs', 'c.mjs', 'e.mjs']);
   assert.deepEqual(selectBrowserTestShard(files, { index: 2, total: 2 }), ['b.mjs', 'd.mjs']);
+  assert.deepEqual(
+    selectBrowserTestShard(files.slice(0, 4), { index: 1, total: 2 }, { 'a.mjs': 90, 'b.mjs': 80, 'c.mjs': 70, 'd.mjs': 20 }),
+    ['a.mjs', 'd.mjs'],
+  );
+  assert.deepEqual(
+    selectBrowserTestShard(files.slice(0, 4), { index: 2, total: 2 }, { 'a.mjs': 90, 'b.mjs': 80, 'c.mjs': 70, 'd.mjs': 20 }),
+    ['b.mjs', 'c.mjs'],
+  );
   assert.throws(() => resolveBrowserTestShard('0/2'), /Invalid BROWSER_TEST_SHARD/);
   assert.throws(() => resolveBrowserTestShard('3/2'), /Invalid BROWSER_TEST_SHARD/);
   assert.throws(() => resolveBrowserTestShard('broken'), /Invalid BROWSER_TEST_SHARD/);

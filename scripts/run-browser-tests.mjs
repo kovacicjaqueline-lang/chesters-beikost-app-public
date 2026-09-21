@@ -8,6 +8,7 @@ const scriptPath = fileURLToPath(import.meta.url);
 const defaultRoot = path.resolve(path.dirname(scriptPath), "..");
 
 export const DEFAULT_BROWSER_TEST_CONCURRENCY = 2;
+export const DEFAULT_BROWSER_TEST_DURATION_MS = 30000;
 
 const preferredOrder = [
   "meal-editor-recipe-variants-webkit.test.mjs",
@@ -55,10 +56,44 @@ export function resolveBrowserTestShard(value) {
   return { index, total };
 }
 
-export function selectBrowserTestShard(items, shard) {
+export function loadBrowserTestDurations(rootDir = defaultRoot, filePath = path.join(rootDir, "scripts", "browser-test-durations.json")) {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(filePath, "utf8"));
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+    return {};
+  }
+}
+
+export function selectBrowserTestShard(items, shard, durations = {}) {
   const source = [...items];
   if (!shard) return source;
-  return source.filter((_, index) => index % shard.total === shard.index - 1);
+
+  const groups = Array.from({ length: shard.total }, () => []);
+  const totals = Array.from({ length: shard.total }, () => 0);
+  const weighted = source.map((item, index) => {
+    const name = path.basename(item);
+    const duration = Number(durations[name]);
+    return {
+      item,
+      index,
+      duration: Number.isFinite(duration) && duration > 0 ? duration : DEFAULT_BROWSER_TEST_DURATION_MS,
+    };
+  }).sort((left, right) => right.duration - left.duration || left.index - right.index);
+
+  for (const entry of weighted) {
+    let target = 0;
+    for (let index = 1; index < totals.length; index += 1) {
+      if (totals[index] < totals[target]) target = index;
+    }
+    groups[target].push(entry);
+    totals[target] += entry.duration;
+  }
+
+  return groups[shard.index - 1]
+    .sort((left, right) => left.index - right.index)
+    .map((entry) => entry.item);
 }
 
 export async function runWithConcurrency(items, worker, concurrency = DEFAULT_BROWSER_TEST_CONCURRENCY) {

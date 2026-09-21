@@ -223,7 +223,7 @@ try {
   assert.equal(after.futureManual, null, "zukünftiger offener manueller Banane-Slot wird freigegeben");
   assert.equal(after.futureLock, null, "freigegebener Zukunftsslot bleibt ohne pauschalen Auto-Lock");
   assert.ok(after.futurePlanned, "freigegebener Zukunftsslot darf dynamisch neu geplant werden");
-  assert.equal(after.futurePlanned.foodIds.includes("banane"), false, "dynamisch neu geplanter Zukunftsslot enthält die fehlende Zutat nicht");
+  assert.equal(after.futurePlanned.foodIds.includes("banane"), false, "dynamisch neu geplanter Zukunftsslot enthält die fehlende Zutat nicht: " + JSON.stringify({ futurePlanned: after.futurePlanned, hint: after.hint, pantry: after.pantry, unavailable: after.unavailable }));
   assert.equal(after.futureOverride, null, "zukünftiger Banane-Override wird entfernt");
   assert.equal(after.carried, null, "auch ein verschobener offener Rollover-Plan mit Banane wird entfernt");
   assert.match(await page.locator("#toastText").innerText(), /Einkaufsliste.*Plan wurde angepasst/i);

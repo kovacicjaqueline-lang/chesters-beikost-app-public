@@ -16,11 +16,22 @@
     typeof globalScope.buildDays !== "function"
   ) return;
 
-  const CACHE_VERSION = 1;
+  const CACHE_VERSION = 2;
   const cache = new Map();
   let revision = 0;
   let warmupPending = false;
   let warmupHandle = null;
+  let plannerWorker = null;
+  let plannerWorkerDisabled = false;
+  let plannerWorkerRequest = 0;
+  let plannerWorkerPending = null;
+  const workerStats = {
+    supported: false,
+    requests: 0,
+    completed: 0,
+    fallbacks: 0,
+    lastError: "",
+  };
 
   function currentState() {
     try {
@@ -43,6 +54,9 @@
     revision += 1;
     cache.clear();
     warmupPending = false;
+    // A response for an older revision is ignored. The worker itself stays
+    // alive so a later idle warmup can reuse it.
+    plannerWorkerPending = null;
     if (warmupHandle !== null && typeof globalScope.cancelIdleCallback === "function") {
       globalScope.cancelIdleCallback(warmupHandle);
     } else if (warmupHandle !== null && typeof globalScope.clearTimeout === "function") {
@@ -60,6 +74,114 @@
     const snapshot = cloneValue(days || []);
     cache.set(key, snapshot);
     return cloneValue(snapshot);
+  }
+
+
+  function recordWorkerFallback(error) {
+    workerStats.fallbacks += 1;
+    workerStats.lastError = String(error || "Planner-Worker fehlgeschlagen");
+  }
+
+  function runMainThreadWarmup(from) {
+    const starts = [
+      globalScope.addDays(from, 7),
+      globalScope.addDays(from, 14),
+    ];
+    for (const start of starts) {
+      const key = cacheKey(start, 7);
+      if (cache.has(key)) continue;
+      // Future weeks do not need today's tracking-lock synchronization.
+      put(key, globalScope.buildDays(start, 7, false));
+    }
+  }
+
+  function disablePlannerWorker(error) {
+    plannerWorkerDisabled = true;
+    workerStats.supported = false;
+    recordWorkerFallback(error);
+    if (plannerWorker) {
+      plannerWorker.onmessage = null;
+      plannerWorker.onerror = null;
+    }
+    plannerWorker = null;
+    plannerWorkerPending = null;
+    warmupPending = false;
+  }
+
+  function ensurePlannerWorker() {
+    if (plannerWorkerDisabled || plannerWorker) return plannerWorker;
+    if (typeof globalScope.Worker !== "function") return null;
+
+    const baseUrl = globalScope.document?.baseURI || globalScope.location?.href;
+    if (!baseUrl || typeof globalScope.URL !== "function") return null;
+
+    try {
+      const workerUrl = new globalScope.URL(
+        "js/planner-week-worker.js?v=10.1.26",
+        baseUrl,
+      );
+      plannerWorker = new globalScope.Worker(workerUrl);
+      workerStats.supported = true;
+      plannerWorker.onmessage = (event) => {
+        const data = event?.data || {};
+        const pending = plannerWorkerPending;
+        if (!pending || data.requestId !== pending.requestId) return;
+
+        plannerWorkerPending = null;
+        warmupPending = false;
+
+        if (data.type === "error") {
+          recordWorkerFallback(data.message);
+          runMainThreadWarmup(globalScope.visiblePlanStart());
+          return;
+        }
+        if (data.type !== "result" || data.inputRevision !== revision) return;
+
+        for (const week of data.weeks || []) {
+          if (!week || !week.from) continue;
+          put(cacheKey(week.from, week.count || 7), week.days);
+        }
+        workerStats.completed += 1;
+      };
+      plannerWorker.onerror = (event) => {
+        const pending = plannerWorkerPending;
+        plannerWorkerPending = null;
+        warmupPending = false;
+        disablePlannerWorker(event?.message || "Planner-Worker konnte nicht geladen werden");
+        if (pending) runMainThreadWarmup(globalScope.visiblePlanStart());
+      };
+      return plannerWorker;
+    } catch (error) {
+      disablePlannerWorker(error);
+      return null;
+    }
+  }
+
+  function dispatchPlannerWorkerWarmup(from) {
+    const worker = ensurePlannerWorker();
+    if (!worker) return false;
+    if (plannerWorkerPending) return true;
+
+    const requestId = ++plannerWorkerRequest;
+    plannerWorkerPending = { requestId, inputRevision: revision };
+    workerStats.requests += 1;
+    try {
+      worker.postMessage({
+        type: "build",
+        requestId,
+        inputRevision: revision,
+        starts: [
+          globalScope.addDays(from, 7),
+          globalScope.addDays(from, 14),
+        ],
+        state: currentState(),
+      });
+      return true;
+    } catch (error) {
+      plannerWorkerPending = null;
+      disablePlannerWorker(error);
+      return false;
+    }
   }
 
   function scheduleWarmup() {
@@ -82,18 +204,10 @@
 
       try {
         const from = globalScope.visiblePlanStart();
-        const starts = [
-          globalScope.addDays(from, 7),
-          globalScope.addDays(from, 14),
-        ];
-        for (const start of starts) {
-          const key = cacheKey(start, 7);
-          if (cache.has(key)) continue;
-          // Future weeks do not need today's tracking-lock synchronization.
-          put(key, globalScope.buildDays(start, 7, false));
-        }
+        if (dispatchPlannerWorkerWarmup(from)) return;
+        runMainThreadWarmup(from);
       } finally {
-        warmupPending = false;
+        if (!plannerWorkerPending) warmupPending = false;
       }
     };
 
@@ -127,7 +241,12 @@
   const baseSave = typeof globalScope.save === "function" ? globalScope.save : null;
   if (baseSave) {
     globalScope.save = function plannerCacheAwareSave(options = {}) {
-      if (!preserveForNavigation(options)) invalidate("save");
+      if (!preserveForNavigation(options)) {
+        invalidate("save");
+        if (typeof globalScope.invalidateDayPlanRuntimeCache === "function") {
+          globalScope.invalidateDayPlanRuntimeCache();
+        }
+      }
       return baseSave.apply(this, arguments);
     };
   }
@@ -137,6 +256,12 @@
   globalScope.__plannerWeekCache = {
     get revision() { return revision; },
     get size() { return cache.size; },
+    get workerAvailable() {
+      return !!plannerWorker && !plannerWorkerDisabled;
+    },
+    workerStats() {
+      return { ...workerStats };
+    },
     clear: invalidate,
     warmup: scheduleWarmup,
   };

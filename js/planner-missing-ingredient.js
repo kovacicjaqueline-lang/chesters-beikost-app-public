@@ -558,6 +558,9 @@
     );
 
     if (typeof save === "function") save();
+    if (typeof globalScope.invalidateDayPlanRuntimeCache === "function") {
+      globalScope.invalidateDayPlanRuntimeCache();
+    }
     if (typeof showToast === "function") {
       showToast(`${item.name} fehlt und steht auf der Einkaufsliste. Der Plan wurde angepasst.`);
     }

@@ -5,7 +5,7 @@ const vm = require("node:vm");
 const source = require("fs").readFileSync("js/planner-week-cache.js", "utf8");
 
 test("Planner-Wochen-Cache bleibt abgeleitet und versioniert", () => {
-  assert.match(source, /const CACHE_VERSION = 1/);
+  assert.match(source, /const CACHE_VERSION = 2/);
   assert.match(source, /preservePlanCache/);
   assert.match(source, /buildDays\(start, 7, false\)/);
   assert.match(source, /invalidate\("save"\)/);
@@ -21,6 +21,13 @@ test("Wochenwechsel erhält den Cache, fachliche Saves invalidieren ihn", () => 
 test("Service Worker nimmt den Planner-Cache in den Offline-Precache auf", () => {
   const sw = require("fs").readFileSync("sw.js", "utf8");
   assert.match(sw, /const UI_PRECACHE = \[[\s\S]*\.\/js\/planner-week-cache\.js\?v=10\.1\.26/);
+assert.ok(sw.includes("./js/planner-week-worker.js?v=10.1.26"));
+});
+
+test("Worker-Warmup bleibt revisionssicher und optional", () => {
+  assert.ok(source.includes("inputRevision"));
+  assert.ok(source.includes("postMessage"));
+  assert.ok(source.includes("planner-week-worker.js"));
 });
 
 test("gültige Wochen werden wiederverwendet und fachliche Saves verwerfen den Cache", () => {

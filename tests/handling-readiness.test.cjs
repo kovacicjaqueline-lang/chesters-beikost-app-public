@@ -377,6 +377,9 @@ test("HANDLING: weich-stückige Formfälle bleiben soft-orientation statt künst
     "Lachs-Brokkoli-Kartoffel-Auflauf",
     "Mildes Bohnen-Süßkartoffel-Chili",
     "Gefüllte Paprika mit Linsenreis",
+    "Quinoa-Linsen-Gemüse-Khichdi",
+    "Bulgur-Zucchini-Ei",
+    "Bulgur-Linsen-Suppe",
   ].sort();
   const actual = Object.entries(RECIPE_HANDLING_CONTRACT)
     .filter(([, entry]) => entry.laterKind === "soft-orientation")

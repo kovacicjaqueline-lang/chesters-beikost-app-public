@@ -277,7 +277,7 @@
     }
     if (typeof openGeneric !== "function" || typeof renderRecipeCard !== "function") return false;
 
-    openGeneric("Rezept", renderRecipeCard(recipe, { showDetails: true }));
+    openGeneric("Rezept", renderRecipeCard(recipe));
     let card = document.querySelector("#genericBody .recipe-card-v2");
     if (card) card.open = true;
     if (typeof bindRecipeStockButtons === "function") bindRecipeStockButtons();

@@ -172,10 +172,36 @@ function plannerRecipeSuitableForMeal(recipe, meal) {
     (tag) => String(tag || "").trim().toLowerCase() === "snack",
   );
   if (meal === "snack") return hasSnackTag;
-  if (meal === "breakfast") return ["porridge", "pancakes", "baking"].includes(category);
+  if (meal === "breakfast") {
+    return ["porridge", "pancakes", "baking"].includes(category) &&
+      plannerRecipeBreakfastHasBase(recipe);
+  }
   if (meal === "dinner")
     return !["philippines"].includes(category) || Number(recipe?.stage || 1) <= 3;
   return true;
+}
+
+function plannerRecipeBreakfastHasBase(recipe) {
+  if (recipe?.breakfastBase === false) return false;
+  let names = [
+    ...(recipe?.requires || []),
+    ...(recipe?.alternatives || []).flat(),
+    ...(recipe?.oneOf || []),
+    ...(recipe?.milkChoices || []),
+  ].filter(Boolean);
+  let foods = typeof FOOD_DB !== "undefined" && Array.isArray(FOOD_DB) ? FOOD_DB : [];
+  if (foods.length) {
+    return names.some((name) => {
+      let item = foods.find((food) => food?.name === name);
+      return ["Getreide/Stärke", "Milchprodukt"].includes(item?.category) &&
+        plannerFoodCanBeBase(item) &&
+        item.id !== "kuhmilch";
+    });
+  }
+
+  // Node-side policy tests load app.js without the browser's FOOD_DB script.
+  // Keep the same contract for the canonical grain/dairy names in that case.
+  return names.some((name) => /hafer|hirse|polenta|reis|quinoa|buchweizen|weizen|dinkel|grieß|griess|naturjoghurt|joghurt|buttermilch|quark|skyr/i.test(String(name)));
 }
 
 function plannerRecipeByStoredName(name, recipes = []) {

@@ -28,10 +28,31 @@ function recipeSuitableForMeal(recipe, meal) {
   if (meal === "snack")
     return (recipe?.tags || []).some((tag) => normalizeName(tag) === "snack");
   if (meal === "breakfast")
-    return ["porridge", "pancakes", "baking"].includes(c);
+    return ["porridge", "pancakes", "baking"].includes(c) && plannerRecipeBreakfastHasBase(recipe);
   if (meal === "dinner")
     return !["philippines"].includes(c) || Number(recipe.stage || 1) <= 3;
   return true;
+}
+function plannerRecipeBreakfastHasBase(recipe) {
+  if (recipe?.breakfastBase === false) return false;
+  let names = [
+    ...(recipe?.requires || []),
+    ...(recipe?.alternatives || []).flat(),
+    ...(recipe?.oneOf || []),
+    ...(recipe?.milkChoices || []),
+  ].filter(Boolean);
+  let foods = typeof state !== "undefined" && Array.isArray(state?.foods)
+    ? state.foods
+    : typeof FOOD_DB !== "undefined" && Array.isArray(FOOD_DB) ? FOOD_DB : [];
+  if (foods.length) {
+    return names.some((name) => {
+      let item = foods.find((food) => food?.name === name);
+      return ["Getreide/Stärke", "Milchprodukt"].includes(item?.category) &&
+        (typeof plannerFoodCanBeBase !== "function" || plannerFoodCanBeBase(item)) &&
+        item.id !== "kuhmilch";
+    });
+  }
+  return names.some((name) => /hafer|hirse|polenta|reis|quinoa|buchweizen|weizen|dinkel|grieß|griess|naturjoghurt|joghurt|buttermilch|quark|skyr/i.test(String(name)));
 }
 function manualMealKey(date, meal) {
   return `${date}|${meal}`;
@@ -534,6 +555,24 @@ function introductionCandidate(meal, on, ctx, exclude = []) {
   fresh.sort((a, b) => effectivePriority(a, on) - effectivePriority(b, on));
   return fresh.length ? { f: fresh[0], type: fresh[0].allergenGroup ? "Allergen einführen" : "neu" } : null;
 }
+function breakfastBaseIntroductionCandidate(meal, on, ctx, exclude = []) {
+  if (meal !== "breakfast" || !state?.foods) return null;
+  let originalFoods = state.foods;
+  state.foods = originalFoods.filter((item) =>
+    item?.active &&
+    item.meals?.includes("breakfast") &&
+    !item.allergenGroup &&
+    item.category === "Getreide/Stärke" &&
+    (typeof plannerFoodCanBeBase !== "function" || plannerFoodCanBeBase(item)) &&
+    (typeof plannerFoodCanBeAutomaticFocus !== "function" || plannerFoodCanBeAutomaticFocus(item)),
+  );
+  try {
+    let result = introductionCandidate(meal, on, ctx, exclude);
+    return result?.f?.category === "Getreide/Stärke" ? result : null;
+  } finally {
+    state.foods = originalFoods;
+  }
+}
 function knownCandidate(meal, on, ctx, exclude = []) {
   let key = on + "|" + meal,
     override = state.overrides[key];
@@ -954,9 +993,22 @@ function buildDay(date, index, ctx) {
       continue;
     }
     let c = null;
-    if (introDue && !introAssigned && (!forcedIntroMeal || meal === forcedIntroMeal)) c = introductionCandidate(meal, date, ctx, used);
+    let breakfastBaseRequired = meal === "breakfast" &&
+      !state.overrides[date + "|" + meal] &&
+      !knownBase(meal, used);
+    let breakfastBaseIntroduction = false;
+    if (breakfastBaseRequired) {
+      c = breakfastBaseIntroductionCandidate(meal, date, ctx, used);
+      breakfastBaseIntroduction = !!c;
+    } else if (introDue && !introAssigned && (!forcedIntroMeal || meal === forcedIntroMeal)) {
+      c = introductionCandidate(meal, date, ctx, used);
+    }
     if (c && ["neu", "gezielt wiederholen", "bekannt kombinieren", "Allergen einführen", "Allergen wiederholen", "manuell"].includes(c.type)) {
       introAssigned = true; ctx.reserved.add(c.f.id); ctx.introduced.push(c.f.id);
+    }
+    if (!c && breakfastBaseRequired) {
+      meals.push({ meal, active: true, empty: true, note: "Für ein sinnvolles Frühstück wird zuerst eine geeignete Basis eingeführt." });
+      continue;
     }
     if (!c && (!introDue || introAssigned)) {
       let recipe = recipeStockCandidate(meal, date, ctx);
@@ -976,8 +1028,8 @@ function buildDay(date, index, ctx) {
     if (!c) { meals.push({ meal, active: true, empty: true }); continue; }
     let f = c.f;
     used.push(f.id); ctx.plannedUse.set(f.id, (ctx.plannedUse.get(f.id) || 0) + 1); ctx.lastFocus.set(f.id, date);
-    let introduction = ["neu", "gezielt wiederholen", "Allergen einführen", "Allergen wiederholen", "manuell"].includes(c.type) && !isTrustedBase(f);
-    let base = companionFor(f, meal, date, c.type);
+    let introduction = (breakfastBaseIntroduction || ["neu", "gezielt wiederholen", "Allergen einführen", "Allergen wiederholen", "manuell"].includes(c.type)) && !isTrustedBase(f);
+    let base = breakfastBaseIntroduction ? null : companionFor(f, meal, date, c.type);
     let companions = enforceSingleStarch(f, base ? [base] : []);
     let ids = introduction ? companions.map((x) => x.id) : [f.id, ...companions.map((x) => x.id)];
     if (introduction && !ids.includes(f.id)) ids.push(f.id);
@@ -1011,7 +1063,9 @@ function buildDay(date, index, ctx) {
     let baseFoodIds = introduction ? companions.map((x) => x.id) : ids.filter((id) => id !== f.id);
     let sampleFoodIds = introduction ? [f.id] : [];
     let standaloneAllergen = plannerAllergenCanBeStandalone(f) && !isTrustedBase(f);
-    let note = c.type === "neu"
+    let note = breakfastBaseIntroduction
+      ? "Geeignete Frühstücksbasis zuerst als kleine Kostprobe einführen; danach mit passenden Komponenten zu einer Mahlzeit aufbauen."
+      : c.type === "neu"
       ? standaloneAllergen
         ? `Neue ${f.name}-Einführung als eigenständige, gut durchgegarte altersgerechte Speise anbieten.`
         : "Neue Einführung separat oder in kleiner Menge mit der sicheren Basis anbieten."

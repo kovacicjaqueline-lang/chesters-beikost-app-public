@@ -93,6 +93,123 @@ test("bei gleich zulässigen Kandidaten schlägt neue Kombination eine wiederhol
   assert.equal(chosen.f.id, "zucchini");
 });
 
+test("Frühstücks-Begleiter wechseln bei vorhandener Alternative statt täglich zu wiederholen", () => {
+  const state = ctx();
+  state.qualityLastFoodUse.set("brombeere", "2026-08-20");
+  const results = [
+    { f: { id: "brombeere" } },
+    { f: { id: "apfel" } },
+  ];
+  const filtered = quality.plannerQualityBreakfastCompanionResults(
+    results,
+    state,
+    "2026-08-21",
+    (a, b) => Math.round((Date.parse(`${a}T00:00:00Z`) - Date.parse(`${b}T00:00:00Z`)) / 86400000),
+  );
+  assert.deepEqual(filtered.map((entry) => entry.f.id), ["apfel"]);
+});
+
+test("Frühstücks-Rotation fällt auf den vorhandenen Begleiter zurück, wenn es keine Alternative gibt", () => {
+  const state = ctx();
+  state.qualityLastFoodUse.set("brombeere", "2026-08-20");
+  const results = [{ f: { id: "brombeere" } }];
+  assert.deepEqual(
+    quality.plannerQualityBreakfastCompanionResults(
+      results,
+      state,
+      "2026-08-21",
+      (a, b) => Math.round((Date.parse(`${a}T00:00:00Z`) - Date.parse(`${b}T00:00:00Z`)) / 86400000),
+    ),
+    results,
+  );
+});
+
+test("Runtime rotiert Brombeere als Frühstücks-Begleiter am Folgetag", () => {
+  const names = [
+    "buildDay", "freshPlanContext", "introductionCandidate", "knownCandidate", "companionFor",
+    "planQualityIssues", "manualMealFor", "lockedMeal", "dueAllergen", "knownBase", "food",
+    "isTrustedBase", "diffDays", "lastDate", "activeMeal", "rank", "state",
+    "relatedFamilyFoodIds", "plannerAutomaticPairPreferencePenalty",
+  ];
+  const previous = Object.fromEntries(names.map((name) => [name, global[name]]));
+  const previousFlag = global.__plannerQualityRotationRuntimeInstalled;
+
+  try {
+    delete global.__plannerQualityRotationRuntimeInstalled;
+    const foods = [
+      { id: "hafer", name: "Hafer", allergenGroup: "", meals: ["breakfast"], priority: 1 },
+      { id: "brombeere", name: "Brombeere", allergenGroup: "", meals: ["breakfast"], priority: 2 },
+      { id: "apfel", name: "Apfel", allergenGroup: "", meals: ["breakfast"], priority: 3 },
+    ];
+    global.state = {
+      foods,
+      settings: {},
+      deferred: {},
+      planLocks: {},
+      overrides: {},
+    };
+    global.food = (id) => global.state.foods.find((item) => item.id === id);
+    global.isTrustedBase = (item) => item?.id === "hafer";
+    global.dueAllergen = () => false;
+    global.knownBase = () => global.food("hafer");
+    global.lastDate = () => "";
+    global.diffDays = (a, b) => Math.round((Date.parse(`${a}T00:00:00Z`) - Date.parse(`${b}T00:00:00Z`)) / 86400000);
+    global.activeMeal = (meal) => meal === "breakfast";
+    global.rank = () => 2;
+    global.relatedFamilyFoodIds = (item) => [item.id];
+    global.plannerAutomaticPairPreferencePenalty = () => 0;
+    global.manualMealFor = () => null;
+    global.lockedMeal = () => null;
+    global.freshPlanContext = () => ({
+      reserved: new Set(),
+      introduced: [],
+      plannedUse: new Map(),
+      lastFocus: new Map(),
+      inventoryReserved: new Map(),
+      recipeReserved: new Map(),
+      recipePlannedUse: new Map(),
+      fullMilkDates: new Set(),
+    });
+    global.introductionCandidate = () => null;
+    global.knownCandidate = () => ({ f: global.food("hafer"), type: "bekannt" });
+    global.companionFor = (focus) => global.state.foods.find(
+      (item) => item.id !== focus?.id && item.meals.includes("breakfast"),
+    ) || null;
+    global.planQualityIssues = () => [];
+    global.buildDay = (date, index, context) => {
+      const focus = global.food("hafer");
+      const companion = global.companionFor(focus, "breakfast", date, "bekannt");
+      return {
+        date,
+        index,
+        meals: [{
+          meal: "breakfast",
+          active: true,
+          focusId: focus.id,
+          foodIds: [focus.id, companion.id],
+          baseFoodIds: [focus.id, companion.id],
+          sampleFoodIds: [],
+          type: "bekannt",
+        }],
+      };
+    };
+
+    assert.equal(quality.installPlannerQualityRotationRuntime(), true);
+    const context = global.freshPlanContext();
+    const first = global.buildDay("2026-08-20", 0, context);
+    const second = global.buildDay("2026-08-21", 1, context);
+    assert.equal(first.meals[0].foodIds[1], "brombeere");
+    assert.equal(second.meals[0].foodIds[1], "apfel");
+  } finally {
+    for (const [name, value] of Object.entries(previous)) {
+      if (value === undefined) delete global[name];
+      else global[name] = value;
+    }
+    if (previousFlag === undefined) delete global.__plannerQualityRotationRuntimeInstalled;
+    else global.__plannerQualityRotationRuntimeInstalled = previousFlag;
+  }
+});
+
 test("fällige Allergen-Warnung erklärt den fehlenden freien Slot statt nur 'fällig' zu melden", () => {
   assert.equal(
     quality.plannerQualityRewriteIssue(

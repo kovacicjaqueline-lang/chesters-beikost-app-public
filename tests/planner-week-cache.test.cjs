@@ -76,6 +76,6 @@ test("gültige Wochen werden wiederverwendet und fachliche Saves verwerfen den C
 
 
 test("Worker isoliert den Snapshot je vorbereiteter Woche", () => {
-  assert.match(workerSource, /function cloneSnapshot\\(snapshot\\)/);
-  assert.match(workerSource, /state = cloneSnapshot\\(snapshot \\|\\| \\{\\}\\)/);
+  assert.match(workerSource, /function cloneSnapshot\(snapshot\)/);
+  assert.match(workerSource, /state = cloneSnapshot\(snapshot \|\| \{\}\)/);
 });

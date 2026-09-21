@@ -424,7 +424,18 @@
       const original = recipeStockCandidate;
       const wrapped = function missingIngredientAwareRecipeStockCandidate(meal, on, ctx, ...args) {
         const candidate = withPlanMissingFoodsAvailable(() => original(meal, on, ctx, ...args));
-        if (candidate) return markPreparedStockRecipe(candidate);
+        const preparedIdsFor = (recipe) => uniqueIds([
+          ...(recipe?.requires || []),
+          ...((recipe?.alternatives || [])[0] || []),
+          ...((recipe?.oneOf || []).slice(0, 1)),
+          ...((recipe?.milkChoices || []).slice(0, 1)),
+        ].map((name) =>
+          typeof foodByName === "function" ? foodByName(name, state?.foods || [])?.id : "",
+        ));
+        if (candidate) return {
+          ...markPreparedStockRecipe(candidate),
+          __preparedFoodIds: preparedIdsFor(candidate),
+        };
 
         const stocked = (state?.inventory || [])
           .filter((item) =>
@@ -441,15 +452,7 @@
         const available = Number(stocked.portions) - Number(ctx?.recipeReserved?.get?.(recipe.name) || 0);
         if (available <= 0) return null;
         const preparedRecipe = markPreparedStockRecipe({ ...recipe, unlocked: true, missing: [], ingredientMissing: [], requirementMissing: [] });
-        const preparedNames = [
-          ...(recipe.requires || []),
-          ...((recipe.alternatives || [])[0] || []),
-          ...((recipe.oneOf || []).slice(0, 1)),
-          ...((recipe.milkChoices || []).slice(0, 1)),
-        ];
-        const preparedFoodIds = uniqueIds(preparedNames.map((name) =>
-          typeof foodByName === "function" ? foodByName(name, state?.foods || [])?.id : "",
-        ));
+        const preparedFoodIds = preparedIdsFor(recipe);
         return { ...preparedRecipe, __preparedFoodIds: preparedFoodIds };
       };
       wrapped.__missingIngredientAware = true;

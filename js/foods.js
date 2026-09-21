@@ -274,7 +274,7 @@ function showFoodInfoCore(f) {
         <div class="chips catalog-detail-status"><span class="pill ${!f.active ? "inactive-pill" : ""}">${esc(!f.active ? "Deaktiviert" : status(f))}</span></div>
         ${f.alias ? `<p class="small"><b>Anderer Name:</b> ${esc(f.alias)}</p>` : ""}
       </div>
-      <div class="catalog-detail-hero-icon" aria-hidden="true" style="--icon-food:96px;width:96px;height:96px">${foodIconSvg(f)}</div>
+      <div class="catalog-detail-hero-icon food-detail-hero-icon" aria-hidden="true" style="--icon-food:96px;width:96px;height:96px">${foodIconSvg(f)}</div>
     </div>
     <div class="food-detail-dynamic"></div>
     <div class="catalog-detail-primary-actions"><button class="btn full" id="foodCatalogLog" type="button">Protokollieren</button></div>

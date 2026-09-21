@@ -98,6 +98,13 @@
     data.manualMeals ||= {};
     data.autoLockExcluded ||= {};
     globalScope.__plannerLogRolloverCore?.ensurePrimaryPlanIds?.(data);
+    const visiblePlanIds = new Map();
+    for (const button of globalScope.document?.querySelectorAll?.("#blockPlan .logMeal[data-plan]") || []) {
+      try {
+        const payload = JSON.parse(decodeURIComponent(button.dataset.plan || ""));
+        if (payload.date && payload.meal && payload.planId) visiblePlanIds.set(slotKey(payload.date, payload.meal), payload.planId);
+      } catch (_) {}
+    }
     let pinned = 0;
     for (const day of days || []) {
       if (!day?.date || day.date < todayValue) continue;
@@ -107,12 +114,13 @@
         if (key === targetKey || isCompleted?.(day.date, meal.meal)) continue;
         if (data.manualMeals?.[key]?.manualAdded) continue;
         const existing = data.planLocks?.[key];
+        const visiblePlanId = visiblePlanIds.get(key);
         if (existing?.followUpFoodId || existing?.mode === "manual" || existing?.[PIN_FLAG]) continue;
         if (existing?.mode === "auto") {
           if (!existing.planId && globalScope.__plannerLogRolloverCore?.stablePlanId) {
             existing.planId = globalScope.__plannerLogRolloverCore.stablePlanId(meal, day.date, meal.meal);
           }
-          if (meal.planId) existing.planId = meal.planId;
+          if (visiblePlanId || meal.planId) existing.planId = visiblePlanId || meal.planId;
           for (const field of ["plannedMealId", "recipeInventoryId", "recipeBatchId"]) {
             if (!existing[field] && meal[field]) existing[field] = meal[field];
           }
@@ -124,7 +132,7 @@
         }
         const snapshot = snapshotFactory(day.date, meal.meal, meal, "auto");
         if (!snapshot?.focusId) continue;
-        snapshot.planId = meal.planId ||
+        snapshot.planId = visiblePlanId || meal.planId ||
           globalScope.__plannerLogRolloverCore?.stablePlanId?.(meal, day.date, meal.meal) ||
           snapshot.planId;
         snapshot.mode = "auto";

@@ -43,25 +43,13 @@ function startStaticServer() {
   });
 }
 
-function summarize(values) {
-  const sorted = [...values].sort((a, b) => a - b);
-  const percentile = (p) => sorted[Math.min(sorted.length - 1, Math.floor((sorted.length - 1) * p))];
-  return {
-    samples: values.length,
-    minMs: Number(sorted[0].toFixed(2)),
-    medianMs: Number(percentile(0.5).toFixed(2)),
-    p95Ms: Number(percentile(0.95).toFixed(2)),
-    maxMs: Number(sorted.at(-1).toFixed(2)),
-  };
-}
-
 async function main() {
   const server = await startStaticServer();
   const { port } = server.address();
   const browserType = process.env.BROWSER_ENGINE === "chromium" ? chromium : webkit;
-  const browser = await browserType.launch();
-
+  let browser = null;
   try {
+    browser = await browserType.launch();
     const context = await browser.newContext({
       viewport: { width: 390, height: 844 },
       deviceScaleFactor: 2,
@@ -78,6 +66,17 @@ async function main() {
       const api = window.__beikostTest;
       const solutions = window.PlannerPlanCheckSolutions;
       const on = api.today();
+      const summarizeValues = (values) => {
+        const sorted = [...values].sort((a, b) => a - b);
+        const percentile = (p) => sorted[Math.min(sorted.length - 1, Math.floor((sorted.length - 1) * p))];
+        return {
+          samples: values.length,
+          minMs: Number(sorted[0].toFixed(2)),
+          medianMs: Number(percentile(0.5).toFixed(2)),
+          p95Ms: Number(percentile(0.95).toFixed(2)),
+          maxMs: Number(sorted.at(-1).toFixed(2)),
+        };
+      };
 
       api.reset();
       const seed = api.getState();
@@ -232,7 +231,7 @@ async function main() {
         visiblePlan: {
           date: on,
           days: visibleDays.length,
-          cold: summarize(visibleCold),
+          cold: summarizeValues(visibleCold),
           warmHitMs: Number(visibleWarmMs.toFixed(2)),
         },
         planCheck: {
@@ -240,8 +239,8 @@ async function main() {
           goalKey: solutions.goalKey(goal),
           candidateCount: (visibleDays || []).flatMap((day) => day.meals || [])
             .filter((meal) => meal?.active && !meal.empty && meal.focusId).length,
-          synchronous: summarize(syncTimes),
-          cooperative: summarize(asyncTimes),
+          synchronous: summarizeValues(syncTimes),
+          cooperative: summarizeValues(asyncTimes),
         },
       };
     });

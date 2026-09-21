@@ -785,6 +785,7 @@ function recipeCatalogDetailBody(r) {
   if (r.selectedVariantLabel) optionParts.push('<div><b>Variante:</b> ' + esc(r.selectedVariantLabel) + ((r.selectedVariantRequirements || []).every(recipeIngredientReady) ? "" : " · noch offen") + "</div>");
   if (r.selectedOption || r.availableOptions?.length) optionParts.push('<div><b>' + (r.oneOf?.length && r.name === "Milch-Getreide-Brei" ? "Getreide" : r.selectedOption ? "Vorausgewählt" : "Jetzt mögliche Auswahl") + ":</b> " + (r.selectedOption ? esc(r.selectedOption) + (r.selectedOptionReady ? "" : " · noch offen") : r.availableOptions.map(esc).join(", ")) + "</div>");
   if (r.milkChoices?.length) optionParts.push('<div><b>Milchprodukt:</b> ' + (r.selectedMilkOption ? esc(r.selectedMilkOption) + (r.selectedMilkOptionReady ? "" : " · noch offen") : "noch keines gegessen") + "</div>");
+  if (r.variantLabels?.length > 1) optionParts.push('<div><b>Varianten:</b> ' + r.variantLabels.map(esc).join(" · ") + "</div>");
   let variants = optionParts.length ? optionParts.join("") : '<div class="small">Keine zusätzliche Variante nötig.</div>';
   let importantHints =
     (r.skillRequirement ? '<div class="notice"><b>Sicher anbieten:</b> ' + esc(r.skillRequirement) + "</div>" : "") +

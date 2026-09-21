@@ -253,6 +253,16 @@
 
   globalScope.invalidatePlannerWeekCache = invalidate;
   globalScope.__plannerWeekCacheInstalled = true;
+  function warmupNow() {
+    if (warmupPending || typeof globalScope.visiblePlanStart !== "function") return;
+    if (!currentState()?.settings) return;
+    warmupPending = true;
+    const from = globalScope.visiblePlanStart();
+    if (dispatchPlannerWorkerWarmup(from)) return;
+    runMainThreadWarmup(from);
+    if (!plannerWorkerPending) warmupPending = false;
+  }
+
   globalScope.__plannerWeekCache = {
     get revision() { return revision; },
     get size() { return cache.size; },
@@ -263,7 +273,7 @@
       return { ...workerStats };
     },
     clear: invalidate,
-    warmup: scheduleWarmup,
+    warmup: warmupNow,
   };
 
   if (typeof module !== "undefined" && module.exports) {

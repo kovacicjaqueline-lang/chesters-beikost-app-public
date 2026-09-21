@@ -50,7 +50,7 @@ test('app workflow classifies scope before choosing the gate', () => {
   );
   assert.ok(appWorkflow.includes('image: mcr.microsoft.com/playwright:v1.62.1-noble'));
   assert.equal(occurrences(appWorkflow, 'run: npm run verify:fast'), 2);
-  assert.equal(occurrences(appWorkflow, 'run: npm run test:browser:standard'), 1);
+  assert.equal(occurrences(appWorkflow, 'run: npm run test:browser:standard'), 0);
   assert.equal(occurrences(appWorkflow, 'run: npm run verify:app'), 0);
 });
 

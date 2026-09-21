@@ -103,6 +103,7 @@ try {
     snapshot.planLocks[key] = { ...meal, mode: "manual" };
     bridge.setState(snapshot);
     window.showView("plan");
+    window.renderCurrentView();
     return { date, key };
   });
   await waitForView(page, "plan");

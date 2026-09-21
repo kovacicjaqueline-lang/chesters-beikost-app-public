@@ -194,7 +194,7 @@ export async function runBrowserTests({
   fs.mkdirSync(artifactDir, { recursive: true });
 
   if (shard) {
-    console.log(`Browser regression shard: ${shard.index}/${shard.total} (${selectedTestFiles.length}/${testFiles.length} tests)`);
+    console.log(`Browser regression shard: ${shard.index}/${shard.total} (${selectedTestFiles.length}/${discoveredTestFiles.length} tests)`);
   }
   const resolvedConcurrency = Math.min(selectedTestFiles.length, resolveBrowserTestConcurrency(concurrency));
   console.log(`Browser regression concurrency: ${resolvedConcurrency}`);

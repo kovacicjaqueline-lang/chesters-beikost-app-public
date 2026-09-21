@@ -73,7 +73,10 @@ const RECIPE_CONTRACT_GROUPS = Object.freeze({
     "Bananen-French-Toast-Finger",
     "Gemüse-Couscous-Schnitten",
     "Bunte Gemüse-Nuggets",
-    "Weiche Gemüse-Reis-Finger"
+    "Weiche Gemüse-Reis-Finger",
+    "Quinoa-Huhn-Süßkartoffel-Finger",
+    "Quinoa-Gemüse-Puffer",
+    "Bulgur-Gemüse-Köfte"
   ]),
   fingerEasyChew: Object.freeze([
     "Obst-Hafer-Pancakes",
@@ -155,7 +158,10 @@ const RECIPE_CONTRACT_GROUPS = Object.freeze({
     "Huhn-Spinat-Quinoa-Auflauf",
     "Lachs-Brokkoli-Kartoffel-Auflauf",
     "Mildes Bohnen-Süßkartoffel-Chili",
-    "Gefüllte Paprika mit Linsenreis"
+    "Gefüllte Paprika mit Linsenreis",
+    "Quinoa-Linsen-Gemüse-Khichdi",
+    "Bulgur-Zucchini-Ei",
+    "Bulgur-Linsen-Suppe"
   ]),
   spoonMash: Object.freeze([
     "Lugaw-Basis",
@@ -203,6 +209,24 @@ const RECIPE_CONTRACT_GROUPS = Object.freeze({
 });
 
 const RECIPE_CONTRACT_OVERRIDES = Object.freeze({
+  "Quinoa-Huhn-Süßkartoffel-Finger": Object.freeze({
+    servingRequirement: "Flach und fingerlang anbieten; das Stück muss zwischen zwei Fingern leicht zerdrückbar sein. Vollständig durchgegart, feucht und ohne harte Kruste servieren.",
+  }),
+  "Quinoa-Gemüse-Puffer": Object.freeze({
+    servingRequirement: "Sehr weich und flach als kleine Puffer anbieten; sie müssen zwischen zwei Fingern leicht zerdrückbar sein. Keine harte Kruste und keine trockene Mitte.",
+  }),
+  "Bulgur-Gemüse-Köfte": Object.freeze({
+    servingRequirement: "Als kleine flache, ovale und sehr weiche Stücke anbieten; keine festen runden Kugeln. Das Stück muss zwischen zwei Fingern leicht zerdrückbar sein.",
+  }),
+  "Quinoa-Linsen-Gemüse-Khichdi": Object.freeze({
+    servingRequirement: "Quinoa, Linsen und Gemüse vollständig weich garen und feucht vom Löffel anbieten. Bei Bedarf weich zerdrücken; keine trockenen Körner und keine gesalzene Brühe.",
+  }),
+  "Bulgur-Zucchini-Ei": Object.freeze({
+    servingRequirement: "Bulgur und Zucchini vollständig weich garen, das Ei vollständig stocken lassen und die feuchte Mischung weich vom Löffel anbieten. Keine trockenen Körner und kein Salz.",
+  }),
+  "Bulgur-Linsen-Suppe": Object.freeze({
+    servingRequirement: "Bulgur, Linsen, Tomate und Karotte vollständig weich kochen und einen Teil zerdrücken, damit keine harten losen Körner bleiben. Feucht vom Löffel anbieten; keine gesalzene Brühe.",
+  }),
   "Rind-Hafer-Bällchen": Object.freeze({
     servingRequirement: "Sehr weich, saftig und flach oder länglich anbieten; keine runden festen Kugeln und keine harte Kruste. Der abgetrennte Bissen bleibt strukturiert und muss anschließend sicher im Mund positioniert und wiederholt zerkleinert werden können.",
   }),

@@ -440,8 +440,9 @@
         if (typeof plannerRecipeSuitableForMeal === "function" && !plannerRecipeSuitableForMeal(recipe, meal)) return null;
         const available = Number(stocked.portions) - Number(ctx?.recipeReserved?.get?.(recipe.name) || 0);
         if (available <= 0) return null;
-        const preparedFoodIds = original(recipe);
-        return markPreparedStockRecipe({ ...recipe, __preparedFoodIds: preparedFoodIds, unlocked: true, missing: [], ingredientMissing: [], requirementMissing: [] });
+        const preparedRecipe = markPreparedStockRecipe({ ...recipe, unlocked: true, missing: [], ingredientMissing: [], requirementMissing: [] });
+        const preparedFoodIds = typeof recipeFoodIds === "function" ? recipeFoodIds(preparedRecipe) : [];
+        return { ...preparedRecipe, __preparedFoodIds: preparedFoodIds };
       };
       wrapped.__missingIngredientAware = true;
       recipeStockCandidate = wrapped;

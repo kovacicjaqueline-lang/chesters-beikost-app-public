@@ -112,6 +112,7 @@
           if (!existing.planId && globalScope.__plannerLogRolloverCore?.stablePlanId) {
             existing.planId = globalScope.__plannerLogRolloverCore.stablePlanId(meal, day.date, meal.meal);
           }
+          if (meal.planId) existing.planId = meal.planId;
           for (const field of ["plannedMealId", "recipeInventoryId", "recipeBatchId"]) {
             if (!existing[field] && meal[field]) existing[field] = meal[field];
           }

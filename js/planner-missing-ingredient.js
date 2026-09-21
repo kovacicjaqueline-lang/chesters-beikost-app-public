@@ -429,9 +429,15 @@
           ...((recipe?.alternatives || [])[0] || []),
           ...((recipe?.oneOf || []).slice(0, 1)),
           ...((recipe?.milkChoices || []).slice(0, 1)),
-        ].map((name) =>
-          typeof foodByName === "function" ? foodByName(name, state?.foods || [])?.id : "",
-        ));
+        ].map((name) => {
+          if (typeof foodByName === "function") {
+            const fromState = foodByName(name, state?.foods || []);
+            if (fromState?.id) return fromState.id;
+            const fromCatalog = foodByName(name, typeof FOOD_DB !== "undefined" ? FOOD_DB : []);
+            if (fromCatalog?.id) return fromCatalog.id;
+          }
+          return "";
+        }));
         if (candidate) return {
           ...markPreparedStockRecipe(candidate),
           __preparedFoodIds: preparedIdsFor(candidate),

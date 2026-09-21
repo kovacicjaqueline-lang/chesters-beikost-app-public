@@ -439,24 +439,6 @@
       knownCandidate = wrapped;
     }
 
-    if (typeof companionFor === "function" && !companionFor.__missingIngredientAware) {
-      const original = companionFor;
-      const wrapped = function missingIngredientAwareCompanionFor(...args) {
-        return withUnavailableFoodsMasked(() => original(...args));
-      };
-      wrapped.__missingIngredientAware = true;
-      companionFor = wrapped;
-    }
-
-    if (typeof ironCompanion === "function" && !ironCompanion.__missingIngredientAware) {
-      const original = ironCompanion;
-      const wrapped = function missingIngredientAwareIronCompanion(...args) {
-        return withUnavailableFoodsMasked(() => original(...args));
-      };
-      wrapped.__missingIngredientAware = true;
-      ironCompanion = wrapped;
-    }
-
     if (typeof recipeIngredientReady === "function" && !recipeIngredientReady.__missingIngredientAware) {
       const original = recipeIngredientReady;
       const wrapped = function missingIngredientAwareRecipeIngredientReady(name, ...args) {

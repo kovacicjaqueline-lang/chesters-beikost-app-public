@@ -257,6 +257,9 @@
     if (typeof globalScope.visiblePlanStart !== "function") return;
     if (!currentState()?.settings) return;
     ensurePlannerWorker();
+    // Worker support describes the browser capability, even if startup is
+    // still racing with the page's initial idle work.
+    if (typeof globalScope.Worker === "function") workerStats.supported = true;
     warmupPending = true;
     // The explicit API is used by diagnostics and regression tests. Count the
     // request synchronously so it remains deterministic even when Worker

@@ -806,7 +806,7 @@ function pruneIneligibleAutomaticPlanState(currentState, recipes = typeof RECIPE
       automaticIds.some((id) => {
         let f = currentState.foods?.find((item) => item.id === id);
         return f && !automaticFoodEligibility(f, date, currentState.settings || {});
-    buildDays: (from = today(), count = 7, applyAutoLocks = true) => clone(buildDays(from, count, applyAutoLocks)),
+      }) ||
       plannerAutomaticLockRoleViolation(lock, currentState.foods) ||
       plannerAutomaticRecipeLockMealViolation(key, lock, recipes);
     if (!blocked) continue;
@@ -820,7 +820,6 @@ function pruneIneligibleAutomaticPlanState(currentState, recipes = typeof RECIPE
   }
   return changed;
 }
-
 function startBeikostApp() {
   installFoodPolicyRuntime();
 

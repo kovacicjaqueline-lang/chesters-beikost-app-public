@@ -936,7 +936,7 @@ function openManualMealSelector(date, meal, initialMeal = null) {
       .filter(
         (r) =>
           (r.unlocked || r.almost || r.name === selectedRecipe) &&
-          recipeSuitableForMeal(r, meal) &&
+          plannerRecipeSuitableForManualMeal(r, meal) &&
           (!query || normalizeName(recipeSearchText(r)).includes(normalizeName(query))),
       )
       .sort((a, b) => Number(b.unlocked) - Number(a.unlocked) || a.name.localeCompare(b.name, "de"));

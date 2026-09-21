@@ -99,17 +99,11 @@ async function seedRecipeMeal(page, recipeName, foodIds, textureStage = 3) {
   }, { recipeName, foodIds, textureStage });
 }
 
-const LAYOUT_SETTLE_ATTEMPTS = 20;
-
 async function assertRecipeTitleLayout(page, locator, widths = [320, 375, 390]) {
   for (const width of widths) {
     await page.setViewportSize({ width, height: 844 });
     await locator.waitFor({ state: "visible" });
-    let box = null;
-    for (let attempt = 0; attempt < LAYOUT_SETTLE_ATTEMPTS && !box; attempt += 1) {
-      box = await locator.boundingBox();
-      if (!box) await page.waitForTimeout(50);
-    }
+    const box = await locator.boundingBox();
     assert.ok(box, `Rezepttitel muss bei ${width}px sichtbar sein`);
     assert.ok(box.height >= 44, `Rezepttitel muss bei ${width}px mindestens 44px hoch sein`);
     const viewport = await page.evaluate(() => ({

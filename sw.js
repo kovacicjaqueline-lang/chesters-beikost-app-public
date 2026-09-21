@@ -193,6 +193,12 @@ const RECIPE_RUNTIME_PRECACHE = [
   "./assets/illustrations-v2/recipes/birne-pfirsich-kompott.svg",
   "./assets/illustrations-v2/recipes/mango-bananen-creme.svg",
   "./assets/illustrations-v2/recipes/kartoffel-karotten-stampf.svg",
+  "./assets/illustrations-v2/recipes/quinoa-huhn-suesskartoffel-finger.svg",
+  "./assets/illustrations-v2/recipes/quinoa-linsen-gemuese-khichdi.svg",
+  "./assets/illustrations-v2/recipes/quinoa-gemuese-puffer.svg",
+  "./assets/illustrations-v2/recipes/bulgur-zucchini-ei.svg",
+  "./assets/illustrations-v2/recipes/bulgur-gemuese-koefte.svg",
+  "./assets/illustrations-v2/recipes/bulgur-linsen-suppe.svg",
   "./assets/illustrations-v2/recipes/gemuese-reis-brei.svg",
 ];
 

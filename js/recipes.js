@@ -448,6 +448,34 @@ const RECIPE_CATALOG_ADDITIONS = Object.freeze([
     tags: Object.freeze(["Bulgur", "Linsen", "Suppe"]),
     searchAliases: Object.freeze(["Bulgur-Linsensuppe", "Bulgur-Ezogelin-inspiriert"]),
   }),
+  Object.freeze({
+    name: "Forelle-Kartoffel-Bällchen",
+    category: "balls",
+    requires: Object.freeze(["Forelle", "Kartoffel"]),
+    stage: 3,
+    batch: "8 kleine weiche Fischbällchen",
+    ingredients: "80 g vollständig gegarte, sorgfältig entgrätete Forelle, 150 g sehr weiche Kartoffel, 1 Ei, 20 g feine Haferflocken, 1 TL Rapsöl, 1 TL Petersilie",
+    note: "Forelle vollständig garen und sehr sorgfältig auf Gräten prüfen. Kartoffel weich garen und fein zerdrücken. Fisch fein zerpflücken und mit Kartoffel, Ei, Haferflocken und Petersilie zu einer feuchten Masse vermengen. Kleine flache oder längliche Bällchen statt fester runder Kugeln formen, mit wenig Rapsöl bestreichen und bei niedriger Hitze vollständig durchgaren. Keine harte Kruste; vor dem Servieren auf weiche, zwischen zwei Fingern leicht zerdrückbare Konsistenz prüfen. Ohne Salz anbieten.",
+    freezable: true,
+    freezerNote: "Gegarte Bällchen einzeln vorfrieren, portionsweise verpacken und nach dem Auftauen vollständig erwärmen; vor dem Servieren erneut auf Gräten prüfen.",
+    tags: Object.freeze(["Fisch", "Fingerfood", "Forelle"]),
+    searchAliases: Object.freeze(["Forellen-Kartoffel-Bällchen", "Forellen-Fischküchlein"]),
+    skillRequirement: "Nur vollständig gegart, sorgfältig entgrätet und sehr weich anbieten. Flach oder länglich formen; keine festen runden Kugeln und keine harte Kruste. Nur aufrecht sitzend und direkt beaufsichtigt anbieten.",
+  }),
+  Object.freeze({
+    name: "Kabeljau-Süßkartoffel-Fischküchlein",
+    category: "balls",
+    requires: Object.freeze(["Kabeljau", "Süßkartoffel"]),
+    stage: 3,
+    batch: "8 kleine weiche Fischküchlein",
+    ingredients: "80 g vollständig gegarter, sorgfältig entgräteter Kabeljau, 160 g Süßkartoffel, 1 Ei, 25 g feine Haferflocken, 1 TL Rapsöl, 1 TL Petersilie",
+    note: "Kabeljau vollständig garen und sorgfältig auf Gräten prüfen. Süßkartoffel weich garen und fein zerdrücken. Fisch fein zerpflücken und mit Süßkartoffel, Ei, Haferflocken und Petersilie vermengen. Kleine flache Küchlein formen und bei niedriger Hitze vollständig durchgaren; die Oberfläche darf nicht hart und die Mitte nicht trocken oder kompakt werden. Vor dem Servieren prüfen, dass das Küchlein zwischen zwei Fingern leicht zerdrückbar ist. Ohne Salz anbieten.",
+    freezable: true,
+    freezerNote: "Gegarte Küchlein einzeln vorfrieren, portionsweise verpacken und nach dem Auftauen vollständig erwärmen; vor dem Servieren erneut auf Gräten prüfen.",
+    tags: Object.freeze(["Fisch", "Fingerfood", "Kabeljau"]),
+    searchAliases: Object.freeze(["Kabeljau-Fischküchlein", "Kabeljau-Süßkartoffel-Taler"]),
+    skillRequirement: "Nur vollständig gegart, sorgfältig entgrätet und sehr weich anbieten. Als flache Küchlein ohne harte Kruste servieren; der Bissen muss leicht zerdrückbar sein. Nur aufrecht sitzend und direkt beaufsichtigt anbieten.",
+  }),
 ]);
 
 function installRecipeCatalogAdditions(recipes = typeof RECIPES !== "undefined" ? RECIPES : null) {
@@ -501,6 +529,8 @@ const RECIPE_RESEARCH_GUIDANCE = Object.freeze({
   "Kalabasa mit Kokos": Object.freeze(["200 g Kürbis, 50 ml ungesüßte Kokosmilch, 50 ml Wasser", 6]),
   "Tilapia-Reis-Brei": Object.freeze(["60 g vollständig gegarter grätenfreier Tilapia, 30 g Reis, 200 ml Wasser", 7]),
   "Bangus-Kartoffel-Taler": Object.freeze(["60 g vollständig gegarter und äußerst sorgfältig entgräteter Bangus, 120 g sehr weiche Kartoffel, 1 TL Petersilie oder Dill", 7]),
+  "Forelle-Kartoffel-Bällchen": Object.freeze(["80 g vollständig gegarte, sorgfältig entgrätete Forelle, 150 g sehr weiche Kartoffel, 1 Ei, 20 g feine Haferflocken, 1 TL Rapsöl, 1 TL Petersilie", 7]),
+  "Kabeljau-Süßkartoffel-Fischküchlein": Object.freeze(["80 g vollständig gegarter, sorgfältig entgräteter Kabeljau, 160 g Süßkartoffel, 1 Ei, 25 g feine Haferflocken, 1 TL Rapsöl, 1 TL Petersilie", 7]),
   "Obst-Hafer-Muffins": Object.freeze(["120 g sehr weiches Obst oder Obstpüree nach Auswahl, 80 g fein gemahlene Haferflocken, 1 Ei", 7]),
   "Gemüse-Hafer-Muffins": Object.freeze(["100 g sehr fein vorbereitetes weiches Gemüse nach Auswahl, 80 g fein gemahlene Haferflocken, 1 Ei", 7]),
   "Kürbis-Hirse-Muffins": Object.freeze(["120 g Kürbispüree, 70 g Hirseflocken, 1 Ei", 7]),
@@ -854,6 +884,7 @@ function recipeStates() {
 function renderRecipeCard(r, { priorityImage = false } = {}) {
   let optionParts = [];
   if (r.selectedVariantLabel) optionParts.push(`<div><b>Variante:</b> ${esc(r.selectedVariantLabel)}${(r.selectedVariantRequirements || []).every(recipeIngredientReady) ? "" : " · noch offen"}</div>`);
+  if (r.variantLabels?.length > 1) optionParts.push(`<div><b>Varianten:</b> ${r.variantLabels.map(esc).join(" · ")}</div>`);
   if (r.selectedOption || r.availableOptions?.length) optionParts.push(`<div><b>${r.oneOf?.length && r.name === "Milch-Getreide-Brei" ? "Getreide" : r.selectedOption ? "Vorausgewählt" : "Jetzt mögliche Auswahl"}:</b> ${r.selectedOption ? `${esc(r.selectedOption)}${r.selectedOptionReady ? "" : " · noch offen"}` : r.availableOptions.map(esc).join(", ")}</div>`);
   if (r.milkChoices?.length) optionParts.push(`<div><b>Milchprodukt:</b> ${r.selectedMilkOption ? `${esc(r.selectedMilkOption)}${r.selectedMilkOptionReady ? "" : " · noch offen"}` : "noch keines gegessen"}</div>`);
   let variants = optionParts.length ? optionParts.join("") : '<div class="small">Keine zusätzliche Variante nötig.</div>';

@@ -69,6 +69,7 @@ function auditedLegacyFingerNames() {
     "Gemüse-Couscous-Schnitten", "Bunte Gemüse-Nuggets", "Weiche Gemüse-Reis-Finger",
     "Apfel-Bananen-Baked-Oatmeal", "Weiche Apfel-Hafer-Riegel",
     "Quinoa-Huhn-Süßkartoffel-Finger", "Quinoa-Gemüse-Puffer", "Bulgur-Gemüse-Köfte",
+    "Forelle-Kartoffel-Bällchen", "Kabeljau-Süßkartoffel-Fischküchlein",
   ]);
   return [
     ...RECIPE_CONTRACT_GROUPS.fingerLowResistance,
@@ -106,20 +107,20 @@ test("HANDLING: feedingApproach sortiert nur Präferenzen und entfernt keine sic
   ]);
 });
 
-test("HANDLING: alle 135 Laufzeitrezepte sind explizit und genau einmal migriert", () => {
+test("HANDLING: alle 137 Laufzeitrezepte sind explizit und genau einmal migriert", () => {
   const runtimeNames = runtimeRecipeNames();
   const contractNames = Object.keys(RECIPE_HANDLING_CONTRACT);
   const grouped = Object.values(RECIPE_CONTRACT_GROUPS).flat();
-  assert.equal(runtimeNames.length, 135);
-  assert.equal(contractNames.length, 135);
-  assert.equal(new Set(grouped).size, 135, "Contract-Gruppen dürfen sich nicht überlappen");
+  assert.equal(runtimeNames.length, 137);
+  assert.equal(contractNames.length, 137);
+  assert.equal(new Set(grouped).size, 137, "Contract-Gruppen dürfen sich nicht überlappen");
   assert.deepEqual([...contractNames].sort(), [...runtimeNames].sort());
   assert.deepEqual([...grouped].sort(), [...runtimeNames].sort());
 });
 
 test("HANDLING: aktuelle Auditmatrix bleibt vollständig erhalten", () => {
   const entries = Object.values(RECIPE_HANDLING_CONTRACT);
-  assert.equal(entries.filter((entry) => !entry.laterKind).length, 107);
+  assert.equal(entries.filter((entry) => !entry.laterKind).length, 109);
   assert.equal(entries.filter((entry) => entry.laterKind === "oral-capability").length, 4);
   assert.equal(entries.filter((entry) => entry.laterKind === "handling-capability").length, 3);
   assert.equal(entries.filter((entry) => entry.laterKind === "soft-orientation").length, 19);

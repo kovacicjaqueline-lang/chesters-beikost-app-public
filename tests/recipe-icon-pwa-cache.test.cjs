@@ -62,6 +62,18 @@ test("Bulgur- und Quinoa-Rezepte haben eigene Recipe-V2-Assets, Mapping und PWA-
   }
 });
 
+test("Fischküchlein haben eigene Recipe-V2-Assets, Mapping und PWA-Precache", () => {
+  const expected = {
+    "Forelle-Kartoffel-Bällchen": "assets/illustrations-v2/recipes/forelle-kartoffel-baellchen.svg",
+    "Kabeljau-Süßkartoffel-Fischküchlein": "assets/illustrations-v2/recipes/kabeljau-suesskartoffel-fischkuechlein.svg",
+  };
+  for (const [name, asset] of Object.entries(expected)) {
+    assert.ok(fs.existsSync(path.join(ROOT, asset)), name + ": eigenes Recipe-V2-Asset fehlt");
+    assert.ok(icons.includes('"' + name + '": "' + asset + '"'), name + ": Runtime-Mapping fehlt");
+    assert.ok(worker.includes('"./' + asset + '"'), name + ": PWA-Precache fehlt");
+  }
+});
+
 test("Hirsotto hat ein eigenes Recipe-V2-Asset, Mapping und Core-Precache", () => {
   const asset = "assets/illustrations-v2/recipes/hirsotto.svg";
   assert.ok(fs.existsSync(path.join(ROOT, asset)), "Hirsotto: eigenes Recipe-V2-Asset fehlt");

@@ -76,7 +76,9 @@ const RECIPE_CONTRACT_GROUPS = Object.freeze({
     "Weiche Gemüse-Reis-Finger",
     "Quinoa-Huhn-Süßkartoffel-Finger",
     "Quinoa-Gemüse-Puffer",
-    "Bulgur-Gemüse-Köfte"
+    "Bulgur-Gemüse-Köfte",
+    "Forelle-Kartoffel-Bällchen",
+    "Kabeljau-Süßkartoffel-Fischküchlein"
   ]),
   fingerEasyChew: Object.freeze([
     "Obst-Hafer-Pancakes",
@@ -209,6 +211,14 @@ const RECIPE_CONTRACT_GROUPS = Object.freeze({
 });
 
 const RECIPE_CONTRACT_OVERRIDES = Object.freeze({
+  "Forelle-Kartoffel-Bällchen": Object.freeze({
+    servingRequirement: "Vollständig garen und sorgfältig auf Gräten prüfen. Flach oder länglich statt fest rund formen; weich, feucht und ohne harte Kruste anbieten. Der Bissen muss zwischen zwei Fingern leicht zerdrückbar sein.",
+    noteOverride: "Forelle vollständig garen und sehr sorgfältig auf Gräten prüfen. Kartoffel weich garen und fein zerdrücken. Fisch fein zerpflücken, mit Kartoffel, Ei, Haferflocken und Petersilie vermengen, flache oder längliche Bällchen formen und vollständig durchgaren. Keine harte Kruste und kein Salz; vor dem Servieren die weiche, leicht zerdrückbare Konsistenz prüfen.",
+  }),
+  "Kabeljau-Süßkartoffel-Fischküchlein": Object.freeze({
+    servingRequirement: "Vollständig garen und sorgfältig auf Gräten prüfen. Als flache, weiche Küchlein ohne harte Kruste anbieten; der Bissen muss zwischen zwei Fingern leicht zerdrückbar sein.",
+    noteOverride: "Kabeljau vollständig garen und sorgfältig auf Gräten prüfen. Süßkartoffel weich garen und fein zerdrücken. Fisch fein zerpflücken, mit Süßkartoffel, Ei, Haferflocken und Petersilie vermengen, flache Küchlein formen und vollständig durchgaren. Die Oberfläche darf nicht hart und die Mitte nicht trocken oder kompakt werden; ohne Salz anbieten.",
+  }),
   "Quinoa-Huhn-Süßkartoffel-Finger": Object.freeze({
     servingRequirement: "Flach und fingerlang anbieten; das Stück muss zwischen zwei Fingern leicht zerdrückbar sein. Vollständig durchgegart, feucht und ohne harte Kruste servieren.",
   }),

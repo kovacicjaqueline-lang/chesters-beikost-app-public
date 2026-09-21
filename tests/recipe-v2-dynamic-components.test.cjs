@@ -72,6 +72,16 @@ test("alle variablen Obst-Slots werden aus FOOD.category=Obst abgeleitet", () =>
   assert.ok(recipeByName(recipes, "Obst-Reisbrei").oneOf.includes("Brombeere"));
 });
 
+test("Pute-Varianten bleiben im Rezeptkatalog sichtbar und suchbar", () => {
+  const { recipes } = freshData();
+  const poultry = recipeByName(recipes, "Geflügel-Gemüse-Hafer-Bällchen");
+  const meat = recipeByName(recipes, "Fleisch-Gemüse-Bällchen");
+  assert.deepEqual(poultry.variantLabels, ["Huhn + Zucchini", "Pute + Karotte"]);
+  assert.deepEqual(meat.variantLabels, ["Rind + Karotte + Kartoffel", "Pute + Süßkartoffel"]);
+  assert.ok(poultry.searchAliases.includes("Pute-Karotten-Bällchen"));
+  assert.ok(meat.searchAliases.includes("Pute-Süßkartoffel-Bällchen"));
+});
+
 test("Getreide, Milch, Gemüse und Bohnen werden aus zentralen FOOD-Capabilities abgeleitet", () => {
   const { foods, recipes } = freshData();
   installRecipeV2ComponentOptions(recipes, foods);

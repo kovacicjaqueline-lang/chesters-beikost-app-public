@@ -351,6 +351,8 @@ const RECIPE_RUNTIME_ICON_ALIASES = Object.freeze({
   "Bulgur-Zucchini-Ei": "assets/illustrations-v2/recipes/bulgur-zucchini-ei.svg",
   "Bulgur-Gemüse-Köfte": "assets/illustrations-v2/recipes/bulgur-gemuese-koefte.svg",
   "Bulgur-Linsen-Suppe": "assets/illustrations-v2/recipes/bulgur-linsen-suppe.svg",
+  "Forelle-Kartoffel-Bällchen": "assets/illustrations-v2/recipes/forelle-kartoffel-baellchen.svg",
+  "Kabeljau-Süßkartoffel-Fischküchlein": "assets/illustrations-v2/recipes/kabeljau-suesskartoffel-fischkuechlein.svg",
   "Gemüse-Reis-Brei": "assets/illustrations-v2/recipes/gemuese-reis-brei.svg"
 });
 

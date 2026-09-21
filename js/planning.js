@@ -173,6 +173,7 @@ function knownBase(meal, exclude = []) {
     (f) =>
       f.active &&
       f.meals.includes(meal) &&
+      !isFoodUnavailable(f.id) &&
       !f.allergenGroup &&
       isTrustedBase(f) &&
       !exclude.includes(f.id) &&

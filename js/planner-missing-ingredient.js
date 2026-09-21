@@ -426,7 +426,6 @@
         const candidate = withPlanMissingFoodsAvailable(() => original(meal, on, ctx, ...args));
         if (candidate) return markPreparedStockRecipe(candidate);
 
-        const reserved = Number(ctx?.recipeReserved?.get?.(ctx?.recipeReserved) || 0);
         const stocked = (state?.inventory || [])
           .filter((item) =>
             item?.kind === "recipe" &&

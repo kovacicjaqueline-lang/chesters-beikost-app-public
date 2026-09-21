@@ -108,7 +108,10 @@
         const existing = data.planLocks?.[key];
         if (existing?.followUpFoodId || existing?.mode === "manual" || existing?.[PIN_FLAG]) continue;
         if (existing?.mode === "auto") {
-          for (const field of ["planId", "plannedMealId", "recipeInventoryId", "recipeBatchId"]) {
+          if (!existing.planId && globalScope.__plannerLogRolloverCore?.stablePlanId) {
+            existing.planId = globalScope.__plannerLogRolloverCore.stablePlanId(meal, day.date, meal.meal);
+          }
+          for (const field of ["plannedMealId", "recipeInventoryId", "recipeBatchId"]) {
             if (!existing[field] && meal[field]) existing[field] = meal[field];
           }
           existing[PIN_FLAG] = true;

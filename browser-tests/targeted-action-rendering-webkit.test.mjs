@@ -152,13 +152,21 @@ try {
     window.__targetedActionRenderProbe.current = 0;
     window.__targetedActionRenderProbe.plan = 0;
   });
-  const mealDetailsSelector = `#plan details.manual-meal[data-date="${mealDeleteSetup.date}"][data-meal="lunch"]`;
-  const mealDetails = page.locator(mealDetailsSelector);
-  await mealDetails.waitFor({ state: "visible" });
-  await mealDetails.evaluate((details) => { details.open = true; });
-  const removeManualMeal = page.locator(`${mealDetailsSelector} .removeManualMeal`);
-  await removeManualMeal.waitFor({ state: "visible" });
-  await removeManualMeal.click();
+  const removeManualMealSelector = `.removeManualMeal[data-date="${mealDeleteSetup.date}"][data-meal="lunch"]`;
+  await page.waitForFunction((selector) => [...document.querySelectorAll(selector)].some((element) => {
+    const style = getComputedStyle(element);
+    const rect = element.getBoundingClientRect();
+    return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
+  }), removeManualMealSelector);
+  await page.locator(removeManualMealSelector).evaluateAll((elements) => {
+    const visible = elements.find((element) => {
+      const style = getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
+    });
+    if (!visible) throw new Error("Kein sichtbarer Löschbutton für die manuelle Mahlzeit gefunden");
+    visible.click();
+  });
   await page.locator("#confirmMealDelete").waitFor({ state: "visible" });
   const deleteMealMs = await page.evaluate(() => {
     const start = performance.now();

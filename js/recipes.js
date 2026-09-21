@@ -825,7 +825,7 @@ function showRecipeInfo(r) {
   if (typeof bindRecipeStockButtons === "function") bindRecipeStockButtons();
 }
 
-function renderRecipeCard(r, { priorityImage = false, showDetails = false } = {}) {
+function renderRecipeCard(r, { priorityImage = false, showDetails = true } = {}) {
   let type = recipeCatalogTypeLabel(r);
   let familyText = r.familyLabel ? " · " + esc(r.familyLabel) : "";
   let encodedName = encodeURIComponent(r.name);

@@ -810,7 +810,7 @@ function recipeCatalogDetailBody(r) {
   '<section class="catalog-detail-section"><h3>Zutaten</h3><p class="small">' + esc(r.ingredients || (r.requires || []).join(", ")) + "</p></section>" +
   '<section class="catalog-detail-section"><h3>Zubereitung</h3><p class="small">' + esc(r.note) + "</p></section>" +
   importantHints +
-  '<details class="accordion"><summary>Varianten</summary><div class="recipe-option-list" style="margin-top:10px">' + variants + "</div></details>" +
+  '<details class="accordion recipe-subsection"><summary>Varianten</summary><div class="recipe-option-list" style="margin-top:10px">' + variants + "</div></details>" +
   '<details class="accordion"><summary>Aufbewahrung</summary><div style="margin-top:10px">' + storage + "</div></details>" +
   '<details class="accordion"><summary>Hinweise</summary><div style="margin-top:10px">' + hints + "</div></details>";
 }

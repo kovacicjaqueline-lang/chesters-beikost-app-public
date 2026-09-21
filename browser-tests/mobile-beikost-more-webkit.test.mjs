@@ -152,5 +152,5 @@ try {
   assert.ok(overflow <= 1, "Beikost und Mehr dürfen bei 390px keinen horizontalen App-Overflow erzeugen");
 
 } finally {
-  await closeBrowserApp({ context, browser, server });
+  await closeBrowserApp({ context: typeof context !== "undefined" ? context : null, browser, server });
 }

@@ -95,5 +95,5 @@ try {
   assert.ok(atEnd.markerBottom <= atEnd.navTop + 1, "Der letzte Inhalt muss oberhalb der Bottom-Navigation vollständig erreichbar bleiben");
 
 } finally {
-  await closeBrowserApp({ context, browser, server });
+  await closeBrowserApp({ context: typeof context !== "undefined" ? context : null, browser, server });
 }

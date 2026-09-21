@@ -203,5 +203,5 @@ try {
   assert.equal(await page.locator('.selectFood.selected[data-food="karotte"]').count(), 1);
 
 } finally {
-  await closeBrowserApp({ context, browser, server });
+  await closeBrowserApp({ context: typeof context !== "undefined" ? context : null, browser, server });
 }

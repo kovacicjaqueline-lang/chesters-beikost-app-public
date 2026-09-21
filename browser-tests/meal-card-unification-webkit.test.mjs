@@ -294,7 +294,7 @@ try {
   assert.deepEqual(multiFoodResult, { ingredientNames: 2, details: 0, actualContained: false }, "Mehrere Lebensmittel behalten ihre aussagekräftigen Einzelzeilen");
 
 } finally {
-  await closeBrowserApp({ context, browser, server });
+  await closeBrowserApp({ context: typeof context !== "undefined" ? context : null, browser, server });
 }
 
 console.log("meal-card-unification-webkit: ok");

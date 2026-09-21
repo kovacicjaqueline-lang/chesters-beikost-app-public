@@ -145,7 +145,7 @@ try {
   assert.equal(await completedDay.evaluate((node) => node.open), true, "Der ausgewählte Tag lässt sich wieder aufklappen");
 
 } finally {
-  await closeBrowserApp({ context, browser, server });
+  await closeBrowserApp({ context: typeof context !== "undefined" ? context : null, browser, server });
 }
 
 console.log("completed-day-presentation-webkit: ok");

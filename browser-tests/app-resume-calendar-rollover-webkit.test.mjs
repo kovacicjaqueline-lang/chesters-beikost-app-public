@@ -97,5 +97,5 @@ try {
 
   console.log(`APP_RESUME_CALENDAR_ROLLOVER ${JSON.stringify(result)}`);
 } finally {
-  await closeBrowserApp({ context, browser, server });
+  await closeBrowserApp({ context: typeof context !== "undefined" ? context : null, browser, server });
 }

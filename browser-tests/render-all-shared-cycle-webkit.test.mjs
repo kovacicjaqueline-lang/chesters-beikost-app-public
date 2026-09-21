@@ -113,5 +113,5 @@ try {
   assert.deepEqual(pageErrors, [], `Der Full-Render darf keine JavaScript-Fehler erzeugen: ${pageErrors.join(" | ")}`);
 
 } finally {
-  await closeBrowserApp({ context, browser, server });
+  await closeBrowserApp({ context: typeof context !== "undefined" ? context : null, browser, server });
 }

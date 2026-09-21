@@ -177,5 +177,5 @@ try {
   assert.deepEqual(await plannerMealSnapshot(page, plannerKey), plannerBefore, "Planner-Mahlzeitendaten müssen über beide Moduswechsel erhalten bleiben");
 
 } finally {
-  await closeBrowserApp({ context, browser, server });
+  await closeBrowserApp({ context: typeof context !== "undefined" ? context : null, browser, server });
 }

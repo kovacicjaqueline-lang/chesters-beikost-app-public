@@ -336,5 +336,5 @@ try {
   assert.equal(logUnavailableStockProbe.freshIds.length, 0, "frisch zuzubereitendes Rezept bleibt auch beim Log-Pfad gesperrt");
 
 } finally {
-  await closeBrowserApp({ context, browser, server });
+  await closeBrowserApp({ context: typeof context !== "undefined" ? context : null, browser, server });
 }

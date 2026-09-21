@@ -241,7 +241,7 @@ try {
   assert.match(await page.locator("#todayCard .completed-title").innerText(), /Banane \+ Ei/);
 
 } finally {
-  await closeBrowserApp({ context, browser, server });
+  await closeBrowserApp({ context: typeof context !== "undefined" ? context : null, browser, server });
 }
 
 console.log("Planned recipe details WebKit regressions passed.");

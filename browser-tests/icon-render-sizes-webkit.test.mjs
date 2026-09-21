@@ -102,5 +102,5 @@ try {
   assert.equal(recipeSize.assetHeight, 52, "mobiles Recipe-Asset muss tatsächlich 52px hoch rendern");
 
 } finally {
-  await closeBrowserApp({ context, browser, server });
+  await closeBrowserApp({ context: typeof context !== "undefined" ? context : null, browser, server });
 }

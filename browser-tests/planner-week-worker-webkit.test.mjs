@@ -56,5 +56,5 @@ try {
   assert.equal(result.overrides, before.overrides, "Worker darf keine Overrides im Hauptthread verändern");
 
 } finally {
-  await closeBrowserApp({ context, browser, server });
+  await closeBrowserApp({ context: typeof context !== "undefined" ? context : null, browser, server });
 }

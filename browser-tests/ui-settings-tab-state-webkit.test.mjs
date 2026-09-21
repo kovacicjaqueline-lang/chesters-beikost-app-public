@@ -201,5 +201,5 @@ try {
   assert.equal(await page.locator("#structuredChewCapability").isChecked(), true, "gespeicherte Structured-Chew-Fähigkeit darf durch UI-Tab-State-Reset nicht verloren gehen");
 
 } finally {
-  await closeBrowserApp({ context, browser, server });
+  await closeBrowserApp({ context: typeof context !== "undefined" ? context : null, browser, server });
 }

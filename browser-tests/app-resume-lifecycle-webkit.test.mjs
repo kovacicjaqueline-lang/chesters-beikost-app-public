@@ -408,5 +408,5 @@ try {
 
   console.log(`APP_RESUME_METRICS ${JSON.stringify(report)}`);
 } finally {
-  await closeBrowserApp({ context, browser, server });
+  await closeBrowserApp({ context: typeof context !== "undefined" ? context : null, browser, server });
 }

@@ -302,7 +302,7 @@ try {
   assert.equal(savedBreakfastLog.foodPreparationKeys?.pfirsich, undefined, "entfernte Kostprobe darf keine veraltete Darreichung im Log hinterlassen");
 
 } finally {
-  await closeBrowserApp({ context, browser, server });
+  await closeBrowserApp({ context: typeof context !== "undefined" ? context : null, browser, server });
 }
 
 console.log("WebKit meal editor regression passed for 320/375/390px plus manual meal flow.");

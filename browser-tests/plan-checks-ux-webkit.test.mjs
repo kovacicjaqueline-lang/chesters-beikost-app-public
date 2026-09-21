@@ -372,5 +372,5 @@ try {
   await context.close();
   console.log("plan-checks-ux-webkit: ok");
 } finally {
-  await closeBrowserApp({ context, browser, server });
+  await closeBrowserApp({ context: typeof context !== "undefined" ? context : null, browser, server });
 }

@@ -14,7 +14,7 @@ test("Planner-Wochen-Cache bleibt abgeleitet und versioniert", () => {
 
 test("Wochenwechsel erhält den Cache, fachliche Saves invalidieren ihn", () => {
   const mobilePlan = require("fs").readFileSync("js/plan-mobile-ui.js", "utf8");
-  assert.match(source, /if \(!preserveForNavigation\(options\)\) invalidate\("save"\)/);
+  assert.match(source, /if \(!preserveForNavigation\(options\)\) \{[\s\S]*invalidate\("save"\)/);
   assert.match(mobilePlan, /save\(\{ preservePlanCache: true \}\)/);
 });
 

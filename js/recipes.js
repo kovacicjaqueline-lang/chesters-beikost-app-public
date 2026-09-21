@@ -626,6 +626,8 @@ const RECIPE_RESEARCH_GUIDANCE = Object.freeze({
   "Birne-Pfirsich-Kompott": Object.freeze(["120 g Birne, 80 g entsteinter Pfirsich, 1–2 EL Wasser", 6]),
   "Mango-Bananen-Creme": Object.freeze(["80 g reife Mango, 60 g reife Banane", 6]),
   "Kartoffel-Karotten-Stampf": Object.freeze(["100 g Kartoffel, 80 g Karotte, 1 TL Rapsöl pro Portion nach Bedarf", 6]),
+  "Forelle-Kartoffel-Bällchen": Object.freeze(["80 g vollständig gegarte, sorgfältig entgrätete Forelle, 150 g sehr weiche Kartoffel, 1 Ei, 20 g feine Haferflocken, 1 TL Rapsöl, 1 TL Petersilie", 8]),
+  "Kabeljau-Süßkartoffel-Fischküchlein": Object.freeze(["80 g vollständig gegarter, sorgfältig entgräteter Kabeljau, 160 g Süßkartoffel, 1 Ei, 25 g feine Haferflocken, 1 TL Rapsöl, 1 TL Petersilie", 8]),
   "Gemüse-Reis-Brei": Object.freeze(["30 g Reis, 80 g Zucchini, 60 g Karotte, 1 TL Rapsöl pro Portion nach Bedarf", 6]),
 });
 

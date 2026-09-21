@@ -107,6 +107,13 @@
         if (data.manualMeals?.[key]?.manualAdded) continue;
         const existing = data.planLocks?.[key];
         if (existing?.followUpFoodId || existing?.mode === "manual" || existing?.[PIN_FLAG]) continue;
+        if (existing?.mode === "auto") {
+          existing[PIN_FLAG] = true;
+          existing[PRESERVE_FLAG] = true;
+          delete data.autoLockExcluded?.[key];
+          pinned += 1;
+          continue;
+        }
         const snapshot = snapshotFactory(day.date, meal.meal, meal, "auto");
         if (!snapshot?.focusId) continue;
         snapshot.mode = "auto";

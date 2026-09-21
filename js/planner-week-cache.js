@@ -241,7 +241,12 @@
   const baseSave = typeof globalScope.save === "function" ? globalScope.save : null;
   if (baseSave) {
     globalScope.save = function plannerCacheAwareSave(options = {}) {
-      if (!preserveForNavigation(options)) invalidate("save");
+      if (!preserveForNavigation(options)) {
+        invalidate("save");
+        if (typeof globalScope.invalidateDayPlanRuntimeCache === "function") {
+          globalScope.invalidateDayPlanRuntimeCache();
+        }
+      }
       return baseSave.apply(this, arguments);
     };
   }

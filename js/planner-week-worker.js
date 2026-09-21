@@ -94,15 +94,15 @@
       "./handling-readiness.js?v=10.1.26"
     );
 
-    if (typeof installHandlingReadinessRuntime === "function") {
-      installHandlingReadinessRuntime();
-    }
     booted = true;
   }
 
   function buildWeek(snapshot, start) {
     state = snapshot;
     state.settings = state.settings || {};
+    if (typeof installHandlingReadinessRuntime === "function") {
+      installHandlingReadinessRuntime();
+    }
     return buildDays(start, 7, false);
   }
 

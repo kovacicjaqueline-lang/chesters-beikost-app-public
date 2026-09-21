@@ -1272,19 +1272,19 @@ function showView(id) {
     if (!view?.classList.contains("active")) return;
     try {
       renderView(id);
-      // Nur der scrollende Inhaltsbereich wird zurückgesetzt. Der Root-Scroll
-      // darf die absolute Tab-Navigation während des View-Wechsels nicht bewegen.
       const main = document.querySelector("main");
       if (main) main.scrollTop = 0;
     } finally {
       view.removeAttribute("aria-busy");
     }
   };
-  // Tab-Wechsel werden vollständig abgeschlossen, bevor der nächste
-  // Navigation-Klick möglich ist. Das verhindert in WebKit eine laufende
-  // View-Render-/Layoutbewegung unter der absolut verankerten Tab-Leiste.
-  if (typeof cancelDeferredViewRender === "function") cancelDeferredViewRender();
-  finishViewChange();
+  if (previous === id || typeof renderViewAfterNextPaint !== "function") {
+    if (typeof cancelDeferredViewRender === "function") cancelDeferredViewRender();
+    finishViewChange();
+    return;
+  }
+  document.getElementById(id)?.setAttribute("aria-busy", "true");
+  renderViewAfterNextPaint(id, finishViewChange);
 }
 function existingFoodWithName(name) {
   let normalized = normalizeName(name);

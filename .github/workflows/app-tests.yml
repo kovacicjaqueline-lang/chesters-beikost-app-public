@@ -159,9 +159,11 @@ jobs:
           - shard: 1
             run_fast: false
           - shard: 2
+            run_fast: false
+          - shard: 3
             run_fast: true
     env:
-      BROWSER_TEST_SHARD: ${{ matrix.shard }}/2
+      BROWSER_TEST_SHARD: ${{ matrix.shard }}/3
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

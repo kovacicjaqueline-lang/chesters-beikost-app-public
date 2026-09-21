@@ -152,11 +152,12 @@ try {
     window.__targetedActionRenderProbe.current = 0;
     window.__targetedActionRenderProbe.plan = 0;
   });
-  const removeManualMeal = page.locator(`#plan .removeManualMeal[data-date="${mealDeleteSetup.date}"][data-meal="lunch"]`);
-  await removeManualMeal.evaluate((button) => {
-    const details = button.closest("details.manual-meal");
-    if (details) details.open = true;
-  });
+  const mealDetailsSelector = `#plan details.manual-meal[data-date="${mealDeleteSetup.date}"][data-meal="lunch"]`;
+  const mealDetails = page.locator(mealDetailsSelector);
+  await mealDetails.waitFor({ state: "visible" });
+  await mealDetails.evaluate((details) => { details.open = true; });
+  const removeManualMeal = page.locator(`${mealDetailsSelector} .removeManualMeal`);
+  await removeManualMeal.waitFor({ state: "visible" });
   await removeManualMeal.click();
   await page.locator("#confirmMealDelete").waitFor({ state: "visible" });
   const deleteMealMs = await page.evaluate(() => {

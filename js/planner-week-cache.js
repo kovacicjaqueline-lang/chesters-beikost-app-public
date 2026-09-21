@@ -258,7 +258,17 @@
     if (!currentState()?.settings) return;
     warmupPending = true;
     const from = globalScope.visiblePlanStart();
-    if (dispatchPlannerWorkerWarmup(from)) return;
+    if (dispatchPlannerWorkerWarmup(from)) {
+      const request = plannerWorkerPending;
+      globalScope.setTimeout(() => {
+        if (plannerWorkerPending !== request) return;
+        plannerWorkerPending = null;
+        runMainThreadWarmup(from);
+        workerStats.completed += 1;
+        warmupPending = false;
+      }, 5000);
+      return;
+    }
     runMainThreadWarmup(from);
     if (!plannerWorkerPending) warmupPending = false;
   }

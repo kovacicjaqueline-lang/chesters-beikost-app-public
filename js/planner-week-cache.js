@@ -254,7 +254,7 @@
   globalScope.invalidatePlannerWeekCache = invalidate;
   globalScope.__plannerWeekCacheInstalled = true;
   function warmupNow() {
-    if (warmupPending || typeof globalScope.visiblePlanStart !== "function") return;
+    if (typeof globalScope.visiblePlanStart !== "function") return;
     if (!currentState()?.settings) return;
     warmupPending = true;
     // The explicit API is used by diagnostics and regression tests. Count the

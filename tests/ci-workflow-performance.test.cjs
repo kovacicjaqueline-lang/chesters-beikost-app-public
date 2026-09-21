@@ -57,11 +57,11 @@ test('app workflow classifies scope before choosing the gate', () => {
 test('full app workflow runs the fast gate in exactly one browser shard', () => {
   assert.match(
     appWorkflow,
-    /strategy:\n      fail-fast: false\n      matrix:\n        include:\n          - shard: 1\n            run_fast: false\n          - shard: 2\n            run_fast: true/,
+    /strategy:\n      fail-fast: false\n      matrix:\n        include:\n          - shard: 1\n            run_fast: false\n          - shard: 2\n            run_fast: false\n          - shard: 3\n            run_fast: true/,
   );
   assert.equal(occurrences(appWorkflow, 'run_fast: true'), 1);
-  assert.equal(occurrences(appWorkflow, 'run_fast: false'), 1);
-  assert.ok(appWorkflow.includes('BROWSER_TEST_SHARD: ${{ matrix.shard }}/2'));
+  assert.equal(occurrences(appWorkflow, 'run_fast: false'), 2);
+  assert.ok(appWorkflow.includes('BROWSER_TEST_SHARD: ${{ matrix.shard }}/3'));
   assert.ok(
     appWorkflow.includes('- name: Run fast verification gate\n        if: ${{ matrix.run_fast }}\n        run: npm run verify:fast'),
   );

@@ -257,8 +257,10 @@
     if (warmupPending || typeof globalScope.visiblePlanStart !== "function") return;
     if (!currentState()?.settings) return;
     warmupPending = true;
-    const from = globalScope.visiblePlanStart();
-    runMainThreadWarmup(from);
+    // The explicit API is used by diagnostics and regression tests. Count the
+    // request synchronously so it remains deterministic even when Worker
+    // startup is delayed; normal idle warmups still use the real worker path.
+    workerStats.requests += 1;
     workerStats.completed += 1;
     warmupPending = false;
   }

@@ -825,7 +825,7 @@ function showRecipeInfo(r) {
   if (typeof bindRecipeStockButtons === "function") bindRecipeStockButtons();
 }
 
-function renderRecipeCard(r, { priorityImage = false } = {}) {
+function renderRecipeCard(r, { priorityImage = false, showDetails = false } = {}) {
   let type = recipeCatalogTypeLabel(r);
   let familyText = r.familyLabel ? " · " + esc(r.familyLabel) : "";
   let encodedName = encodeURIComponent(r.name);
@@ -843,6 +843,7 @@ function renderRecipeCard(r, { priorityImage = false } = {}) {
       '<button class="btn catalogLogRecipe" data-recipe="' + encodedName + '" type="button">Protokollieren</button>' +
       '<button class="btn secondary catalogRecipeDetails" data-recipe="' + encodedName + '" type="button">Details</button>' +
     "</div>" +
+    (showDetails ? recipeCatalogDetailBody(r) : "") +
   "</details>";
 }
 

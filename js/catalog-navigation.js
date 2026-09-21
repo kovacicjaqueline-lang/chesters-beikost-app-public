@@ -9,6 +9,63 @@
   const MODE_FOODS = "foods";
   const MODE_RECIPES = "recipes";
 
+  function decodeCatalogValue(value) {
+    try { return decodeURIComponent(value || ""); } catch { return value || ""; }
+  }
+
+  function openCatalogFoodLog(foodId) {
+    let item = typeof food === "function" ? food(foodId) : null;
+    if (!item || typeof openLog !== "function") return;
+    let itemRank = typeof rank === "function" ? rank(item) : 0;
+    let learning = itemRank < 2;
+    let outcome = learning ? (itemRank >= 1 ? "eaten" : "tried") : "eaten";
+    openLog({
+      date: today(),
+      meal: "",
+      focusId: item.id,
+      foodIds: [item.id],
+      baseFoodIds: learning ? [] : [item.id],
+      sampleFoodIds: learning ? [item.id] : [],
+      recipeName: "",
+      recipeInventoryId: "",
+      entryType: "food",
+      foodOutcomes: { [item.id]: outcome },
+    });
+  }
+
+  function openCatalogRecipeLog(recipeName) {
+    let recipe = typeof recipeByName === "function" ? recipeByName(recipeName) : null;
+    if (!recipe || typeof openLog !== "function") return;
+    openLog({
+      date: today(),
+      meal: "",
+      focusId: "",
+      foodIds: [],
+      baseFoodIds: [],
+      sampleFoodIds: [],
+      recipeName: recipe.name,
+      recipeInventoryId: "",
+      entryType: "food",
+      foodOutcomes: {},
+    });
+    let choice = typeof logRecipeChoiceState === "function"
+      ? logRecipeChoiceState(recipe)
+      : { variantIndex: 0, oneOfId: "", milkChoiceId: "" };
+    choice.__explicit = {};
+    choice.confirmed = typeof logRecipeNeedsExplicitChoice === "function"
+      ? !logRecipeNeedsExplicitChoice(recipe)
+      : true;
+    pendingLog.__recipeChoice = choice;
+    if (typeof applyLogRecipeChoice === "function") applyLogRecipeChoice(recipe, choice);
+    if (typeof renderLogForm === "function") renderLogForm();
+    if (!choice.confirmed && typeof focusFirstRequiredRecipeChoice === "function") {
+      queueMicrotask(focusFirstRequiredRecipeChoice);
+    }
+  }
+
+  globalThis.openCatalogFoodLog = openCatalogFoodLog;
+  globalThis.openCatalogRecipeLog = openCatalogRecipeLog;
+
   function recipeCatalogStructuredLabels(recipe) {
     return [
       ...(recipe?.requires || []),
@@ -251,6 +308,16 @@
     });
     if (search) search.oninput = (event) => { recipeQuery = event.target.value; renderRecipeCatalog(); };
     if (typeof bindRecipeStockButtons === "function") bindRecipeStockButtons();
+    const recipeByCatalogName = new Map(recipes.map((recipe) => [recipe.name, recipe]));
+    document.querySelectorAll(".catalogRecipeDetails").forEach((button) => {
+      button.onclick = () => {
+        const recipe = recipeByCatalogName.get(decodeCatalogValue(button.dataset.recipe));
+        if (recipe && typeof showRecipeInfo === "function") showRecipeInfo(recipe);
+      };
+    });
+    document.querySelectorAll(".catalogLogRecipe").forEach((button) => {
+      button.onclick = () => openCatalogRecipeLog(decodeCatalogValue(button.dataset.recipe));
+    });
     globalThis.MobileUiLifecycle?.afterRender("foods", { source: "recipe-catalog" });
   }
 

@@ -1280,13 +1280,11 @@ function showView(id) {
       view.removeAttribute("aria-busy");
     }
   };
-  if (previous === id || typeof renderViewAfterNextPaint !== "function") {
-    if (typeof cancelDeferredViewRender === "function") cancelDeferredViewRender();
-    finishViewChange();
-    return;
-  }
-  document.getElementById(id)?.setAttribute("aria-busy", "true");
-  renderViewAfterNextPaint(id, finishViewChange);
+  // Tab-Wechsel werden vollständig abgeschlossen, bevor der nächste
+  // Navigation-Klick möglich ist. Das verhindert in WebKit eine laufende
+  // View-Render-/Layoutbewegung unter der absolut verankerten Tab-Leiste.
+  if (typeof cancelDeferredViewRender === "function") cancelDeferredViewRender();
+  finishViewChange();
 }
 function existingFoodWithName(name) {
   let normalized = normalizeName(name);

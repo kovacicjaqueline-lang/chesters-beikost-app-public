@@ -268,13 +268,13 @@ function showFoodInfoCore(f) {
 
   openGeneric(
     f.name,
-    `<div class="food-detail-hero" style="display:grid;grid-template-columns:minmax(0,1fr) 96px;gap:14px;align-items:start;min-height:96px;margin-bottom:4px">
-      <div class="food-detail-hero-copy">
-        <div class="small food-detail-type">${esc(foodCategoryLabel(f.category))}${f.ph ? " · Philippinen" : ""}${f.ironRich ? " · eisenreich" : ""}${f.allergenGroup ? ` · Allergen: ${esc(f.allergenGroup)}` : ""}</div>
-        <div class="chips food-detail-status"><span class="pill ${!f.active ? "inactive-pill" : ""}">${esc(!f.active ? "Deaktiviert" : status(f))}</span></div>
+    `<div class="catalog-detail-hero">
+      <div class="catalog-detail-hero-copy">
+        <div class="small catalog-detail-type">${esc(foodCategoryLabel(f.category))}${f.ph ? " · Philippinen" : ""}${f.ironRich ? " · eisenreich" : ""}${f.allergenGroup ? ` · Allergen: ${esc(f.allergenGroup)}` : ""}</div>
+        <div class="chips catalog-detail-status"><span class="pill ${!f.active ? "inactive-pill" : ""}">${esc(!f.active ? "Deaktiviert" : status(f))}</span></div>
         ${f.alias ? `<p class="small"><b>Anderer Name:</b> ${esc(f.alias)}</p>` : ""}
       </div>
-      <div class="food-detail-hero-icon" aria-hidden="true" style="--icon-food:96px;width:96px;height:96px;display:flex;align-items:center;justify-content:center;pointer-events:none">${foodIconSvg(f)}</div>
+      <div class="catalog-detail-hero-icon" aria-hidden="true" style="--icon-food:96px">${foodIconSvg(f)}</div>
     </div>
     <div class="food-detail-dynamic"></div>
     <div class="catalog-detail-primary-actions"><button class="btn full" id="foodCatalogLog" type="button">Protokollieren</button></div>

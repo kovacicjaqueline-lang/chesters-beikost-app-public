@@ -97,6 +97,7 @@ function plannerCulinaryRecipeIngredientReady(name, meal = null, on = "") {
     ? foodByName(name, state?.foods || [])
     : (state?.foods || []).find((candidate) => candidate?.name === name);
   if (!item || item.active === false || (typeof status === "function" && status(item) === "Pausiert")) return false;
+  if (typeof isFoodUnavailable === "function" && isFoodUnavailable(item.id)) return false;
   if (meal && typeof plannerAutomaticFoodMealEligible === "function" &&
       !plannerAutomaticFoodMealEligible(
         item,

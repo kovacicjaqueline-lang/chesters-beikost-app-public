@@ -97,8 +97,13 @@
     booted = true;
   }
 
+  function cloneSnapshot(snapshot) {
+    if (typeof globalScope.structuredClone === "function") return globalScope.structuredClone(snapshot);
+    return JSON.parse(JSON.stringify(snapshot));
+  }
+
   function buildWeek(snapshot, start) {
-    state = snapshot;
+    state = cloneSnapshot(snapshot || {});
     state.settings = state.settings || {};
     if (typeof installHandlingReadinessRuntime === "function") {
       installHandlingReadinessRuntime();

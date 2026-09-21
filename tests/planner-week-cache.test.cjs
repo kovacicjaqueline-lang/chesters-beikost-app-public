@@ -3,9 +3,12 @@ const assert = require("node:assert/strict");
 const vm = require("node:vm");
 
 const source = require("fs").readFileSync("js/planner-week-cache.js", "utf8");
+const workerSource = require("fs").readFileSync("js/planner-week-worker.js", "utf8");
 
 test("Planner-Wochen-Cache bleibt abgeleitet und versioniert", () => {
   assert.match(source, /const CACHE_VERSION = 2/);
+  assert.match(source, /const PRECOMPUTE_WEEKS = 6/);
+  assert.match(source, /futureWeekStarts/);
   assert.match(source, /preservePlanCache/);
   assert.match(source, /buildDays\(start, 7, false\)/);
   assert.match(source, /invalidate\("save"\)/);
@@ -59,7 +62,7 @@ test("gültige Wochen werden wiederverwendet und fachliche Saves verwerfen den C
   assert.notStrictEqual(second, first);
 
   idleCallback?.({ didTimeout: true });
-  assert.equal(buildCalls, 3, "zwei weitere Wochen werden im Warmup vorbereitet");
+  assert.equal(buildCalls, 7, "sechs weitere Wochen werden im Warmup vorbereitet");
 
   const revisionBeforeNavigationSave = context.__plannerWeekCache.revision;
   context.save({ preservePlanCache: true });
@@ -69,4 +72,10 @@ test("gültige Wochen werden wiederverwendet und fachliche Saves verwerfen den C
   context.save();
   assert.equal(context.__plannerWeekCache.revision, revisionBeforeNavigationSave + 1);
   assert.equal(context.__plannerWeekCache.size, 0);
+});
+
+
+test("Worker isoliert den Snapshot je vorbereiteter Woche", () => {
+  assert.match(workerSource, /function cloneSnapshot\\(snapshot\\)/);
+  assert.match(workerSource, /state = cloneSnapshot\\(snapshot \\|\\| \\{\\}\\)/);
 });

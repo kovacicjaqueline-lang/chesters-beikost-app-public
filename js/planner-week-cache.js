@@ -17,6 +17,7 @@
   ) return;
 
   const CACHE_VERSION = 2;
+  const PRECOMPUTE_WEEKS = 6;
   const cache = new Map();
   let revision = 0;
   let warmupPending = false;
@@ -82,11 +83,14 @@
     workerStats.lastError = String(error || "Planner-Worker fehlgeschlagen");
   }
 
+  function futureWeekStarts(from) {
+    return Array.from({ length: PRECOMPUTE_WEEKS }, (_, index) =>
+      globalScope.addDays(from, (index + 1) * 7),
+    );
+  }
+
   function runMainThreadWarmup(from) {
-    const starts = [
-      globalScope.addDays(from, 7),
-      globalScope.addDays(from, 14),
-    ];
+    const starts = futureWeekStarts(from);
     for (const start of starts) {
       const key = cacheKey(start, 7);
       if (cache.has(key)) continue;
@@ -170,10 +174,7 @@
         type: "build",
         requestId,
         inputRevision: revision,
-        starts: [
-          globalScope.addDays(from, 7),
-          globalScope.addDays(from, 14),
-        ],
+        starts: futureWeekStarts(from),
         state: currentState(),
       });
       return true;

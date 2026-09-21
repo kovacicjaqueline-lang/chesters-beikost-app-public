@@ -424,6 +424,7 @@ function companionFor(f, meal, on, focusType = "") {
     let flexibleCerealMatch =
       f.category === "Getreide/Stärke" &&
       x.active &&
+      !isFoodUnavailable(x.id) &&
       status(x) !== "Pausiert" &&
       ["Obst", "Gemüse", "Wurzel/Knolle"].includes(x.category);
 

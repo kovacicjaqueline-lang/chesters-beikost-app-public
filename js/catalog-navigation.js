@@ -1,7 +1,7 @@
 "use strict";
 
 /* Gemeinsamer Katalog-Tab für Lebensmittel und Rezepte.
- * Rezeptdaten, Planner und direkte Rezeptdetail-Dialoge bleiben unverändert.
+ * Rezeptdaten und Planner bleiben unverändert; Katalogdetails nutzen den gemeinsamen Dialog.
  */
 (function catalogNavigationModule() {
   if (typeof document === "undefined") return;

@@ -140,6 +140,8 @@ const PLAN_CHECK_PRECACHE = [
 // Der bisherige CSS-Schlüssel bleibt für einen Update-Zyklus dabei: Bereits geöffnete
 // PWA-Clients mit dem alten index.html erhalten beim nächsten Start trotzdem den Fix.
 const UI_PRECACHE = [
+  "./js/planner-week-cache.js?v=10.1.26",
+  "./js/planner-week-worker.js?v=10.1.26",
   "./ui-meal-editor-footer.css?v=10.1.26-circle-r2",
   "./ui-meal-editor-footer.css?v=10.1.26",
   "./flow-dialog-ui.css?v=10.1.26-compact-r1",
@@ -193,6 +195,14 @@ const RECIPE_RUNTIME_PRECACHE = [
   "./assets/illustrations-v2/recipes/birne-pfirsich-kompott.svg",
   "./assets/illustrations-v2/recipes/mango-bananen-creme.svg",
   "./assets/illustrations-v2/recipes/kartoffel-karotten-stampf.svg",
+  "./assets/illustrations-v2/recipes/quinoa-huhn-suesskartoffel-finger.svg",
+  "./assets/illustrations-v2/recipes/quinoa-linsen-gemuese-khichdi.svg",
+  "./assets/illustrations-v2/recipes/quinoa-gemuese-puffer.svg",
+  "./assets/illustrations-v2/recipes/bulgur-zucchini-ei.svg",
+  "./assets/illustrations-v2/recipes/bulgur-gemuese-koefte.svg",
+  "./assets/illustrations-v2/recipes/bulgur-linsen-suppe.svg",
+  "./assets/illustrations-v2/recipes/forelle-kartoffel-baellchen.svg",
+  "./assets/illustrations-v2/recipes/kabeljau-suesskartoffel-fischkuechlein.svg",
   "./assets/illustrations-v2/recipes/gemuese-reis-brei.svg",
 ];
 

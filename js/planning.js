@@ -33,6 +33,15 @@ function recipeSuitableForMeal(recipe, meal) {
     return !["philippines"].includes(c) || Number(recipe.stage || 1) <= 3;
   return true;
 }
+function plannerRecipeSuitableForManualMeal(recipe, meal) {
+  if (Array.isArray(recipe?.excludeMeals) && recipe.excludeMeals.includes(meal)) return false;
+  if (meal === "snack")
+    return (recipe?.tags || []).some((tag) => normalizeName(tag) === "snack");
+  if (meal === "breakfast") return ["porridge", "pancakes", "baking"].includes(recipe?.category || "");
+  if (meal === "dinner")
+    return !["philippines"].includes(recipe?.category || "") || Number(recipe?.stage || 1) <= 3;
+  return true;
+}
 function plannerRecipeBreakfastHasBase(recipe) {
   if (recipe?.breakfastBase === false) return false;
   let names = [

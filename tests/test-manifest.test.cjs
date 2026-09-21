@@ -33,3 +33,21 @@ test('known planner changes select planner tests without changing the full fallb
   assert.ok(result.browser.some((file) => file.endsWith('planner-random-swap-webkit.test.mjs')));
   assert.ok(result.node.length < manifest.listNodeTests('fast').length);
 });
+
+test('standard browser gate and performance gate are complete and disjoint', async () => {
+  const manifest = await import(path.join(root, 'scripts/test-manifest.mjs'));
+  const all = new Set(manifest.TEST_GROUPS.browser());
+  const standard = new Set(manifest.TEST_GROUPS.browserStandard());
+  const performance = new Set(manifest.TEST_GROUPS.browserPerformance());
+
+  assert.equal(new Set([...standard, ...performance]).size, all.size);
+  assert.deepEqual([...standard].filter((file) => performance.has(file)), []);
+  assert.deepEqual(
+    [...performance].map((file) => path.basename(file)).sort(),
+    [
+      'app-resume-lifecycle-webkit.test.mjs',
+      'save-ui-latency-webkit.test.mjs',
+      'targeted-action-rendering-webkit.test.mjs',
+    ],
+  );
+});

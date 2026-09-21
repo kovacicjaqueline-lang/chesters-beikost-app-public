@@ -25,16 +25,19 @@ const integrationPatterns = [
   /milk-/, /hummus-/, /mais-/, /rind-/, /performance-/, /ci-/, /browser-/,
 ];
 
-const performanceBrowserPatterns = [
-  /latency/, /rendering-performance/, /app-resume-lifecycle/, /startup-lazy-render/, /render-all-shared-cycle/,
-];
+const criticalBrowserPerformanceNames = new Set([
+  "save-ui-latency-webkit.test.mjs",
+  "targeted-action-rendering-webkit.test.mjs",
+  "app-resume-lifecycle-webkit.test.mjs",
+]);
 
 export const TEST_GROUPS = Object.freeze({
   unit: () => nodeTestFiles.filter((file) => !matchesAny(file, integrationPatterns)),
   integration: () => nodeTestFiles.filter((file) => matchesAny(file, integrationPatterns)),
   fast: () => nodeTestFiles,
   browser: () => browserTestFiles,
-  browserPerformance: () => browserTestFiles.filter((file) => matchesAny(file, performanceBrowserPatterns)),
+  browserStandard: () => browserTestFiles.filter((file) => !criticalBrowserPerformanceNames.has(basename(file))),
+  browserPerformance: () => browserTestFiles.filter((file) => criticalBrowserPerformanceNames.has(basename(file))),
 });
 
 const areaRules = [

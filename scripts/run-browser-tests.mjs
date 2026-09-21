@@ -214,13 +214,15 @@ export async function runBrowserTests({
   const group = childEnv.BROWSER_TEST_GROUP || "";
   let discoveredTestFiles = testFiles || discoverBrowserTests(rootDir);
   if (requestedFiles?.length) discoveredTestFiles = requestedFiles;
+  else if (group === "standard") discoveredTestFiles = TEST_GROUPS.browserStandard();
   else if (group === "performance") discoveredTestFiles = TEST_GROUPS.browserPerformance();
   else if (group === "relevant") {
     if (!changedFiles.length) throw new Error("test:browser:relevant requires CHANGED_FILES or --files.");
     discoveredTestFiles = selectRelevantTests(changedFiles).browser;
   }
 
-  const selectedTestFiles = selectBrowserTestShard(discoveredTestFiles, shard);
+  const browserTestDurations = loadBrowserTestDurations(rootDir);
+  const selectedTestFiles = selectBrowserTestShard(discoveredTestFiles, shard, browserTestDurations);
   if (selectedTestFiles.length === 0) {
     const suffix = shard ? ` for shard ${shard.index}/${shard.total}` : "";
     throw new Error(`No browser regression scripts found${suffix}.`);

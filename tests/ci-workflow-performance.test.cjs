@@ -30,7 +30,7 @@ test('all dependency-installing setup-node steps use the npm cache', () => {
   const deploySetupCount = occurrences(deployWorkflow, 'uses: actions/setup-node@v4');
   const deployCacheCount = occurrences(deployWorkflow, "cache: 'npm'");
 
-  assert.equal(appSetupCount, 3);
+  assert.equal(appSetupCount, 4);
   assert.equal(appCacheCount, appSetupCount);
   assert.equal(deploySetupCount, 1);
   assert.equal(deployCacheCount, deploySetupCount);
@@ -50,7 +50,7 @@ test('app workflow classifies scope before choosing the gate', () => {
   );
   assert.ok(appWorkflow.includes('image: mcr.microsoft.com/playwright:v1.62.1-noble'));
   assert.equal(occurrences(appWorkflow, 'run: npm run verify:fast'), 2);
-  assert.equal(occurrences(appWorkflow, 'run: npm run test:browser'), 1);
+  assert.equal(occurrences(appWorkflow, 'run: npm run test:browser:standard'), 0);
   assert.equal(occurrences(appWorkflow, 'run: npm run verify:app'), 0);
 });
 
@@ -69,6 +69,9 @@ test('full app workflow runs the fast gate in exactly one browser shard', () => 
     appWorkflow.includes('- name: Run browser regression shard\n        if: ${{ !cancelled() }}\n        run: npm run test:browser'),
   );
   assert.ok(appWorkflow.includes('browser-regression-diagnostics-${{ github.run_id }}-shard-${{ matrix.shard }}'));
+  assert.ok(appWorkflow.includes('browser-performance:'));
+  assert.ok(appWorkflow.includes('run: npm run test:browser:performance'));
+  assert.ok(appWorkflow.includes('browser-performance-diagnostics-${{ github.run_id }}'));
   assert.ok(appWorkflow.includes('plan-checks-ux-screenshots-${{ github.run_id }}-shard-${{ matrix.shard }}'));
 });
 

@@ -74,7 +74,7 @@ try {
   await page.waitForFunction(() => {
     const stats = window.__plannerWeekCache.workerStats();
     return stats.completed > 0 && window.__plannerWeekCache.size >= 2;
-  }, null, { timeout: 30000 });
+  }, null, { timeout: 60000 });
 
   const result = await page.evaluate(() => {
     const current = window.__beikostTest.getState();

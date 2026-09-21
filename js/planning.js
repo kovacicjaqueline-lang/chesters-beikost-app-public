@@ -172,6 +172,7 @@ function knownBase(meal, exclude = []) {
   let pool = state.foods.filter(
     (f) =>
       f.active &&
+      !isFoodUnavailable(f.id) &&
       f.meals.includes(meal) &&
       !f.allergenGroup &&
       isTrustedBase(f) &&

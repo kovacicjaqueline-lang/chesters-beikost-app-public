@@ -68,6 +68,7 @@ function auditedLegacyFingerNames() {
     "Grießschnitten ohne Panade", "Apfel-Milchreisschnitten", "Bananen-French-Toast-Finger",
     "Gemüse-Couscous-Schnitten", "Bunte Gemüse-Nuggets", "Weiche Gemüse-Reis-Finger",
     "Apfel-Bananen-Baked-Oatmeal", "Weiche Apfel-Hafer-Riegel",
+    "Quinoa-Huhn-Süßkartoffel-Finger", "Quinoa-Gemüse-Puffer", "Bulgur-Gemüse-Köfte",
   ]);
   return [
     ...RECIPE_CONTRACT_GROUPS.fingerLowResistance,
@@ -105,23 +106,23 @@ test("HANDLING: feedingApproach sortiert nur Präferenzen und entfernt keine sic
   ]);
 });
 
-test("HANDLING: alle 129 Laufzeitrezepte sind explizit und genau einmal migriert", () => {
+test("HANDLING: alle 135 Laufzeitrezepte sind explizit und genau einmal migriert", () => {
   const runtimeNames = runtimeRecipeNames();
   const contractNames = Object.keys(RECIPE_HANDLING_CONTRACT);
   const grouped = Object.values(RECIPE_CONTRACT_GROUPS).flat();
-  assert.equal(runtimeNames.length, 129);
-  assert.equal(contractNames.length, 129);
-  assert.equal(new Set(grouped).size, 129, "Contract-Gruppen dürfen sich nicht überlappen");
+  assert.equal(runtimeNames.length, 135);
+  assert.equal(contractNames.length, 135);
+  assert.equal(new Set(grouped).size, 135, "Contract-Gruppen dürfen sich nicht überlappen");
   assert.deepEqual([...contractNames].sort(), [...runtimeNames].sort());
   assert.deepEqual([...grouped].sort(), [...runtimeNames].sort());
 });
 
 test("HANDLING: aktuelle Auditmatrix bleibt vollständig erhalten", () => {
   const entries = Object.values(RECIPE_HANDLING_CONTRACT);
-  assert.equal(entries.filter((entry) => !entry.laterKind).length, 104);
+  assert.equal(entries.filter((entry) => !entry.laterKind).length, 107);
   assert.equal(entries.filter((entry) => entry.laterKind === "oral-capability").length, 4);
   assert.equal(entries.filter((entry) => entry.laterKind === "handling-capability").length, 3);
-  assert.equal(entries.filter((entry) => entry.laterKind === "soft-orientation").length, 16);
+  assert.equal(entries.filter((entry) => entry.laterKind === "soft-orientation").length, 19);
   assert.equal(entries.filter((entry) => entry.laterKind === "bite-capability").length, 1);
   assert.equal(entries.filter((entry) => entry.laterKind === "bite-oral-capability").length, 1);
 });
@@ -376,6 +377,9 @@ test("HANDLING: weich-stückige Formfälle bleiben soft-orientation statt künst
     "Lachs-Brokkoli-Kartoffel-Auflauf",
     "Mildes Bohnen-Süßkartoffel-Chili",
     "Gefüllte Paprika mit Linsenreis",
+    "Quinoa-Linsen-Gemüse-Khichdi",
+    "Bulgur-Zucchini-Ei",
+    "Bulgur-Linsen-Suppe",
   ].sort();
   const actual = Object.entries(RECIPE_HANDLING_CONTRACT)
     .filter(([, entry]) => entry.laterKind === "soft-orientation")

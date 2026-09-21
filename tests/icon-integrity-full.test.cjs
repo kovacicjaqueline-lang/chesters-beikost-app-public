@@ -182,6 +182,13 @@ test("V2-Mappings, Dateibestand und Service-Worker-Precache sind exakt deckungsg
   assert.deepEqual(precached, allAssets, "V2-Precache enthält fehlende, doppelte oder veraltete Assetpfade");
   assert.deepEqual(runtimeRecipePrecache.sort(), [
     "assets/illustrations-v2/recipes/chicken-fajita-wrap.svg",
+    "assets/illustrations-v2/recipes/bulgur-gemuese-koefte.svg",
+    "assets/illustrations-v2/recipes/bulgur-linsen-suppe.svg",
+    "assets/illustrations-v2/recipes/bulgur-zucchini-ei.svg",
+    "assets/illustrations-v2/recipes/quinoa-gemuese-puffer.svg",
+    "assets/illustrations-v2/recipes/quinoa-huhn-suesskartoffel-finger.svg",
+    "assets/illustrations-v2/recipes/quinoa-linsen-gemuese-khichdi.svg",
+
     "assets/illustrations-v2/recipes/apfel-bananen-baked-oatmeal.svg",
     "assets/illustrations-v2/recipes/apfel-milchreisschnitten.svg",
     "assets/illustrations-v2/recipes/bananen-french-toast-finger.svg",

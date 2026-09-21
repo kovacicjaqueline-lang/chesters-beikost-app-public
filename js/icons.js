@@ -345,6 +345,12 @@ const RECIPE_RUNTIME_ICON_ALIASES = Object.freeze({
   "Birne-Pfirsich-Kompott": "assets/illustrations-v2/recipes/birne-pfirsich-kompott.svg",
   "Mango-Bananen-Creme": "assets/illustrations-v2/recipes/mango-bananen-creme.svg",
   "Kartoffel-Karotten-Stampf": "assets/illustrations-v2/recipes/kartoffel-karotten-stampf.svg",
+  "Quinoa-Huhn-Süßkartoffel-Finger": "assets/illustrations-v2/recipes/quinoa-huhn-suesskartoffel-finger.svg",
+  "Quinoa-Linsen-Gemüse-Khichdi": "assets/illustrations-v2/recipes/quinoa-linsen-gemuese-khichdi.svg",
+  "Quinoa-Gemüse-Puffer": "assets/illustrations-v2/recipes/quinoa-gemuese-puffer.svg",
+  "Bulgur-Zucchini-Ei": "assets/illustrations-v2/recipes/bulgur-zucchini-ei.svg",
+  "Bulgur-Gemüse-Köfte": "assets/illustrations-v2/recipes/bulgur-gemuese-koefte.svg",
+  "Bulgur-Linsen-Suppe": "assets/illustrations-v2/recipes/bulgur-linsen-suppe.svg",
   "Gemüse-Reis-Brei": "assets/illustrations-v2/recipes/gemuese-reis-brei.svg"
 });
 

@@ -1272,7 +1272,10 @@ function showView(id) {
     if (!view?.classList.contains("active")) return;
     try {
       renderView(id);
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      // View-Wechsel darf keine laufende Scroll-Animation hinterlassen: Auf iOS/WebKit
+      // würde die absolute Tab-Navigation sonst als instabil gelten und den nächsten
+      // Tab-Klick blockieren.
+      window.scrollTo({ top: 0, behavior: "auto" });
     } finally {
       view.removeAttribute("aria-busy");
     }

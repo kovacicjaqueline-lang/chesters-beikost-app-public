@@ -179,6 +179,9 @@ function plannerRecipeSuitableForMeal(recipe, meal) {
   }
   if (meal === "dinner")
     return !["philippines"].includes(category) || Number(recipe?.stage || 1) <= 3;
+  return true;
+}
+
 function plannerRecipeBreakfastHasBase(recipe) {
   if (recipe?.breakfastBase === false) return false;
   let names = [
@@ -200,9 +203,6 @@ function plannerRecipeBreakfastHasBase(recipe) {
   // Node-side policy tests load app.js without the browser's FOOD_DB script.
   // Keep the same contract for the canonical grain/dairy names in that case.
   return names.some((name) => /hafer|hirse|polenta|reis|quinoa|buchweizen|weizen|dinkel|grieß|griess|naturjoghurt|joghurt|buttermilch|quark|skyr/i.test(String(name)));
-}
-
-  return true;
 }
 
 function plannerRecipeByStoredName(name, recipes = []) {

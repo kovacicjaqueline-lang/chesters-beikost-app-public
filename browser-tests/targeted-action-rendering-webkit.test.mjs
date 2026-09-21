@@ -153,20 +153,16 @@ try {
     window.__targetedActionRenderProbe.plan = 0;
   });
   const removeManualMealSelector = `.removeManualMeal[data-date="${mealDeleteSetup.date}"][data-meal="lunch"]`;
-  await page.waitForFunction((selector) => [...document.querySelectorAll(selector)].some((element) => {
-    const style = getComputedStyle(element);
-    const rect = element.getBoundingClientRect();
-    return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
-  }), removeManualMealSelector);
-  await page.locator(removeManualMealSelector).evaluateAll((elements) => {
-    const visible = elements.find((element) => {
-      const style = getComputedStyle(element);
-      const rect = element.getBoundingClientRect();
-      return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
-    });
-    if (!visible) throw new Error("Kein sichtbarer Löschbutton für die manuelle Mahlzeit gefunden");
-    visible.click();
+  const removeManualMeal = page.locator(removeManualMealSelector);
+  await removeManualMeal.evaluateAll((elements) => {
+    for (const element of elements) {
+      const details = element.closest("details.manual-meal");
+      if (details) details.open = true;
+    }
   });
+  const visibleRemoveManualMeal = page.locator(`${removeManualMealSelector}:visible`).first();
+  await visibleRemoveManualMeal.waitFor({ state: "visible" });
+  await visibleRemoveManualMeal.click();
   await page.locator("#confirmMealDelete").waitFor({ state: "visible" });
   const deleteMealMs = await page.evaluate(() => {
     const start = performance.now();

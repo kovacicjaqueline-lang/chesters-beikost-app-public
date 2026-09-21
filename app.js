@@ -589,6 +589,7 @@ function installFoodPolicyRuntime() {
   function autoRecipeIngredientReady(name, on) {
     let f = state.foods.find((item) => item.name === name);
     if (!f || !policyEligible(f, on) || status(f) === "Pausiert") return false;
+    if (typeof isFoodUnavailable === "function" && isFoodUnavailable(f.id)) return false;
     return originalRank(f) >= 2 || familySuccessfulExposureCount(f, state.foods, state.logs, outcomeForFood) >= 1;
   }
 

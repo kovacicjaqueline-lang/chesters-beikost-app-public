@@ -18,7 +18,8 @@ test("Lebensmittelkarten bieten dieselben Katalogaktionen wie Rezeptkarten", () 
 
 test("Rezeptdetails werden nicht mehr inline in der Katalogliste aufgeklappt", () => {
   assert.match(recipes, /function showRecipeInfo\(r\)/);
-  assert.doesNotMatch(recipes, /<details class="recipe-card-v2">/);
+  assert.match(recipes, /<details class="recipe-card-v2" open/);
+  assert.doesNotMatch(recipes, /recipe-body-v2/);
   assert.match(catalog, /showRecipeInfo\(recipe\)/);
 });
 

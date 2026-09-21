@@ -932,6 +932,39 @@ function openFullPlanRebuild() {
   document.getElementById("rebuildKeepLocks").onclick = () => { closeGeneric(); rebuildVisiblePlan(false); showToast("Woche vollständig neu geplant; manuell geschützte Mahlzeiten wurden behalten."); };
   document.getElementById("rebuildReleaseLocks").onclick = () => { closeGeneric(); rebuildVisiblePlan(true); showToast("Woche vollständig neu geplant; lösbare feste Planungen wurden aufgehoben."); };
 }
+function removeUnavailableGeneratedFoods(meal) {
+  if (!meal || typeof isFoodUnavailable !== "function") return meal;
+  let unavailableIds = new Set((meal.foodIds || []).filter((id) => isFoodUnavailable(id)));
+  if (!unavailableIds.size) return meal;
+  if (meal.focusId && unavailableIds.has(meal.focusId)) return null;
+
+  for (let field of ["foodIds", "baseFoodIds", "sampleFoodIds", "optionalAddons", "inventoryFoodIds", "recipeIngredientFoodIds", "additionalFoodIds"]) {
+    if (Array.isArray(meal[field])) meal[field] = meal[field].filter((id) => !unavailableIds.has(id));
+  }
+  if (meal.foodRoles && typeof meal.foodRoles === "object") {
+    meal.foodRoles = Object.fromEntries(
+      Object.entries(meal.foodRoles).filter(([id]) => !unavailableIds.has(id)),
+    );
+  }
+  if (meal.ingredientAmounts && typeof meal.ingredientAmounts === "object") {
+    meal.ingredientAmounts = Object.fromEntries(
+      Object.entries(meal.ingredientAmounts).filter(([id]) => !unavailableIds.has(id)),
+    );
+  }
+  if (
+    meal.recipeName &&
+    (meal.recipeIngredientFoodIds || []).some((id) => unavailableIds.has(id))
+  ) {
+    meal.recipeName = "";
+    meal.recipeInventoryId = "";
+    delete meal.compositionMode;
+    delete meal.recipeIngredientFoodIds;
+    delete meal.additionalFoodIds;
+    delete meal.recipePairingKey;
+  }
+  return meal;
+}
+
 function buildDay(date, index, ctx) {
   let meals = [];
   let activeMeals = ["breakfast", "lunch", "snack", "dinner"].filter((m) => activeMeal(m, date) || !!state.manualMeals?.[manualMealKey(date, m)]);
@@ -1040,6 +1073,8 @@ function buildDay(date, index, ctx) {
           : "Bekannte Lebensmittel sinnvoll rotieren; Vorrat bevorzugt nutzen.";
     let generated = applyPlannedMealAmounts({ meal, active: true, focusId: f.id, foodIds: ids, baseFoodIds, sampleFoodIds, optionalAddons, milkMeal: mealContainsMilkProduct(ids) ? (introduction ? "small" : "full") : "", type: c.type, note });
     generated = applyRecipeFoodComposition(generated, date, ctx);
+    generated = removeUnavailableGeneratedFoods(generated);
+    if (!generated) { meals.push({ meal, active: true, empty: true }); continue; }
     if (mealMilkLevel(generated) === "full") ctx.fullMilkDates?.add(date);
     reserveMealInventory(generated, ctx); meals.push(generated);
   }

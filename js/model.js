@@ -404,6 +404,7 @@ function inventoryName(item) {
     : food(item.foodId)?.name || item.foodName || "Lebensmittel";
 }
 function recipeInventoryPortions(recipeName) {
+  if (typeof invalidateInventoryAggregateCache === "function") invalidateInventoryAggregateCache();
   if (typeof inventoryRecipePortions === "function") return inventoryRecipePortions(recipeName);
   return state.inventory
     .filter(

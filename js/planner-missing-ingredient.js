@@ -441,7 +441,15 @@
         const available = Number(stocked.portions) - Number(ctx?.recipeReserved?.get?.(recipe.name) || 0);
         if (available <= 0) return null;
         const preparedRecipe = markPreparedStockRecipe({ ...recipe, unlocked: true, missing: [], ingredientMissing: [], requirementMissing: [] });
-        const preparedFoodIds = typeof recipeFoodIds === "function" ? recipeFoodIds(preparedRecipe) : [];
+        const preparedNames = [
+          ...(recipe.requires || []),
+          ...((recipe.alternatives || [])[0] || []),
+          ...((recipe.oneOf || []).slice(0, 1)),
+          ...((recipe.milkChoices || []).slice(0, 1)),
+        ];
+        const preparedFoodIds = uniqueIds(preparedNames.map((name) =>
+          typeof foodByName === "function" ? foodByName(name, state?.foods || [])?.id : "",
+        ));
         return { ...preparedRecipe, __preparedFoodIds: preparedFoodIds };
       };
       wrapped.__missingIngredientAware = true;

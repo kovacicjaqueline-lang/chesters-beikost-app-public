@@ -124,6 +124,9 @@
         }
         const snapshot = snapshotFactory(day.date, meal.meal, meal, "auto");
         if (!snapshot?.focusId) continue;
+        snapshot.planId = meal.planId ||
+          globalScope.__plannerLogRolloverCore?.stablePlanId?.(meal, day.date, meal.meal) ||
+          snapshot.planId;
         snapshot.mode = "auto";
         snapshot[PIN_FLAG] = true;
         snapshot[PRESERVE_FLAG] = true;

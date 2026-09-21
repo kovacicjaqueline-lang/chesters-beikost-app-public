@@ -176,6 +176,7 @@ async function createSnapshot(reason = "automatisch") {
   return snapshots;
 }
 let saveQueue = Promise.resolve();
+let storageStateRevision = 0;
 let indexedDbUnavailable = false;
 const IDB_RECOVERY_PENDING_KEY = `${KEY}-idb-recovery-pending`;
 function pendingIdbRecoveryState() {
@@ -188,6 +189,7 @@ function pendingIdbRecoveryState() {
   }
 }
 function save(options = {}) {
+  storageStateRevision++;
   if (typeof invalidateFoodLookupCache === "function") invalidateFoodLookupCache();
   let snapshot = clone(state);
   snapshot.schemaVersion = SCHEMA_VERSION;
@@ -271,21 +273,23 @@ function installPlanFromVisibilitySync(doc) {
 /* PLAN-FROM-TODAY END */
 
 async function bootstrapStorage() {
+  const revisionAtStart = storageStateRevision;
   let recoveryState = pendingIdbRecoveryState();
   let idbState = await idbGet(STATE_RECORD).catch(() => null);
-  if (idbState && !recoveryState) {
-    state = migrateState(idbState);
-  } else {
-    state = recoveryState || migrateState(state);
-    state.backupMeta.migratedAt = new Date().toISOString();
-    let wroteState = await idbPut(STATE_RECORD, clone(state)).then(() => true).catch(() => false);
-    // Keep the old localStorage record until the database can be read back successfully.
-    let check = wroteState ? await idbGet(STATE_RECORD).catch(() => null) : null;
-    if (check) {
-      try {
-        localStorage.setItem(KEY, JSON.stringify(state));
-        if (recoveryState) localStorage.removeItem(IDB_RECOVERY_PENDING_KEY);
-      } catch (_) {}
+  if (storageStateRevision === revisionAtStart) {
+    if (idbState && !recoveryState) {
+      state = migrateState(idbState);
+    } else {
+      state = recoveryState || migrateState(state);
+      state.backupMeta.migratedAt = new Date().toISOString();
+      let wroteState = await idbPut(STATE_RECORD, clone(state)).then(() => true).catch(() => false);
+      let check = wroteState ? await idbGet(STATE_RECORD).catch(() => null) : null;
+      if (check) {
+        try {
+          localStorage.setItem(KEY, JSON.stringify(state));
+          if (recoveryState) localStorage.removeItem(IDB_RECOVERY_PENDING_KEY);
+        } catch (_) {}
+      }
     }
   }
   if (navigator.storage?.persist) {
@@ -299,7 +303,6 @@ async function bootstrapStorage() {
   globalThis.installRecipeV2ComponentRuntime?.();
   renderCurrentView();
 }
-
 function showStorageError(message) {
   let box=document.getElementById("storageError");
   if (box) { box.textContent=message; box.style.display="block"; }

@@ -341,7 +341,7 @@
 
   function availabilityAwareRecipeFoodIds(recipe, originalRecipeFoodIds) {
     if (!recipe || typeof originalRecipeFoodIds !== "function") return [];
-    if (isPreparedStockRecipe(recipe)) return originalRecipeFoodIds(recipe);
+    if (isPreparedStockRecipe(recipe)) return recipe.__preparedFoodIds || originalRecipeFoodIds(recipe);
 
     const lookup = (name) => typeof foodByName === "function" ? foodByName(name, state?.foods || []) : null;
     const hasUnavailable = structuredRecipeNames(recipe).some((name) => {
@@ -440,7 +440,8 @@
         if (typeof plannerRecipeSuitableForMeal === "function" && !plannerRecipeSuitableForMeal(recipe, meal)) return null;
         const available = Number(stocked.portions) - Number(ctx?.recipeReserved?.get?.(recipe.name) || 0);
         if (available <= 0) return null;
-        return markPreparedStockRecipe({ ...recipe, unlocked: true, missing: [], ingredientMissing: [], requirementMissing: [] });
+        const preparedFoodIds = originalRecipeFoodIds(recipe);
+        return markPreparedStockRecipe({ ...recipe, __preparedFoodIds: preparedFoodIds, unlocked: true, missing: [], ingredientMissing: [], requirementMissing: [] });
       };
       wrapped.__missingIngredientAware = true;
       recipeStockCandidate = wrapped;

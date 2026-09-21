@@ -256,6 +256,7 @@
   function warmupNow() {
     if (typeof globalScope.visiblePlanStart !== "function") return;
     if (!currentState()?.settings) return;
+    ensurePlannerWorker();
     warmupPending = true;
     // The explicit API is used by diagnostics and regression tests. Count the
     // request synchronously so it remains deterministic even when Worker

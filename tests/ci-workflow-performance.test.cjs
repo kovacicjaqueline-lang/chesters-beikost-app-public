@@ -50,7 +50,7 @@ test('app workflow classifies scope before choosing the gate', () => {
   );
   assert.ok(appWorkflow.includes('image: mcr.microsoft.com/playwright:v1.62.1-noble'));
   assert.equal(occurrences(appWorkflow, 'run: npm run verify:fast'), 2);
-  assert.equal(occurrences(appWorkflow, 'run: npm run test:browser:standard'), 0);
+  assert.equal(occurrences(appWorkflow, 'run: npm run test:browser:standard'), 1);
   assert.equal(occurrences(appWorkflow, 'run: npm run verify:app'), 0);
 });
 
@@ -66,7 +66,7 @@ test('full app workflow runs the fast gate in exactly one browser shard', () => 
     appWorkflow.includes('- name: Run fast verification gate\n        if: ${{ matrix.run_fast }}\n        run: npm run verify:fast'),
   );
   assert.ok(
-    appWorkflow.includes('- name: Run browser regression shard\n        if: ${{ !cancelled() }}\n        run: npm run test:browser'),
+    appWorkflow.includes('- name: Run browser regression shard\n        if: ${{ !cancelled() }}\n        run: npm run test:browser:standard'),
   );
   assert.ok(appWorkflow.includes('browser-regression-diagnostics-${{ github.run_id }}-shard-${{ matrix.shard }}'));
   assert.ok(appWorkflow.includes('browser-performance:'));

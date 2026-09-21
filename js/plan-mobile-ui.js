@@ -222,7 +222,7 @@
         const nextFrom = addDays(from, delta);
         globalThis.__mobilePlanSelectedDate = addDays(nextFrom, selectedIndex);
         state.settings.planFrom = nextFrom;
-        save();
+        save({ preservePlanCache: true });
         renderPlan();
       };
     });
@@ -381,7 +381,7 @@
         ? addDays(nextFrom, 0)
         : addDays(nextFrom, 6);
       state.settings.planFrom = nextFrom;
-      save();
+      save({ preservePlanCache: true });
       renderPlan();
     }, { passive: true });
 

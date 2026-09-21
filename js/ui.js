@@ -1485,7 +1485,7 @@ function bind() {
     .forEach((b) => (b.onclick = () => showView(b.dataset.view)));
   document.getElementById("planFrom").onchange = (e) => {
     state.settings.planFrom = e.target.value;
-    save();
+    save({ preservePlanCache: true });
     renderAll();
   };
   document.getElementById("planToday").onclick = () => {

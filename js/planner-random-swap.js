@@ -100,10 +100,21 @@
     data.autoLockExcluded ||= {};
     globalScope.__plannerLogRolloverCore?.ensurePrimaryPlanIds?.(data);
     const visiblePlanIds = new Map();
+    const visiblePlanPayloads = new Map();
+    const preserveVisiblePayload = (lock, payload) => {
+      if (!lock || !payload) return;
+      for (const field of ["foodIds", "recipeName", "recipeId", "plannedMealId", "focusId", "sampleFoodIds", "type", "texture", "fatId"]) {
+        if (payload[field] !== undefined) lock[field] = clone(payload[field]);
+      }
+    };
     for (const button of globalScope.document?.querySelectorAll?.("#blockPlan .logMeal[data-plan]") || []) {
       try {
         const payload = JSON.parse(decodeURIComponent(button.dataset.plan || ""));
-        if (payload.date && payload.meal && payload.planId) visiblePlanIds.set(slotKey(payload.date, payload.meal), payload.planId);
+        if (payload.date && payload.meal && payload.planId) {
+          const key = slotKey(payload.date, payload.meal);
+          visiblePlanIds.set(key, payload.planId);
+          visiblePlanPayloads.set(key, payload);
+        }
       } catch (_) {}
     }
     preservedVisiblePlanIds = visiblePlanIds;
@@ -123,6 +134,7 @@
             existing.planId = globalScope.__plannerLogRolloverCore.stablePlanId(meal, day.date, meal.meal);
           }
           if (visiblePlanId || meal.planId) existing.planId = visiblePlanId || meal.planId;
+          preserveVisiblePayload(existing, visiblePlanPayloads.get(key));
           for (const field of ["plannedMealId", "recipeInventoryId", "recipeBatchId"]) {
             if (!existing[field] && meal[field]) existing[field] = meal[field];
           }
@@ -149,6 +161,7 @@
       if (visibleKey === targetKey || !planId) continue;
       data.planLocks[visibleKey] ||= { mode: "auto" };
       data.planLocks[visibleKey].planId = planId;
+      preserveVisiblePayload(data.planLocks[visibleKey], visiblePlanPayloads.get(visibleKey));
     }
     return pinned;
   }

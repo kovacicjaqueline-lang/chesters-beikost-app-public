@@ -224,6 +224,7 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+  # Keep slow measurement regressions outside the normal browser shards.
   browser-performance:
     needs: scope
     if: ${{ needs.scope.outputs.browser_required == 'true' }}

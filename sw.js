@@ -199,6 +199,8 @@ const RECIPE_RUNTIME_PRECACHE = [
   "./assets/illustrations-v2/recipes/bulgur-zucchini-ei.svg",
   "./assets/illustrations-v2/recipes/bulgur-gemuese-koefte.svg",
   "./assets/illustrations-v2/recipes/bulgur-linsen-suppe.svg",
+  "./assets/illustrations-v2/recipes/forelle-kartoffel-baellchen.svg",
+  "./assets/illustrations-v2/recipes/kabeljau-suesskartoffel-fischkuechlein.svg",
   "./assets/illustrations-v2/recipes/gemuese-reis-brei.svg",
 ];
 

@@ -97,9 +97,9 @@ const REQUIRED_NOTE_FRAGMENTS = Object.freeze({
   "Süßkartoffel-Linsen-Muffins": [/Süßkartoffel/i, /Linsen/i, /Hafer/i, /vermeng/i],
 });
 
-test("recipe preparation audit covers the full 135-recipe runtime catalog", () => {
+test("recipe preparation audit covers the full 137-recipe runtime catalog", () => {
   const recipes = loadCatalog();
-  assert.equal(recipes.length, 135);
+  assert.equal(recipes.length, 137);
   assert.equal(INCOMPLETE_PREPARATIONS.length, 20);
   assert.equal(TERSE_PREPARATIONS.length, 23);
   assert.equal(new Set([...INCOMPLETE_PREPARATIONS, ...TERSE_PREPARATIONS]).size, 43);
@@ -120,6 +120,20 @@ test("recipe preparation completeness: new Bulgur- und Quinoa-Gerichte enthalten
     const recipe = recipes.find((item) => item.name === name);
     assert.ok(recipe, name + ": Rezept fehlt");
     assert.ok(recipe.note.length >= 180, name + ": Zubereitung bleibt zu knapp");
+    for (const fragment of fragments) assert.match(recipe.note, fragment, name + ": Zubereitungshinweis fehlt (" + fragment + ")");
+  }
+});
+
+test("recipe preparation completeness: Fischküchlein enthalten Gräten-, Gar- und Konsistenzhinweise", () => {
+  const recipes = loadCatalog();
+  const expected = {
+    "Forelle-Kartoffel-Bällchen": [/Forelle/i, /Kartoffel/i, /Ei/i, /entgrät|Gräten/i, /vollständig durchgar/i, /zerdrückbar/i],
+    "Kabeljau-Süßkartoffel-Fischküchlein": [/Kabeljau/i, /Süßkartoffel/i, /Ei/i, /Gräten/i, /vollständig durchgar/i, /zerdrückbar/i],
+  };
+  for (const [name, fragments] of Object.entries(expected)) {
+    const recipe = recipes.find((item) => item.name === name);
+    assert.ok(recipe, name + ": Rezept fehlt");
+    assert.ok(recipe.note.length >= 220, name + ": Zubereitung bleibt zu knapp");
     for (const fragment of fragments) assert.match(recipe.note, fragment, name + ": Zubereitungshinweis fehlt (" + fragment + ")");
   }
 });

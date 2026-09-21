@@ -97,6 +97,7 @@
     data.planLocks ||= {};
     data.manualMeals ||= {};
     data.autoLockExcluded ||= {};
+    globalScope.__plannerLogRolloverCore?.ensurePrimaryPlanIds?.(data);
     let pinned = 0;
     for (const day of days || []) {
       if (!day?.date || day.date < todayValue) continue;

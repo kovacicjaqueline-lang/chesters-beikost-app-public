@@ -332,10 +332,12 @@
 
   function withUnavailableFoodsMasked(callback) {
     if (typeof callback !== "function") return null;
+    const hints = state?.shoppingHints;
+    if (!hints || Object.keys(hints).length === 0) return callback();
     const foods = Array.isArray(state?.foods) ? state.foods : null;
     if (!foods) return callback();
     const unavailableIds = new Set(
-      Object.entries(state?.shoppingHints || {})
+      Object.entries(hints)
         .filter(([id, hint]) => hint?.status === "needed" && !state?.pantry?.[id])
         .map(([id]) => id),
     );

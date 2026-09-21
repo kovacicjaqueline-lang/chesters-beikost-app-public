@@ -212,7 +212,6 @@ function dueAllergen(f, on) {
 function eligibleCore(f, meal, on) {
   return (
     f.active &&
-    !isFoodUnavailable(f.id) &&
     f.meals.includes(meal) &&
     status(f) !== "Pausiert" &&
     f.category !== "Fett"
@@ -1027,6 +1026,19 @@ function buildDay(date, index, ctx) {
           : "Bekannte Lebensmittel sinnvoll rotieren; Vorrat bevorzugt nutzen.";
     let generated = applyPlannedMealAmounts({ meal, active: true, focusId: f.id, foodIds: ids, baseFoodIds, sampleFoodIds, optionalAddons, milkMeal: mealContainsMilkProduct(ids) ? (introduction ? "small" : "full") : "", type: c.type, note });
     generated = applyRecipeFoodComposition(generated, date, ctx);
+    const availableGeneratedIds = (generated.foodIds || []).filter((id) => !isFoodUnavailable(id));
+    if (availableGeneratedIds.length !== (generated.foodIds || []).length) {
+      generated.foodIds = availableGeneratedIds;
+      generated.sampleFoodIds = (generated.sampleFoodIds || []).filter((id) => availableGeneratedIds.includes(id));
+      generated.baseFoodIds = (generated.baseFoodIds || []).filter((id) => availableGeneratedIds.includes(id));
+      generated.focusId = availableGeneratedIds.includes(generated.focusId) ? generated.focusId : (availableGeneratedIds[0] || "");
+      generated.foodRoles = foodRolesFor(
+        availableGeneratedIds,
+        generated.baseFoodIds,
+        generated.sampleFoodIds,
+      );
+      applyPlannedMealAmounts(generated);
+    }
     if (mealMilkLevel(generated) === "full") ctx.fullMilkDates?.add(date);
     reserveMealInventory(generated, ctx); meals.push(generated);
   }

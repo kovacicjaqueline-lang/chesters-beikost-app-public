@@ -587,6 +587,9 @@
       );
     }
     if (typeof save === "function") save();
+    if (typeof globalScope.invalidateDayPlanRuntimeCache === "function") {
+      globalScope.invalidateDayPlanRuntimeCache();
+    }
     if (typeof showToast === "function") {
       showToast(`${typeof food === "function" ? food(foodId)?.name || "Zutat" : "Zutat"} ist vorhanden und wird wieder eingeplant.`);
     }

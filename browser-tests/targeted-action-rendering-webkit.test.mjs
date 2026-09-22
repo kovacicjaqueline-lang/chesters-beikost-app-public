@@ -152,7 +152,14 @@ try {
     window.__targetedActionRenderProbe.current = 0;
     window.__targetedActionRenderProbe.plan = 0;
   });
-  const removeManualMealSelector = `.removeManualMeal[data-date="${mealDeleteSetup.date}"][data-meal="lunch"]`;
+  const removeManualMealSelector = `#plan .removeManualMeal[data-date="${mealDeleteSetup.date}"][data-meal="lunch"]`;
+  await page.waitForFunction((selector) => !!document.querySelector(selector), removeManualMealSelector);
+  await page.locator(removeManualMealSelector).evaluateAll((elements) => {
+    elements.forEach((button) => {
+      const details = button.closest("details.manual-meal");
+      if (details) details.open = true;
+    });
+  });
   await page.waitForFunction((selector) => [...document.querySelectorAll(selector)].some((element) => {
     const style = getComputedStyle(element);
     const rect = element.getBoundingClientRect();

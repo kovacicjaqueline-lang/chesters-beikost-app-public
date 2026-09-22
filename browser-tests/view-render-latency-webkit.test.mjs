@@ -32,6 +32,30 @@ function summarize(samples, key) {
   };
 }
 
+function summarizeHotspots(samples) {
+  const combined = new Map();
+  for (const sample of samples) {
+    for (const [name, stat] of Object.entries(sample.hotspots || {})) {
+      const current = combined.get(name) || { name, calls: 0, totalMs: 0, maxMs: 0, sampleTotals: [] };
+      current.calls += Number(stat.calls) || 0;
+      current.totalMs += Number(stat.totalMs) || 0;
+      current.maxMs = Math.max(current.maxMs, Number(stat.maxMs) || 0);
+      current.sampleTotals.push(Number(stat.totalMs) || 0);
+      combined.set(name, current);
+    }
+  }
+  return [...combined.values()]
+    .map((stat) => ({
+      name: stat.name,
+      calls: stat.calls,
+      medianTotalMs: round(median(stat.sampleTotals)),
+      totalMs: round(stat.totalMs),
+      maxSingleCallMs: round(stat.maxMs),
+    }))
+    .sort((a, b) => b.medianTotalMs - a.medianTotalMs || b.totalMs - a.totalMs)
+    .slice(0, 18);
+}
+
 async function settleView(id) {
   const active = await page.evaluate((viewId) => document.getElementById(viewId)?.classList.contains("active") || false, id);
   if (!active) {
@@ -99,6 +123,63 @@ try {
       last: null,
     };
 
+    const hotspotNames = [
+      "renderPlanCore",
+      "renderPrepCore",
+      "planDisplayDays",
+      "viewRenderBuildDays",
+      "buildDays",
+      "buildDay",
+      "freshPlanContext",
+      "ensureAutoLocks",
+      "prepDemand",
+      "computePrepDemand",
+      "prepItems",
+      "shoppingItems",
+      "recipeStates",
+      "introductionCandidate",
+      "breakfastBaseIntroductionCandidate",
+      "knownCandidate",
+      "snackRecipeCandidate",
+      "buildSnackRecipeMeal",
+      "recipeStockCandidate",
+      "companionFor",
+      "knownBase",
+      "ironCompanion",
+      "applyPlannedMealAmounts",
+      "reserveMealInventory",
+      "plannedMealAmounts",
+      "recipeFoodIds",
+      "mealMilkLevel",
+      "rank",
+      "status",
+      "eatenExposureCount",
+      "usageCount",
+    ];
+
+    for (const name of hotspotNames) {
+      const base = window[name];
+      if (typeof base !== "function" || base.__viewLatencyHotspotProbe) continue;
+      const wrapped = function profiledHotspot(...args) {
+        const run = probe.current;
+        const measured = !!run && !run.done;
+        if (!measured) return base.apply(this, args);
+        const startedAt = performance.now();
+        try {
+          return base.apply(this, args);
+        } finally {
+          const duration = performance.now() - startedAt;
+          const stat = run.hotspots[name] || { calls: 0, totalMs: 0, maxMs: 0 };
+          stat.calls += 1;
+          stat.totalMs += duration;
+          stat.maxMs = Math.max(stat.maxMs, duration);
+          run.hotspots[name] = stat;
+        }
+      };
+      wrapped.__viewLatencyHotspotProbe = true;
+      window[name] = wrapped;
+    }
+
     document.addEventListener("click", (event) => {
       const button = event.target?.closest?.("nav button[data-view]");
       const target = button?.dataset?.view || "";
@@ -111,6 +192,7 @@ try {
         renderEndAt: null,
         firstPostRenderRafAt: null,
         stableFrameAt: null,
+        hotspots: {},
         done: false,
       };
     }, true);
@@ -138,7 +220,7 @@ try {
             if (probe.current !== run || run.done) return;
             run.stableFrameAt = performance.now();
             run.done = true;
-            probe.last = { ...run };
+            probe.last = { ...run, hotspots: { ...run.hotspots } };
           });
         });
       }
@@ -152,7 +234,7 @@ try {
         probe.last = null;
       },
       snapshot() {
-        return probe.last ? { ...probe.last } : null;
+        return probe.last ? { ...probe.last, hotspots: { ...probe.last.hotspots } } : null;
       },
     };
   });
@@ -185,6 +267,7 @@ try {
         tapToFirstPostRenderRafMs: run.firstPostRenderRafAt - run.tapAt,
         tapToStableFrameMs: run.stableFrameAt - run.tapAt,
         renderEndToStableFrameMs: run.stableFrameAt - run.renderEndAt,
+        hotspots: run.hotspots || {},
       });
     }
 
@@ -195,6 +278,7 @@ try {
       tapToFirstPostRenderRaf: summarize(samples, "tapToFirstPostRenderRafMs"),
       tapToStableFrame: summarize(samples, "tapToStableFrameMs"),
       renderEndToStableFrame: summarize(samples, "renderEndToStableFrameMs"),
+      hotspots: summarizeHotspots(samples),
     };
   }
 
@@ -207,4 +291,4 @@ try {
   await closeBrowserApp({ context, browser, server });
 }
 
-console.log("WebKit per-view render and tab paint latency profile passed.");
+console.log("WebKit per-view render, tab paint and stale-render hotspot profile passed.");

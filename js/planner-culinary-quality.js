@@ -262,56 +262,56 @@ function installPlannerCulinaryQualityRuntime() {
   if (typeof companionFor !== "function") return false;
   globalThis.__plannerCulinaryQualityRuntimeInstalled = true;
 
-  const originalCompanionFor = companionFor;
-  companionFor = function culinaryQualityCompanionFor(focus, meal, on, focusType = "") {
-    const allFoods = state?.foods || [];
-    const recipes = typeof recipeStates === "function"
+  let runtimeRecipes = null;
+  const recipePairCache = new Map();
+  const allRecipes = () => {
+    if (runtimeRecipes) return runtimeRecipes;
+    runtimeRecipes = typeof recipeStates === "function"
       ? recipeStates()
       : (typeof RECIPES !== "undefined" ? RECIPES : []);
-    const isLearning = ["neu", "gezielt wiederholen", "Allergen einführen", "Allergen wiederholen", "manuell"].includes(String(focusType || ""));
-    const candidates = [];
-    const blocked = new Set();
-    const max = Math.min(32, allFoods.length + 1);
-    for (let index = 0; index < max; index++) {
-      const previous = state.foods;
-      state.foods = allFoods.filter((item) => item?.id === focus?.id || !blocked.has(item?.id));
-      let result;
-      try {
-        result = originalCompanionFor(focus, meal, on, focusType);
-      } finally {
-        state.foods = previous;
-      }
-      if (!result?.id || blocked.has(result.id)) break;
-      blocked.add(result.id);
-      const canonical = allFoods.find((item) => item.id === result.id) || result;
-      const recipeBacked = plannerCulinaryRecipeHasPair(
-        focus,
-        canonical,
-        meal,
-        recipes,
-        allFoods,
-        typeof plannerRecipeSuitableForMeal === "function" ? plannerRecipeSuitableForMeal : null,
-      );
-      const score = plannerCulinaryPairScore(focus, canonical, meal, {
-        foods: allFoods,
-        recipeBacked,
-        learningOnly: isLearning,
-      });
-      if (score > -1000) candidates.push({ food: canonical, score, index });
-    }
-    if (!candidates.length) return isLearning ? originalCompanionFor(focus, meal, on, focusType) : null;
-    candidates.sort((a, b) => b.score - a.score || a.index - b.index);
-    return candidates[0].food;
+    return runtimeRecipes;
+  };
+  const recipeBackedPair = (focus, candidate, meal) => {
+    if (!focus?.id || !candidate?.id) return false;
+    const key = `${meal}|${[focus.id, candidate.id].sort().join("+")}`;
+    if (recipePairCache.has(key)) return recipePairCache.get(key);
+    const value = plannerCulinaryRecipeHasPair(
+      focus,
+      candidate,
+      meal,
+      allRecipes(),
+      state?.foods || [focus, candidate],
+      typeof plannerRecipeSuitableForMeal === "function" ? plannerRecipeSuitableForMeal : null,
+    );
+    recipePairCache.set(key, value);
+    return value;
   };
 
   if (typeof culinaryCompatibilityScore === "function") {
     const originalScore = culinaryCompatibilityScore;
     culinaryCompatibilityScore = function plannerCulinaryCompatibilityScore(focus, candidate, meal) {
-      const score = plannerCulinaryPairScore(focus, candidate, meal, { foods: state?.foods || [focus, candidate] });
+      const score = plannerCulinaryPairScore(focus, candidate, meal, {
+        foods: state?.foods || [focus, candidate],
+        recipeBacked: recipeBackedPair(focus, candidate, meal),
+      });
       return score > -1000 ? -score : 1000;
     };
     culinaryCompatibilityScore.__previous = originalScore;
   }
+
+  const originalCompanionFor = companionFor;
+  companionFor = function culinaryQualityCompanionFor(focus, meal, on, focusType = "") {
+    const result = originalCompanionFor(focus, meal, on, focusType);
+    if (!result) return null;
+    const isLearning = ["neu", "gezielt wiederholen", "Allergen einführen", "Allergen wiederholen", "manuell"].includes(String(focusType || ""));
+    const score = plannerCulinaryPairScore(focus, result, meal, {
+      foods: state?.foods || [focus, result],
+      recipeBacked: recipeBackedPair(focus, result, meal),
+      learningOnly: isLearning,
+    });
+    return score > -1000 || isLearning ? result : null;
+  };
+  companionFor.__previous = originalCompanionFor;
 
   return true;
 }

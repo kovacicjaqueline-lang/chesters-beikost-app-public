@@ -49,7 +49,7 @@ const AMOUNT_LEVELS = {
 };
 const PHASES = {
   kennenlernen: { label: "Kennenlernen", rank: 0, meals: ["lunch"] },
-  aufbau: { label: "Mahlzeitenaufbau", rank: 1, meals: ["breakfast", "lunch"] },
+  aufbau: { label: "Mahlzeitenaufbau", rank: 1, meals: ["lunch", "dinner"] },
   drei: { label: "Drei Hauptmahlzeiten", rank: 2, meals: ["breakfast", "lunch", "dinner"] },
   familie: { label: "Familienkost", rank: 3, meals: ["breakfast", "lunch", "snack", "dinner"] },
 };

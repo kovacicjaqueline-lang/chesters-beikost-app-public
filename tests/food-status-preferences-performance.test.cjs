@@ -109,7 +109,7 @@ test("Introduction-Vorfilter lässt Override und echte Ablehnungs-Wiederholung u
     "override",
     context.rank,
     context.lastOutcome,
-    () => false,
+    (item) => item.id === "abgelehnt",
   );
   assert.deepEqual(Array.from(blocked), []);
 

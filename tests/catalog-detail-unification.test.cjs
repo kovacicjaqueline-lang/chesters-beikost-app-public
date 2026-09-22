@@ -9,11 +9,13 @@ const recipes = fs.readFileSync(path.join(root, "js/recipes.js"), "utf8");
 const catalog = fs.readFileSync(path.join(root, "js/catalog-navigation.js"), "utf8");
 const css = fs.readFileSync(path.join(root, "styles.css"), "utf8");
 
-test("Lebensmittelkarten bieten dieselben Katalogaktionen wie Rezeptkarten", () => {
+test("Lebensmittel- und Rezeptkarten öffnen Details; Protokollieren liegt im Detail", () => {
   assert.match(foods, /catalogLogFood/);
   assert.match(foods, /id="foodCatalogLog"/);
-  assert.match(recipes, /catalogLogRecipe/);
-  assert.match(recipes, /catalogRecipeDetails/);
+  assert.match(recipes, /id="recipeCatalogLog"/);
+  assert.doesNotMatch(recipes, /catalogRecipeDetails/);
+  assert.match(recipes, /recipe-row-chevron/);
+  assert.doesNotMatch(recipes, /class="btn catalogLogRecipe"/);
 });
 
 test("Rezeptdetails werden nicht mehr inline in der Katalogliste aufgeklappt", () => {
@@ -21,6 +23,7 @@ test("Rezeptdetails werden nicht mehr inline in der Katalogliste aufgeklappt", (
   assert.match(recipes, /<details class="recipe-card-v2" open/);
   assert.doesNotMatch(recipes, /recipe-body-v2/);
   assert.match(catalog, /showRecipeInfo\(recipe\)/);
+  assert.match(recipes, /globalThis\.showRecipeInfo = showRecipeInfo/);
 });
 
 test("Beide Katalogtypen verwenden den gemeinsamen Protokoll-Einstieg", () => {
@@ -34,4 +37,18 @@ test("Katalogkarten und Detailansichten haben gemeinsame Aktions- und Layoutklas
   assert.match(css, /\.catalog-card-actions\s*\{/);
   assert.match(css, /\.catalog-detail-primary-actions\s*\{/);
   assert.match(css, /\.catalog-detail-hero\s*\{/);
+});
+
+test("Rezeptdetail stellt die vorhandenen Rezept- und Handlingdaten strukturiert dar", () => {
+  assert.match(recipes, /function recipeDetailIngredientItems\(r\)/);
+  assert.match(recipes, /Zutaten mit Mengen/);
+  assert.match(recipes, /Konsistenz &amp; Servierform/);
+  assert.match(recipes, /Fingerfood &amp; Handling/);
+  assert.match(recipes, /Allergene &amp; Sicherheit/);
+  assert.match(recipes, /recipeDetailStructuredFoods/);
+  assert.match(recipes, /preferredHandlingModes/);
+  assert.match(recipes, /recipeDetailVariantBody/);
+  assert.match(css, /\.recipe-detail-facts\s*\{/);
+  assert.match(css, /\.recipe-detail-list\s*\{/);
+  assert.match(css, /\.recipe-detail-choice\s*\{/);
 });

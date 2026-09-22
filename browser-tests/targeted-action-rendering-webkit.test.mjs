@@ -118,7 +118,7 @@ try {
   await removeManualMeal.evaluateAll((elements) => {
     for (const element of elements) {
       const details = element.closest("details.manual-meal");
-      if (details) details.open = true;
+      if (details && !details.open) details.querySelector("summary")?.click();
     }
   });
   const visibleRemoveManualMeal = page.locator(`${removeManualMealSelector}:visible`).first();

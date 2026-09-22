@@ -32,7 +32,7 @@ Der Übergang in die nächste Phase ist entwicklungsorientiert zu empfehlen und 
 | Phase | Automatisch geplante Slots |
 |---|---|
 | 1 – Kennenlernen | Mittagessen |
-| 2 – Mahlzeitenaufbau | Frühstück + Mittagessen |
+| 2 – Mahlzeitenaufbau | Mittagessen + Abendessen |
 | 3 – Drei Hauptmahlzeiten | Frühstück + Mittagessen + Abendessen |
 | 4 – Familienkost | Frühstück + Mittagessen + Snack + Abendessen |
 
@@ -68,8 +68,8 @@ Die Übergänge verwenden dieselbe Kernregel:
 
 | Aktuelle Phase | Nächste Phase | Neuer Auto-Slot | Spezifische Bedeutung von `additionalMealCue` |
 |---|---|---|---|
-| Kennenlernen | Mahlzeitenaufbau | Frühstück | Hunger/Interesse an einer zusätzlichen regelmäßigen Frühstücks-Essensgelegenheit |
-| Mahlzeitenaufbau | Drei Hauptmahlzeiten | Abendessen | Hunger/Interesse an einer zusätzlichen regelmäßigen Abend-Essensgelegenheit |
+| Kennenlernen | Mahlzeitenaufbau | Abendessen | Hunger/Interesse an einer zusätzlichen regelmäßigen Abend-Essensgelegenheit |
+| Mahlzeitenaufbau | Drei Hauptmahlzeiten | Frühstück | Hunger/Interesse an einer zusätzlichen regelmäßigen Frühstücks-Essensgelegenheit |
 | Drei Hauptmahlzeiten | Familienkost | Snack | tatsächlicher regelmäßiger Zusatzbedarf zwischen den drei Hauptmahlzeiten |
 | Familienkost | – | – | terminale Phase; keine weitere Empfehlung |
 

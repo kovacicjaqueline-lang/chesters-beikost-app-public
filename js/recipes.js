@@ -900,40 +900,156 @@ function recipeCatalogStatusBadge(r) {
   return '<span class="pill ok">Jetzt passend</span>';
 }
 
+function recipeDetailIngredientItems(r) {
+  let source = String(r.ingredients || (r.requires || []).join(", ") || "").trim();
+  if (!source) return [];
+  return source
+    .split(/,\s+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function recipeDetailStructuredFoods(r) {
+  let labels = [
+    ...(r.requires || []),
+    ...((r.alternatives || []).flat()),
+    ...(r.oneOf || []),
+    ...(r.milkChoices || []),
+  ];
+  let resolved = labels
+    .map((label) => typeof recipeFoodFromStructuredLabel === "function"
+      ? recipeFoodFromStructuredLabel(label, typeof FOOD_DB !== "undefined" ? FOOD_DB : [])
+      : null)
+    .filter(Boolean);
+  return [...new Map(resolved.map((item) => [item.id, item])).values()];
+}
+
+function recipeDetailHandlingLabel(mode) {
+  return ({
+    "spoon-smooth": "Fein und glatt vom Löffel",
+    "spoon-mashed": "Weich zerdrückt",
+    "spoon-soft-lumpy": "Weich stückig",
+    "finger-graspable": "Weiches Fingerfood",
+    "finger-small-soft": "Kleine weiche Stücke",
+  })[mode] || mode;
+}
+
+function recipeDetailBiteLabel(profile) {
+  return ({
+    "low-resistance-separate": "Bissen lässt sich mit wenig Widerstand abtrennen",
+    "easy-bite-separate": "Bissen lässt sich leicht abtrennen",
+    "graded-bite-required": "Gezieltes Abtrennen eines passenden Bissens erforderlich",
+  })[profile] || "";
+}
+
+function recipeDetailOralLabel(profile) {
+  return ({
+    "soft-breakdown": "weicht sehr leicht im Mund auf",
+    "easy-chew": "leichtes Kauen",
+    "structured-chew-required": "strukturiertes Kauen erforderlich",
+  })[profile] || "";
+}
+
+function recipeDetailAgeText(r) {
+  let parts = [];
+  if (r.hardMinMonths) parts.push(`frühestens ab etwa ${r.hardMinMonths} Monaten`);
+  if (r.minMonths && Number(r.minMonths) > Number(r.hardMinMonths || 0)) {
+    parts.push(`Orientierung ab etwa ${r.minMonths} Monaten`);
+  }
+  return parts.join(" · ") || "Altersorientierung nach bestehender Rezeptfreigabe";
+}
+
+function recipeDetailVariantBody(r) {
+  let rows = [];
+  if (r.selectedVariantLabel) {
+    let readiness = (r.selectedVariantRequirements || []).every(recipeIngredientReady) ? "" : " · noch offen";
+    rows.push(`<div class="recipe-detail-choice selected"><b>Variante:</b><span>${esc(r.selectedVariantLabel)}${readiness}</span></div>`);
+  }
+  if (r.selectedOption) {
+    rows.push(`<div class="recipe-detail-choice selected"><b>${r.name === "Milch-Getreide-Brei" ? "Aktuell ausgewähltes Getreide:" : "Vorausgewählt:"}</b><span>${esc(r.selectedOption)}${r.selectedOptionReady ? "" : " · noch offen"}</span></div>`);
+  }
+  if (r.selectedMilkOption) {
+    rows.push(`<div class="recipe-detail-choice selected"><b>Aktuell ausgewähltes Milchprodukt</b><span>${esc(r.selectedMilkOption)}${r.selectedMilkOptionReady ? "" : " · noch offen"}</span></div>`);
+  }
+  let sets = [r.requires || [], ...(r.alternatives || [])];
+  sets.forEach((set, index) => {
+    if (!set.length) return;
+    let label = r.variantLabels?.[index] || (index === 0 ? "Standardvariante" : `Alternative ${index}`);
+    rows.push(`<div class="recipe-detail-choice"><b>${esc(label)}</b><span>${set.map(esc).join(" · ")}</span></div>`);
+  });
+  if (r.oneOf?.length) {
+    let label = r.name === "Milch-Getreide-Brei" ? "Getreide-Auswahl" : "Eine Auswahl davon";
+    rows.push(`<div class="recipe-detail-choice"><b>${esc(label)}</b><span>${r.oneOf.map(esc).join(" · ")}</span></div>`);
+  }
+  if (r.milkChoices?.length) {
+    rows.push(`<div class="recipe-detail-choice"><b>Milchprodukt nach Auswahl</b><span>${r.milkChoices.map(esc).join(" · ")}</span></div>`);
+  }
+  if (!rows.length) return '<div class="small">Keine zusätzliche Variante nötig.</div>';
+  return rows.join("");
+}
+
 function recipeCatalogDetailBody(r) {
-  let optionParts = [];
-  if (r.selectedVariantLabel) optionParts.push('<div><b>Variante:</b> ' + esc(r.selectedVariantLabel) + ((r.selectedVariantRequirements || []).every(recipeIngredientReady) ? "" : " · noch offen") + "</div>");
-  if (r.selectedOption || r.availableOptions?.length) optionParts.push('<div><b>' + (r.oneOf?.length && r.name === "Milch-Getreide-Brei" ? "Getreide" : r.selectedOption ? "Vorausgewählt" : "Jetzt mögliche Auswahl") + ":</b> " + (r.selectedOption ? esc(r.selectedOption) + (r.selectedOptionReady ? "" : " · noch offen") : r.availableOptions.map(esc).join(", ")) + "</div>");
-  if (r.milkChoices?.length) optionParts.push('<div><b>Milchprodukt:</b> ' + (r.selectedMilkOption ? esc(r.selectedMilkOption) + (r.selectedMilkOptionReady ? "" : " · noch offen") : "noch keines gegessen") + "</div>");
-  if (r.variantLabels?.length > 1) optionParts.push('<div><b>Varianten:</b> ' + r.variantLabels.map(esc).join(" · ") + "</div>");
-  let variants = optionParts.length ? optionParts.join("") : '<div class="small">Keine zusätzliche Variante nötig.</div>';
-  let importantHints =
-    (r.skillRequirement ? '<div class="notice"><b>Sicher anbieten:</b> ' + esc(r.skillRequirement) + "</div>" : "") +
-    (r.unlocked ? "" : '<div class="recipe-missing"><b>Noch offen:</b> ' + esc(recipeMissingSummary(r)) + "</div>") +
-    (r.milkMeal === "full" ? '<div class="notice olive"><b>Milchmahlzeit:</b> Als volle Milchmahlzeit zählen; keine zweite volle Milchmahlzeit am selben Tag einplanen und nicht mit Fleisch oder Fisch kombinieren.</div>' : "");
-  let hints =
-    (r.ageHint ? '<div class="small recipe-age-hint">' + esc(r.ageHint) + "</div>" : "") +
-    (r.milkMeal === "small" ? '<div class="small">Kleine Milchproduktmenge; sie zählt nicht automatisch als volle Milchmahlzeit.</div>' : "");
-  if (!hints) hints = '<div class="small">Keine zusätzlichen Hinweise.</div>';
+  let ingredients = recipeDetailIngredientItems(r);
+  let structuredFoods = recipeDetailStructuredFoods(r);
+  let allergenFoods = structuredFoods.filter((item) => item.allergenGroup);
+  let allergens = [...new Set(allergenFoods.map((item) => item.allergenGroup))];
+  let handlingModes = [...new Set(r.preferredHandlingModes?.length ? r.preferredHandlingModes : (r.handlingModes || []))];
+  let hasFingerfood = handlingModes.some((mode) => String(mode).startsWith("finger-")) ||
+    (r.tags || []).some((tag) => /fingerfood/i.test(String(tag)));
+  let handlingText = handlingModes.length
+    ? handlingModes.map(recipeDetailHandlingLabel).join(" · ")
+    : "Darreichungsform nach dem hinterlegten Sicherheitshinweis";
+  let biteText = recipeDetailBiteLabel(r.biteSeparation);
+  let oralText = recipeDetailOralLabel(r.oralProcessing);
+  let familyText = r.familyLabel ? " · " + esc(r.familyLabel) : "";
+  let tags = (r.tags || []).map((tag) => `<span class="pill">${esc(tag)}</span>`).join("");
+  let ageText = recipeDetailAgeText(r);
+  let statusText = r.unlocked ? "Jetzt passend" : `Noch offen · ${recipeMissingSummary(r)}`;
+  let milkHint = r.milkMeal === "full"
+    ? "Als volle Milchmahlzeit zählen; keine zweite volle Milchmahlzeit am selben Tag einplanen und nicht mit Fleisch oder Fisch kombinieren."
+    : r.milkMeal === "small"
+      ? "Kleine Milchproduktmenge; sie zählt nicht automatisch als volle Milchmahlzeit."
+      : "";
   let storage = r.freezable
     ? '<div class="small">' + esc(r.freezerNote || "Portionsweise einfrieren und vollständig auftauen beziehungsweise erwärmen.") + '</div><button class="btn secondary full" style="margin-top:9px" data-add-recipe-stock="' + encodeURIComponent(r.name) + '">Als Vorrat eintragen</button>'
     : '<div class="small">Am besten frisch zubereiten.</div>';
-  let familyText = r.familyLabel ? " · " + esc(r.familyLabel) : "";
+
   return '<div class="catalog-detail-hero">' +
     '<div class="catalog-detail-hero-copy">' +
       '<div class="small catalog-detail-type">' + esc(recipeCatalogTypeLabel(r)) + familyText + "</div>" +
       '<div class="chips catalog-detail-status">' + recipeCatalogStatusBadge(r) + "</div>" +
-      '<div class="tiny">' + esc(r.batch || "kleine Portion") + "</div>" +
+      (tags ? '<div class="recipe-detail-tags">' + tags + "</div>" : "") +
     "</div>" +
     '<div class="catalog-detail-hero-icon" aria-hidden="true">' + recipeIconSvg(r) + "</div>" +
   "</div>" +
   '<div class="catalog-detail-primary-actions"><button class="btn full" id="recipeCatalogLog" type="button">Protokollieren</button></div>' +
-  '<section class="catalog-detail-section"><h3>Zutaten</h3><p class="small">' + esc(r.ingredients || (r.requires || []).join(", ")) + "</p></section>" +
-  '<section class="catalog-detail-section"><h3>Zubereitung</h3><p class="small">' + esc(r.note) + "</p></section>" +
-  importantHints +
-  '<details class="accordion recipe-subsection"><summary>Varianten</summary><div class="recipe-option-list" style="margin-top:10px">' + variants + "</div></details>" +
-  '<details class="accordion"><summary>Aufbewahrung</summary><div style="margin-top:10px">' + storage + "</div></details>" +
-  '<details class="accordion"><summary>Hinweise</summary><div style="margin-top:10px">' + hints + "</div></details>";
+  '<section class="catalog-detail-section recipe-detail-facts" aria-label="Rezept-Einordnung">' +
+    `<div class="recipe-detail-fact"><span>Eignung</span><b>${esc(statusText)}</b></div>` +
+    `<div class="recipe-detail-fact"><span>Alter</span><b>${esc(ageText)}</b></div>` +
+    `<div class="recipe-detail-fact"><span>Konsistenz</span><b>${esc(typeof textureName === "function" ? textureName(r.stage) : `Stufe ${r.stage || 1}`)}</b></div>` +
+    `<div class="recipe-detail-fact"><span>Ergibt</span><b>${esc(r.batch || "kleine Portion")}</b></div>` +
+  "</section>" +
+  '<section class="catalog-detail-section"><h3>Zutaten mit Mengen</h3><ul class="recipe-detail-list">' +
+    (ingredients.length ? ingredients.map((item) => `<li>${esc(item)}</li>`).join("") : '<li>Keine Mengenangabe hinterlegt.</li>') +
+  "</ul></section>" +
+  '<section class="catalog-detail-section"><h3>Zubereitung</h3><p class="small recipe-detail-preparation">' + esc(r.note || "Keine Zubereitungsangabe hinterlegt.") + "</p></section>" +
+  '<section class="catalog-detail-section"><h3>Konsistenz &amp; Servierform</h3>' +
+    `<div class="recipe-detail-fact"><span>Darreichungsform</span><b>${esc(handlingText)}</b></div>` +
+    (r.skillRequirement ? `<div class="notice recipe-detail-callout"><b>Sicher anbieten:</b> ${esc(r.skillRequirement)}</div>` : "") +
+  "</section>" +
+  (hasFingerfood ? '<section class="catalog-detail-section"><h3>Fingerfood &amp; Handling</h3>' +
+    (biteText ? `<p class="small"><b>Bissabtrennung:</b> ${esc(biteText)}</p>` : "") +
+    (oralText ? `<p class="small"><b>Orale Verarbeitung:</b> ${esc(oralText)}</p>` : "") +
+    (r.skillRequirement ? `<p class="small"><b>Praktischer Hinweis:</b> ${esc(r.skillRequirement)}</p>` : "") +
+  "</section>" : "") +
+  '<section class="catalog-detail-section"><h3>Allergene &amp; Sicherheit</h3>' +
+    (allergens.length
+      ? `<div class="recipe-detail-allergens">${allergens.map((item) => `<span class="pill warn">${esc(item)}</span>`).join("")}</div><p class="small">Hinterlegte Allergenquellen: ${allergenFoods.map((item) => esc(item.name)).join(" · ")}.</p>`
+      : '<p class="small">Keine strukturiert hinterlegte Allergenquelle in den Rezeptzutaten.</p>') +
+    (milkHint ? `<div class="notice olive recipe-detail-callout"><b>Milchhinweis:</b> ${esc(milkHint)}</div>` : "") +
+  "</section>" +
+  '<details class="accordion recipe-subsection"><summary>Varianten &amp; Alternativen</summary><div class="recipe-detail-choice-list recipe-option-list" style="margin-top:10px">' + recipeDetailVariantBody(r) + "</div></details>" +
+  '<details class="accordion"><summary>Aufbewahrung</summary><div style="margin-top:10px">' + storage + "</div></details>";
 }
 
 function showRecipeInfo(r) {
@@ -945,6 +1061,7 @@ function showRecipeInfo(r) {
   });
   if (typeof bindRecipeStockButtons === "function") bindRecipeStockButtons();
 }
+globalThis.showRecipeInfo = showRecipeInfo;
 
 function renderRecipeCard(r, { priorityImage = false, showDetails = true } = {}) {
   let type = recipeCatalogTypeLabel(r);
@@ -957,13 +1074,9 @@ function renderRecipeCard(r, { priorityImage = false, showDetails = true } = {})
           recipeIconSvg(r, priorityImage ? { loading: "eager", fetchPriority: "high" } : undefined) +
           '<div><b>' + esc(r.name) + '</b><div class="small recipe-type-text">' + esc(type) + '</div><div class="tiny recipe-tech-text">' + esc(r.batch || "kleine Portion") + familyText + "</div></div>" +
         "</div>" +
-        '<div class="recipe-summary-end">' + recipeCatalogStatusBadge(r) + "</div>" +
+        '<div class="recipe-summary-end">' + recipeCatalogStatusBadge(r) + '<span class="recipe-row-chevron" aria-hidden="true">›</span></div>' +
       "</div>" +
     "</summary>" +
-    '<div class="catalog-card-actions">' +
-      '<button class="btn catalogLogRecipe" data-recipe="' + encodedName + '" type="button">Protokollieren</button>' +
-      '<button class="btn secondary catalogRecipeDetails" data-recipe="' + encodedName + '" type="button">Details</button>' +
-    "</div>" +
     (showDetails ? recipeCatalogDetailBody(r) : "") +
   "</details>";
 }

@@ -316,15 +316,6 @@
         if (recipe && typeof showRecipeInfo === "function") showRecipeInfo(recipe);
       };
     });
-    document.querySelectorAll(".catalogRecipeDetails").forEach((button) => {
-      button.onclick = () => {
-        const recipe = recipeByCatalogName.get(decodeCatalogValue(button.dataset.recipe));
-        if (recipe && typeof showRecipeInfo === "function") showRecipeInfo(recipe);
-      };
-    });
-    document.querySelectorAll(".catalogLogRecipe").forEach((button) => {
-      button.onclick = () => openCatalogRecipeLog(decodeCatalogValue(button.dataset.recipe));
-    });
     globalThis.MobileUiLifecycle?.afterRender("foods", { source: "recipe-catalog" });
   }
 

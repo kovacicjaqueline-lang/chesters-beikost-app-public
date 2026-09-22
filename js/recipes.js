@@ -966,7 +966,7 @@ function recipeDetailVariantBody(r) {
     rows.push(`<div class="recipe-detail-choice selected"><b>Aktuell ausgewählte Variante</b><span>${esc(r.selectedVariantLabel)}${readiness}</span></div>`);
   }
   if (r.selectedOption) {
-    rows.push(`<div class="recipe-detail-choice selected"><b>${r.name === "Milch-Getreide-Brei" ? "Aktuell ausgewähltes Getreide" : "Aktuell ausgewählte Zutat"}</b><span>${esc(r.selectedOption)}${r.selectedOptionReady ? "" : " · noch offen"}</span></div>`);
+    rows.push(`<div class="recipe-detail-choice selected"><b>${r.name === "Milch-Getreide-Brei" ? "Aktuell ausgewähltes Getreide:" : "Vorausgewählt:"}</b><span>${esc(r.selectedOption)}${r.selectedOptionReady ? "" : " · noch offen"}</span></div>`);
   }
   if (r.selectedMilkOption) {
     rows.push(`<div class="recipe-detail-choice selected"><b>Aktuell ausgewähltes Milchprodukt</b><span>${esc(r.selectedMilkOption)}${r.selectedMilkOptionReady ? "" : " · noch offen"}</span></div>`);

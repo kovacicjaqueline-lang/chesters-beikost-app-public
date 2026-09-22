@@ -74,6 +74,19 @@ try {
   assert.notEqual(planProfile.afterDateChange, planProfile.today, "Plan-Datumswechsel muss den gewählten Folgetag speichern");
   assert.equal(planProfile.finalPlanFrom, planProfile.today, "Heute muss planFrom wieder auf den aktuellen Tag setzen");
 
+  const stalePlanProfile = await page.evaluate(() => {
+    const saveStart = performance.now();
+    window.save();
+    const saveMs = performance.now() - saveStart;
+    const renderStart = performance.now();
+    window.renderCurrentView();
+    return {
+      saveMs,
+      renderMs: performance.now() - renderStart,
+    };
+  });
+  assert.ok(Number.isFinite(stalePlanProfile.renderMs), "Stale-Plan-Render muss messbar bleiben");
+
   const mealDeleteSetup = await page.evaluate(() => {
     const bridge = window.__beikostTest;
     const snapshot = bridge.getState();
@@ -273,6 +286,7 @@ try {
 
   console.log(`[targeted-action-profile] ${JSON.stringify({
     plan: planProfile.timings,
+    stalePlan: stalePlanProfile,
     mealDelete: { deleteMealMs, undoMealMs },
     food: foodProfile.timings,
     deleteMs,

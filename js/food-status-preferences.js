@@ -60,18 +60,34 @@ function foodStatusPreferenceIntroductionExclude(
 function foodStatusPreferenceNextAutomaticResult(producer, exclude = []) {
   let blocked = [...exclude];
   let max = (state?.foods?.length || 0) + 1;
+  let producerCalls = 0;
+  let skipped = 0;
+  let finish = (result) => {
+    if (typeof globalThis !== "undefined" && globalThis.__targetedActionRenderProbe && producerCalls > 1) {
+      console.log(`[food-status-next-profile] ${JSON.stringify({
+        producerCalls,
+        skipped,
+        resultId: result?.f?.id || "",
+        resultType: result?.type || "",
+        blockedCount: blocked.length,
+      })}`);
+    }
+    return result;
+  };
   for (let index = 0; index < max; index++) {
+    producerCalls += 1;
     let result = producer(blocked);
-    if (!result?.f) return result;
+    if (!result?.f) return finish(result);
     if (!foodStatusPreferenceShouldSkipAutomaticResult(
       result,
       rank(result.f),
       lastOutcome(result.f.id),
-    )) return result;
-    if (blocked.includes(result.f.id)) return null;
+    )) return finish(result);
+    skipped += 1;
+    if (blocked.includes(result.f.id)) return finish(null);
     blocked.push(result.f.id);
   }
-  return null;
+  return finish(null);
 }
 
 function foodStatusPreferenceKnownBase(meal, exclude = []) {

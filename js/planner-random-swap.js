@@ -445,7 +445,6 @@
     const suitable = typeof plannerRecipeSuitableForMeal === "function"
       ? plannerRecipeSuitableForMeal
       : recipeSuitableForMeal;
-
     for (const recipe of shuffle(recipes)) {
       if (!recipe || recipe.name === current.recipeName) continue;
       if (Array.isArray(recipe.requirementMissing) && recipe.requirementMissing.length) continue;
@@ -660,6 +659,19 @@
     } finally {
       isAutoLockDate = originalIsAutoLockDate;
     }
+  };
+
+  const baseLockedMeal = lockedMeal;
+  lockedMeal = function randomSwapAwareLockedMeal(date, meal) {
+    const generated = baseLockedMeal(date, meal);
+    const lock = state.planLocks?.[slotKey(date, meal)];
+    const preservedPlanId = lock?.[PIN_FLAG] && (lock.planId || lock.plannedMealId);
+    if (!generated || !preservedPlanId) return generated;
+    return {
+      ...generated,
+      planId: preservedPlanId,
+      plannedMealId: lock.plannedMealId || preservedPlanId,
+    };
   };
 
   const baseRenderMealCore = renderMealCore;

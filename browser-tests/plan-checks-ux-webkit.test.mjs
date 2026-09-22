@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { webkit } from "playwright";
 import { closeBrowserApp, startStaticServer } from "./helpers/app-harness.mjs";
+import { installBrowserTimingProbe } from "./helpers/browser-timing-probe.mjs";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const artifactDir = path.join(root, "artifacts", "browser-tests", "plan-checks-ux-webkit");
 
@@ -225,6 +226,7 @@ async function assertSheetFitsMobile(page) {
 const server = await startStaticServer();
 const { port } = server.address();
 const browser = await webkit.launch();
+let timingProbe = null;
 
 try {
   const context = await browser.newContext({
@@ -234,6 +236,7 @@ try {
     hasTouch: true,
   });
   const page = await context.newPage();
+  timingProbe = installBrowserTimingProbe(page);
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
 
@@ -374,5 +377,6 @@ try {
   await context.close();
   console.log("plan-checks-ux-webkit: ok");
 } finally {
+  console.log(`[browser-timing-probe] ${JSON.stringify(timingProbe?.report?.() || {})}`);
   await closeBrowserApp({ context: typeof context !== "undefined" ? context : null, browser, server });
 }

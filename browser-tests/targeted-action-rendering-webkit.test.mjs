@@ -1,48 +1,8 @@
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { webkit } from "playwright";
-
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const mimeTypes = {
-  ".html": "text/html; charset=utf-8",
-  ".js": "text/javascript; charset=utf-8",
-  ".css": "text/css; charset=utf-8",
-  ".json": "application/json; charset=utf-8",
-  ".webmanifest": "application/manifest+json; charset=utf-8",
-  ".svg": "image/svg+xml",
-  ".png": "image/png",
-  ".webp": "image/webp",
-};
-
-function startStaticServer() {
-  const server = http.createServer((request, response) => {
-    const url = new URL(request.url || "/", "http://127.0.0.1");
-    const pathname = decodeURIComponent(url.pathname === "/" ? "/index.html" : url.pathname);
-    const filePath = path.resolve(root, `.${pathname}`);
-    if (filePath !== path.join(root, "index.html") && !filePath.startsWith(`${root}${path.sep}`)) {
-      response.writeHead(403).end("Forbidden");
-      return;
-    }
-    fs.stat(filePath, (error, stat) => {
-      if (error || !stat.isFile()) {
-        response.writeHead(404).end("Not found");
-        return;
-      }
-      response.writeHead(200, {
-        "content-type": mimeTypes[path.extname(filePath)] || "application/octet-stream",
-        "cache-control": "no-store",
-      });
-      fs.createReadStream(filePath).pipe(response);
-    });
-  });
-  return new Promise((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(0, "127.0.0.1", () => resolve(server));
-  });
-}
+import { closeBrowserApp, startStaticServer } from "./helpers/app-harness.mjs";
 
 async function waitForView(page, id) {
   await page.waitForFunction((viewId) => document.getElementById(viewId)?.classList.contains("active"), id);
@@ -141,6 +101,7 @@ try {
     snapshot.planLocks[key] = { ...meal, mode: "manual" };
     bridge.setState(snapshot);
     window.showView("plan");
+    window.renderCurrentView();
     return { date, key };
   });
   await waitForView(page, "plan");
@@ -152,28 +113,17 @@ try {
     window.__targetedActionRenderProbe.current = 0;
     window.__targetedActionRenderProbe.plan = 0;
   });
-  const removeManualMealSelector = `#plan .removeManualMeal[data-date="${mealDeleteSetup.date}"][data-meal="lunch"]`;
-  await page.waitForFunction((selector) => !!document.querySelector(selector), removeManualMealSelector);
-  await page.locator(removeManualMealSelector).evaluateAll((elements) => {
-    elements.forEach((button) => {
-      const details = button.closest("details.manual-meal");
-      if (details) details.open = true;
-    });
+  const removeManualMealSelector = `.removeManualMeal[data-date="${mealDeleteSetup.date}"][data-meal="lunch"]`;
+  const removeManualMeal = page.locator(removeManualMealSelector);
+  await removeManualMeal.evaluateAll((elements) => {
+    for (const element of elements) {
+      const details = element.closest("details.manual-meal");
+      if (details && !details.open) details.querySelector("summary")?.click();
+    }
   });
-  await page.waitForFunction((selector) => [...document.querySelectorAll(selector)].some((element) => {
-    const style = getComputedStyle(element);
-    const rect = element.getBoundingClientRect();
-    return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
-  }), removeManualMealSelector);
-  await page.locator(removeManualMealSelector).evaluateAll((elements) => {
-    const visible = elements.find((element) => {
-      const style = getComputedStyle(element);
-      const rect = element.getBoundingClientRect();
-      return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
-    });
-    if (!visible) throw new Error("Kein sichtbarer Löschbutton für die manuelle Mahlzeit gefunden");
-    visible.click();
-  });
+  const visibleRemoveManualMeal = page.locator(`${removeManualMealSelector}:visible`).first();
+  await visibleRemoveManualMeal.waitFor({ state: "visible" });
+  await visibleRemoveManualMeal.click();
   await page.locator("#confirmMealDelete").waitFor({ state: "visible" });
   const deleteMealMs = await page.evaluate(() => {
     const start = performance.now();
@@ -329,9 +279,7 @@ try {
     undoMs,
   })}`);
 } finally {
-  await context.close();
-  await browser.close();
-  await new Promise((resolve) => server.close(resolve));
+  await closeBrowserApp({ context, browser, server });
 }
 
 console.log("WebKit targeted action rendering regression passed.");

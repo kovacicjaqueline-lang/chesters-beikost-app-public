@@ -1,0 +1,17 @@
+{
+  "targeted-action-rendering-webkit.test.mjs": 102000,
+  "app-resume-lifecycle-webkit.test.mjs": 53000,
+  "open-ui-latency-webkit.test.mjs": 70000,
+  "today-completed-card-ui-webkit.test.mjs": 33000,
+  "plan-checks-ux-webkit.test.mjs": 25000,
+  "mobile-prep-webkit.test.mjs": 24000,
+  "planner-mobile-first-webkit.test.mjs": 24000,
+  "ui-meal-editor-webkit.test.mjs": 90000,
+  "meal-card-unification-webkit.test.mjs": 56000,
+  "flow-c-dialogs-webkit.test.mjs": 31000,
+  "planner-random-swap-webkit.test.mjs": 30000,
+  "save-ui-latency-webkit.test.mjs": 126000,
+  "phase-readiness-clarity-webkit.test.mjs": 30000,
+  "catalog-filter-rendering-performance-webkit.test.mjs": 30000,
+  "catalog-search-rendering-performance-webkit.test.mjs": 30000
+}

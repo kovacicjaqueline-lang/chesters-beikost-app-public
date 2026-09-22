@@ -377,7 +377,7 @@
     const name = recipe?.name || "";
     const key = `${name}|${priorityImage ? "priority" : "deferred"}`;
     if (!recipeCardHtmlCache.has(key)) {
-      recipeCardHtmlCache.set(key, renderRecipeCard(recipe, { priorityImage }));
+      recipeCardHtmlCache.set(key, renderRecipeCard(recipe, { priorityImage, showDetails: false }));
     }
     return recipeCardHtmlCache.get(key);
   }

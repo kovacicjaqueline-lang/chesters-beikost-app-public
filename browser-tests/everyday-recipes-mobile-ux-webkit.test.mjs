@@ -210,6 +210,20 @@ try {
     const image = document.querySelector("#recipeList .recipe-card-v2 img.illustration-icon__asset");
     return !!image && image.complete && image.naturalWidth > 0;
   });
+  await page.locator("#recipeList .catalogRecipeDetails").first().click();
+  await page.locator("#genericModal.open").waitFor();
+  for (const selector of [
+    ".recipe-detail-facts",
+    ".recipe-detail-list",
+    ".recipe-detail-preparation",
+    ".recipe-detail-choice-list",
+  ]) {
+    assert.equal(await page.locator(`#genericBody ${selector}`).count(), 1, `Rezeptdetail rendert ${selector}`);
+  }
+  assert.match(await page.locator("#genericBody").innerText(), /Zutaten mit Mengen/);
+  assert.match(await page.locator("#genericBody").innerText(), /Konsistenz & Servierform/);
+  assert.match(await page.locator("#genericBody").innerText(), /Allergene & Sicherheit/);
+  await page.locator("#closeGeneric").click();
   for (const filter of ["available", "almost", "pantry", "freezer"]) {
     assert.equal(await page.locator(`#recipeFilter [data-recipe-filter="${filter}"]`).count(), 1, `${filter} bleibt schnell erreichbar`);
   }

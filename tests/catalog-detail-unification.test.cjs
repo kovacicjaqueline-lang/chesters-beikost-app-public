@@ -35,3 +35,17 @@ test("Katalogkarten und Detailansichten haben gemeinsame Aktions- und Layoutklas
   assert.match(css, /\.catalog-detail-primary-actions\s*\{/);
   assert.match(css, /\.catalog-detail-hero\s*\{/);
 });
+
+test("Rezeptdetail stellt die vorhandenen Rezept- und Handlingdaten strukturiert dar", () => {
+  assert.match(recipes, /function recipeDetailIngredientItems\(r\)/);
+  assert.match(recipes, /Zutaten mit Mengen/);
+  assert.match(recipes, /Konsistenz &amp; Servierform/);
+  assert.match(recipes, /Fingerfood &amp; Handling/);
+  assert.match(recipes, /Allergene &amp; Sicherheit/);
+  assert.match(recipes, /recipeDetailStructuredFoods/);
+  assert.match(recipes, /preferredHandlingModes/);
+  assert.match(recipes, /recipeDetailVariantBody/);
+  assert.match(css, /\.recipe-detail-facts\s*\{/);
+  assert.match(css, /\.recipe-detail-list\s*\{/);
+  assert.match(css, /\.recipe-detail-choice\s*\{/);
+});

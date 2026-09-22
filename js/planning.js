@@ -66,9 +66,17 @@ function plannerRecipeBreakfastHasBase(recipe) {
 function manualMealKey(date, meal) {
   return `${date}|${meal}`;
 }
+function plannerManualMealIsExplicitlyAdded(data) {
+  return data?.manualAdded === true;
+}
+function plannerManualMealCanOccupySlot(date, meal, data) {
+  if (!data) return false;
+  if (plannerManualMealIsExplicitlyAdded(data)) return true;
+  return typeof activeMeal !== "function" || activeMeal(meal, date);
+}
 function manualMealFor(date, meal) {
   let data = state.manualMeals?.[manualMealKey(date, meal)];
-  if (!data) return null;
+  if (!plannerManualMealCanOccupySlot(date, meal, data)) return null;
   return {
     ...clone(data),
     meal,
@@ -1015,7 +1023,9 @@ function removeUnavailableGeneratedFoods(meal) {
 
 function buildDay(date, index, ctx) {
   let meals = [];
-  let activeMeals = ["breakfast", "lunch", "snack", "dinner"].filter((m) => activeMeal(m, date) || !!state.manualMeals?.[manualMealKey(date, m)]);
+  let activeMeals = ["breakfast", "lunch", "snack", "dinner"].filter((m) =>
+    activeMeal(m, date) || plannerManualMealIsExplicitlyAdded(state.manualMeals?.[manualMealKey(date, m)]),
+  );
   // A later fixed/manual milk meal must already protect earlier automatic meals on the same day.
   let hasPresetFullMilk = ["breakfast", "lunch", "snack", "dinner"].some((meal) => {
     let preset = manualMealFor(date, meal) || lockedMeal(date, meal);

@@ -89,7 +89,7 @@ try {
         createdAt: `${window.__beikostTest.addDays(current, -1)}T08:00:00.000Z`,
       },
     ];
-    state.settings.phaseSelected = "aufbau";
+    state.settings.phaseSelected = "drei";
     state.settings.planFrom = current;
     state.shoppingHints = {};
     state.followUps = {};

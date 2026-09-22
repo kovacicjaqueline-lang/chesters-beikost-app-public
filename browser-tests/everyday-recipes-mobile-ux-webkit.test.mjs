@@ -41,7 +41,7 @@ async function seedEverydayPlan(page) {
       recipeInventoryId: "",
       type: "bekannt kombinieren",
       note: "",
-      manualAdded: false,
+      manualAdded: true,
       active: true,
       mode: "manual",
       locked: true,

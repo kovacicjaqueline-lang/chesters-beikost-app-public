@@ -56,6 +56,7 @@
     "./recipe-inventory-ingredients.js?v=10.1.26",
     "./recipe-v2-component-options.js?v=10.1.26",
     "./log.js?v=10.1.26",
+    "./food-status-preferences.js?v=10.1.26",
     "./ui.js?v=10.1.26",
     "../app.js?v=10.1.26"
   );
@@ -76,6 +77,9 @@
     // damit der Worker dieselbe Plan-ID-/Rollover-Basis wie die App verwendet.
     importScripts("./planner-log-rollover.js?v=10.1.26");
 
+    if (typeof installFoodStatusPreferencePolicy === "function") {
+      installFoodStatusPreferencePolicy();
+    }
     if (typeof installFoodPolicyRuntime === "function") {
       installFoodPolicyRuntime();
     }

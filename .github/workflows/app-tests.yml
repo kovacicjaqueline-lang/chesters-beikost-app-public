@@ -2,7 +2,9 @@ name: App regression tests
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - test/audit-selective-runner
     paths:
       - 'index.html'
       - '**/*.css'

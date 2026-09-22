@@ -38,7 +38,7 @@ test('TODO3 PHASE-01..04: Phasenmodell-v2 hat exakt die freigegebenen automatisc
   const context = loadModel(state);
   const expected = {
     kennenlernen: ['lunch'],
-    aufbau: ['breakfast', 'lunch'],
+    aufbau: ['lunch', 'dinner'],
     drei: ['breakfast', 'lunch', 'dinner'],
     familie: ['breakfast', 'lunch', 'snack', 'dinner'],
   };

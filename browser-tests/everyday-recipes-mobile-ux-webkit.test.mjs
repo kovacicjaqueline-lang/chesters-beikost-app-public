@@ -195,6 +195,7 @@ try {
   await page.locator('nav button[data-view="foods"]').click();
   await page.locator("#recipesSection").waitFor({ state: "visible" });
   await page.locator("#recipeList .recipe-card-v2").first().waitFor();
+  assert.equal(await page.locator("#recipeList .catalogLogRecipe").count(), 0, "Protokollieren erscheint erst in den Rezeptdetails");
 
   const recipeImages = await page.locator("#recipeList .recipe-card-v2 img.illustration-icon__asset").evaluateAll((images) =>
     images.map((image) => ({

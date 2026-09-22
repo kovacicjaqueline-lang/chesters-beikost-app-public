@@ -1048,7 +1048,7 @@ function recipeCatalogDetailBody(r) {
       : '<p class="small">Keine strukturiert hinterlegte Allergenquelle in den Rezeptzutaten.</p>') +
     (milkHint ? `<div class="notice olive recipe-detail-callout"><b>Milchhinweis:</b> ${esc(milkHint)}</div>` : "") +
   "</section>" +
-  '<details class="accordion recipe-subsection"><summary>Varianten &amp; Alternativen</summary><div class="recipe-detail-choice-list" style="margin-top:10px">' + recipeDetailVariantBody(r) + "</div></details>" +
+  '<details class="accordion recipe-subsection"><summary>Varianten &amp; Alternativen</summary><div class="recipe-detail-choice-list recipe-option-list" style="margin-top:10px">' + recipeDetailVariantBody(r) + "</div></details>" +
   '<details class="accordion"><summary>Aufbewahrung</summary><div style="margin-top:10px">' + storage + "</div></details>";
 }
 
@@ -1061,6 +1061,7 @@ function showRecipeInfo(r) {
   });
   if (typeof bindRecipeStockButtons === "function") bindRecipeStockButtons();
 }
+globalThis.showRecipeInfo = showRecipeInfo;
 
 function renderRecipeCard(r, { priorityImage = false, showDetails = true } = {}) {
   let type = recipeCatalogTypeLabel(r);
@@ -1077,7 +1078,6 @@ function renderRecipeCard(r, { priorityImage = false, showDetails = true } = {})
       "</div>" +
     "</summary>" +
     '<div class="catalog-card-actions">' +
-      '<button class="btn catalogLogRecipe" data-recipe="' + encodedName + '" type="button">Protokollieren</button>' +
       '<button class="btn secondary catalogRecipeDetails" data-recipe="' + encodedName + '" type="button">Details</button>' +
     "</div>" +
     (showDetails ? recipeCatalogDetailBody(r) : "") +

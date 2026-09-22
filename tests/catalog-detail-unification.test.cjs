@@ -9,11 +9,12 @@ const recipes = fs.readFileSync(path.join(root, "js/recipes.js"), "utf8");
 const catalog = fs.readFileSync(path.join(root, "js/catalog-navigation.js"), "utf8");
 const css = fs.readFileSync(path.join(root, "styles.css"), "utf8");
 
-test("Lebensmittelkarten bieten dieselben Katalogaktionen wie Rezeptkarten", () => {
+test("Lebensmittel- und Rezeptkarten öffnen Details; Protokollieren liegt im Detail", () => {
   assert.match(foods, /catalogLogFood/);
   assert.match(foods, /id="foodCatalogLog"/);
-  assert.match(recipes, /catalogLogRecipe/);
+  assert.match(recipes, /id="recipeCatalogLog"/);
   assert.match(recipes, /catalogRecipeDetails/);
+  assert.doesNotMatch(recipes, /class="btn catalogLogRecipe"/);
 });
 
 test("Rezeptdetails werden nicht mehr inline in der Katalogliste aufgeklappt", () => {
@@ -21,6 +22,7 @@ test("Rezeptdetails werden nicht mehr inline in der Katalogliste aufgeklappt", (
   assert.match(recipes, /<details class="recipe-card-v2" open/);
   assert.doesNotMatch(recipes, /recipe-body-v2/);
   assert.match(catalog, /showRecipeInfo\(recipe\)/);
+  assert.match(recipes, /globalThis\.showRecipeInfo = showRecipeInfo/);
 });
 
 test("Beide Katalogtypen verwenden den gemeinsamen Protokoll-Einstieg", () => {

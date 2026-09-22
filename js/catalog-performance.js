@@ -387,7 +387,25 @@
     list.dataset.catalogPerformanceBound = "true";
     list.addEventListener("click", (event) => {
       const button = event.target?.closest?.("button");
-      if (!button || !list.contains(button)) return;
+      const card = event.target?.closest?.(".recipe-card-v2");
+      if ((!button && !card) || (button && !list.contains(button)) || (card && !list.contains(card))) return;
+
+      const recipeForCard = () => {
+        if (!card || typeof recipeByName !== "function") return null;
+        let encodedName = card.dataset.recipe || "";
+        let name = encodedName;
+        try { name = decodeURIComponent(encodedName); } catch {}
+        return recipeByName(name);
+      };
+
+      if (button?.matches(".catalogRecipeDetails") || event.target?.closest?.("summary")) {
+        event.preventDefault();
+        const recipe = recipeForCard();
+        if (recipe && typeof globalThis.showRecipeInfo === "function") globalThis.showRecipeInfo(recipe);
+        return;
+      }
+
+      if (!button) return;
 
       if (button.id === "recipeEmptyAction") {
         recipeQuery = "";

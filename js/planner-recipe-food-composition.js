@@ -93,6 +93,7 @@ function plannerRecipeFoodCompositionCandidates(
       result.push({
         key: pairing.key || `${recipe.name}+${additionalFoodId}`,
         recipe,
+        meal: meal.meal,
         recipeIngredientFoodIds: ids,
         additionalFoodId,
         additionalFoodName: additionalFood.name,
@@ -109,7 +110,20 @@ function plannerRecipeFoodCompositionCandidates(
 }
 
 function plannerSelectRecipeFoodComposition(candidates) {
-  return (candidates || [])[0] || null;
+  if (!Array.isArray(candidates) || !candidates.length) return null;
+  if (typeof plannerCulinaryRecipeScore !== "function") return candidates[0] || null;
+  return candidates
+    .map((candidate, index) => ({
+      candidate,
+      index,
+      score: plannerCulinaryRecipeScore(
+        candidate.recipe,
+        [...(candidate.recipeIngredientFoodIds || []), candidate.additionalFoodId],
+        typeof state !== "undefined" ? state.foods || [] : [],
+        candidate.meal || "lunch",
+      ),
+    }))
+    .sort((a, b) => b.score - a.score || a.index - b.index)[0]?.candidate || null;
 }
 
 function plannerApplyRecipeFoodComposition(meal, candidate) {

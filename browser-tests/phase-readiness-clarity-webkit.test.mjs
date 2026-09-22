@@ -66,7 +66,7 @@ try {
   }
 
   assert.match(await page.locator("#genericBody").textContent(), /Nächste Phase noch nicht empfohlen/);
-  assert.match(await page.locator("#genericBody").textContent(), /zusätzlich ein Frühstück\. Mittagessen bleibt bestehen/);
+  assert.match(await page.locator("#genericBody").textContent(), /zusätzlich ein Abendessen\. Frühstück und Mittagessen bleiben bestehen/);
   assert.equal(await page.locator("#toast").isVisible(), false, "Abnahmescreenshot darf keinen alten Toast enthalten");
   await assertSheetFitsMobile(page);
   await page.screenshot({ path: path.join(screenshotDir, "phase-readiness-clean.png"), fullPage: false });

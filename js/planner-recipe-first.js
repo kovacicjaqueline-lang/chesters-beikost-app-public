@@ -197,18 +197,29 @@ function plannerSelectExactRecipe(
   ctx = {},
   preferInventory = false,
   inventoryPortionsFn = null,
+  meal = "",
 ) {
   let inventoryPortions = typeof inventoryPortionsFn === "function" ? inventoryPortionsFn : () => 0;
   let ranked = (candidates || [])
     .map((recipe) => {
       let available = inventoryPortions(recipe.name) > (ctx.recipeReserved?.get(recipe.name) || 0);
+      let culinaryScore = typeof plannerCulinaryRecipeScore === "function" && typeof recipeFoodIds === "function"
+        ? plannerCulinaryRecipeScore(
+          recipe,
+          recipeFoodIds(recipe),
+          typeof state !== "undefined" ? state.foods || [] : [],
+          meal,
+        )
+        : 0;
       return {
         recipe,
+        culinaryScore,
         stockRank: preferInventory && available ? 0 : 1,
         used: ctx.recipePlannedUse?.get(recipe.name) || 0,
       };
     })
     .sort((a, b) =>
+      b.culinaryScore - a.culinaryScore ||
       a.stockRank - b.stockRank ||
       a.used - b.used ||
       String(a.recipe.name).localeCompare(String(b.recipe.name), "de"),
@@ -484,29 +495,29 @@ function installPlannerRecipeFirstRuntime() {
 
       let recipes = recipeStates();
       let ingredientReadyForMeal = (name) =>
-        plannerRecipeIngredientReadyForMeal(
-          name,
-          meal,
-          state?.foods || [],
-          recipeIngredientReady,
-        );
+        typeof plannerCulinaryRecipeIngredientReady === "function"
+          ? plannerCulinaryRecipeIngredientReady(name, meal, date)
+          : plannerRecipeIngredientReadyForMeal(
+              name,
+              meal,
+              state?.foods || [],
+              recipeIngredientReady,
+            );
       let recipeAllowed = (candidate) =>
         plannerRecipeMilkContextCompatible(meal, candidate) &&
         !(candidate?.milkMeal === "full" &&
           typeof recipeContainsMeatOrFish === "function" &&
           recipeContainsMeatOrFish(candidate));
 
-      let candidates = ids.length
-        ? plannerExactRecipeCandidates(
-            ids,
-            meal.meal,
-            recipes,
-            state?.foods || [],
-            plannerRecipeSuitableForMeal,
-            ingredientReadyForMeal,
-            recipeAllowed,
-          )
-        : [];
+      let candidates = plannerExactRecipeCandidates(
+        ids,
+        meal.meal,
+        recipes,
+        state?.foods || [],
+        plannerRecipeSuitableForMeal,
+        ingredientReadyForMeal,
+        recipeAllowed,
+      );
       if (ctx && Number(state?.__plannerStandaloneRecipeOffset)) {
         ctx.recipeSelectionOffset = Number(state.__plannerStandaloneRecipeOffset);
       }
@@ -515,6 +526,7 @@ function installPlannerRecipeFirstRuntime() {
         ctx,
         !!state?.settings?.preferInventoryInPlan,
         typeof recipeInventoryPortions === "function" ? recipeInventoryPortions : null,
+        meal.meal,
       );
       if (recipe) {
         plannerPromoteMealToRecipe(

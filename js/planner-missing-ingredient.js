@@ -500,7 +500,9 @@
     const original = load;
     const wrapped = function missingIngredientAwareLoad(...args) {
       installAvailabilityPolicies();
-      return original(...args);
+      const result = original(...args);
+      installAvailabilityPolicies();
+      return result;
     };
     wrapped.__missingIngredientAware = true;
     load = wrapped;
@@ -569,6 +571,7 @@
       now,
     );
     state.pantry[foodId] = false;
+    installAvailabilityPolicies();
     state.followUps[foodId] = awaitingStockFollowUp(
       previousFollowUp,
       foodId,

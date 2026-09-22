@@ -90,6 +90,7 @@ const PLAN08_PRECACHE = [
   "./js/planner-meal-eligibility.js",
   "./js/planner-milk-policy.js",
   "./js/planner-iron-preference.js",
+  "./js/planner-culinary-quality.js?v=10.1.26",
   "./data/food-presentation.js",
   "./js/planner-meal-presentation.js",
   "./js/planner-recipe-first.js",
@@ -139,7 +140,7 @@ const PLAN_CHECK_PRECACHE = [
 // Der bisherige CSS-Schlüssel bleibt für einen Update-Zyklus dabei: Bereits geöffnete
 // PWA-Clients mit dem alten index.html erhalten beim nächsten Start trotzdem den Fix.
 const UI_PRECACHE = [
-  "./js/planner-week-cache.js?v=10.1.26",
+  "./js/planner-week-cache.js?v=10.1.26&planner-cache=3",
   "./js/planner-week-worker.js?v=10.1.26",
   "./ui-meal-editor-footer.css?v=10.1.26-circle-r2",
   "./ui-meal-editor-footer.css?v=10.1.26",

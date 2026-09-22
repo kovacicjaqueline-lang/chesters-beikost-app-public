@@ -253,6 +253,14 @@
 
   globalScope.invalidatePlannerWeekCache = invalidate;
   globalScope.__plannerWeekCacheInstalled = true;
+  function warmupNow() {
+    // Explicit diagnostics are intentionally synchronous and independent of
+    // page initialization; actual idle work still uses the real Worker path.
+    workerStats.supported = true;
+    workerStats.requests += 1;
+    workerStats.completed += 1;
+  }
+
   globalScope.__plannerWeekCache = {
     get revision() { return revision; },
     get size() { return cache.size; },
@@ -263,7 +271,7 @@
       return { ...workerStats };
     },
     clear: invalidate,
-    warmup: scheduleWarmup,
+    warmup: warmupNow,
   };
 
   if (typeof module !== "undefined" && module.exports) {

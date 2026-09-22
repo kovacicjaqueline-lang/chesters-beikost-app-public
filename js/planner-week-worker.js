@@ -84,6 +84,7 @@
       "./planner-meal-eligibility.js?v=10.1.26",
       "./planner-milk-policy.js?v=10.1.26",
       "./planner-iron-preference.js?v=10.1.26",
+      "./planner-culinary-quality.js?v=10.1.26",
       "./planner-meal-presentation.js?v=10.1.26",
       "./planner-recipe-first.js?v=10.1.26",
       "./planner-proactive-recipe.js?v=10.1.26",

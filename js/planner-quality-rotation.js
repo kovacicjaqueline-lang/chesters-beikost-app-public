@@ -56,6 +56,8 @@ function plannerQualityRelatedIds(foodRecord, foods = [], relatedFn = null) {
 
 function plannerQualityEnsureContext(ctx) {
   if (!ctx) return ctx;
+  ctx.plannedUse ||= new Map();
+  ctx.lastFocus ||= new Map();
   ctx.qualityFoodUse ||= new Map();
   ctx.qualityLastFoodUse ||= new Map();
   ctx.qualityPairUse ||= new Map();
@@ -108,6 +110,10 @@ function plannerQualitySeedKeptPlans(ctx, date, stateValue) {
     let ids = [...new Set(plan.foodIds || [])].filter(Boolean);
     if (!ids.length && plan.focusId) ids = [plan.focusId];
     if (!ids.length) continue;
+    if (plan.focusId) {
+      ctx.plannedUse.set(plan.focusId, (ctx.plannedUse.get(plan.focusId) || 0) + 1);
+      ctx.lastFocus.set(plan.focusId, plan.date);
+    }
     plannerQualityRecordMeal(
       { ...plan, active: true, foodIds: ids },
       plan.date,

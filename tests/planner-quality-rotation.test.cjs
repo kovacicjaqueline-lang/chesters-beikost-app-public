@@ -108,6 +108,7 @@ test("Nicht verschieben zählt die Vortagsplanung für die Rotation, aber nicht 
   assert.equal(context.qualityLastFoodUse.get("bulgur"), "2026-08-20");
   assert.equal(context.qualityLastFoodUse.get("brombeere"), "2026-08-20");
   assert.equal(context.qualityPairUse.get("brombeere+bulgur"), 1);
+  assert.equal(context.lastFocus.get("bulgur"), "2026-08-20");
   assert.equal(context.qualityLastFoodUse.has("apfel"), false);
   assert.deepEqual(data.logs, [], "Nicht verschieben darf keinen gegessenen/protokollierten Eintrag erzeugen");
 });

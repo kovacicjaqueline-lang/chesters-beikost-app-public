@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { webkit } from "playwright";
 import { closeBrowserApp, startStaticServer } from "./helpers/app-harness.mjs";
+import { installBrowserTimingProbe } from "./helpers/browser-timing-probe.mjs";
 
 
 
@@ -72,6 +73,7 @@ const context = await browser.newContext({
   hasTouch: true,
 });
 const page = await context.newPage();
+const timingProbe = installBrowserTimingProbe(page);
 
 try {
   await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "domcontentloaded" });
@@ -500,6 +502,7 @@ try {
     "Freie Gaben dürfen im Familienstatus nicht über date|meal zusammenfallen",
   );
 } finally {
+  console.log(`[browser-timing-probe] ${JSON.stringify(timingProbe.report())}`);
   await closeBrowserApp({ context, browser, server });
 }
 

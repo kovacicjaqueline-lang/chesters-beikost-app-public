@@ -74,6 +74,7 @@ function foodPolicyMonthsOld(on, birthDate) {
 function automaticFoodEligibility(foodRecord, on, settings = {}) {
   if (!foodRecord) return false;
   if (foodRecord.autoPlan === false) return false;
+  if (typeof isFoodUnavailable === "function" && isFoodUnavailable(foodRecord.id)) return false;
 
   if (foodRecord.minPhase) {
     let current = FOOD_PHASE_ORDER.indexOf(settings.phaseSelected || "kennenlernen");
@@ -615,6 +616,7 @@ function installFoodPolicyRuntime() {
   function autoRecipeIngredientReady(name, on) {
     let f = state.foods.find((item) => item.name === name);
     if (!f || !policyEligible(f, on) || status(f) === "Pausiert") return false;
+    if (typeof isFoodUnavailable === "function" && isFoodUnavailable(f.id)) return false;
     return originalRank(f) >= 2 || familySuccessfulExposureCount(f, state.foods, state.logs, outcomeForFood) >= 1;
   }
 
@@ -685,7 +687,60 @@ function installFoodPolicyRuntime() {
       let day = originalBuildDay(date, index, ctx);
       for (let meal of day?.meals || []) {
         if (meal?.manualAdded || meal?.lockedMode === "manual") continue;
-        meal.optionalAddons = (meal.optionalAddons || []).filter((id) => policyEligible(food(id), date));
+
+        const isUnavailable = (id) =>
+          !!id &&
+          typeof isFoodUnavailable === "function" &&
+          isFoodUnavailable(id);
+        meal.optionalAddons = (meal.optionalAddons || []).filter(
+          (id) => !isUnavailable(id) && policyEligible(food(id), date),
+        );
+
+        const unavailableIds = new Set((meal.foodIds || []).filter(isUnavailable));
+        if (!unavailableIds.size) continue;
+
+        // Alle automatischen Planner-Pfade müssen dieselbe Verfügbarkeitsregel
+        // einhalten. Dieser letzte Guard verhindert, dass nachgelagerte Recipe-
+        // oder Composition-Decoratoren eine fehlende Zutat wieder eintragen.
+        if (!isUnavailable(meal.focusId)) {
+          meal.foodIds = (meal.foodIds || []).filter((id) => !unavailableIds.has(id));
+          meal.baseFoodIds = (meal.baseFoodIds || []).filter((id) => !unavailableIds.has(id));
+          meal.sampleFoodIds = (meal.sampleFoodIds || []).filter((id) => !unavailableIds.has(id));
+          meal.foodRoles = Object.fromEntries(
+            Object.entries(meal.foodRoles || {}).filter(([id]) => !unavailableIds.has(id)),
+          );
+          continue;
+        }
+
+        const fallback = (state.foods || [])
+          .filter((candidate) =>
+            !isUnavailable(candidate.id) &&
+            eligible(candidate, meal.meal, date) &&
+            (typeof plannerFoodCanBeAutomaticFocus !== "function" ||
+              plannerFoodCanBeAutomaticFocus(candidate)),
+          )
+          .sort((a, b) => (Number(a.priority) || 9999) - (Number(b.priority) || 9999))[0];
+
+        if (!fallback) {
+          meal.empty = true;
+          meal.focusId = "";
+          meal.foodIds = [];
+          meal.baseFoodIds = [];
+          meal.sampleFoodIds = [];
+          meal.foodRoles = {};
+          meal.recipeName = "";
+          continue;
+        }
+
+        meal.empty = false;
+        meal.focusId = fallback.id;
+        meal.foodIds = [fallback.id];
+        meal.baseFoodIds = [fallback.id];
+        meal.sampleFoodIds = [];
+        meal.foodRoles = { [fallback.id]: "base" };
+        meal.recipeName = "";
+        meal.recipeInventoryId = "";
+        if (typeof applyPlannedMealAmounts === "function") applyPlannedMealAmounts(meal);
       }
       return day;
     } finally {
@@ -765,7 +820,6 @@ function pruneIneligibleAutomaticPlanState(currentState, recipes = typeof RECIPE
   }
   return changed;
 }
-
 function startBeikostApp() {
   installFoodPolicyRuntime();
 
@@ -777,7 +831,7 @@ function startBeikostApp() {
     getState: () => clone(state),
     setState: (next) => { state = migrateState(next); if (!state.settings.planFrom) state.settings.planFrom = today(); pruneIneligibleAutomaticPlanState(state); save(); renderAll(); return clone(state); },
     reset: () => { state = migrateState(clone(DEFAULT)); state.backupMeta.chesterContextSeeded = true; state.settings.planFrom = today(); save(); renderAll(); return clone(state); },
-    buildDays: (from = today(), count = 7, applyAutoLocks = true) => clone(buildDays(from, count, applyAutoLocks)),
+    buildDays: (from = today(), count = 7) => clone(buildDays(from, count)),
     scheduleFollowUp: (...args) => { let result = scheduleFollowUp(...args); save(); renderAll(); return clone(result); },
     followUpEntries: () => clone(followUpEntries()),
     displayStatus: (id) => displayStatus(food(id)),

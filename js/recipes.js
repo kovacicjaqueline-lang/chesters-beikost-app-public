@@ -419,6 +419,8 @@ const RECIPE_CATALOG_ADDITIONS = Object.freeze([
     freezable: true,
     freezerNote: "Portionsweise einfrieren und beim Erwärmen mit etwas Wasser wieder weich rühren.",
     tags: Object.freeze(["Bulgur", "Ei", "Löffelgericht"]),
+  "Forelle-Kartoffel-Bällchen": Object.freeze(["80 g vollständig gegarte, sorgfältig entgrätete Forelle, 150 g sehr weiche Kartoffel, 1 Ei, 20 g feine Haferflocken, 1 TL Rapsöl, 1 TL Petersilie", 7]),
+  "Kabeljau-Süßkartoffel-Fischküchlein": Object.freeze(["80 g vollständig gegarter, sorgfältig entgräteter Kabeljau, 160 g Süßkartoffel, 1 Ei, 25 g feine Haferflocken, 1 TL Rapsöl, 1 TL Petersilie", 7]),
     searchAliases: Object.freeze(["Bulgur mit Zucchini und Ei", "Bulgur-Ei-Gemüse"]),
   }),
   Object.freeze({
@@ -507,6 +509,12 @@ const RECIPE_RESEARCH_GUIDANCE = Object.freeze({
   "Polenta-Zucchini-Sticks": Object.freeze(["40 g feine Polenta, 160 ml Wasser, 60 g fein geriebene und weich gegarte Zucchini, 1 TL Butter oder Rapsöl, 1 TL Petersilie", 6]),
   "Süßkartoffel-Hirse-Sticks": Object.freeze(["150 g Süßkartoffelpüree, 60 g sehr weich gekochte Hirse", 7]),
   "Omelettstreifen": Object.freeze(["1 Ei, 15 ml Wasser, 1 TL Butter, 1 TL Petersilie oder Schnittlauch", 6]),
+  "Quinoa-Huhn-Süßkartoffel-Finger": Object.freeze(["100 g Huhn, 70 g Quinoa, 160 g Süßkartoffel, 1 TL Rapsöl, 1 TL Petersilie", 8]),
+  "Quinoa-Linsen-Gemüse-Khichdi": Object.freeze(["60 g Quinoa, 60 g rote Linsen, 120 g Karotte, 100 g Zucchini, 450 ml Wasser, 1 TL Rapsöl, 1 TL Petersilie", 7]),
+  "Quinoa-Gemüse-Puffer": Object.freeze(["70 g Quinoa, 120 g Zucchini, 100 g Karotte, 1 Ei, 1 TL Rapsöl, 1 TL Petersilie", 8]),
+  "Bulgur-Zucchini-Ei": Object.freeze(["60 g Bulgur, 160 g Zucchini, 1 Ei, 250 ml Wasser, 1 TL Rapsöl, 1 TL Petersilie", 7]),
+  "Bulgur-Gemüse-Köfte": Object.freeze(["70 g Bulgur, 100 g rote Linsen, 120 g Karotte, 80 g Zucchini, 1 TL Rapsöl, 1 TL Petersilie, ¼ TL milder Kreuzkümmel", 8]),
+  "Bulgur-Linsen-Suppe": Object.freeze(["50 g Bulgur, 60 g rote Linsen, 150 g Tomate, 120 g Karotte, 450 ml Wasser, 1 TL Rapsöl, 1 TL Petersilie", 7]),
   "Zucchini-Omelett": Object.freeze(["1 Ei, 30 g fein geriebene Zucchini, 1 TL Butter, 1 TL Petersilie oder Schnittlauch", 6]),
   "Obst-Haferbrei": Object.freeze(["20 g feine Haferflocken, 120 ml Wasser, 40 g weiches bekanntes Obst nach Auswahl", 6]),
   "Obst-Hirsebrei": Object.freeze(["20 g Hirseflocken, 120 ml Wasser, 40 g weiches bekanntes Obst nach Auswahl", 6]),
@@ -529,8 +537,6 @@ const RECIPE_RESEARCH_GUIDANCE = Object.freeze({
   "Kalabasa mit Kokos": Object.freeze(["200 g Kürbis, 50 ml ungesüßte Kokosmilch, 50 ml Wasser", 6]),
   "Tilapia-Reis-Brei": Object.freeze(["60 g vollständig gegarter grätenfreier Tilapia, 30 g Reis, 200 ml Wasser", 7]),
   "Bangus-Kartoffel-Taler": Object.freeze(["60 g vollständig gegarter und äußerst sorgfältig entgräteter Bangus, 120 g sehr weiche Kartoffel, 1 TL Petersilie oder Dill", 7]),
-  "Forelle-Kartoffel-Bällchen": Object.freeze(["80 g vollständig gegarte, sorgfältig entgrätete Forelle, 150 g sehr weiche Kartoffel, 1 Ei, 20 g feine Haferflocken, 1 TL Rapsöl, 1 TL Petersilie", 7]),
-  "Kabeljau-Süßkartoffel-Fischküchlein": Object.freeze(["80 g vollständig gegarter, sorgfältig entgräteter Kabeljau, 160 g Süßkartoffel, 1 Ei, 25 g feine Haferflocken, 1 TL Rapsöl, 1 TL Petersilie", 7]),
   "Obst-Hafer-Muffins": Object.freeze(["120 g sehr weiches Obst oder Obstpüree nach Auswahl, 80 g fein gemahlene Haferflocken, 1 Ei", 7]),
   "Gemüse-Hafer-Muffins": Object.freeze(["100 g sehr fein vorbereitetes weiches Gemüse nach Auswahl, 80 g fein gemahlene Haferflocken, 1 Ei", 7]),
   "Kürbis-Hirse-Muffins": Object.freeze(["120 g Kürbispüree, 70 g Hirseflocken, 1 Ei", 7]),
@@ -620,13 +626,9 @@ const RECIPE_RESEARCH_GUIDANCE = Object.freeze({
   "Birne-Pfirsich-Kompott": Object.freeze(["120 g Birne, 80 g entsteinter Pfirsich, 1–2 EL Wasser", 6]),
   "Mango-Bananen-Creme": Object.freeze(["80 g reife Mango, 60 g reife Banane", 6]),
   "Kartoffel-Karotten-Stampf": Object.freeze(["100 g Kartoffel, 80 g Karotte, 1 TL Rapsöl pro Portion nach Bedarf", 6]),
+  "Forelle-Kartoffel-Bällchen": Object.freeze(["80 g vollständig gegarte, sorgfältig entgrätete Forelle, 150 g sehr weiche Kartoffel, 1 Ei, 20 g feine Haferflocken, 1 TL Rapsöl, 1 TL Petersilie", 8]),
+  "Kabeljau-Süßkartoffel-Fischküchlein": Object.freeze(["80 g vollständig gegarter, sorgfältig entgräteter Kabeljau, 160 g Süßkartoffel, 1 Ei, 25 g feine Haferflocken, 1 TL Rapsöl, 1 TL Petersilie", 8]),
   "Gemüse-Reis-Brei": Object.freeze(["30 g Reis, 80 g Zucchini, 60 g Karotte, 1 TL Rapsöl pro Portion nach Bedarf", 6]),
-  "Quinoa-Huhn-Süßkartoffel-Finger": Object.freeze(["100 g Huhn, 70 g Quinoa, 160 g Süßkartoffel, 1 TL Rapsöl, 1 TL Petersilie", 8]),
-  "Quinoa-Linsen-Gemüse-Khichdi": Object.freeze(["60 g Quinoa, 60 g rote Linsen, 120 g Karotte, 100 g Zucchini, 450 ml Wasser, 1 TL Rapsöl, 1 TL Petersilie", 7]),
-  "Quinoa-Gemüse-Puffer": Object.freeze(["70 g Quinoa, 120 g Zucchini, 100 g Karotte, 1 Ei, 1 TL Rapsöl, 1 TL Petersilie", 8]),
-  "Bulgur-Zucchini-Ei": Object.freeze(["60 g Bulgur, 160 g Zucchini, 1 Ei, 250 ml Wasser, 1 TL Rapsöl, 1 TL Petersilie", 7]),
-  "Bulgur-Gemüse-Köfte": Object.freeze(["70 g Bulgur, 100 g rote Linsen, 120 g Karotte, 80 g Zucchini, 1 TL Rapsöl, 1 TL Petersilie, ¼ TL milder Kreuzkümmel", 8]),
-  "Bulgur-Linsen-Suppe": Object.freeze(["50 g Bulgur, 60 g rote Linsen, 150 g Tomate, 120 g Karotte, 450 ml Wasser, 1 TL Rapsöl, 1 TL Petersilie", 7]),
 });
 
 const RECIPE_NOCKERL_SPLIT = Object.freeze([
@@ -881,14 +883,8 @@ function recipeStates() {
     ? memoizeViewRenderValue("recipeStates", computeRecipeStates)
     : computeRecipeStates();
 }
-function renderRecipeCard(r, { priorityImage = false } = {}) {
-  let optionParts = [];
-  if (r.selectedVariantLabel) optionParts.push(`<div><b>Variante:</b> ${esc(r.selectedVariantLabel)}${(r.selectedVariantRequirements || []).every(recipeIngredientReady) ? "" : " · noch offen"}</div>`);
-  if (r.variantLabels?.length > 1) optionParts.push(`<div><b>Varianten:</b> ${r.variantLabels.map(esc).join(" · ")}</div>`);
-  if (r.selectedOption || r.availableOptions?.length) optionParts.push(`<div><b>${r.oneOf?.length && r.name === "Milch-Getreide-Brei" ? "Getreide" : r.selectedOption ? "Vorausgewählt" : "Jetzt mögliche Auswahl"}:</b> ${r.selectedOption ? `${esc(r.selectedOption)}${r.selectedOptionReady ? "" : " · noch offen"}` : r.availableOptions.map(esc).join(", ")}</div>`);
-  if (r.milkChoices?.length) optionParts.push(`<div><b>Milchprodukt:</b> ${r.selectedMilkOption ? `${esc(r.selectedMilkOption)}${r.selectedMilkOptionReady ? "" : " · noch offen"}` : "noch keines gegessen"}</div>`);
-  let variants = optionParts.length ? optionParts.join("") : '<div class="small">Keine zusätzliche Variante nötig.</div>';
-  let type = ({
+function recipeCatalogTypeLabel(r) {
+  return ({
     porridge: "Brei & Löffelgericht",
     pancakes: "Pancake",
     balls: "Fingerfood",
@@ -896,33 +892,80 @@ function renderRecipeCard(r, { priorityImage = false } = {}) {
     philippines: "Philippinen-Rezept",
     baking: "Backrezept",
   })[r.category] || ((r.tags || []).some((tag) => /fingerfood/i.test(String(tag))) ? "Fingerfood" : "Rezept");
-  let statusBadge = !r.unlocked
-    ? '<span class="pill warn">Noch nicht passend</span>'
-    : r.freezable
-      ? '<span class="pill ok">Einfrierbar</span>'
-      : "";
-  let familyText = r.familyLabel ? ` · ${esc(r.familyLabel)}` : "";
-  let importantHints = `${r.skillRequirement ? `<div class="notice"><b>Sicher anbieten:</b> ${esc(r.skillRequirement)}</div>` : ""}${r.unlocked ? "" : `<div class="recipe-missing"><b>Noch offen:</b> ${esc(recipeMissingSummary(r))}</div>`}${r.milkMeal === "full" ? '<div class="notice olive"><b>Milchmahlzeit:</b> Als volle Milchmahlzeit zählen; keine zweite volle Milchmahlzeit am selben Tag einplanen und nicht mit Fleisch oder Fisch kombinieren.</div>' : ""}`;
-  let hints = `${r.ageHint ? `<div class="small recipe-age-hint">${esc(r.ageHint)}</div>` : ""}${r.milkMeal === "small" ? '<div class="small">Kleine Milchproduktmenge; sie zählt nicht automatisch als volle Milchmahlzeit.</div>' : ""}` || '<div class="small">Keine zusätzlichen Hinweise.</div>';
+}
+
+function recipeCatalogStatusBadge(r) {
+  if (!r.unlocked) return '<span class="pill warn">Noch nicht passend</span>';
+  if (r.freezable) return '<span class="pill ok">Einfrierbar</span>';
+  return '<span class="pill ok">Jetzt passend</span>';
+}
+
+function recipeCatalogDetailBody(r) {
+  let optionParts = [];
+  if (r.selectedVariantLabel) optionParts.push('<div><b>Variante:</b> ' + esc(r.selectedVariantLabel) + ((r.selectedVariantRequirements || []).every(recipeIngredientReady) ? "" : " · noch offen") + "</div>");
+  if (r.selectedOption || r.availableOptions?.length) optionParts.push('<div><b>' + (r.oneOf?.length && r.name === "Milch-Getreide-Brei" ? "Getreide" : r.selectedOption ? "Vorausgewählt" : "Jetzt mögliche Auswahl") + ":</b> " + (r.selectedOption ? esc(r.selectedOption) + (r.selectedOptionReady ? "" : " · noch offen") : r.availableOptions.map(esc).join(", ")) + "</div>");
+  if (r.milkChoices?.length) optionParts.push('<div><b>Milchprodukt:</b> ' + (r.selectedMilkOption ? esc(r.selectedMilkOption) + (r.selectedMilkOptionReady ? "" : " · noch offen") : "noch keines gegessen") + "</div>");
+  if (r.variantLabels?.length > 1) optionParts.push('<div><b>Varianten:</b> ' + r.variantLabels.map(esc).join(" · ") + "</div>");
+  let variants = optionParts.length ? optionParts.join("") : '<div class="small">Keine zusätzliche Variante nötig.</div>';
+  let importantHints =
+    (r.skillRequirement ? '<div class="notice"><b>Sicher anbieten:</b> ' + esc(r.skillRequirement) + "</div>" : "") +
+    (r.unlocked ? "" : '<div class="recipe-missing"><b>Noch offen:</b> ' + esc(recipeMissingSummary(r)) + "</div>") +
+    (r.milkMeal === "full" ? '<div class="notice olive"><b>Milchmahlzeit:</b> Als volle Milchmahlzeit zählen; keine zweite volle Milchmahlzeit am selben Tag einplanen und nicht mit Fleisch oder Fisch kombinieren.</div>' : "");
+  let hints =
+    (r.ageHint ? '<div class="small recipe-age-hint">' + esc(r.ageHint) + "</div>" : "") +
+    (r.milkMeal === "small" ? '<div class="small">Kleine Milchproduktmenge; sie zählt nicht automatisch als volle Milchmahlzeit.</div>' : "");
+  if (!hints) hints = '<div class="small">Keine zusätzlichen Hinweise.</div>';
   let storage = r.freezable
-    ? `<div class="small">${esc(r.freezerNote || "Portionsweise einfrieren und vollständig auftauen beziehungsweise erwärmen.")}</div><button class="btn secondary full" style="margin-top:9px" data-add-recipe-stock="${encodeURIComponent(r.name)}">Als Vorrat eintragen</button>`
+    ? '<div class="small">' + esc(r.freezerNote || "Portionsweise einfrieren und vollständig auftauen beziehungsweise erwärmen.") + '</div><button class="btn secondary full" style="margin-top:9px" data-add-recipe-stock="' + encodeURIComponent(r.name) + '">Als Vorrat eintragen</button>'
     : '<div class="small">Am besten frisch zubereiten.</div>';
-  return `<details class="recipe-card-v2">
-    <summary>
-      <div class="recipe-summary-grid">
-        <div class="recipe-heading-with-icon">${recipeIconSvg(r, priorityImage ? { loading: "eager", fetchPriority: "high" } : undefined)}<div><b>${esc(r.name)}</b><div class="small recipe-type-text">${esc(type)}</div><div class="tiny recipe-tech-text">${esc(r.batch || "kleine Portion")}${familyText}</div></div></div>
-        <div class="recipe-summary-end">${statusBadge}<span class="recipe-chevron" aria-hidden="true">⌄</span></div>
-      </div>
-    </summary>
-    <div class="recipe-body-v2">
-      <section class="recipe-open-section"><h3>Zutaten</h3><p class="small">${esc(r.ingredients || (r.requires || []).join(", "))}</p></section>
-      <section class="recipe-open-section"><h3>Zubereitung</h3><p class="small">${esc(r.note)}</p></section>
-      ${importantHints}
-      <details class="recipe-subsection"><summary>Varianten</summary><div class="recipe-subsection-body recipe-option-list">${variants}</div></details>
-      <details class="recipe-subsection"><summary>Aufbewahrung</summary><div class="recipe-subsection-body">${storage}</div></details>
-      <details class="recipe-subsection"><summary>Hinweise</summary><div class="recipe-subsection-body">${hints}</div></details>
-    </div>
-  </details>`;
+  let familyText = r.familyLabel ? " · " + esc(r.familyLabel) : "";
+  return '<div class="catalog-detail-hero">' +
+    '<div class="catalog-detail-hero-copy">' +
+      '<div class="small catalog-detail-type">' + esc(recipeCatalogTypeLabel(r)) + familyText + "</div>" +
+      '<div class="chips catalog-detail-status">' + recipeCatalogStatusBadge(r) + "</div>" +
+      '<div class="tiny">' + esc(r.batch || "kleine Portion") + "</div>" +
+    "</div>" +
+    '<div class="catalog-detail-hero-icon" aria-hidden="true">' + recipeIconSvg(r) + "</div>" +
+  "</div>" +
+  '<div class="catalog-detail-primary-actions"><button class="btn full" id="recipeCatalogLog" type="button">Protokollieren</button></div>' +
+  '<section class="catalog-detail-section"><h3>Zutaten</h3><p class="small">' + esc(r.ingredients || (r.requires || []).join(", ")) + "</p></section>" +
+  '<section class="catalog-detail-section"><h3>Zubereitung</h3><p class="small">' + esc(r.note) + "</p></section>" +
+  importantHints +
+  '<details class="accordion recipe-subsection"><summary>Varianten</summary><div class="recipe-option-list" style="margin-top:10px">' + variants + "</div></details>" +
+  '<details class="accordion"><summary>Aufbewahrung</summary><div style="margin-top:10px">' + storage + "</div></details>" +
+  '<details class="accordion"><summary>Hinweise</summary><div style="margin-top:10px">' + hints + "</div></details>";
+}
+
+function showRecipeInfo(r) {
+  if (!r || typeof openGeneric !== "function") return;
+  openGeneric(r.name, recipeCatalogDetailBody(r));
+  document.getElementById("recipeCatalogLog")?.addEventListener("click", () => {
+    closeGeneric();
+    if (typeof openCatalogRecipeLog === "function") openCatalogRecipeLog(r.name);
+  });
+  if (typeof bindRecipeStockButtons === "function") bindRecipeStockButtons();
+}
+
+function renderRecipeCard(r, { priorityImage = false, showDetails = true } = {}) {
+  let type = recipeCatalogTypeLabel(r);
+  let familyText = r.familyLabel ? " · " + esc(r.familyLabel) : "";
+  let encodedName = encodeURIComponent(r.name);
+  return '<details class="recipe-card-v2" open data-recipe="' + encodedName + '">' +
+    "<summary>" +
+      '<div class="recipe-summary-grid">' +
+        '<div class="recipe-heading-with-icon">' +
+          recipeIconSvg(r, priorityImage ? { loading: "eager", fetchPriority: "high" } : undefined) +
+          '<div><b>' + esc(r.name) + '</b><div class="small recipe-type-text">' + esc(type) + '</div><div class="tiny recipe-tech-text">' + esc(r.batch || "kleine Portion") + familyText + "</div></div>" +
+        "</div>" +
+        '<div class="recipe-summary-end">' + recipeCatalogStatusBadge(r) + "</div>" +
+      "</div>" +
+    "</summary>" +
+    '<div class="catalog-card-actions">' +
+      '<button class="btn catalogLogRecipe" data-recipe="' + encodedName + '" type="button">Protokollieren</button>' +
+      '<button class="btn secondary catalogRecipeDetails" data-recipe="' + encodedName + '" type="button">Details</button>' +
+    "</div>" +
+    (showDetails ? recipeCatalogDetailBody(r) : "") +
+  "</details>";
 }
 
 if (typeof module !== "undefined" && module.exports) {

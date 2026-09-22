@@ -4,8 +4,6 @@ import { fileURLToPath } from "node:url";
 import { webkit } from "playwright";
 import { closeBrowserApp, startStaticServer } from "./helpers/app-harness.mjs";
 
-
-
 async function waitForView(page, id) {
   await page.waitForFunction((viewId) => document.getElementById(viewId)?.classList.contains("active"), id);
 }
@@ -116,7 +114,16 @@ try {
     window.__targetedActionRenderProbe.plan = 0;
   });
   const removeManualMealSelector = `.removeManualMeal[data-date="${mealDeleteSetup.date}"][data-meal="lunch"]`;
-  await page.locator(removeManualMealSelector).first().click({ force: true });
+  const removeManualMeal = page.locator(removeManualMealSelector);
+  await removeManualMeal.evaluateAll((elements) => {
+    for (const element of elements) {
+      const details = element.closest("details.manual-meal");
+      if (details) details.open = true;
+    }
+  });
+  const visibleRemoveManualMeal = page.locator(`${removeManualMealSelector}:visible`).first();
+  await visibleRemoveManualMeal.waitFor({ state: "visible" });
+  await visibleRemoveManualMeal.click();
   await page.locator("#confirmMealDelete").waitFor({ state: "visible" });
   const deleteMealMs = await page.evaluate(() => {
     const start = performance.now();

@@ -1,12 +1,48 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { webkit } from "playwright";
-import { closeBrowserApp, startStaticServer } from "./helpers/app-harness.mjs";
+
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const mimeTypes = {
+  ".html": "text/html; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".webmanifest": "application/manifest+json; charset=utf-8",
+  ".svg": "image/svg+xml",
+  ".png": "image/png",
+  ".webp": "image/webp",
+};
 
-
+function startStaticServer() {
+  const server = http.createServer((request, response) => {
+    const url = new URL(request.url || "/", "http://127.0.0.1");
+    const pathname = decodeURIComponent(url.pathname === "/" ? "/index.html" : url.pathname);
+    const filePath = path.resolve(root, `.${pathname}`);
+    if (filePath !== path.join(root, "index.html") && !filePath.startsWith(`${root}${path.sep}`)) {
+      response.writeHead(403).end("Forbidden");
+      return;
+    }
+    fs.stat(filePath, (error, stat) => {
+      if (error || !stat.isFile()) {
+        response.writeHead(404).end("Not found");
+        return;
+      }
+      response.writeHead(200, {
+        "content-type": mimeTypes[path.extname(filePath)] || "application/octet-stream",
+        "cache-control": "no-store",
+      });
+      fs.createReadStream(filePath).pipe(response);
+    });
+  });
+  return new Promise((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", () => resolve(server));
+  });
+}
 
 const server = await startStaticServer();
 const { port } = server.address();
@@ -187,7 +223,7 @@ try {
   assert.equal(after.futureManual, null, "zukünftiger offener manueller Banane-Slot wird freigegeben");
   assert.equal(after.futureLock, null, "freigegebener Zukunftsslot bleibt ohne pauschalen Auto-Lock");
   assert.ok(after.futurePlanned, "freigegebener Zukunftsslot darf dynamisch neu geplant werden");
-  assert.equal(after.futurePlanned.foodIds.includes("banane"), false, "dynamisch neu geplanter Zukunftsslot enthält die fehlende Zutat nicht: " + JSON.stringify({ futurePlanned: after.futurePlanned, hint: after.hint, pantry: after.pantry, unavailable: after.unavailable }));
+  assert.equal(after.futurePlanned.foodIds.includes("banane"), false, "dynamisch neu geplanter Zukunftsslot enthält die fehlende Zutat nicht");
   assert.equal(after.futureOverride, null, "zukünftiger Banane-Override wird entfernt");
   assert.equal(after.carried, null, "auch ein verschobener offener Rollover-Plan mit Banane wird entfernt");
   assert.match(await page.locator("#toastText").innerText(), /Einkaufsliste.*Plan wurde angepasst/i);
@@ -337,6 +373,8 @@ try {
   assert.ok(logUnavailableStockProbe.preparedIds.includes("banane"));
   assert.equal(logUnavailableStockProbe.freshIds.length, 0, "frisch zuzubereitendes Rezept bleibt auch beim Log-Pfad gesperrt");
 
+  await context.close();
 } finally {
-  await closeBrowserApp({ context: typeof context !== "undefined" ? context : null, browser, server });
+  await browser.close();
+  await new Promise((resolve) => server.close(resolve));
 }

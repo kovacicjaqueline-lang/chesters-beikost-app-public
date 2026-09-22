@@ -56,10 +56,70 @@ function plannerQualityRelatedIds(foodRecord, foods = [], relatedFn = null) {
 
 function plannerQualityEnsureContext(ctx) {
   if (!ctx) return ctx;
+  ctx.plannedUse ||= new Map();
+  ctx.lastFocus ||= new Map();
   ctx.qualityFoodUse ||= new Map();
   ctx.qualityLastFoodUse ||= new Map();
   ctx.qualityPairUse ||= new Map();
   ctx.qualityDuePlanned ||= new Set();
+  ctx.qualityKeptSeededDates ||= new Set();
+  return ctx;
+}
+
+function plannerQualityKeptPlanInstances(stateValue, date) {
+  let handled = stateValue?.backupMeta?.plannerLinking?.rolloverHandled;
+  if (!handled || typeof handled !== "object" || Array.isArray(handled)) return [];
+
+  let candidates = [];
+  for (let [key, plan] of Object.entries(stateValue?.planLocks || {})) {
+    let [planDate, meal] = key.split("|");
+    candidates.push({ ...(plan || {}), date: plan?.date || planDate, meal: plan?.meal || meal });
+  }
+  for (let [key, plan] of Object.entries(stateValue?.manualMeals || {})) {
+    let [planDate, meal] = key.split("|");
+    candidates.push({ ...(plan || {}), date: plan?.date || planDate, meal: plan?.meal || meal });
+  }
+  for (let plan of Object.values(stateValue?.backupMeta?.plannerLinking?.carriedPlans || {})) {
+    candidates.push({ ...(plan || {}) });
+  }
+
+  let seen = new Set();
+  return candidates.filter((plan) => {
+    let planId = String(plan?.planId || "");
+    if (!planId || seen.has(planId)) return false;
+    if (plan.date !== date || handled[planId]?.action !== "keep") return false;
+    seen.add(planId);
+    return true;
+  });
+}
+
+function plannerQualityPreviousDate(date) {
+  let [year, month, day] = String(date || "").split("-").map(Number);
+  if (![year, month, day].every(Number.isFinite)) return "";
+  let value = new Date(Date.UTC(year, month - 1, day - 1));
+  return value.toISOString().slice(0, 10);
+}
+
+function plannerQualitySeedKeptPlans(ctx, date, stateValue) {
+  if (!ctx || !date) return ctx;
+  plannerQualityEnsureContext(ctx);
+  if (ctx.qualityKeptSeededDates.has(date)) return ctx;
+  ctx.qualityKeptSeededDates.add(date);
+
+  for (let plan of plannerQualityKeptPlanInstances(stateValue, plannerQualityPreviousDate(date))) {
+    let ids = [...new Set(plan.foodIds || [])].filter(Boolean);
+    if (!ids.length && plan.focusId) ids = [plan.focusId];
+    if (!ids.length) continue;
+    if (plan.focusId) {
+      ctx.plannedUse.set(plan.focusId, (ctx.plannedUse.get(plan.focusId) || 0) + 1);
+      ctx.lastFocus.set(plan.focusId, plan.date);
+    }
+    plannerQualityRecordMeal(
+      { ...plan, active: true, foodIds: ids },
+      plan.date,
+      ctx,
+    );
+  }
   return ctx;
 }
 
@@ -420,6 +480,7 @@ function installPlannerQualityRotationRuntime() {
 
   buildDay = function plannerQualityBuildDay(date, index, ctx) {
     plannerQualityEnsureContext(ctx);
+    plannerQualitySeedKeptPlans(ctx, date, state);
     let presetMeals = presetMealsFor(date);
     let presetLearning = presetMeals.some(plannerQualityMealConsumesLearningSlot);
     let forcedOverride = forcedLearningOverride(date);
@@ -501,6 +562,9 @@ if (typeof module !== "undefined" && module.exports) {
     plannerQualityPairKey,
     plannerQualityRelatedIds,
     plannerQualityEnsureContext,
+    plannerQualityKeptPlanInstances,
+    plannerQualityPreviousDate,
+    plannerQualitySeedKeptPlans,
     plannerQualityRecordMeal,
     plannerQualityRecencyBucket,
     plannerQualityCandidateTuple,

@@ -164,7 +164,46 @@ test("Frühstücks-Rotation fällt auf den vorhandenen Begleiter zurück, wenn e
   );
 });
 
-test("Runtime rotiert Brombeere als Frühstücks-Begleiter am Folgetag", () => {
+test("Begleiter-Rotation gilt über mehrere Tage auch für Mittagessen", () => {
+  const state = ctx();
+  state.qualityLastFoodUse.set("brombeere", "2026-08-20");
+  const results = [
+    { f: { id: "brombeere" } },
+    { f: { id: "apfel" } },
+  ];
+  const diffDays = (a, b) => Math.round(
+    (Date.parse(`${a}T00:00:00Z`) - Date.parse(`${b}T00:00:00Z`)) / 86400000,
+  );
+
+  assert.equal(
+    quality.plannerQualityChooseResult(
+      quality.plannerQualityCompanionResults(results, state, "2026-08-21", diffDays),
+      state,
+      "2026-08-21",
+      diffDays,
+      "hafer",
+    ).f.id,
+    "apfel",
+  );
+  quality.plannerQualityRecordMeal(
+    { active: true, foodIds: ["hafer", "apfel"] },
+    "2026-08-21",
+    state,
+  );
+  assert.equal(
+    quality.plannerQualityChooseResult(
+      quality.plannerQualityCompanionResults(results, state, "2026-08-22", diffDays),
+      state,
+      "2026-08-22",
+      diffDays,
+      "hafer",
+    ).f.id,
+    "brombeere",
+    "die Rotation darf den aktuellen Favoriten nicht künstlich sperren, wenn die Alternative erst am Vortag verwendet wurde",
+  );
+});
+
+test("Runtime rotiert Begleiter für Frühstück und Mittag über mehrere Tage", () => {
   const names = [
     "buildDay", "freshPlanContext", "introductionCandidate", "knownCandidate", "companionFor",
     "planQualityIssues", "manualMealFor", "lockedMeal", "dueAllergen", "knownBase", "food",
@@ -177,9 +216,9 @@ test("Runtime rotiert Brombeere als Frühstücks-Begleiter am Folgetag", () => {
   try {
     delete global.__plannerQualityRotationRuntimeInstalled;
     const foods = [
-      { id: "hafer", name: "Hafer", allergenGroup: "", meals: ["breakfast"], priority: 1 },
-      { id: "brombeere", name: "Brombeere", allergenGroup: "", meals: ["breakfast"], priority: 2 },
-      { id: "apfel", name: "Apfel", allergenGroup: "", meals: ["breakfast"], priority: 3 },
+      { id: "hafer", name: "Hafer", allergenGroup: "", meals: ["breakfast", "lunch"], priority: 1 },
+      { id: "brombeere", name: "Brombeere", allergenGroup: "", meals: ["breakfast", "lunch"], priority: 2 },
+      { id: "apfel", name: "Apfel", allergenGroup: "", meals: ["breakfast", "lunch"], priority: 3 },
     ];
     global.state = {
       foods,
@@ -194,7 +233,7 @@ test("Runtime rotiert Brombeere als Frühstücks-Begleiter am Folgetag", () => {
     global.knownBase = () => global.food("hafer");
     global.lastDate = () => "";
     global.diffDays = (a, b) => Math.round((Date.parse(`${a}T00:00:00Z`) - Date.parse(`${b}T00:00:00Z`)) / 86400000);
-    global.activeMeal = (meal) => meal === "breakfast";
+    global.activeMeal = (meal) => ["breakfast", "lunch"].includes(meal);
     global.rank = () => 2;
     global.relatedFamilyFoodIds = (item) => [item.id];
     global.plannerAutomaticPairPreferencePenalty = () => 0;
@@ -212,25 +251,28 @@ test("Runtime rotiert Brombeere als Frühstücks-Begleiter am Folgetag", () => {
     });
     global.introductionCandidate = () => null;
     global.knownCandidate = () => ({ f: global.food("hafer"), type: "bekannt" });
-    global.companionFor = (focus) => global.state.foods.find(
-      (item) => item.id !== focus?.id && item.meals.includes("breakfast"),
+    global.companionFor = (focus, meal) => global.state.foods.find(
+      (item) => item.id !== focus?.id && item.meals.includes(meal),
     ) || null;
     global.planQualityIssues = () => [];
     global.buildDay = (date, index, context) => {
       const focus = global.food("hafer");
-      const companion = global.companionFor(focus, "breakfast", date, "bekannt");
-      return {
-        date,
-        index,
-        meals: [{
-          meal: "breakfast",
+      const meals = ["breakfast", "lunch"].map((meal) => {
+        const companion = global.companionFor(focus, meal, date, "bekannt");
+        return {
+          meal,
           active: true,
           focusId: focus.id,
           foodIds: [focus.id, companion.id],
           baseFoodIds: [focus.id, companion.id],
           sampleFoodIds: [],
           type: "bekannt",
-        }],
+        };
+      });
+      return {
+        date,
+        index,
+        meals,
       };
     };
 
@@ -238,8 +280,10 @@ test("Runtime rotiert Brombeere als Frühstücks-Begleiter am Folgetag", () => {
     const context = global.freshPlanContext();
     const first = global.buildDay("2026-08-20", 0, context);
     const second = global.buildDay("2026-08-21", 1, context);
-    assert.equal(first.meals[0].foodIds[1], "brombeere");
-    assert.equal(second.meals[0].foodIds[1], "apfel");
+    const third = global.buildDay("2026-08-22", 2, context);
+    assert.deepEqual(first.meals.map((meal) => meal.foodIds[1]), ["brombeere", "brombeere"]);
+    assert.deepEqual(second.meals.map((meal) => meal.foodIds[1]), ["apfel", "apfel"]);
+    assert.deepEqual(third.meals.map((meal) => meal.foodIds[1]), ["brombeere", "brombeere"]);
   } finally {
     for (const [name, value] of Object.entries(previous)) {
       if (value === undefined) delete global[name];

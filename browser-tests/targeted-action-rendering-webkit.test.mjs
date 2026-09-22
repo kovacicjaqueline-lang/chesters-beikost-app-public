@@ -75,17 +75,84 @@ try {
   assert.equal(planProfile.finalPlanFrom, planProfile.today, "Heute muss planFrom wieder auf den aktuellen Tag setzen");
 
   const stalePlanProfile = await page.evaluate(() => {
-    const saveStart = performance.now();
-    window.save();
-    const saveMs = performance.now() - saveStart;
-    const renderStart = performance.now();
-    window.renderCurrentView();
-    return {
-      saveMs,
-      renderMs: performance.now() - renderStart,
+    const originals = new Map();
+    const stats = {};
+    const rankStackSamples = [];
+    const timedNames = [
+      "buildDays",
+      "buildDay",
+      "introductionCandidate",
+      "knownCandidate",
+      "knownBase",
+      "companionFor",
+      "recipeMealCandidate",
+      "recipeFoodIds",
+      "recipeStates",
+      "prepDemand",
+    ];
+    const countedNames = [
+      "rank",
+      "status",
+      "eligible",
+      "isTrustedBase",
+      "canCombine",
+      "usageCount",
+      "eatenExposureCount",
+      "dueAllergen",
+      "effectivePriority",
+    ];
+
+    const wrapTimed = (name) => {
+      const base = window[name];
+      if (typeof base !== "function") return;
+      originals.set(name, base);
+      stats[name] = { calls: 0, totalMs: 0, maxMs: 0 };
+      window[name] = function profiledPlannerFunction(...args) {
+        const start = performance.now();
+        stats[name].calls += 1;
+        try {
+          return base.apply(this, args);
+        } finally {
+          const elapsed = performance.now() - start;
+          stats[name].totalMs += elapsed;
+          stats[name].maxMs = Math.max(stats[name].maxMs, elapsed);
+        }
+      };
     };
+    const wrapCounted = (name) => {
+      const base = window[name];
+      if (typeof base !== "function") return;
+      originals.set(name, base);
+      stats[name] = { calls: 0 };
+      window[name] = function countedPlannerFunction(...args) {
+        stats[name].calls += 1;
+        if (name === "rank" && stats[name].calls % 100000 === 0 && rankStackSamples.length < 12) {
+          rankStackSamples.push(new Error().stack?.split("\n").slice(1, 6).join(" <- ") || "");
+        }
+        return base.apply(this, args);
+      };
+    };
+
+    timedNames.forEach(wrapTimed);
+    countedNames.forEach(wrapCounted);
+    try {
+      const saveStart = performance.now();
+      window.save();
+      const saveMs = performance.now() - saveStart;
+      const renderStart = performance.now();
+      window.renderCurrentView();
+      return {
+        saveMs,
+        renderMs: performance.now() - renderStart,
+        stats,
+        rankStackSamples,
+      };
+    } finally {
+      for (const [name, base] of originals) window[name] = base;
+    }
   });
   assert.ok(Number.isFinite(stalePlanProfile.renderMs), "Stale-Plan-Render muss messbar bleiben");
+  assert.ok((stalePlanProfile.stats.buildDays?.calls || 0) >= 1, "Stale-Plan-Profil muss buildDays erfassen");
 
   const mealDeleteSetup = await page.evaluate(() => {
     const bridge = window.__beikostTest;

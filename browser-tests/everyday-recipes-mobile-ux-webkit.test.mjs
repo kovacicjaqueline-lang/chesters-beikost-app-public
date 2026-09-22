@@ -211,7 +211,8 @@ try {
     const image = document.querySelector("#recipeList .recipe-card-v2 img.illustration-icon__asset");
     return !!image && image.complete && image.naturalWidth > 0;
   });
-  await page.locator("#recipeList .catalogRecipeDetails").first().click();
+  assert.equal(await page.locator("#recipeList .catalogRecipeDetails").count(), 0, "Rezepte öffnen direkt über die Rezeptzeile");
+  await page.locator("#recipeList .recipe-card-v2").first().locator("summary").click();
   await page.locator("#genericModal.open").waitFor();
   for (const selector of [
     ".recipe-detail-facts",

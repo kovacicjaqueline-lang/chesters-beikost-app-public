@@ -1063,7 +1063,7 @@ function showRecipeInfo(r) {
 }
 globalThis.showRecipeInfo = showRecipeInfo;
 
-function renderRecipeCard(r, { priorityImage = false, showDetails = false } = {}) {
+function renderRecipeCard(r, { priorityImage = false, showDetails = true } = {}) {
   let type = recipeCatalogTypeLabel(r);
   let familyText = r.familyLabel ? " · " + esc(r.familyLabel) : "";
   let encodedName = encodeURIComponent(r.name);
@@ -1074,12 +1074,9 @@ function renderRecipeCard(r, { priorityImage = false, showDetails = false } = {}
           recipeIconSvg(r, priorityImage ? { loading: "eager", fetchPriority: "high" } : undefined) +
           '<div><b>' + esc(r.name) + '</b><div class="small recipe-type-text">' + esc(type) + '</div><div class="tiny recipe-tech-text">' + esc(r.batch || "kleine Portion") + familyText + "</div></div>" +
         "</div>" +
-        '<div class="recipe-summary-end">' + recipeCatalogStatusBadge(r) + "</div>" +
+        '<div class="recipe-summary-end">' + recipeCatalogStatusBadge(r) + '<span class="recipe-row-chevron" aria-hidden="true">›</span></div>' +
       "</div>" +
     "</summary>" +
-    '<div class="catalog-card-actions">' +
-      '<button class="btn secondary catalogRecipeDetails" data-recipe="' + encodedName + '" type="button">Details</button>' +
-    "</div>" +
     (showDetails ? recipeCatalogDetailBody(r) : "") +
   "</details>";
 }

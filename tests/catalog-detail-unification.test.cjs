@@ -13,7 +13,8 @@ test("Lebensmittel- und Rezeptkarten öffnen Details; Protokollieren liegt im De
   assert.match(foods, /catalogLogFood/);
   assert.match(foods, /id="foodCatalogLog"/);
   assert.match(recipes, /id="recipeCatalogLog"/);
-  assert.match(recipes, /catalogRecipeDetails/);
+  assert.doesNotMatch(recipes, /catalogRecipeDetails/);
+  assert.match(recipes, /recipe-row-chevron/);
   assert.doesNotMatch(recipes, /class="btn catalogLogRecipe"/);
 });
 

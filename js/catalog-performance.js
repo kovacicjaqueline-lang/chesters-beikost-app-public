@@ -398,7 +398,7 @@
         return recipeByName(name);
       };
 
-      if (button?.matches(".catalogRecipeDetails") || event.target?.closest?.("summary")) {
+      if (event.target?.closest?.("summary") || (!button && card)) {
         event.preventDefault();
         const recipe = recipeForCard();
         if (recipe && typeof globalThis.showRecipeInfo === "function") globalThis.showRecipeInfo(recipe);

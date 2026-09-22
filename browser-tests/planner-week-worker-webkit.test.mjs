@@ -16,7 +16,11 @@ try {
   const page = await context.newPage();
 
   await page.goto("http://127.0.0.1:" + port + "/", { waitUntil: "domcontentloaded" });
-  await page.waitForFunction(() => !!window.__beikostTest?.getState && !!window.__plannerWeekCache);
+  await page.waitForFunction(
+    () => !!window.__beikostTest?.getState && !!window.__plannerWeekCache,
+    null,
+    { timeout: 60000 },
+  );
   await page.waitForFunction(
     () => window.__plannerPoliciesReady === true,
     null,

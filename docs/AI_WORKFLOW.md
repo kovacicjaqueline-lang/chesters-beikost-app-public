@@ -62,7 +62,41 @@ Die verbindlichen Details stehen in `AGENTS.md`, `docs/FOOD_HANDLING_ORAL_PROCES
 
 `npm run verify` ist bewusst kein Standard nach jeder kleinen Änderung. Es ist der vollständige Gate, wenn der Scope mehrere Bereiche berührt oder ein Abschluss-/Releasecheck gebraucht wird.
 
-Der GitHub-App-Workflow spiegelt diese Matrix konservativ: nur eine explizite Fast-only-Allowlist aus reinen Planner-, Daten-, Persistenz-, Utility- und Node-Testpfaden darf ohne Browserregressionen enden. Sobald irgendein app-relevanter geänderter Pfad nicht eindeutig auf dieser Allowlist steht, wird weiterhin die vollständige Abdeckung von `npm run verify:app` verlangt. In GitHub Actions ist diese Abdeckung aus Performancegründen zerlegt: bei Fast-only-Scope läuft `npm run verify:fast` im eigenen Node-Job; bei Browser-Scope läuft `npm run verify:fast` genau einmal in einem der zwei Browser-Shards und `npm run test:browser` in beiden deterministischen Shards. Der Browserteil läuft auch dann weiter, wenn der einmalige Fast-Gate fehlschlägt, damit die Diagnoseabdeckung erhalten bleibt. Damit wird `verify:fast` nicht doppelt ausgeführt und kein zusätzlicher Runner nur für den Full-App-Fast-Gate gestartet. Die Klassifikation liegt in `scripts/ci-app-scope.mjs` und ist absichtlich fail-closed; neue, gemischte oder UI-nahe Dateien werden nie allein anhand eines Namensmusters automatisch als fast-only eingestuft.
+### Testbefehle nach Prüfbedarf
+
+Die Testgruppen werden durch `scripts/test-manifest.mjs` bestimmt und bleiben bei unbekannten oder querschnittlichen Änderungen fail-closed.
+
+```bash
+# kleinste Node-Prüfung nach fachlicher Gruppe
+npm run test:unit
+npm run test:integration
+
+# kompletter schneller Node-Gate
+npm run test:fast
+
+# nur die von geänderten Dateien betroffenen Node-Tests
+npm run test:relevant -- --files "js/planner-random-swap.js,tests/planner-random-swap.test.cjs"
+
+# gezielte Browserregression
+node browser-tests/planner-random-swap-webkit.test.mjs
+
+# normaler Browser-Gate ohne die drei langsamsten Messläufe
+npm run test:browser:standard
+
+# separat: die drei langsamsten Performance-/Lifecycle-Browserregressionen
+npm run test:browser:performance
+
+# relevante Browserregressionen anhand geänderter Pfade
+npm run test:browser:relevant -- --changed-files "js/planner-random-swap.js"
+
+# vollständige Gates
+npm run verify:app
+npm run verify
+```
+
+`npm run test:relevant` und `npm run test:browser:relevant` benötigen die geänderten Pfade. Bei unbekannten Laufzeitpfaden wird automatisch die vollständige Testmenge gewählt. Die Browserregressionen verwenden den gemeinsamen Harness in `browser-tests/helpers/app-harness.mjs`; Testisolierung und fachliche Assertions bleiben unverändert.
+
+Der GitHub-App-Workflow spiegelt diese Matrix konservativ: nur eine explizite Fast-only-Allowlist aus reinen Planner-, Daten-, Persistenz-, Utility- und Node-Testpfaden darf ohne Browserregressionen enden. Sobald irgendein app-relevanter geänderter Pfad nicht eindeutig auf dieser Allowlist steht, wird weiterhin die vollständige Abdeckung von `npm run verify:app` verlangt. In GitHub Actions ist diese Abdeckung aus Performancegründen zerlegt: bei Fast-only-Scope läuft `npm run verify:fast` im eigenen Node-Job; bei Browser-Scope läuft `npm run verify:fast` genau einmal in einem der zwei Browser-Shards und `npm run test:browser:standard` in beiden deterministischen Shards. Die drei langsamsten Messläufe (`save-ui-latency`, `targeted-action-rendering`, `app-resume-lifecycle`) laufen zusätzlich in einem eigenen, parallel gestarteten Performance-Job; sie bleiben damit Pflichtbestandteil der vollständigen Abdeckung, werden aber nicht in den normalen Browser-Shards doppelt ausgeführt. Der Browserteil läuft auch dann weiter, wenn der einmalige Fast-Gate fehlschlägt, damit die Diagnoseabdeckung erhalten bleibt. Damit wird `verify:fast` nicht doppelt ausgeführt und kein zusätzlicher Runner nur für den Full-App-Fast-Gate gestartet. Die Klassifikation liegt in `scripts/ci-app-scope.mjs` und ist absichtlich fail-closed; neue, gemischte oder UI-nahe Dateien werden nie allein anhand eines Namensmusters automatisch als fast-only eingestuft.
 
 ## CI rot vermeiden: Pre-Push- und Integrationscheck
 

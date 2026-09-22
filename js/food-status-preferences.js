@@ -40,10 +40,16 @@ function foodStatusPreferenceIntroductionExclude(
   overrideId = "",
   rankFn = () => 0,
   lastOutcomeFn = () => "",
+  focusAllowedFn = null,
 ) {
   let blocked = new Set(exclude || []);
   for (let item of foods || []) {
-    if (!item?.id || item.id === overrideId || item.allergenGroup) continue;
+    if (!item?.id || item.id === overrideId) continue;
+    if (typeof focusAllowedFn === "function" && !focusAllowedFn(item)) {
+      blocked.add(item.id);
+      continue;
+    }
+    if (item.allergenGroup) continue;
     if (Number(rankFn(item)) !== 1) continue;
     if (lastOutcomeFn(item.id) === "not_accepted") continue;
     blocked.add(item.id);
@@ -263,6 +269,9 @@ function installFoodStatusPreferencePolicy() {
         overrideId,
         rank,
         lastOutcome,
+        typeof plannerFoodCanBeAutomaticFocus === "function"
+          ? plannerFoodCanBeAutomaticFocus
+          : null,
       );
       return foodStatusPreferenceNextAutomaticResult(
         (nextBlocked) => originalIntroductionCandidate(meal, on, ctx, nextBlocked),

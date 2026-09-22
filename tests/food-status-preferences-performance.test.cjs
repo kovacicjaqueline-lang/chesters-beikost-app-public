@@ -23,17 +23,18 @@ function loadPolicy({ foods = [], ranks = {}, outcomes = {} } = {}) {
   return { context, policy: context.__policy };
 }
 
-test("Introduction-Vorfilter blockiert nur Probiert-Nicht-Allergene ohne echte Ablehnung", () => {
+test("Introduction-Vorfilter blockiert nur ohnehin übersprungene Probiert- und Auto-Fokus-Kandidaten", () => {
   const foods = [
     { id: "probiert", allergenGroup: "" },
     { id: "abgelehnt", allergenGroup: "" },
     { id: "allergen", allergenGroup: "Ei" },
     { id: "bekannt", allergenGroup: "" },
+    { id: "component", allergenGroup: "" },
     { id: "override", allergenGroup: "" },
   ];
   const { context, policy } = loadPolicy({
     foods,
-    ranks: { probiert: 1, abgelehnt: 1, allergen: 1, bekannt: 2, override: 1 },
+    ranks: { probiert: 1, abgelehnt: 1, allergen: 1, bekannt: 2, component: 0, override: 1 },
     outcomes: { probiert: "eaten", abgelehnt: "not_accepted", allergen: "eaten", override: "eaten" },
   });
 
@@ -43,22 +44,31 @@ test("Introduction-Vorfilter blockiert nur Probiert-Nicht-Allergene ohne echte A
     "override",
     context.rank,
     context.lastOutcome,
+    (item) => !["component", "override"].includes(item.id),
   );
 
   assert.deepEqual(
     Array.from(blocked).sort(),
-    ["probiert", "schon-ausgeschlossen"].sort(),
+    ["probiert", "component", "schon-ausgeschlossen"].sort(),
   );
 });
 
-test("Introduction-Vorfilter reduziert serielle Skip-Suche auf einen Producer-Aufruf", () => {
+test("Introduction-Vorfilter reduziert Probiert- und Component-Skip-Schleifen auf einen Producer-Aufruf", () => {
   const ordinary = Array.from({ length: 80 }, (_, index) => ({
     id: `probiert-${index}`,
     allergenGroup: "",
   }));
+  const components = Array.from({ length: 80 }, (_, index) => ({
+    id: `component-${index}`,
+    allergenGroup: "",
+  }));
   const allergen = { id: "ei", allergenGroup: "Ei" };
-  const foods = [...ordinary, allergen];
-  const ranks = Object.fromEntries(foods.map((item) => [item.id, 1]));
+  const foods = [...ordinary, ...components, allergen];
+  const ranks = {
+    ...Object.fromEntries(ordinary.map((item) => [item.id, 1])),
+    ...Object.fromEntries(components.map((item) => [item.id, 0])),
+    ei: 1,
+  };
   const outcomes = Object.fromEntries(ordinary.map((item) => [item.id, "eaten"]));
   outcomes.ei = "eaten";
   const { context, policy } = loadPolicy({ foods, ranks, outcomes });
@@ -69,6 +79,7 @@ test("Introduction-Vorfilter reduziert serielle Skip-Suche auf einen Producer-Au
     "",
     context.rank,
     context.lastOutcome,
+    (item) => !item.id.startsWith("component-"),
   );
   let producerCalls = 0;
   const result = policy.foodStatusPreferenceNextAutomaticResult((exclude) => {
@@ -98,6 +109,7 @@ test("Introduction-Vorfilter lässt Override und echte Ablehnungs-Wiederholung u
     "override",
     context.rank,
     context.lastOutcome,
+    () => false,
   );
   assert.deepEqual(Array.from(blocked), []);
 

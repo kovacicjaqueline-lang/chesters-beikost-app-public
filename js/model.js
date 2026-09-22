@@ -365,7 +365,9 @@ function setPhase(key) {
   state.settings.phaseSelected = key;
   state.settings.phaseModelVersion = 2;
   state.settings.phaseMode = "manual-v2";
-  save(); renderAll();
+  save();
+  if (typeof renderAllAfterNextPaint === "function") renderAllAfterNextPaint();
+  else renderAll();
   return true;
 }
 function mealProgressRank() {

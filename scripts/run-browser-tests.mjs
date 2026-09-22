@@ -9,6 +9,7 @@ const defaultRoot = path.resolve(path.dirname(scriptPath), "..");
 
 export const DEFAULT_BROWSER_TEST_CONCURRENCY = 2;
 export const DEFAULT_BROWSER_TEST_DURATION_MS = 30000;
+export const DEFAULT_BROWSER_TEST_PROCESS_TIMEOUT_MS = 300000;
 
 const preferredOrder = [
   "meal-editor-recipe-variants-webkit.test.mjs",
@@ -41,6 +42,12 @@ export function resolveBrowserTestConcurrency(value) {
   if (value === undefined || value === null || value === "") return DEFAULT_BROWSER_TEST_CONCURRENCY;
   const parsed = Number.parseInt(String(value), 10);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : DEFAULT_BROWSER_TEST_CONCURRENCY;
+}
+
+export function resolveBrowserTestProcessTimeout(value) {
+  if (value === undefined || value === null || value === "") return DEFAULT_BROWSER_TEST_PROCESS_TIMEOUT_MS;
+  const parsed = Number.parseInt(String(value), 10);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : DEFAULT_BROWSER_TEST_PROCESS_TIMEOUT_MS;
 }
 
 export function resolveBrowserTestShard(value) {
@@ -123,6 +130,7 @@ function safeName(filePath) {
 
 function runOne(testFile, { rootDir, artifactDir, childEnv, forwardOutput }) {
   return new Promise((resolve) => {
+    const processTimeoutMs = resolveBrowserTestProcessTimeout(childEnv.BROWSER_TEST_PROCESS_TIMEOUT_MS);
     const startedAt = Date.now();
     const testName = path.basename(testFile);
     const perTestArtifactDir = path.join(artifactDir, safeName(testFile).replace(/\.test\.mjs$/, ""));
@@ -147,18 +155,31 @@ function runOne(testFile, { rootDir, artifactDir, childEnv, forwardOutput }) {
     child.stderr.on("data", (chunk) => write(process.stderr, chunk));
 
     let spawnError = null;
+    let timedOut = false;
+    let forceKillHandle = null;
+    const timeoutHandle = setTimeout(() => {
+      timedOut = true;
+      logStream.write(`\nRunner timeout: browser test exceeded ${processTimeoutMs} ms.\n`);
+      child.kill("SIGTERM");
+      forceKillHandle = setTimeout(() => {
+        if (child.exitCode === null) child.kill("SIGKILL");
+      }, 5000);
+    }, processTimeoutMs);
     child.once("error", (error) => {
       spawnError = error;
       logStream.write(`\nRunner spawn error: ${error.stack || error.message}\n`);
     });
     child.once("close", (code, signal) => {
+      clearTimeout(timeoutHandle);
+      if (forceKillHandle) clearTimeout(forceKillHandle);
       logStream.end(() => {
         resolve({
           test: testName,
-          status: !spawnError && code === 0 ? "passed" : "failed",
+          status: !spawnError && !timedOut && code === 0 ? "passed" : "failed",
           exitCode: code,
           signal: signal || null,
           durationMs: Date.now() - startedAt,
+          ...(timedOut ? { error: `Browser test exceeded ${processTimeoutMs} ms` } : {}),
           ...(spawnError ? { error: spawnError.message } : {}),
           log: path.relative(rootDir, logPath),
         });

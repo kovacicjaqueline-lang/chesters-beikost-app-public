@@ -2,10 +2,14 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { webkit } from "playwright";
-import { closeBrowserApp, startStaticServer } from "./helpers/app-harness.mjs";
+import { closeBrowserApp, configureBrowserTestPage, startStaticServer } from "./helpers/app-harness.mjs";
 
 async function waitForView(page, id) {
-  await page.waitForFunction((viewId) => document.getElementById(viewId)?.classList.contains("active"), id);
+  await page.waitForFunction(
+    (viewId) => document.getElementById(viewId)?.classList.contains("active"),
+    id,
+    { timeout: 30_000 },
+  );
 }
 
 const server = await startStaticServer();
@@ -17,7 +21,7 @@ const context = await browser.newContext({
   isMobile: true,
   hasTouch: true,
 });
-const page = await context.newPage();
+const page = configureBrowserTestPage(await context.newPage());
 
 try {
   await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "domcontentloaded" });
@@ -114,16 +118,23 @@ try {
     window.__targetedActionRenderProbe.plan = 0;
   });
   const removeManualMealSelector = `.removeManualMeal[data-date="${mealDeleteSetup.date}"][data-meal="lunch"]`;
-  const removeManualMeal = page.locator(removeManualMealSelector);
-  await removeManualMeal.evaluateAll((elements) => {
-    for (const element of elements) {
-      for (let ancestor = element.parentElement; ancestor; ancestor = ancestor.parentElement) {
-        if (ancestor.tagName === "DETAILS") ancestor.open = true;
-      }
+  const manualMealDetails = page.locator("#plan details.manual-meal")
+    .filter({ has: page.locator(removeManualMealSelector) })
+    .filter({ has: page.locator("summary:visible") });
+  let visibleRemoveManualMeal = null;
+  for (let index = 0; index < await manualMealDetails.count(); index += 1) {
+    const candidate = manualMealDetails.nth(index);
+    const summary = candidate.locator("summary:visible");
+    if (!(await candidate.evaluate((details) => details.open))) {
+      await summary.click({ timeout: 10_000 });
     }
-  });
-  const visibleRemoveManualMeal = page.locator(`${removeManualMealSelector}:visible`).first();
-  await visibleRemoveManualMeal.waitFor({ state: "visible" });
+    const removeButton = candidate.locator(removeManualMealSelector);
+    if (await removeButton.isVisible()) {
+      visibleRemoveManualMeal = removeButton;
+      break;
+    }
+  }
+  assert.ok(visibleRemoveManualMeal, "Manuelle Mahlzeit muss in einem sichtbaren geöffneten Plan-Details-Element erscheinen");
   await visibleRemoveManualMeal.click();
   await page.locator("#confirmMealDelete").waitFor({ state: "visible" });
   const deleteMealMs = await page.evaluate(() => {

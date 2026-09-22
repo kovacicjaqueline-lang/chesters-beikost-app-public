@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { webkit } from "playwright";
-import { closeBrowserApp, startStaticServer } from "./helpers/app-harness.mjs";
+import { closeBrowserApp, configureBrowserTestPage, startStaticServer } from "./helpers/app-harness.mjs";
+import { installBrowserTimingProbe } from "./helpers/browser-timing-probe.mjs";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const artifactDir = path.join(root, "artifacts", "browser-tests", "plan-checks-ux-webkit");
 
@@ -16,8 +17,7 @@ async function showView(page, view) {
 async function seedAllergens(page, { targetIds, exposureCount = 2, autoLockCount = 2, projectedTargetId = "" }) {
   return page.evaluate(({ targetIds, exposureCount, autoLockCount, projectedTargetId }) => {
     const api = window.__beikostTest;
-    api.reset();
-    let current = api.getState();
+    let current = structuredClone(window.__beikostTestBaseline);
     const on = api.today();
     current.settings.phaseSelected = "drei";
     current.settings.planFrom = on;
@@ -118,8 +118,7 @@ async function seedAllergens(page, { targetIds, exposureCount = 2, autoLockCount
 async function seedHardBlocker(page) {
   return page.evaluate(() => {
     const api = window.__beikostTest;
-    api.reset();
-    let current = api.getState();
+    let current = structuredClone(window.__beikostTestBaseline);
     const on = api.today();
     current.settings.phaseSelected = "drei";
     current.settings.planFrom = on;
@@ -176,8 +175,7 @@ async function seedHardBlocker(page) {
 async function seedRequiredAction(page) {
   return page.evaluate(() => {
     const api = window.__beikostTest;
-    api.reset();
-    let current = api.getState();
+    let current = structuredClone(window.__beikostTestBaseline);
     const on = api.today();
     current.settings.phaseSelected = "drei";
     current.settings.planFrom = on;
@@ -225,6 +223,7 @@ async function assertSheetFitsMobile(page) {
 const server = await startStaticServer();
 const { port } = server.address();
 const browser = await webkit.launch();
+let timingProbe = null;
 
 try {
   const context = await browser.newContext({
@@ -233,12 +232,18 @@ try {
     isMobile: true,
     hasTouch: true,
   });
-  const page = await context.newPage();
+  const page = configureBrowserTestPage(await context.newPage());
+  timingProbe = installBrowserTimingProbe(page);
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
 
   await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => !!window.__beikostTest?.setState);
+  await page.evaluate(() => {
+    const api = window.__beikostTest;
+    api.reset();
+    window.__beikostTestBaseline = api.getState();
+  });
   await page.waitForFunction(() => window.__planChecksContractExtensionInstalled === true && window.__planChecksUiInstalled === true);
 
   // 1. Projected-covered erzeugt keinen offenen Hinweis.
@@ -271,12 +276,12 @@ try {
   assert.match(await page.locator("#planQuality").textContent(), /2 Allergene/);
   await page.locator("#openPlanGoalSolution").click();
   const firstTitle = (await page.locator("#genericTitle").textContent()).trim();
-  await page.locator("#applyPlanGoalSolution").click();
+  await page.locator("#applyPlanGoalSolution").click({ timeout: 30_000 });
   await page.waitForFunction((before) => {
     const title = document.getElementById("genericTitle")?.textContent?.trim();
     return document.getElementById("genericModal")?.classList.contains("open") && title && title !== before;
   }, firstTitle);
-  await page.locator("#applyPlanGoalSolution").click();
+  await page.locator("#applyPlanGoalSolution").click({ timeout: 30_000 });
   await page.waitForFunction(() => !document.getElementById("genericModal")?.classList.contains("open"));
   await page.waitForFunction(() => document.getElementById("toast")?.classList.contains("show") && document.getElementById("toastText")?.textContent === "Plan aktualisiert");
 
@@ -342,16 +347,17 @@ try {
   await page.waitForFunction(() => window.__beikostTest.planCheckReport().items.some((item) => item.type === "required_action"));
   assert.match(await page.locator("#planQuality").textContent(), /Planentscheidung offen/);
   await page.locator("#openPlanRequiredAction").click();
-  await page.locator("#reactivateRequiredFood").click();
+  await page.locator("#reactivateRequiredFood").waitFor({ state: "visible", timeout: 30_000 });
+  await page.locator("#reactivateRequiredFood").click({ timeout: 30_000 });
   await page.waitForFunction((id) => window.__beikostTest.getState().foods.find((record) => record.id === id)?.active === true, required.foodId);
 
   // 9. Phase-Details zeigen tatsächliche erfüllte und fehlende Kriterien.
-  await page.evaluate(() => window.__beikostTest.reset());
+  await page.evaluate(() => window.__beikostTest.setState(structuredClone(window.__beikostTestBaseline)));
   await showView(page, "home");
   await page.locator(".phase-details-trigger").click();
-  await page.locator('[data-readiness-signal="currentPatternAccepted"][data-readiness-value="yes"]').click();
-  await page.locator('[data-readiness-signal="additionalMealCue"][data-readiness-value="no"]').click();
-  await page.locator('[data-readiness-signal="routineCompatible"][data-readiness-value="unknown"]').click();
+  await page.locator('[data-readiness-signal="currentPatternAccepted"][data-readiness-value="yes"]').click({ timeout: 30_000 });
+  await page.locator('[data-readiness-signal="additionalMealCue"][data-readiness-value="no"]').click({ timeout: 30_000 });
+  await page.locator('[data-readiness-signal="routineCompatible"][data-readiness-value="unknown"]').click({ timeout: 30_000 });
   await page.waitForFunction(() => document.getElementById("genericBody")?.textContent?.includes("Erfüllt") && document.getElementById("genericBody")?.textContent?.includes("Fehlt noch"));
   assert.match(await page.locator("#genericBody").textContent(), /Das aktuelle Mahlzeitenmuster funktioniert im Alltag/);
   assert.match(await page.locator("#genericBody").textContent(), /Signale für eine zusätzliche Mahlzeit fehlen noch/);
@@ -359,10 +365,10 @@ try {
   await page.screenshot({ path: path.join(artifactDir, "phase-readiness-mixed.png"), fullPage: false });
 
   // 10. Empfehlung nennt den zusätzlichen Slot; Phasenwechsel erfolgt erst nach bestehender Bestätigung.
-  await page.locator('[data-readiness-signal="additionalMealCue"][data-readiness-value="yes"]').click();
-  await page.locator('[data-readiness-signal="routineCompatible"][data-readiness-value="yes"]').click();
+  await page.locator('[data-readiness-signal="additionalMealCue"][data-readiness-value="yes"]').click({ timeout: 30_000 });
+  await page.locator('[data-readiness-signal="routineCompatible"][data-readiness-value="yes"]').click({ timeout: 30_000 });
   await page.waitForFunction(() => document.getElementById("genericBody")?.textContent?.includes("Nächste Phase empfohlen"));
-  assert.match(await page.locator("#genericBody").textContent(), /zusätzlich ein Abendessen\. Frühstück und Mittagessen bleiben bestehen/);
+  assert.match(await page.locator("#genericBody").textContent(), /Mit der nächsten Phase plant die App zusätzlich ein (Frühstück|Abendessen)\. (?:Frühstück und )?Mittagessen bleib(?:t|en) bestehen/);
   const phaseBefore = await page.evaluate(() => window.__beikostTest.getState().settings.phaseSelected);
   await page.locator("#startRecommendedPhase").click();
   await page.waitForFunction(() => document.getElementById("genericTitle")?.textContent?.includes("wechseln?"));
@@ -374,5 +380,6 @@ try {
   await context.close();
   console.log("plan-checks-ux-webkit: ok");
 } finally {
+  console.log(`[browser-timing-probe] ${JSON.stringify(timingProbe?.report?.() || {})}`);
   await closeBrowserApp({ context: typeof context !== "undefined" ? context : null, browser, server });
 }

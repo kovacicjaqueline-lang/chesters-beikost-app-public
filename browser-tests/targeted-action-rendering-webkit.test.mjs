@@ -127,16 +127,14 @@ try {
     window.__targetedActionRenderProbe.plan = 0;
   });
   const removeManualMealSelector = `.removeManualMeal[data-date="${mealDeleteSetup.date}"][data-meal="lunch"]`;
-  const removeManualMeal = page.locator(removeManualMealSelector);
-  await removeManualMeal.evaluateAll((elements) => {
-    for (const element of elements) {
-      const details = element.closest("details.manual-meal");
-      if (details && !details.open) details.querySelector("summary")?.click();
+  await page.evaluate((selector) => {
+    const button = document.querySelector(selector);
+    if (!button) throw new Error(`Mahlzeit-Löschen-Button fehlt: ${selector}`);
+    for (let node = button.parentElement; node; node = node.parentElement) {
+      if (node instanceof HTMLDetailsElement) node.open = true;
     }
-  });
-  const visibleRemoveManualMeal = page.locator(`${removeManualMealSelector}:visible`).first();
-  await visibleRemoveManualMeal.waitFor({ state: "visible" });
-  await visibleRemoveManualMeal.click();
+    button.click();
+  }, removeManualMealSelector);
   await page.locator("#confirmMealDelete").waitFor({ state: "visible" });
   const deleteMealMs = await page.evaluate(() => {
     const start = performance.now();

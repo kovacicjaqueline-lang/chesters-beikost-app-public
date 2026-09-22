@@ -34,6 +34,23 @@ function foodStatusPreferenceShouldSkipAutomaticResult(result, rankValue, lastOu
   return !foodStatusPreferenceShouldRetry(result.f, rankValue, lastOutcomeValue);
 }
 
+function foodStatusPreferenceIntroductionExclude(
+  foods = [],
+  exclude = [],
+  overrideId = "",
+  rankFn = () => 0,
+  lastOutcomeFn = () => "",
+) {
+  let blocked = new Set(exclude || []);
+  for (let item of foods || []) {
+    if (!item?.id || item.id === overrideId || item.allergenGroup) continue;
+    if (Number(rankFn(item)) !== 1) continue;
+    if (lastOutcomeFn(item.id) === "not_accepted") continue;
+    blocked.add(item.id);
+  }
+  return [...blocked];
+}
+
 function foodStatusPreferenceNextAutomaticResult(producer, exclude = []) {
   let blocked = [...exclude];
   let max = (state?.foods?.length || 0) + 1;
@@ -238,11 +255,20 @@ function installFoodStatusPreferencePolicy() {
   }
   if (typeof introductionCandidate === "function") {
     let originalIntroductionCandidate = introductionCandidate;
-    introductionCandidate = (meal, on, ctx, exclude = []) =>
-      foodStatusPreferenceNextAutomaticResult(
-        (blocked) => originalIntroductionCandidate(meal, on, ctx, blocked),
+    introductionCandidate = (meal, on, ctx, exclude = []) => {
+      let overrideId = state?.overrides?.[`${on}|${meal}`] || "";
+      let blocked = foodStatusPreferenceIntroductionExclude(
+        state?.foods || [],
         exclude,
+        overrideId,
+        rank,
+        lastOutcome,
       );
+      return foodStatusPreferenceNextAutomaticResult(
+        (nextBlocked) => originalIntroductionCandidate(meal, on, ctx, nextBlocked),
+        blocked,
+      );
+    };
   }
 
   if (typeof showFoodInfoCore === "function") {
@@ -250,7 +276,6 @@ function installFoodStatusPreferencePolicy() {
     showFoodInfoCore = function showFoodInfoCoreWithPreference(foodRecord) {
       originalShowFoodInfoCore(foodRecord);
       if (typeof document === "undefined") return;
-
       let statusChips = document.querySelector(".food-detail-status");
       if (foodStatusPreferenceLiked(foodRecord) && statusChips && !statusChips.querySelector("[data-food-liked-chip]")) {
         statusChips.insertAdjacentHTML(
@@ -291,6 +316,8 @@ if (typeof module !== "undefined" && module.exports) {
     foodStatusPreferenceCanCombine,
     foodStatusPreferenceShouldRetry,
     foodStatusPreferenceShouldSkipAutomaticResult,
+    foodStatusPreferenceIntroductionExclude,
+    foodStatusPreferenceNextAutomaticResult,
     foodStatusPreferenceProgressLabels,
     installFoodStatusPreferencePolicy,
   };

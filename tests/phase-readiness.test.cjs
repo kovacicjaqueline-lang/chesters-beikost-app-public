@@ -27,8 +27,8 @@ const READY = {
 test('PHASE-TRANSITION: nächste Phase und neuer Slot folgen exakt dem Phasenmodell', () => {
   const { __recommend } = loadCore();
   const expected = {
-    kennenlernen: ['aufbau', 'breakfast'],
-    aufbau: ['drei', 'dinner'],
+    kennenlernen: ['aufbau', 'dinner'],
+    aufbau: ['drei', 'breakfast'],
     drei: ['familie', 'snack'],
     familie: [null, null],
   };

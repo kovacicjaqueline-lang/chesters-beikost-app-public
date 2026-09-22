@@ -362,7 +362,7 @@ try {
   await page.locator('[data-readiness-signal="additionalMealCue"][data-readiness-value="yes"]').click();
   await page.locator('[data-readiness-signal="routineCompatible"][data-readiness-value="yes"]').click();
   await page.waitForFunction(() => document.getElementById("genericBody")?.textContent?.includes("Nächste Phase empfohlen"));
-  assert.match(await page.locator("#genericBody").textContent(), /zusätzlich ein Frühstück\. Mittagessen bleibt bestehen/);
+  assert.match(await page.locator("#genericBody").textContent(), /zusätzlich ein Abendessen\. Frühstück und Mittagessen bleiben bestehen/);
   const phaseBefore = await page.evaluate(() => window.__beikostTest.getState().settings.phaseSelected);
   await page.locator("#startRecommendedPhase").click();
   await page.waitForFunction(() => document.getElementById("genericTitle")?.textContent?.includes("wechseln?"));

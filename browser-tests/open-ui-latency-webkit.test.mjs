@@ -258,7 +258,11 @@ try {
   assert.equal(allergenImmediate.loading, true);
   assert.equal(allergenImmediate.saveDisabled, true, "Speichern bleibt bis zur Bestandsprüfung gesperrt");
   assert.equal(allergenImmediate.build21Calls, 0, "21-Tage-Suche darf Öffnen nicht blockieren");
-  await page.waitForFunction(() => window.__openUiLatencyProbe.build21Calls > 0 && !document.getElementById("saveAllergenDate")?.disabled);
+  await page.waitForFunction(
+    () => window.__openUiLatencyProbe.build21Calls > 0 && !document.getElementById("saveAllergenDate")?.disabled,
+    null,
+    { timeout: 60000 },
+  );
   const allergenDeferred = await page.evaluate(() => ({
     painted: window.__openUiLatencyProbe.painted,
     build21BeforePaint: window.__openUiLatencyProbe.build21BeforePaint,

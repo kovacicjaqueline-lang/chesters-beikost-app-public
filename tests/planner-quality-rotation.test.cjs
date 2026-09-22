@@ -73,6 +73,46 @@ test("Rotation erfasst alle FOOD-Rollen und exakte Paare, nicht nur focusId", ()
   assert.equal(state.qualityPairUse.get("gurke+huhn"), 1);
 });
 
+test("Nicht verschieben zählt die Vortagsplanung für die Rotation, aber nicht als Nutzung", () => {
+  const data = {
+    planLocks: {
+      "2026-08-20|breakfast": {
+        planId: "yesterday-plan",
+        date: "2026-08-20",
+        meal: "breakfast",
+        focusId: "bulgur",
+        foodIds: ["bulgur", "brombeere"],
+      },
+      "2026-08-20|lunch": {
+        planId: "shifted-plan",
+        date: "2026-08-20",
+        meal: "lunch",
+        focusId: "apfel",
+        foodIds: ["apfel"],
+      },
+    },
+    backupMeta: {
+      plannerLinking: {
+        rolloverHandled: {
+          "yesterday-plan": { action: "keep", at: "2026-08-21T07:00:00.000Z" },
+          "shifted-plan": { action: "shift", at: "2026-08-21T07:00:00.000Z" },
+        },
+      },
+    },
+    logs: [],
+  };
+  const context = ctx();
+
+  quality.plannerQualitySeedKeptPlans(context, "2026-08-21", data);
+
+  assert.equal(context.qualityLastFoodUse.get("bulgur"), "2026-08-20");
+  assert.equal(context.qualityLastFoodUse.get("brombeere"), "2026-08-20");
+  assert.equal(context.qualityPairUse.get("brombeere+bulgur"), 1);
+  assert.equal(context.lastFocus.get("bulgur"), "2026-08-20");
+  assert.equal(context.qualityLastFoodUse.has("apfel"), false);
+  assert.deepEqual(data.logs, [], "Nicht verschieben darf keinen gegessenen/protokollierten Eintrag erzeugen");
+});
+
 test("bei gleich zulässigen Kandidaten schlägt neue Kombination eine wiederholte", () => {
   const state = ctx();
   state.qualityFoodUse.set("gurke", 2);
@@ -200,6 +240,109 @@ test("Runtime rotiert Brombeere als Frühstücks-Begleiter am Folgetag", () => {
     const second = global.buildDay("2026-08-21", 1, context);
     assert.equal(first.meals[0].foodIds[1], "brombeere");
     assert.equal(second.meals[0].foodIds[1], "apfel");
+  } finally {
+    for (const [name, value] of Object.entries(previous)) {
+      if (value === undefined) delete global[name];
+      else global[name] = value;
+    }
+    if (previousFlag === undefined) delete global.__plannerQualityRotationRuntimeInstalled;
+    else global.__plannerQualityRotationRuntimeInstalled = previousFlag;
+  }
+});
+
+test("Runtime rotiert eine per Nicht verschieben quittierte Vortagsplanung am Folgetag", () => {
+  const names = [
+    "buildDay", "freshPlanContext", "introductionCandidate", "knownCandidate", "companionFor",
+    "planQualityIssues", "manualMealFor", "lockedMeal", "dueAllergen", "knownBase", "food",
+    "isTrustedBase", "diffDays", "lastDate", "activeMeal", "rank", "state",
+    "relatedFamilyFoodIds", "plannerAutomaticPairPreferencePenalty",
+  ];
+  const previous = Object.fromEntries(names.map((name) => [name, global[name]]));
+  const previousFlag = global.__plannerQualityRotationRuntimeInstalled;
+
+  try {
+    delete global.__plannerQualityRotationRuntimeInstalled;
+    const foods = [
+      { id: "bulgur", name: "Bulgur", allergenGroup: "", meals: ["breakfast"], priority: 1 },
+      { id: "brombeere", name: "Brombeere", allergenGroup: "", meals: ["breakfast"], priority: 2 },
+      { id: "apfel", name: "Apfel", allergenGroup: "", meals: ["breakfast"], priority: 3 },
+    ];
+    global.state = {
+      foods,
+      settings: {},
+      deferred: {},
+      planLocks: {
+        "2026-08-20|breakfast": {
+          planId: "yesterday-plan",
+          date: "2026-08-20",
+          meal: "breakfast",
+          focusId: "bulgur",
+          foodIds: ["bulgur", "brombeere"],
+        },
+      },
+      manualMeals: {},
+      overrides: {},
+      logs: [],
+      backupMeta: {
+        plannerLinking: {
+          rolloverHandled: {
+            "yesterday-plan": { action: "keep", at: "2026-08-21T07:00:00.000Z" },
+          },
+        },
+      },
+    };
+    global.food = (id) => global.state.foods.find((item) => item.id === id);
+    global.isTrustedBase = (item) => item?.id === "bulgur";
+    global.dueAllergen = () => false;
+    global.knownBase = () => global.food("bulgur");
+    global.lastDate = () => "";
+    global.diffDays = (a, b) => Math.round((Date.parse(`${a}T00:00:00Z`) - Date.parse(`${b}T00:00:00Z`)) / 86400000);
+    global.activeMeal = (meal) => meal === "breakfast";
+    global.rank = () => 2;
+    global.relatedFamilyFoodIds = (item) => [item.id];
+    global.plannerAutomaticPairPreferencePenalty = () => 0;
+    global.manualMealFor = () => null;
+    global.lockedMeal = () => null;
+    global.freshPlanContext = () => ({
+      reserved: new Set(),
+      introduced: [],
+      plannedUse: new Map(),
+      lastFocus: new Map(),
+      inventoryReserved: new Map(),
+      recipeReserved: new Map(),
+      recipePlannedUse: new Map(),
+      fullMilkDates: new Set(),
+    });
+    global.introductionCandidate = () => null;
+    global.knownCandidate = () => ({ f: global.food("bulgur"), type: "bekannt" });
+    global.companionFor = (focus) => global.state.foods.find(
+      (item) => item.id !== focus?.id && item.meals.includes("breakfast"),
+    ) || null;
+    global.planQualityIssues = () => [];
+    global.buildDay = (date, index, context) => {
+      const focus = global.food("bulgur");
+      const companion = global.companionFor(focus, "breakfast", date, "bekannt");
+      return {
+        date,
+        index,
+        meals: [{
+          meal: "breakfast",
+          active: true,
+          focusId: focus.id,
+          foodIds: [focus.id, companion.id],
+          baseFoodIds: [focus.id, companion.id],
+          sampleFoodIds: [],
+          type: "bekannt",
+        }],
+      };
+    };
+
+    assert.equal(quality.installPlannerQualityRotationRuntime(), true);
+    const context = global.freshPlanContext();
+    const day = global.buildDay("2026-08-21", 0, context);
+
+    assert.equal(day.meals[0].foodIds[1], "apfel");
+    assert.deepEqual(global.state.logs, [], "Rotation darf keinen Nutzungs-/Essenseintrag erzeugen");
   } finally {
     for (const [name, value] of Object.entries(previous)) {
       if (value === undefined) delete global[name];

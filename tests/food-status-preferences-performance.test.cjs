@@ -111,7 +111,7 @@ test("Introduction-Vorfilter lässt Override und echte Ablehnungs-Wiederholung u
     context.lastOutcome,
     (item) => item.id === "abgelehnt",
   );
-  assert.deepEqual(Array.from(blocked), []);
+  assert.equal(blocked.length, 0);
 
   let calls = 0;
   const overrideResult = policy.foodStatusPreferenceNextAutomaticResult(() => {

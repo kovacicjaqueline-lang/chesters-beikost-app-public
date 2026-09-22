@@ -27,7 +27,7 @@ Alter, gegessene Grammmenge und Konsistenz wechseln die Phase nicht automatisch.
 
 Der Übergang in die nächste Phase ist entwicklungsorientiert zu empfehlen und wird bewusst durch die Nutzerin bestätigt.
 
-## 1.1 Automatische Mahlzeitenslots ✅ main
+## 1.1 Automatische Mahlzeitenslots 🟡 Branch/Integrations-PR
 
 | Phase | Automatisch geplante Slots |
 |---|---|
@@ -50,7 +50,7 @@ Zusätzlich gilt:
 - Die Texturentwicklung bleibt separat dokumentiert.
 - Historische Texturinformationen dürfen durch spätere Planner-Erweiterungen nicht stillschweigend umgedeutet werden.
 
-## 1.3 PHASE-TRANSITION – entwicklungsorientierte Empfehlung ✅ main
+## 1.3 PHASE-TRANSITION – entwicklungsorientierte Empfehlung 🟡 Branch/Integrations-PR
 
 Der Readiness-Core beantwortet **ausschließlich**, ob der Übergang in die nächste Beikostphase empfohlen werden kann. Er verändert `phaseSelected` nicht, ruft keinen Phasenwechsel auf und bleibt vollständig getrennt von der bestehenden bewussten Nutzerbestätigung.
 
@@ -674,9 +674,9 @@ Aktuell nicht als erledigt behandeln:
 
 Die vollständige österreichische `seasonMonths`-Matrix und die Nuss-/Samen-Rollen- und Toppingregel sind auf `main` integriert und nicht mehr als offene Planner-Blöcke zu behandeln. Die allgemeine Handling-/BLW-Schicht ist **keine offene Fachfrage mehr**. Der Oral-Processing-Contract ist fachlich auf `main` dokumentiert; Review, Einzelmigrationen und eine spätere technische Runtime-Abbildung bleiben ein separater Handling-/Oral-Arbeitsstrang und sind nicht Teil dieses Planner-Statusabgleichs.
 
-## 17.2 PHASE-TRANSITION ✅ main
+## 17.2 PHASE-TRANSITION 🟡 Branch/Integrations-PR
 
-Für PHASE-TRANSITION besteht kein offener Soll/Ist-Gap mehr. Der read-only Readiness-Core, seine strukturierte Planner-Einbindung und die sichtbare Phase-Readiness-UX sind auf `main` integriert. Die bestehende bewusste Nutzerbestätigung bleibt der einzige Weg zum tatsächlichen Phasenwechsel; Alter, Grammwerte, Loganzahl, Phasendauer und Textur sind weiterhin keine Readiness-Schwellen.
+Der read-only Readiness-Core, seine strukturierte Planner-Einbindung und die sichtbare Phase-Readiness-UX sind grundsätzlich auf `main` integriert. Die in PR #255 geänderte Reihenfolge der neuen Auto-Slots – zuerst Abendessen, danach Frühstück – bleibt bis zum Merge Branch-/Integrations-PR-Stand. Unverändert gilt: Die bewusste Nutzerbestätigung bleibt der einzige Weg zum tatsächlichen Phasenwechsel; Alter, Grammwerte, Loganzahl, Phasendauer und Textur sind weiterhin keine Readiness-Schwellen.
 
 Für den Handling-/Bite-/Oral-Bereich besteht im Integrations-PR keine offene Gruppenmigration mehr: alle **129 Laufzeitrezepte** sind explizit im Contract vertreten. Die 41 zuvor bestehenden zusammenhängenden Fingerfoods bleiben als historische Vergleichsmatrix erhalten; die zwei Wrap-Rezepte und 18 neuen Form-/Texturrezepte sind separat anhand ihrer konkreten Servierform klassifiziert. Neue FOODs/Rezepte benötigen weiterhin ihre eigene explizite Einzelklassifikation gemäß `AGENTS.md`.
 

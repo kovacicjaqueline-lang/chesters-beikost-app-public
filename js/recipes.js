@@ -963,7 +963,7 @@ function recipeDetailVariantBody(r) {
   let rows = [];
   if (r.selectedVariantLabel) {
     let readiness = (r.selectedVariantRequirements || []).every(recipeIngredientReady) ? "" : " · noch offen";
-    rows.push(`<div class="recipe-detail-choice selected"><b>Aktuell ausgewählte Variante</b><span>${esc(r.selectedVariantLabel)}${readiness}</span></div>`);
+    rows.push(`<div class="recipe-detail-choice selected"><b>Variante:</b><span>${esc(r.selectedVariantLabel)}${readiness}</span></div>`);
   }
   if (r.selectedOption) {
     rows.push(`<div class="recipe-detail-choice selected"><b>${r.name === "Milch-Getreide-Brei" ? "Aktuell ausgewähltes Getreide:" : "Vorausgewählt:"}</b><span>${esc(r.selectedOption)}${r.selectedOptionReady ? "" : " · noch offen"}</span></div>`);

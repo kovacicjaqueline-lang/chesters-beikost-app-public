@@ -87,7 +87,8 @@ test("echter buildDays-Plan erzeugt eine abwechslungsreiche 7-Tage-Woche", () =>
   assert.equal(activeMeals.some((meal) => ["breakfast", "snack"].includes(meal.meal)), false);
   assert.ok(new Set(focusIds).size >= 5, "die echten Tagesvorschläge müssen über die Woche rotieren");
   assert.ok(new Set(combinations).size >= 5, "die echten Mahlzeitenkombinationen müssen über die Woche rotieren");
-  const blackberryMeals = activeMeals.filter((meal) => (meal.foodIds || []).includes("brombeere"));\n  assert.ok(blackberryMeals.length <= 2, "Brombeere darf bei gleich geeigneten Alternativen nicht fast jede Mahlzeit dominieren");
+  const blackberryMeals = activeMeals.filter((meal) => (meal.foodIds || []).includes("brombeere"));
+  assert.ok(blackberryMeals.length <= 2, "Brombeere darf bei gleich geeigneten Alternativen nicht fast jede Mahlzeit dominieren");
   assert.ok(activeMeals.some((meal) => meal.foodIds.some((id) => state.foods.find((food) => food.id === id)?.ironRich)), "die Woche muss die modellierte Eisenregel sichtbar bedienen");
   for (const meal of activeMeals) {
     const items = meal.foodIds.map((id) => state.foods.find((food) => food.id === id)).filter(Boolean);

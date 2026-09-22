@@ -1063,7 +1063,7 @@ function showRecipeInfo(r) {
 }
 globalThis.showRecipeInfo = showRecipeInfo;
 
-function renderRecipeCard(r, { priorityImage = false, showDetails = true } = {}) {
+function renderRecipeCard(r, { priorityImage = false, showDetails = false } = {}) {
   let type = recipeCatalogTypeLabel(r);
   let familyText = r.familyLabel ? " · " + esc(r.familyLabel) : "";
   let encodedName = encodeURIComponent(r.name);

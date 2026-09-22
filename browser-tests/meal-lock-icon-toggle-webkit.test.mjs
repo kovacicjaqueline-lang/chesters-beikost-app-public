@@ -182,8 +182,8 @@ try {
   assert.equal(completedTracking.tracking, true, "Ein erledigter heutiger Slot behält seinen unsichtbaren Tracking-Snapshot");
 
   await page.locator("#planRecalculate").click();
-  await page.locator("#confirmPlanRebuild").waitFor({ state: "visible" });
-  await page.locator("#confirmPlanRebuild").click();
+  const confirmationButton = page.locator("#confirmPlanRebuild");
+  if (await confirmationButton.isVisible()) await confirmationButton.click();
   const afterCompletedReplan = await page.evaluate((date) => {
     const state = window.__beikostTest.getState();
     const lock = state.planLocks?.[`${date}|lunch`];

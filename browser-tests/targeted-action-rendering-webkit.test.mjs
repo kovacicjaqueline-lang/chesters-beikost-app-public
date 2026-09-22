@@ -117,8 +117,9 @@ try {
   const removeManualMeal = page.locator(removeManualMealSelector);
   await removeManualMeal.evaluateAll((elements) => {
     for (const element of elements) {
-      const details = element.closest("details.manual-meal");
-      if (details && !details.open) details.querySelector("summary")?.click();
+      for (let ancestor = element.parentElement; ancestor; ancestor = ancestor.parentElement) {
+        if (ancestor.tagName === "DETAILS") ancestor.open = true;
+      }
     }
   });
   const visibleRemoveManualMeal = page.locator(`${removeManualMealSelector}:visible`).first();

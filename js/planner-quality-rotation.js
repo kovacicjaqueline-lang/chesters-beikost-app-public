@@ -189,7 +189,7 @@ function plannerQualityChooseResult(results, ctx, on, diffFn, focusId = "") {
     .sort((a, b) => plannerQualityCompareTuple(a.tuple, b.tuple))[0]?.result || null;
 }
 
-function plannerQualityBreakfastCompanionResults(results, ctx, on, diffFn) {
+function plannerQualityCompanionResults(results, ctx, on, diffFn) {
   if (!Array.isArray(results) || results.length < 2 || typeof diffFn !== "function") return results || [];
   let rotated = results.filter((result) => {
     let id = result?.f?.id || result?.id || "";
@@ -200,6 +200,12 @@ function plannerQualityBreakfastCompanionResults(results, ctx, on, diffFn) {
     return !Number.isFinite(distance) || distance > 1;
   });
   return rotated.length ? rotated : results;
+}
+
+// Backward-compatible name for callers/tests that used the original
+// breakfast-specific helper before rotation became a general companion policy.
+function plannerQualityBreakfastCompanionResults(results, ctx, on, diffFn) {
+  return plannerQualityCompanionResults(results, ctx, on, diffFn);
 }
 
 function plannerQualityKnownCandidatePriorityTuple(
@@ -413,18 +419,16 @@ function installPlannerQualityRotationRuntime() {
     let results = collectCompanionResults(focus, meal, on, focusType);
     if (results.length < 2) return results[0]?.f || null;
 
-    // Frühstücks-Begleiter dürfen nicht täglich denselben Frucht-/Getreidepartner
-    // wiederholen, wenn eine gleich zulässige Alternative vorhanden ist. Der
-    // Fallback auf die vollständige Liste bleibt wichtig, wenn tatsächlich nur
-    // ein FOOD verfügbar ist.
-    if (meal === "breakfast") {
-      results = plannerQualityBreakfastCompanionResults(
-        results,
-        activeQualityContext,
-        on,
-        diffDays,
-      );
-    }
+    // Begleiter dürfen in keiner relevanten automatischen Mahlzeit täglich
+    // denselben Partner wiederholen, wenn eine gleich zulässige Alternative
+    // vorhanden ist. Der Fallback auf die vollständige Liste bleibt wichtig,
+    // wenn tatsächlich nur ein FOOD verfügbar ist.
+    results = plannerQualityCompanionResults(
+      results,
+      activeQualityContext,
+      on,
+      diffDays,
+    );
 
     if (typeof plannerAutomaticPairPreferencePenalty === "function") {
       let baseline = plannerAutomaticPairPreferencePenalty(focus, results[0].f, meal);
@@ -570,6 +574,7 @@ if (typeof module !== "undefined" && module.exports) {
     plannerQualityCandidateTuple,
     plannerQualityCompareTuple,
     plannerQualityChooseResult,
+    plannerQualityCompanionResults,
     plannerQualityBreakfastCompanionResults,
     plannerQualityKnownCandidatePriorityTuple,
     plannerQualityChooseKnownResult,

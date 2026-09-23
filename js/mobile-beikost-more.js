@@ -351,6 +351,7 @@
       ));
     });
     panelScreen.querySelector("#moreBack")?.addEventListener("click", showMenu);
+    panelScreen.querySelector(".more-panel-header > div")?.addEventListener("click", showMenu);
 
     const directOpenDetails = [
       [log?.querySelector(":scope > details"), ids.log, "Protokoll"],

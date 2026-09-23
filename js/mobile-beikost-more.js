@@ -282,7 +282,7 @@
     panelScreen.className = "more-panel-screen";
     panelScreen.id = "morePanelScreen";
     panelScreen.hidden = true;
-    panelScreen.innerHTML = `<div class="more-panel-header"><button class="more-back-button" id="moreBack" type="button" aria-label="Zurück zu Mehr">‹</button><div><span class="today-section-kicker">Mehr</span><h2 id="morePanelTitle">Mehr</h2></div></div><div class="more-panel-host" id="morePanelHost"></div>`;
+    panelScreen.innerHTML = `<div class="more-panel-header"><button class="more-back-button" id="moreBack" type="button" aria-label="Zurück zu Mehr">‹</button><button class="more-panel-title-button" id="morePanelTitleButton" type="button" aria-label="Zurück zu Mehr"><span class="today-section-kicker">Mehr</span><span class="more-panel-title" id="morePanelTitle">Mehr</span></button></div><div class="more-panel-host" id="morePanelHost"></div>`;
     const host = panelScreen.querySelector("#morePanelHost");
 
     destinations.forEach((card) => {
@@ -351,6 +351,7 @@
       ));
     });
     panelScreen.querySelector("#moreBack")?.addEventListener("click", showMenu);
+    panelScreen.querySelector("#morePanelTitleButton")?.addEventListener("click", showMenu);
 
     const directOpenDetails = [
       [log?.querySelector(":scope > details"), ids.log, "Protokoll"],

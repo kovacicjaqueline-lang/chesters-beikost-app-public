@@ -494,7 +494,12 @@ function installFoodPolicyRuntime() {
   };
 
   let nextAllowedFocus = (producer, exclude = [], allowId = "") => {
-    let blocked = [...exclude];
+    let blocked = [...new Set(exclude)];
+    for (let item of state?.foods || []) {
+      if (!item?.id || item.id === allowId) continue;
+      if (!plannerFoodCanBeAutomaticFocus(item)) blocked.push(item.id);
+    }
+    blocked = [...new Set(blocked)];
     let max = (state?.foods?.length || 0) + 1;
     for (let i = 0; i < max; i++) {
       let result = producer(blocked);

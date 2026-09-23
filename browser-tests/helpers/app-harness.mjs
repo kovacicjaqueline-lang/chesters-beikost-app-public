@@ -47,3 +47,9 @@ export async function closeBrowserApp({ context, browser, server }) {
   await browser?.close();
   if (server) await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
 }
+
+export function configureBrowserTestPage(page, { actionTimeoutMs = 10_000, navigationTimeoutMs = 30_000 } = {}) {
+  page?.setDefaultTimeout?.(actionTimeoutMs);
+  page?.setDefaultNavigationTimeout?.(navigationTimeoutMs);
+  return page;
+}

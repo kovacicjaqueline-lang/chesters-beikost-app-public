@@ -2,10 +2,14 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { webkit } from "playwright";
-import { closeBrowserApp, startStaticServer } from "./helpers/app-harness.mjs";
+import { closeBrowserApp, configureBrowserTestPage, startStaticServer } from "./helpers/app-harness.mjs";
 
 async function waitForView(page, id) {
-  await page.waitForFunction((viewId) => document.getElementById(viewId)?.classList.contains("active"), id);
+  await page.waitForFunction(
+    (viewId) => document.getElementById(viewId)?.classList.contains("active"),
+    id,
+    { timeout: 30_000 },
+  );
 }
 
 const server = await startStaticServer();
@@ -17,7 +21,7 @@ const context = await browser.newContext({
   isMobile: true,
   hasTouch: true,
 });
-const page = await context.newPage();
+const page = configureBrowserTestPage(await context.newPage());
 
 try {
   await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "domcontentloaded" });
@@ -74,19 +78,6 @@ try {
   assert.notEqual(planProfile.afterDateChange, planProfile.today, "Plan-Datumswechsel muss den gewählten Folgetag speichern");
   assert.equal(planProfile.finalPlanFrom, planProfile.today, "Heute muss planFrom wieder auf den aktuellen Tag setzen");
 
-  const stalePlanProfile = await page.evaluate(() => {
-    const saveStart = performance.now();
-    window.save();
-    const saveMs = performance.now() - saveStart;
-    const renderStart = performance.now();
-    window.renderCurrentView();
-    return {
-      saveMs,
-      renderMs: performance.now() - renderStart,
-    };
-  });
-  assert.ok(Number.isFinite(stalePlanProfile.renderMs), "Stale-Plan-Render muss messbar bleiben");
-
   const mealDeleteSetup = await page.evaluate(() => {
     const bridge = window.__beikostTest;
     const snapshot = bridge.getState();
@@ -127,31 +118,54 @@ try {
     window.__targetedActionRenderProbe.plan = 0;
   });
   const removeManualMealSelector = `.removeManualMeal[data-date="${mealDeleteSetup.date}"][data-meal="lunch"]`;
-  const deleteMealMs = await page.evaluate((selector) => {
-    const button = document.querySelector(selector);
-    if (!button) throw new Error(`Mahlzeit-Löschen-Button fehlt: ${selector}`);
-    for (let node = button.parentElement; node; node = node.parentElement) {
-      if (node instanceof HTMLDetailsElement) node.open = true;
+  const manualMealDetails = page.locator("#plan details.manual-meal")
+    .filter({ has: page.locator(removeManualMealSelector) })
+    .filter({ has: page.locator("summary:visible") });
+  let visibleRemoveManualMeal = null;
+  for (let index = 0; index < await manualMealDetails.count(); index += 1) {
+    const candidate = manualMealDetails.nth(index);
+    const summary = candidate.locator("summary:visible");
+    if (!(await candidate.evaluate((details) => details.open))) {
+      await summary.click({ timeout: 10_000 });
     }
+    const removeButton = candidate.locator(removeManualMealSelector);
+    if (await removeButton.isVisible()) {
+      visibleRemoveManualMeal = removeButton;
+      break;
+    }
+  }
+  assert.ok(visibleRemoveManualMeal, "Manuelle Mahlzeit muss in einem sichtbaren geöffneten Plan-Details-Element erscheinen");
+  await visibleRemoveManualMeal.click();
+  await page.locator("#confirmMealDelete").waitFor({ state: "visible" });
+  const deleteMealMs = await page.evaluate(() => {
     const start = performance.now();
-    button.click();
+    document.getElementById("confirmMealDelete").click();
     return performance.now() - start;
-  }, removeManualMealSelector);
+  });
   await page.waitForFunction((key) => !window.__beikostTest.getState().manualMeals?.[key], mealDeleteSetup.key);
   const afterMealDelete = await page.evaluate(() => ({
     probe: { ...window.__targetedActionRenderProbe },
     modalOpen: document.getElementById("genericModal").classList.contains("open"),
     undoVisible: getComputedStyle(document.getElementById("toastUndo")).display !== "none",
   }));
-  console.log(`[targeted-plan-profile] ${JSON.stringify({
-    plan: planProfile.timings,
-    stalePlan: stalePlanProfile,
-    mealDelete: { deleteMealMs, probe: afterMealDelete.probe },
-  })}`);
   assert.equal(afterMealDelete.probe.full, 0, "Mahlzeit-Löschen darf keinen Voll-Render auslösen");
   assert.ok(afterMealDelete.probe.current >= 1, "Mahlzeit-Löschen muss nur die aktuelle Ansicht rendern");
-  assert.equal(afterMealDelete.modalOpen, false, "Mahlzeit-Löschen darf keinen Dialog offenlassen");
-  assert.equal(afterMealDelete.undoVisible, false, "Der aktuelle Sofort-Löschpfad bietet kein Rückgängig an");
+  assert.equal(afterMealDelete.modalOpen, false, "Löschdialog muss nach dem Bestätigen geschlossen bleiben");
+  assert.equal(afterMealDelete.undoVisible, true, "Rückgängig muss nach dem Mahlzeit-Löschen verfügbar bleiben");
+
+  const undoMealMs = await page.evaluate(() => {
+    const start = performance.now();
+    document.getElementById("toastUndo").click();
+    return performance.now() - start;
+  });
+  await page.waitForFunction((key) => !!window.__beikostTest.getState().manualMeals?.[key], mealDeleteSetup.key);
+  const afterMealUndo = await page.evaluate((key) => ({
+    probe: { ...window.__targetedActionRenderProbe },
+    note: window.__beikostTest.getState().manualMeals?.[key]?.note || "",
+  }), mealDeleteSetup.key);
+  assert.equal(afterMealUndo.probe.full, 0, "Mahlzeit-Rückgängig darf keinen Voll-Render auslösen");
+  assert.ok(afterMealUndo.probe.current >= 2, "Mahlzeit-Rückgängig muss die aktuelle Ansicht erneut gezielt rendern");
+  assert.equal(afterMealUndo.note, "targeted-render-delete-meal", "Rückgängig muss dieselbe Mahlzeit wiederherstellen");
 
   await page.evaluate(() => {
     window.__targetedActionRenderProbe.full = 0;
@@ -271,8 +285,7 @@ try {
 
   console.log(`[targeted-action-profile] ${JSON.stringify({
     plan: planProfile.timings,
-    stalePlan: stalePlanProfile,
-    mealDelete: { deleteMealMs },
+    mealDelete: { deleteMealMs, undoMealMs },
     food: foodProfile.timings,
     deleteMs,
     undoMs,

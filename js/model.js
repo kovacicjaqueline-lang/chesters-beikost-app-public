@@ -41,8 +41,6 @@ function recipeStructuredFoodSearchTerms(recipe) {
 if (typeof RECIPES !== "undefined" && typeof FOOD_DB !== "undefined") canonicalizeRecipeFoodLabels(RECIPES, FOOD_DB);
 
 let logsForCache = new WeakMap();
-let foodAutoStatusCache = new WeakMap();
-let logsForCacheRevision = 0;
 function logIndexCombinationKey(ids) {
   return [...new Set(ids || [])].filter(Boolean).sort().join("+");
 }
@@ -61,8 +59,6 @@ function logIndexFor(logs = typeof state !== "undefined" ? state.logs : []) {
   let byFoodId = new Map();
   let usageCountByFoodId = new Map();
   let eatenExposureCountByFoodId = new Map();
-  let positiveExposureCountByFoodId = new Map();
-  let reactionPausedFoodIds = new Set();
   let refusalByFoodId = new Map();
   let latestByFoodId = new Map();
   let byCombinationKey = new Map();
@@ -92,21 +88,11 @@ function logIndexFor(logs = typeof state !== "undefined" ? state.logs : []) {
       if (!byFoodId.has(foodId)) byFoodId.set(foodId, []);
       byFoodId.get(foodId).push(log);
       let outcome = outcomeForFood(log, foodId);
-      let exposureKey = null;
-      let currentExposureKey = () => exposureKey ??= exposureKeyFor(log);
       if (outcome === "eaten") {
         usageCountByFoodId.set(foodId, (usageCountByFoodId.get(foodId) || 0) + 1);
         let exposures = eatenExposureCountByFoodId.get(foodId) || new Set();
-        exposures.add(currentExposureKey());
+        exposures.add(exposureKeyFor(log));
         eatenExposureCountByFoodId.set(foodId, exposures);
-      }
-      if (["tried", "eaten"].includes(outcome)) {
-        let exposures = positiveExposureCountByFoodId.get(foodId) || new Set();
-        exposures.add(currentExposureKey());
-        positiveExposureCountByFoodId.set(foodId, exposures);
-      }
-      if (outcome === "reaction" && (!log.reactionFoodId || log.reactionFoodId === foodId)) {
-        reactionPausedFoodIds.add(foodId);
       }
       if (outcome === "not_accepted") {
         if (!refusalByFoodId.has(foodId)) refusalByFoodId.set(foodId, []);
@@ -154,8 +140,6 @@ function logIndexFor(logs = typeof state !== "undefined" ? state.logs : []) {
     byFoodId,
     usageCountByFoodId,
     eatenExposureCountByFoodId,
-    positiveExposureCountByFoodId,
-    reactionPausedFoodIds,
     refusalByFoodId,
     latestByFoodId,
     byCombinationKey,
@@ -168,7 +152,6 @@ function logIndexFor(logs = typeof state !== "undefined" ? state.logs : []) {
 }
 function invalidateLogsForCache(logs = typeof state !== "undefined" ? state.logs : null) {
   if (Array.isArray(logs)) logsForCache.delete(logs);
-  logsForCacheRevision += 1;
 }
 function logsFor(id) {
   return logIndexFor().byFoodId.get(id) || [];
@@ -194,29 +177,14 @@ function modelExposureKey(log) {
   let hasMeal = log?.entryType !== "sample" && ["breakfast", "snack", "lunch", "dinner"].includes(String(log?.meal || ""));
   return hasMeal ? `${log.date}|${log.meal}` : `${log?.date || ""}|entry:${log?.id || log?.createdAt || log?.updatedAt || "free"}`;
 }
-function autoStatusSnapshot(f) {
-  let logs = typeof state !== "undefined" && Array.isArray(state?.logs) ? state.logs : [];
-  let cached = foodAutoStatusCache.get(f);
-  if (cached?.logs === logs && cached.revision === logsForCacheRevision) return cached;
-  let index = logIndexFor(logs);
-  let value = index.reactionPausedFoodIds.has(f.id)
-    ? "Pausiert"
-    : (index.eatenExposureCountByFoodId.get(f.id)?.size || 0) >= 2
-      ? "Bekannt"
-      : (index.positiveExposureCountByFoodId.get(f.id)?.size || 0) >= 1
-        ? "Probiert"
-        : "Offen";
-  cached = {
-    logs,
-    revision: logsForCacheRevision,
-    status: value,
-    rank: STATUS_ORDER[value] ?? 0,
-  };
-  foodAutoStatusCache.set(f, cached);
-  return cached;
-}
 function autoStatus(f) {
-  return autoStatusSnapshot(f).status;
+  let ls = logsFor(f.id);
+  if (ls.some((l) => outcomeForFood(l, f.id) === "reaction" && (!l.reactionFoodId || l.reactionFoodId === f.id))) return "Pausiert";
+  let success = new Set(ls.filter((l) => outcomeForFood(l, f.id) === "eaten").map(modelExposureKey));
+  let positive = new Set(ls.filter((l) => ["tried", "eaten"].includes(outcomeForFood(l, f.id))).map(modelExposureKey));
+  if (success.size >= 2) return "Bekannt";
+  if (positive.size >= 1) return "Probiert";
+  return "Offen";
 }
 function status(f) {
   return f.manualStatus && f.manualStatus !== "auto"
@@ -224,18 +192,17 @@ function status(f) {
     : autoStatus(f);
 }
 function rank(f) {
-  if (f.manualStatus && f.manualStatus !== "auto") return STATUS_ORDER[f.manualStatus] ?? 0;
-  return autoStatusSnapshot(f).rank;
+  return STATUS_ORDER[status(f)] ?? 0;
 }
 function statusSource(f) {
   if (f.manualStatus && f.manualStatus !== "auto") return "manuell gesetzt";
-  let index = logIndexFor();
-  let success = index.eatenExposureCountByFoodId.get(f.id)?.size || 0;
-  let positive = index.positiveExposureCountByFoodId.get(f.id)?.size || 0;
-  if (success >= 2) return `automatisch aus ${success} getrennten gegessenen Expositionen`;
-  if (success === 1) return "automatisch aus einer gegessenen Exposition";
-  if (positive > 1) return `automatisch aus ${positive} protokollierten Probier-Expositionen`;
-  if (positive === 1) return "automatisch aus einer protokollierten Probier-Exposition";
+  let ls = logsFor(f.id);
+  let success = new Set(ls.filter((l) => outcomeForFood(l, f.id) === "eaten").map(modelExposureKey));
+  let positive = new Set(ls.filter((l) => ["tried", "eaten"].includes(outcomeForFood(l, f.id))).map(modelExposureKey));
+  if (success.size >= 2) return `automatisch aus ${success.size} getrennten gegessenen Expositionen`;
+  if (success.size === 1) return "automatisch aus einer gegessenen Exposition";
+  if (positive.size > 1) return `automatisch aus ${positive.size} protokollierten Probier-Expositionen`;
+  if (positive.size === 1) return "automatisch aus einer protokollierten Probier-Exposition";
   return "automatisch – noch ohne Protokoll";
 }
 
@@ -398,7 +365,9 @@ function setPhase(key) {
   state.settings.phaseSelected = key;
   state.settings.phaseModelVersion = 2;
   state.settings.phaseMode = "manual-v2";
-  save(); renderAll();
+  save();
+  if (typeof renderAllAfterNextPaint === "function") renderAllAfterNextPaint();
+  else renderAll();
   return true;
 }
 function mealProgressRank() {

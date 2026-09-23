@@ -112,11 +112,6 @@ try {
   await page.waitForFunction(({ date }) =>
     !!document.querySelector(`.removeManualMeal[data-date="${date}"][data-meal="lunch"]`),
   mealDeleteSetup);
-  await page.evaluate(() => {
-    window.__targetedActionRenderProbe.full = 0;
-    window.__targetedActionRenderProbe.current = 0;
-    window.__targetedActionRenderProbe.plan = 0;
-  });
   const removeManualMealSelector = `.removeManualMeal[data-date="${mealDeleteSetup.date}"][data-meal="lunch"]`;
   const manualMealDetails = page.locator("#plan details.manual-meal")
     .filter({ has: page.locator(removeManualMealSelector) })
@@ -135,6 +130,11 @@ try {
     }
   }
   assert.ok(visibleRemoveManualMeal, "Manuelle Mahlzeit muss in einem sichtbaren geöffneten Plan-Details-Element erscheinen");
+  await page.evaluate(() => {
+    window.__targetedActionRenderProbe.full = 0;
+    window.__targetedActionRenderProbe.current = 0;
+    window.__targetedActionRenderProbe.plan = 0;
+  });
   await visibleRemoveManualMeal.click();
   await page.locator("#confirmMealDelete").waitFor({ state: "visible" });
   const deleteMealMs = await page.evaluate(() => {

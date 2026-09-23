@@ -76,6 +76,30 @@ function plannerIntroductionCandidateShouldSkip(
     lastOutcomeFn(item.id) !== "not_accepted";
 }
 
+function plannerIntroductionPrefilterBlockedFoods(
+  foods = [],
+  exclude = [],
+  overrideId = "",
+  allowAllergen = true,
+  allowNonAllergen = true,
+  lastOutcomeFn = () => "",
+) {
+  let blocked = new Set(exclude || []);
+  for (let item of foods || []) {
+    if (!item?.id || blocked.has(item.id)) continue;
+    if (item.allergenGroup) {
+      if (!allowAllergen) blocked.add(item.id);
+      continue;
+    }
+    if (
+      !allowNonAllergen &&
+      item.id !== overrideId &&
+      lastOutcomeFn(item.id) !== "not_accepted"
+    ) blocked.add(item.id);
+  }
+  return [...blocked];
+}
+
 function plannerIntroductionNormalizeCandidate(
   result,
   on,
@@ -183,7 +207,15 @@ function installPlannerIntroductionPolicyRuntime() {
     allowAllergen = true,
     allowNonAllergen = true,
   ) => {
-    let blocked = [...new Set(exclude || [])];
+    let overrideId = state?.overrides?.[`${on}|${meal}`] || "";
+    let blocked = plannerIntroductionPrefilterBlockedFoods(
+      state?.foods || [],
+      exclude,
+      overrideId,
+      allowAllergen,
+      allowNonAllergen,
+      lastOutcome,
+    );
     let max = (state?.foods?.length || 0) + 1;
     for (let i = 0; i < max; i++) {
       let result = originalIntroductionCandidate(meal, on, ctx, blocked);
@@ -597,6 +629,7 @@ if (typeof module !== "undefined" && module.exports) {
     plannerIntroductionMealIsLearning,
     plannerIntroductionMealIsAllergenLearning,
     plannerIntroductionCandidateShouldSkip,
+    plannerIntroductionPrefilterBlockedFoods,
     plannerIntroductionNormalizeCandidate,
     plannerIntroductionKnownSnackFruitEligible,
     plannerIntroductionCloneContext,

@@ -140,7 +140,11 @@ try {
   assert.equal(await page.locator("#logSection").isVisible(), true, "bestehendes Protokoll muss auf der Unterseite weiterverwendet werden");
   assert.equal(await page.locator("#appBarTitle").textContent(), "Protokoll", "App-Bar soll das geöffnete Mehr-Ziel benennen");
 
-  await page.locator("#morePanelTitle").click();
+  const titleBackButton = page.locator("#morePanelTitleButton");
+  assert.equal(await titleBackButton.evaluate((button) => button.tagName), "BUTTON", "Überschriftsbereich soll ein semantischer Button sein");
+  assert.equal(await titleBackButton.getAttribute("aria-label"), "Zurück zu Mehr", "Überschriftsbutton braucht eine eindeutige Zurück-Beschriftung");
+  assert.ok(await titleBackButton.evaluate((button) => button.getBoundingClientRect().height >= 44), "Überschriftsbutton muss ein mobiles Touch-Ziel bleiben");
+  await titleBackButton.tap();
   assert.equal(await page.locator("#moreNavScreen").isVisible(), true, "Touch auf die Überschrift soll zurück in die gruppierte Mehr-Navigation führen");
 
   await page.locator('#moreNavScreen .more-nav-row[data-more-title="Protokoll"]').click();

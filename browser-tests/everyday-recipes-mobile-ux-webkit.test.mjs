@@ -97,7 +97,10 @@ try {
   assert.equal(await todayCard.locator(".everyday-recipe-open").count(), 0, "Die Rezeptkarte braucht keinen zusätzlichen Öffnen-Button");
   assert.equal(await todayCard.locator(".planned-recipe-title").count(), 1, "Der Rezeptname bleibt direkt öffnbar");
 
-  const everydayLayout = await todayCard.locator(".today-everyday-meal").first().evaluate((meal) => {
+  const recipeMeal = todayCard.locator(".today-everyday-meal").filter({
+    has: todayCard.locator(".everyday-recipe-visual"),
+  }).first();
+  const everydayLayout = await recipeMeal.evaluate((meal) => {
     const row = meal.querySelector(".meal-summary-row");
     const visual = meal.querySelector(".everyday-recipe-visual");
     const main = meal.querySelector(".meal-summary-main");

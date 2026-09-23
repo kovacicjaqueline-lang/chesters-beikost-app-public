@@ -127,8 +127,10 @@
    <summary><span><b>Rezepte</b><small id="recipeCount">Rezepte</small></span></summary>
    <div class="panel-body">
     <div class="field recipe-search"><label>Rezept suchen</label><input type="search" id="recipeSearch" placeholder="z. B. Lachs, Zucchini, Pancakes"></div>
-    <div class="field recipe-filter-field"><label>Passend</label><div class="seg recipe-filters" id="recipeFilter" role="group" aria-label="Rezeptverfügbarkeit"><button type="button" data-recipe-filter="available">Jetzt passend</button><button class="active" type="button" data-recipe-filter="almost">Fast passend</button><button type="button" data-recipe-filter="pantry">Mit Vorrat</button><button type="button" data-recipe-filter="freezer">Einfrierbar</button><button type="button" data-recipe-filter="all">Alle</button></div></div>
-    <button class="btn secondary recipe-more-filter-button" id="recipeMoreFilters" type="button">Filter</button>
+    <div class="recipe-filter-toolbar">
+      <div class="field recipe-filter-field"><label>Passend</label><div class="seg recipe-filters" id="recipeFilter" role="group" aria-label="Rezeptverfügbarkeit"><button type="button" data-recipe-filter="available">Jetzt passend</button><button class="active" type="button" data-recipe-filter="almost">Fast passend</button><button type="button" data-recipe-filter="pantry">Mit Vorrat</button><button type="button" data-recipe-filter="freezer">Einfrierbar</button><button type="button" data-recipe-filter="all">Alle</button></div></div>
+      <button class="btn secondary recipe-more-filter-button" id="recipeMoreFilters" type="button">Filter</button>
+    </div>
     <div class="recipe-filter-sheet" id="recipeFilterSheet" hidden>
       <button class="recipe-filter-sheet-backdrop" type="button" data-recipe-filter-close aria-label="Filter schließen"></button>
       <div class="recipe-filter-sheet-panel" role="dialog" aria-modal="true" aria-labelledby="recipeFilterSheetTitle">

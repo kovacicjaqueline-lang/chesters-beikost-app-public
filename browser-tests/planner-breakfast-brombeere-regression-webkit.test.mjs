@@ -150,19 +150,28 @@ try {
     const visible = window.lockedMeal(on, "breakfast");
     const stored = window.__beikostTest.getState().planLocks?.[key] || null;
     const displayed = window.planDisplayDays(on, 1);
+    const breakfast = (Array.isArray(displayed?.[0]?.meals) ? displayed[0].meals : Array.isArray(displayed?.[0]) ? displayed[0] : [])
+      .find((meal) => meal?.meal === "breakfast") || null;
     return {
       visible,
       stored,
-      displayedMeals: (Array.isArray(displayed?.[0]?.meals) ? displayed[0].meals : Array.isArray(displayed?.[0]) ? displayed[0] : [])
-        .map((meal) => meal?.meal)
-        .filter(Boolean),
+      displayedBreakfast: breakfast ? {
+        active: breakfast.active === true,
+        focusId: breakfast.focusId || "",
+        foodIds: [...(breakfast.foodIds || [])],
+      } : null,
     };
   }, date);
 
   assert.equal(lockPath.visible, null, "Installierter lockedMeal-Wrapper blendet inaktives automatisches Frühstück aus");
   assert.ok(lockPath.stored, "Der inaktive Frühstücks-Lock bleibt im Zustand erhalten");
   assert.equal(lockPath.stored.manualAdded, false);
-  assert.equal(lockPath.displayedMeals.includes("breakfast"), false, "Der reale Planner-Pfad zeigt den inaktiven Frühstücksslot nicht an");
+  assert.equal(lockPath.stored.focusId, "brombeere");
+  assert.deepEqual(lockPath.displayedBreakfast, {
+    active: false,
+    focusId: "",
+    foodIds: [],
+  }, "Der reale Planner-Pfad behält nur den inaktiven Frühstücks-Platzhalter und verwendet den alten Auto-Lock nicht");
 
   const companion = await page.evaluate((on) => {
     const fish = window.__beikostTest.getState().foods.find((item) => item.id === "bangus-milkfish");

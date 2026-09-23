@@ -256,7 +256,7 @@ try {
 
   console.log(`[targeted-action-profile] ${JSON.stringify({
     plan: planProfile.timings,
-    mealDelete: { deleteMealMs, undoMealMs },
+    mealDelete: { deleteMealMs },
     food: foodProfile.timings,
     deleteMs,
     undoMs,

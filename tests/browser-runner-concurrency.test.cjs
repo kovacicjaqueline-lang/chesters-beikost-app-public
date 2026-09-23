@@ -115,6 +115,19 @@ test('runBrowserTests writes deterministic summaries while two fake regressions 
   }
 });
 
+test('browser runner applies and validates the browser process timeout', async () => {
+  const {
+    DEFAULT_BROWSER_TEST_PROCESS_TIMEOUT_MS,
+    resolveBrowserTestProcessTimeout,
+  } = await runnerModule;
+
+  assert.equal(DEFAULT_BROWSER_TEST_PROCESS_TIMEOUT_MS, 300000);
+  assert.equal(resolveBrowserTestProcessTimeout(undefined), 300000);
+  assert.equal(resolveBrowserTestProcessTimeout('45000'), 45000);
+  assert.equal(resolveBrowserTestProcessTimeout('0'), 300000);
+  assert.equal(resolveBrowserTestProcessTimeout('invalid'), 300000);
+});
+
 test('runBrowserTests executes only the selected shard', async () => {
   const { runBrowserTests } = await runnerModule;
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), 'beikost-browser-shard-'));

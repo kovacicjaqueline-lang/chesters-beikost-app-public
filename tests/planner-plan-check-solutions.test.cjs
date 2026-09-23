@@ -139,7 +139,7 @@ test("Etablierte Glutenpflege verhindert ein neues FOOD-spezifisches Brot-Fortse
   );
 });
 
-test("Einmal Hafer plus einmal Brot gilt nicht allein deshalb als etablierte Gluten-Einführung", () => {
+test("Brot erzeugt auch ohne etablierte Glutenpflege kein eigenes Fortsetzungsziel", () => {
   const foods = [
     {
       id: "hafer",
@@ -163,7 +163,7 @@ test("Einmal Hafer plus einmal Brot gilt nicht allein deshalb als etablierte Glu
       groupLevelTargets,
       maintenance.targetForFood,
     ),
-    true,
+    false,
   );
 });
 

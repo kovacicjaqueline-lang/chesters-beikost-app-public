@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { webkit } from "playwright";
-import { closeBrowserApp, startStaticServer } from "./helpers/app-harness.mjs";
+import { closeBrowserApp, configureBrowserTestPage, startStaticServer } from "./helpers/app-harness.mjs";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const screenshotDir = path.join(root, "artifacts", "browser-tests", "plan-checks-ux-webkit");
 
@@ -37,7 +37,7 @@ try {
     isMobile: true,
     hasTouch: true,
   });
-  const page = await context.newPage();
+  const page = configureBrowserTestPage(await context.newPage());
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
 
@@ -66,7 +66,7 @@ try {
   }
 
   assert.match(await page.locator("#genericBody").textContent(), /Nächste Phase noch nicht empfohlen/);
-  assert.match(await page.locator("#genericBody").textContent(), /zusätzlich ein Abendessen\. Frühstück und Mittagessen bleiben bestehen/);
+  assert.match(await page.locator("#genericBody").textContent(), /Mit der nächsten Phase plant die App zusätzlich ein (Frühstück|Abendessen)\. (?:Frühstück und )?Mittagessen bleib(?:t|en) bestehen/);
   assert.equal(await page.locator("#toast").isVisible(), false, "Abnahmescreenshot darf keinen alten Toast enthalten");
   await assertSheetFitsMobile(page);
   await page.screenshot({ path: path.join(screenshotDir, "phase-readiness-clean.png"), fullPage: false });

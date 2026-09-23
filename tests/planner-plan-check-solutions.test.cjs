@@ -79,27 +79,47 @@ test("Goal-Key verwendet strukturierte Zielidentität statt sichtbarer Texte", (
   );
 });
 
-test("Gluten-Einführungsidentitäten bleiben für Hafer und Brot getrennt", () => {
+test("Gluten-Einführungsidentitäten bleiben für Hafer und Couscous getrennt", () => {
   const hafer = {
     id: "hafer",
     name: "Hafer",
     allergenGroup: "Glutenhaltiges Getreide",
     allergenFamily: "hafer",
   };
+  const couscous = {
+    id: "couscous",
+    name: "Couscous",
+    allergenGroup: "Glutenhaltiges Getreide",
+  };
+  assert.equal(solutions.allergenIntroductionTarget(hafer).key, "family:hafer");
+  assert.equal(solutions.allergenIntroductionTarget(couscous).key, "food:couscous");
+  assert.notEqual(
+    solutions.allergenIntroductionTarget(hafer).key,
+    solutions.allergenIntroductionTarget(couscous).key,
+  );
+});
+
+test("Brot ist explizit kein eigenes fortsetzbares Allergen-Einführungsziel", () => {
   const brot = {
     id: "brot",
     name: "Brot",
     allergenGroup: "Glutenhaltiges Getreide",
   };
-  assert.equal(solutions.allergenIntroductionTarget(hafer).key, "family:hafer");
-  assert.equal(solutions.allergenIntroductionTarget(brot).key, "food:brot");
-  assert.notEqual(
-    solutions.allergenIntroductionTarget(hafer).key,
-    solutions.allergenIntroductionTarget(brot).key,
+  assert.equal(solutions.allergenIntroductionTargetMode(brot), "none");
+  assert.equal(solutions.allergenIntroductionTarget(brot), null);
+  assert.equal(
+    solutions.allergenIntroductionNeedsContinuation(
+      brot,
+      1,
+      [],
+      groupLevelTargets,
+      maintenance.targetForFood,
+    ),
+    false,
   );
 });
 
-test("Etablierte Glutenpflege verhindert ein neues FOOD-spezifisches Brot-Fortsetzungsziel", () => {
+test("Etablierte Glutenpflege verhindert ein neues FOOD-spezifisches Fortsetzungsziel", () => {
   const foods = [
     {
       id: "hafer",
@@ -108,8 +128,8 @@ test("Etablierte Glutenpflege verhindert ein neues FOOD-spezifisches Brot-Fortse
       allergenFamily: "hafer",
     },
     {
-      id: "brot",
-      name: "Brot",
+      id: "couscous",
+      name: "Couscous",
       allergenGroup: "Glutenhaltiges Getreide",
     },
   ];
@@ -139,7 +159,7 @@ test("Etablierte Glutenpflege verhindert ein neues FOOD-spezifisches Brot-Fortse
   );
 });
 
-test("Brot erzeugt auch ohne etablierte Glutenpflege kein eigenes Fortsetzungsziel", () => {
+test("Einmal Hafer plus einmal Couscous gilt nicht allein deshalb als etablierte Gluten-Einführung", () => {
   const foods = [
     {
       id: "hafer",
@@ -148,8 +168,8 @@ test("Brot erzeugt auch ohne etablierte Glutenpflege kein eigenes Fortsetzungszi
       allergenFamily: "hafer",
     },
     {
-      id: "brot",
-      name: "Brot",
+      id: "couscous",
+      name: "Couscous",
       allergenGroup: "Glutenhaltiges Getreide",
     },
   ];
@@ -163,7 +183,7 @@ test("Brot erzeugt auch ohne etablierte Glutenpflege kein eigenes Fortsetzungszi
       groupLevelTargets,
       maintenance.targetForFood,
     ),
-    false,
+    true,
   );
 });
 

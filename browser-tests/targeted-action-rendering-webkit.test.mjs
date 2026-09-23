@@ -132,11 +132,7 @@ try {
     modalOpen: document.getElementById("genericModal").classList.contains("open"),
     undoVisible: getComputedStyle(document.getElementById("toastUndo")).display !== "none",
   }));
-  console.log(`[targeted-plan-profile] ${JSON.stringify({
-    plan: planProfile.timings,
-    stalePlan: stalePlanProfile,
-    mealDelete: { deleteMealMs, probe: afterMealDelete.probe },
-  })}`);
+  console.log(`[targeted-meal-delete] ${JSON.stringify({ deleteMealMs, probe: afterMealDelete.probe })}`);
   assert.equal(afterMealDelete.probe.full, 0, "Mahlzeit-Löschen darf keinen Voll-Render auslösen");
   assert.ok(afterMealDelete.probe.current >= 1, "Mahlzeit-Löschen muss nur die aktuelle Ansicht rendern");
   assert.equal(afterMealDelete.modalOpen, false, "Mahlzeit-Löschen darf keinen Dialog offenlassen");

@@ -63,3 +63,49 @@ test('WEEK-REPLAN-02: Neuplanung variiert nur automatisch veränderbare zukünft
     ['2026-09-23|lunch', '2026-09-24|lunch'],
   );
 });
+
+test('WEEK-REPLAN-03: Cleanup verändert keine Random-Swap-Pins außerhalb der sichtbaren Woche', () => {
+  const swap = {
+    PIN_FLAG: 'randomSwapPinned',
+    PRESERVE_FLAG: 'randomSwapPreserved',
+    TARGET_FLAG: 'randomSwapTarget',
+  };
+  const data = {
+    planLocks: {
+      '2026-09-23|lunch': {
+        mode: 'auto',
+        [swap.PIN_FLAG]: true,
+        [swap.TARGET_FLAG]: true,
+      },
+      '2026-09-24|lunch': {
+        mode: 'auto',
+        [swap.PIN_FLAG]: true,
+        [swap.PRESERVE_FLAG]: true,
+      },
+      '2026-10-05|lunch': {
+        mode: 'auto',
+        [swap.PIN_FLAG]: true,
+        [swap.PRESERVE_FLAG]: true,
+      },
+    },
+  };
+  const addDays = (date, days) => {
+    const value = new Date(`${date}T00:00:00Z`);
+    value.setUTCDate(value.getUTCDate() + days);
+    return value.toISOString().slice(0, 10);
+  };
+
+  const cleaned = cascade.cleanupWeekReplanPins(
+    data,
+    swap,
+    new Set(['2026-09-23|lunch']),
+    '2026-09-23',
+    addDays,
+  );
+
+  assert.equal(cleaned, 2);
+  assert.deepEqual(data.planLocks['2026-09-23|lunch'], { mode: 'auto' });
+  assert.equal(data.planLocks['2026-09-24|lunch'], undefined);
+  assert.equal(data.planLocks['2026-10-05|lunch'][swap.PIN_FLAG], true);
+  assert.equal(data.planLocks['2026-10-05|lunch'][swap.PRESERVE_FLAG], true);
+});

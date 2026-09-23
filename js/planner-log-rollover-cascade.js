@@ -31,6 +31,102 @@
     return primary ? core.linkedCompletionLog(data, primary.planId, date, meal) : null;
   }
 
+  function plannerMealIdentity(meal) {
+    if (!meal?.active || meal.empty) return "";
+    let foodIds = [...new Set(meal.foodIds || [])].filter(Boolean).sort().join("+");
+    let recipeName = String(meal.recipeName || "").trim();
+    return recipeName ? `recipe:${recipeName}|foods:${foodIds}` : `foods:${foodIds}`;
+  }
+
+  function collectWeekReplanTargets(
+    data,
+    days,
+    isCompleted = () => false,
+    releaseManualLocks = false,
+    todayValue = "",
+  ) {
+    let targets = [];
+    for (let day of days || []) {
+      if (!day?.date || (todayValue && day.date < todayValue)) continue;
+      for (let meal of day.meals || []) {
+        let identity = plannerMealIdentity(meal);
+        if (!identity || !meal?.meal) continue;
+        let key = `${day.date}|${meal.meal}`;
+        let lock = data?.planLocks?.[key];
+        if (data?.manualMeals?.[key]) continue;
+        if (lock?.followUpFoodId) continue;
+        if (!releaseManualLocks && lock?.mode === "manual") continue;
+        if (isCompleted(day.date, meal.meal)) continue;
+        targets.push({ date: day.date, meal: meal.meal, identity });
+      }
+    }
+    return targets;
+  }
+
+  function visibleMealFor(days, date, meal) {
+    return (days || [])
+      .find((day) => day?.date === date)
+      ?.meals?.find((entry) => entry?.meal === meal) || null;
+  }
+
+  function cleanupWeekReplanPins(data, swap, changedKeys, from, addDaysFn) {
+    if (!data?.planLocks || !swap || !from || typeof addDaysFn !== "function") return 0;
+    let end = addDaysFn(from, 6);
+    let cleaned = 0;
+    for (let [key, lock] of Object.entries(data.planLocks)) {
+      let date = key.split("|")[0];
+      if (date < from || date > end || !lock?.[swap.PIN_FLAG]) continue;
+      if (changedKeys.has(key)) {
+        delete lock[swap.PIN_FLAG];
+        delete lock[swap.PRESERVE_FLAG];
+        delete lock[swap.TARGET_FLAG];
+        cleaned += 1;
+        continue;
+      }
+      if (lock?.[swap.PRESERVE_FLAG] && lock.mode === "auto" && !lock.followUpFoodId) {
+        delete data.planLocks[key];
+        cleaned += 1;
+      }
+    }
+    return cleaned;
+  }
+
+  function diversifyRebuiltWeek(targets, from) {
+    let swap = globalScope.__plannerRandomSwap;
+    if (!swap?.randomizePlannedMeal || !targets?.length) return { changed: 0, attempted: 0 };
+
+    let changedKeys = new Set();
+    let attempted = 0;
+    let previousRenderAll = typeof renderAll === "function" ? renderAll : null;
+    let previousShowToast = typeof showToast === "function" ? showToast : null;
+    try {
+      if (previousRenderAll) renderAll = () => {};
+      if (previousShowToast) showToast = () => {};
+
+      for (let target of targets) {
+        let currentDays = typeof planDisplayDays === "function"
+          ? planDisplayDays(from, 7)
+          : buildDays(from, 7, false);
+        let current = visibleMealFor(currentDays, target.date, target.meal);
+        if (plannerMealIdentity(current) !== target.identity) continue;
+        attempted += 1;
+        let result = swap.randomizePlannedMeal(target.date, target.meal);
+        if (result?.ok) changedKeys.add(`${target.date}|${target.meal}`);
+      }
+    } finally {
+      if (previousRenderAll) renderAll = previousRenderAll;
+      if (previousShowToast) showToast = previousShowToast;
+    }
+
+    if (changedKeys.size) {
+      cleanupWeekReplanPins(state, swap, changedKeys, from, addDays);
+      save();
+      if (previousRenderAll) previousRenderAll();
+    }
+
+    return { changed: changedKeys.size, attempted };
+  }
+
   const NON_PLANNER_SETTING_KEYS = new Set([
     "phaseReadinessSignalsByPhase",
     "planCheckEvaluationRevision",
@@ -119,6 +215,9 @@
   const API = Object.freeze({
     materializeVisibleFuturePlans,
     primarySlotCompletion,
+    plannerMealIdentity,
+    collectWeekReplanTargets,
+    cleanupWeekReplanPins,
     dayPlanRuntimePlannerInput,
     createDayPlanRuntimeCache,
   });
@@ -144,7 +243,22 @@
       let baseRebuildVisiblePlan = rebuildVisiblePlan;
       rebuildVisiblePlan = function cacheAwareRebuildVisiblePlan(...args) {
         runtimeCache.invalidate();
-        return baseRebuildVisiblePlan.apply(this, args);
+        let from = state.settings?.planFrom || today();
+        let releaseManualLocks = args[0] === true;
+        let beforeDays = typeof planDisplayDays === "function"
+          ? planDisplayDays(from, 7)
+          : buildDays(from, 7, false);
+        let targets = collectWeekReplanTargets(
+          state,
+          beforeDays,
+          (date, meal) => mealIsCompleted(date, meal),
+          releaseManualLocks,
+          today(),
+        );
+        let result = baseRebuildVisiblePlan.apply(this, args);
+        runtimeCache.invalidate();
+        diversifyRebuiltWeek(targets, from);
+        return result;
       };
     }
   }

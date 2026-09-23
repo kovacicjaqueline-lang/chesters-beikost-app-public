@@ -261,7 +261,7 @@ try {
   await page.waitForFunction(
     () => window.__openUiLatencyProbe.build21Calls > 0 && !document.getElementById("saveAllergenDate")?.disabled,
     null,
-    { timeout: 60000 },
+    { timeout: 60_000 },
   );
   const allergenDeferred = await page.evaluate(() => ({
     painted: window.__openUiLatencyProbe.painted,

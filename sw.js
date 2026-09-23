@@ -98,6 +98,7 @@ const PLAN08_PRECACHE = [
   "./js/planner-food-role-stability.js",
   "./js/planner-quality-rotation.js",
   "./js/planner-introduction-policy.js",
+  "./js/planner-final-quality.js?v=10.1.26",
   "./js/planner-allergen-maintenance.js",
 ];
 

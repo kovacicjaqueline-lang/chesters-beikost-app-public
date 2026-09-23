@@ -51,6 +51,14 @@ function foodStatusPreferenceNextAutomaticResult(producer, exclude = []) {
   return null;
 }
 
+function foodStatusPreferenceStoredMealVisible(date, meal, stored, currentDate, activeMealFn) {
+  if (!stored) return false;
+  if (stored.manualAdded === true) return true;
+  if (!date || !currentDate || String(date) < String(currentDate)) return true;
+  if (typeof activeMealFn !== "function") return true;
+  return !!activeMealFn(meal, date);
+}
+
 function foodStatusPreferenceKnownBase(meal, exclude = []) {
   let pool = state.foods.filter((foodRecord) =>
     foodRecord.active &&
@@ -86,7 +94,6 @@ function foodStatusPreferenceCompanionFor(focus, meal, on, focusType = "") {
   let needsTrustedBase = introductionTypes.has(focusType) && !isTrustedBase(focus) && !standaloneAllergen;
 
   if (standaloneIntroduction) return null;
-  if (focus.allergenGroup && !standaloneAllergen) return knownBase(meal, [focus.id]);
 
   let pool = state.foods.filter((candidate) => {
     let normalMealMatch = eligible(candidate, meal, on);
@@ -227,6 +234,17 @@ function installFoodStatusPreferencePolicy() {
   if (typeof companionFor === "function") {
     companionFor = foodStatusPreferenceCompanionFor;
   }
+  if (typeof lockedMeal === "function") {
+    let originalLockedMeal = lockedMeal;
+    lockedMeal = function foodStatusPreferenceLockedMeal(date, meal) {
+      let stored = originalLockedMeal(date, meal);
+      let currentDate = typeof today === "function" ? today() : date;
+      let activeMealFn = typeof activeMeal === "function" ? activeMeal : null;
+      return foodStatusPreferenceStoredMealVisible(date, meal, stored, currentDate, activeMealFn)
+        ? stored
+        : null;
+    };
+  }
 
   if (typeof chooseFocus === "function") {
     let originalChooseFocus = chooseFocus;
@@ -291,6 +309,8 @@ if (typeof module !== "undefined" && module.exports) {
     foodStatusPreferenceCanCombine,
     foodStatusPreferenceShouldRetry,
     foodStatusPreferenceShouldSkipAutomaticResult,
+    foodStatusPreferenceStoredMealVisible,
+    foodStatusPreferenceCompanionFor,
     foodStatusPreferenceProgressLabels,
     installFoodStatusPreferencePolicy,
   };

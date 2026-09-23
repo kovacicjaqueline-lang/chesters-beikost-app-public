@@ -25,6 +25,7 @@ async function seedEverydayPlan(page) {
     const carrot = bridge.foodId("Karotte");
     state.settings.appFocusMode = "everyday-recipes";
     state.settings.planFrom = date;
+    state.settings.phaseSelected = "drei";
     state.planLocks = {};
     state.manualMeals = {};
     state.overrides = {};
@@ -89,7 +90,7 @@ try {
 
   const todayCard = page.locator("#todayCard");
   await todayCard.locator(".today-everyday-meals").waitFor();
-  assert.equal(await todayCard.locator(".today-everyday-meal").count(), 2, "Alltagsmodus zeigt alle geplanten Mahlzeiten");
+  assert.equal(await todayCard.locator(".today-everyday-meal").count(), 3, "Alltagsmodus zeigt alle geplanten Mahlzeiten der aktiven Phase");
   assert.match(await todayCard.innerText(), /Frühstück/);
   assert.match(await todayCard.innerText(), /Bananen-Ei-Pancakes/);
   assert.match(await todayCard.innerText(), /Neue Kostprobe|Allergen-Aufgabe/);
@@ -97,8 +98,11 @@ try {
   assert.equal(await todayCard.locator(".everyday-recipe-open").count(), 0, "Die Rezeptkarte braucht keinen zusätzlichen Öffnen-Button");
   assert.equal(await todayCard.locator(".planned-recipe-title").count(), 1, "Der Rezeptname bleibt direkt öffnbar");
 
-  const everydayLayout = await todayCard.locator(".today-everyday-meal").first().evaluate((meal) => {
-    const row = meal.querySelector(".meal-summary-row");
+  const recipeMeal = todayCard.locator(".today-everyday-meal").filter({
+    has: page.locator(".everyday-recipe-visual"),
+  }).first();
+  const everydayLayout = await recipeMeal.evaluate((meal) => {
+    const row = meal.matches(".meal-summary-row") ? meal : meal.querySelector(".meal-summary-row");
     const visual = meal.querySelector(".everyday-recipe-visual");
     const main = meal.querySelector(".meal-summary-main");
     const actions = meal.querySelector(".meal-summary-actions");
@@ -139,7 +143,7 @@ try {
   assert.equal(everydayLayout.visualBorderRadius, "0px", "Rezeptbild erhält keinen zusätzlichen Rahmen");
   assert.ok(everydayLayout.pageScrollWidth <= everydayLayout.viewportWidth + 1, "Alltagsansicht darf keinen Seiten-Overflow erzeugen");
   assert.equal(everydayLayout.imageLoading, "eager", "Das sichtbare Alltags-Rezeptbild wird priorisiert geladen");
-  assert.equal(await todayCard.locator(".today-everyday-meal .logMeal").count(), 2, "Essen eintragen bleibt für jede geplante Mahlzeit erreichbar");
+  assert.equal(await todayCard.locator(".today-everyday-meal .logMeal").count(), 3, "Essen eintragen bleibt für jede geplante Mahlzeit erreichbar");
   const foodRoleRow = todayCard.locator(".today-everyday-meal").nth(1).locator(".compact-role-row").first();
   const foodRoleLayout = await foodRoleRow.evaluate((row) => {
     const style = getComputedStyle(row);

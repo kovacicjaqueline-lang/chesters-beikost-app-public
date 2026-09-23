@@ -60,11 +60,15 @@ test("Planner-Boot: historische Locks bleiben unverändert, wenn kein sicherer S
   assert.ok(state.planLocks.existing);
 });
 
-test("Planner-Boot: Allergenpflege wird nach Introduction und vor Handling/finalem Render installiert", () => {
+test("Planner-Boot: Final-Quality und Allergenpflege werden nach Introduction und vor Handling/finalem Render installiert", () => {
   assert.match(utilsSource, /window\.__plannerPoliciesReady\s*=\s*false/);
   assert.match(
     utilsSource,
-    /installPlannerIntroductionPolicyRuntime\(\);[\s\S]*loadMaintenancePolicy\(\)/,
+    /installPlannerIntroductionPolicyRuntime\(\);[\s\S]*loadFinalQualityPolicy\(\)/,
+  );
+  assert.match(
+    utilsSource,
+    /installPlannerFinalQualityRuntime\(\);[\s\S]*loadMaintenancePolicy\(\)/,
   );
   assert.match(
     utilsSource,
@@ -76,7 +80,7 @@ test("Planner-Boot: Allergenpflege wird nach Introduction und vor Handling/final
   );
   assert.match(
     swSource,
-    /planner-introduction-policy\.js[\s\S]*planner-allergen-maintenance\.js/,
+    /planner-introduction-policy\.js[\s\S]*planner-final-quality\.js[\s\S]*planner-allergen-maintenance\.js/,
   );
   assert.match(
     handlingSource,

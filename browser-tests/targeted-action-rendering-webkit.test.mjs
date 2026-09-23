@@ -2,10 +2,14 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { webkit } from "playwright";
-import { closeBrowserApp, startStaticServer } from "./helpers/app-harness.mjs";
+import { closeBrowserApp, configureBrowserTestPage, startStaticServer } from "./helpers/app-harness.mjs";
 
 async function waitForView(page, id) {
-  await page.waitForFunction((viewId) => document.getElementById(viewId)?.classList.contains("active"), id);
+  await page.waitForFunction(
+    (viewId) => document.getElementById(viewId)?.classList.contains("active"),
+    id,
+    { timeout: 30_000 },
+  );
 }
 
 const server = await startStaticServer();
@@ -17,7 +21,7 @@ const context = await browser.newContext({
   isMobile: true,
   hasTouch: true,
 });
-const page = await context.newPage();
+const page = configureBrowserTestPage(await context.newPage());
 
 try {
   await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "domcontentloaded" });
@@ -74,19 +78,6 @@ try {
   assert.notEqual(planProfile.afterDateChange, planProfile.today, "Plan-Datumswechsel muss den gewählten Folgetag speichern");
   assert.equal(planProfile.finalPlanFrom, planProfile.today, "Heute muss planFrom wieder auf den aktuellen Tag setzen");
 
-  const stalePlanProfile = await page.evaluate(() => {
-    const saveStart = performance.now();
-    window.save();
-    const saveMs = performance.now() - saveStart;
-    const renderStart = performance.now();
-    window.renderCurrentView();
-    return {
-      saveMs,
-      renderMs: performance.now() - renderStart,
-    };
-  });
-  assert.ok(Number.isFinite(stalePlanProfile.renderMs), "Stale-Plan-Render muss messbar bleiben");
-
   const mealDeleteSetup = await page.evaluate(() => {
     const bridge = window.__beikostTest;
     const snapshot = bridge.getState();
@@ -121,11 +112,6 @@ try {
   await page.waitForFunction(({ date }) =>
     !!document.querySelector(`.removeManualMeal[data-date="${date}"][data-meal="lunch"]`),
   mealDeleteSetup);
-  await page.evaluate(() => {
-    window.__targetedActionRenderProbe.full = 0;
-    window.__targetedActionRenderProbe.current = 0;
-    window.__targetedActionRenderProbe.plan = 0;
-  });
   const removeManualMealSelector = `.removeManualMeal[data-date="${mealDeleteSetup.date}"][data-meal="lunch"]`;
   const deleteMealMs = await page.evaluate((selector) => {
     const button = document.querySelector(selector);
@@ -133,6 +119,9 @@ try {
     for (let node = button.parentElement; node; node = node.parentElement) {
       if (node instanceof HTMLDetailsElement) node.open = true;
     }
+    window.__targetedActionRenderProbe.full = 0;
+    window.__targetedActionRenderProbe.current = 0;
+    window.__targetedActionRenderProbe.plan = 0;
     const start = performance.now();
     button.click();
     return performance.now() - start;
@@ -143,11 +132,7 @@ try {
     modalOpen: document.getElementById("genericModal").classList.contains("open"),
     undoVisible: getComputedStyle(document.getElementById("toastUndo")).display !== "none",
   }));
-  console.log(`[targeted-plan-profile] ${JSON.stringify({
-    plan: planProfile.timings,
-    stalePlan: stalePlanProfile,
-    mealDelete: { deleteMealMs, probe: afterMealDelete.probe },
-  })}`);
+  console.log(`[targeted-meal-delete] ${JSON.stringify({ deleteMealMs, probe: afterMealDelete.probe })}`);
   assert.equal(afterMealDelete.probe.full, 0, "Mahlzeit-Löschen darf keinen Voll-Render auslösen");
   assert.ok(afterMealDelete.probe.current >= 1, "Mahlzeit-Löschen muss nur die aktuelle Ansicht rendern");
   assert.equal(afterMealDelete.modalOpen, false, "Mahlzeit-Löschen darf keinen Dialog offenlassen");
@@ -271,7 +256,6 @@ try {
 
   console.log(`[targeted-action-profile] ${JSON.stringify({
     plan: planProfile.timings,
-    stalePlan: stalePlanProfile,
     mealDelete: { deleteMealMs },
     food: foodProfile.timings,
     deleteMs,

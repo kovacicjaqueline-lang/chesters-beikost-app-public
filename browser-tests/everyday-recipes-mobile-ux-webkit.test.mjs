@@ -98,7 +98,7 @@ try {
   assert.equal(await todayCard.locator(".planned-recipe-title").count(), 1, "Der Rezeptname bleibt direkt öffnbar");
 
   const recipeMeal = todayCard.locator(".today-everyday-meal").filter({
-    has: todayCard.locator(".everyday-recipe-visual"),
+    has: page.locator(".everyday-recipe-visual"),
   }).first();
   const everydayLayout = await recipeMeal.evaluate((meal) => {
     const row = meal.querySelector(".meal-summary-row");

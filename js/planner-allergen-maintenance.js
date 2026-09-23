@@ -22,15 +22,33 @@
     "planner-food-role-stability.js",
     "planner-quality-rotation.js",
     "planner-introduction-policy.js",
+    "planner-final-quality.js",
     "planner-allergen-maintenance-runtime.js",
     "handling-readiness.js",
-    "planner-final-quality.js",
   ];
 
+  function finalize() {
+    let changed = false;
+    if (typeof state !== "undefined" && typeof pruneIneligibleAutomaticPlanState === "function") {
+      changed = pruneIneligibleAutomaticPlanState(state);
+    }
+    if (changed && typeof save === "function") save();
+    if (typeof invalidatePlannerWeekCache === "function") {
+      invalidatePlannerWeekCache("planner-runtime-ready");
+    }
+    globalScope.__plannerPoliciesReady = true;
+    if (typeof renderCurrentView === "function") renderCurrentView();
+  }
+
   if (document.readyState === "loading" && typeof document.write === "function") {
-    document.write(scripts
-      .map((name) => `<script src="js/${name}?v=${version}"><\/script>`)
-      .join(""));
+    document.write(
+      scripts.map((name) => `<script src="js/${name}?v=${version}"><\/script>`).join("") +
+      `<script>globalThis.__finalizePlannerRuntime && globalThis.__finalizePlannerRuntime();<\/script>`,
+    );
+    globalScope.__finalizePlannerRuntime = () => {
+      delete globalScope.__finalizePlannerRuntime;
+      finalize();
+    };
     return;
   }
 
@@ -46,4 +64,5 @@
       document.head.appendChild(script);
     }));
   }
+  chain.then(finalize);
 })(typeof globalThis !== "undefined" ? globalThis : this);

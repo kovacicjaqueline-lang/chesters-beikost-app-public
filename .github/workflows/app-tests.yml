@@ -163,6 +163,7 @@ jobs:
           - shard: 2
             run_fast: true
     env:
+      BROWSER_TEST_CONCURRENCY: 1
       BROWSER_TEST_SHARD: ${{ matrix.shard }}/2
     steps:
       - name: Checkout repository

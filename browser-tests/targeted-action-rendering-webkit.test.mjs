@@ -132,9 +132,29 @@ try {
         return base.apply(this, args);
       };
     };
+    const wrapAutomaticResult = () => {
+      const name = "foodStatusPreferenceNextAutomaticResult";
+      const base = window[name];
+      if (typeof base !== "function") return;
+      originals.set(name, base);
+      stats[name] = { calls: 0, results: {} };
+      window[name] = function profiledAutomaticResult(...args) {
+        stats[name].calls += 1;
+        const result = base.apply(this, args);
+        const f = result?.f;
+        const role = typeof window.plannerRole === "function" ? window.plannerRole(f) : String(f?.plannerRole || "");
+        const allowed = f && typeof window.plannerFoodCanBeAutomaticFocus === "function"
+          ? window.plannerFoodCanBeAutomaticFocus(f)
+          : null;
+        const key = `${f?.id || "<none>"}|${result?.type || ""}|${role}|${String(allowed)}`;
+        stats[name].results[key] = (stats[name].results[key] || 0) + 1;
+        return result;
+      };
+    };
 
     timedNames.forEach(wrapTimed);
     countedNames.forEach(wrapCounted);
+    wrapAutomaticResult();
     try {
       const saveStart = performance.now();
       window.save();

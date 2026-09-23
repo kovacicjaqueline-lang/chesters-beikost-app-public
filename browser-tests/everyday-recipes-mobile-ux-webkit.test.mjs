@@ -101,7 +101,7 @@ try {
     has: page.locator(".everyday-recipe-visual"),
   }).first();
   const everydayLayout = await recipeMeal.evaluate((meal) => {
-    const row = meal.querySelector(".meal-summary-row");
+    const row = meal.matches(".meal-summary-row") ? meal : meal.querySelector(".meal-summary-row");
     const visual = meal.querySelector(".everyday-recipe-visual");
     const main = meal.querySelector(".meal-summary-main");
     const actions = meal.querySelector(".meal-summary-actions");

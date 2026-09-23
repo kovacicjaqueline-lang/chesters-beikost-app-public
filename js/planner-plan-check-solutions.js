@@ -89,6 +89,9 @@
     groupLevelTargets = [],
     targetForFoodFn = null,
   ) {
+    // Brot bleibt ein normal planbarer Gluten-Träger, hat aber keinen eigenen
+    // fortsetzbaren Einführungsstatus mehr.
+    if (text(record?.id) === "brot") return false;
     if (Number(successfulExposureCount) !== 1) return false;
     return !foodSpecificIntroductionCoveredByEstablishedMaintenance(
       record,

@@ -101,7 +101,7 @@
       "./planner-quality-rotation.js?v=10.1.26",
       "./planner-introduction-policy.js?v=10.1.26",
       "./planner-final-quality.js?v=10.1.26",
-      "./planner-allergen-maintenance-runtime.js?v=10.1.26",
+      "./planner-allergen-maintenance.js?v=10.1.26",
       "./handling-readiness.js?v=10.1.26"
     );
 

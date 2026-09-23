@@ -25,6 +25,7 @@ async function seedEverydayPlan(page) {
     const carrot = bridge.foodId("Karotte");
     state.settings.appFocusMode = "everyday-recipes";
     state.settings.planFrom = date;
+    state.settings.phaseSelected = "drei";
     state.planLocks = {};
     state.manualMeals = {};
     state.overrides = {};
@@ -41,7 +42,7 @@ async function seedEverydayPlan(page) {
       recipeInventoryId: "",
       type: "bekannt kombinieren",
       note: "",
-      manualAdded: true,
+      manualAdded: false,
       active: true,
       mode: "manual",
       locked: true,

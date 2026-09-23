@@ -140,8 +140,12 @@ try {
   assert.equal(await page.locator("#logSection").isVisible(), true, "bestehendes Protokoll muss auf der Unterseite weiterverwendet werden");
   assert.equal(await page.locator("#appBarTitle").textContent(), "Protokoll", "App-Bar soll das geöffnete Mehr-Ziel benennen");
 
+  await page.locator("#morePanelTitle").click();
+  assert.equal(await page.locator("#moreNavScreen").isVisible(), true, "Touch auf die Überschrift soll zurück in die gruppierte Mehr-Navigation führen");
+
+  await page.locator('#moreNavScreen .more-nav-row[data-more-title="Protokoll"]').click();
   await page.locator("#moreBack").click();
-  assert.equal(await page.locator("#moreNavScreen").isVisible(), true, "Zurück soll wieder in die gruppierte Mehr-Navigation führen");
+  assert.equal(await page.locator("#moreNavScreen").isVisible(), true, "Zurück-Pfeil soll weiter in die gruppierte Mehr-Navigation führen");
 
   await page.locator('#moreNavScreen .more-nav-row[data-more-title="Konsistenz"]').click();
   assert.equal(await page.locator("#settingsSection").isVisible(), true, "Konsistenz soll die bestehende Einstellungs-Unterseite nutzen");

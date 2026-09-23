@@ -34,60 +34,21 @@ function foodStatusPreferenceShouldSkipAutomaticResult(result, rankValue, lastOu
   return !foodStatusPreferenceShouldRetry(result.f, rankValue, lastOutcomeValue);
 }
 
-function foodStatusPreferenceIntroductionExclude(
-  foods = [],
-  exclude = [],
-  overrideId = "",
-  rankFn = () => 0,
-  lastOutcomeFn = () => "",
-  focusAllowedFn = null,
-) {
-  let blocked = new Set(exclude || []);
-  for (let item of foods || []) {
-    if (!item?.id || item.id === overrideId) continue;
-    if (typeof focusAllowedFn === "function" && !focusAllowedFn(item)) {
-      blocked.add(item.id);
-      continue;
-    }
-    if (item.allergenGroup) continue;
-    if (Number(rankFn(item)) !== 1) continue;
-    if (lastOutcomeFn(item.id) === "not_accepted") continue;
-    blocked.add(item.id);
-  }
-  return [...blocked];
-}
-
 function foodStatusPreferenceNextAutomaticResult(producer, exclude = []) {
   let blocked = [...exclude];
   let max = (state?.foods?.length || 0) + 1;
-  let producerCalls = 0;
-  let skipped = 0;
-  let finish = (result) => {
-    if (typeof globalThis !== "undefined" && globalThis.__targetedActionRenderProbe && producerCalls > 1) {
-      console.log(`[food-status-next-profile] ${JSON.stringify({
-        producerCalls,
-        skipped,
-        resultId: result?.f?.id || "",
-        resultType: result?.type || "",
-        blockedCount: blocked.length,
-      })}`);
-    }
-    return result;
-  };
   for (let index = 0; index < max; index++) {
-    producerCalls += 1;
     let result = producer(blocked);
-    if (!result?.f) return finish(result);
+    if (!result?.f) return result;
     if (!foodStatusPreferenceShouldSkipAutomaticResult(
       result,
       rank(result.f),
       lastOutcome(result.f.id),
-    )) return finish(result);
-    skipped += 1;
-    if (blocked.includes(result.f.id)) return finish(null);
+    )) return result;
+    if (blocked.includes(result.f.id)) return null;
     blocked.push(result.f.id);
   }
-  return finish(null);
+  return null;
 }
 
 function foodStatusPreferenceKnownBase(meal, exclude = []) {
@@ -277,23 +238,11 @@ function installFoodStatusPreferencePolicy() {
   }
   if (typeof introductionCandidate === "function") {
     let originalIntroductionCandidate = introductionCandidate;
-    introductionCandidate = (meal, on, ctx, exclude = []) => {
-      let overrideId = state?.overrides?.[`${on}|${meal}`] || "";
-      let blocked = foodStatusPreferenceIntroductionExclude(
-        state?.foods || [],
+    introductionCandidate = (meal, on, ctx, exclude = []) =>
+      foodStatusPreferenceNextAutomaticResult(
+        (blocked) => originalIntroductionCandidate(meal, on, ctx, blocked),
         exclude,
-        overrideId,
-        rank,
-        lastOutcome,
-        typeof plannerFoodCanBeAutomaticFocus === "function"
-          ? plannerFoodCanBeAutomaticFocus
-          : null,
       );
-      return foodStatusPreferenceNextAutomaticResult(
-        (nextBlocked) => originalIntroductionCandidate(meal, on, ctx, nextBlocked),
-        blocked,
-      );
-    };
   }
 
   if (typeof showFoodInfoCore === "function") {
@@ -301,6 +250,7 @@ function installFoodStatusPreferencePolicy() {
     showFoodInfoCore = function showFoodInfoCoreWithPreference(foodRecord) {
       originalShowFoodInfoCore(foodRecord);
       if (typeof document === "undefined") return;
+
       let statusChips = document.querySelector(".food-detail-status");
       if (foodStatusPreferenceLiked(foodRecord) && statusChips && !statusChips.querySelector("[data-food-liked-chip]")) {
         statusChips.insertAdjacentHTML(
@@ -341,8 +291,6 @@ if (typeof module !== "undefined" && module.exports) {
     foodStatusPreferenceCanCombine,
     foodStatusPreferenceShouldRetry,
     foodStatusPreferenceShouldSkipAutomaticResult,
-    foodStatusPreferenceIntroductionExclude,
-    foodStatusPreferenceNextAutomaticResult,
     foodStatusPreferenceProgressLabels,
     installFoodStatusPreferencePolicy,
   };

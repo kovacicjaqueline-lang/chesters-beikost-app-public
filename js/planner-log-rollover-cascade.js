@@ -69,6 +69,28 @@
       ?.meals?.find((entry) => entry?.meal === meal) || null;
   }
 
+  function cleanupWeekReplanPins(data, swap, changedKeys, from, addDaysFn) {
+    if (!data?.planLocks || !swap || !from || typeof addDaysFn !== "function") return 0;
+    let end = addDaysFn(from, 6);
+    let cleaned = 0;
+    for (let [key, lock] of Object.entries(data.planLocks)) {
+      let date = key.split("|")[0];
+      if (date < from || date > end || !lock?.[swap.PIN_FLAG]) continue;
+      if (changedKeys.has(key)) {
+        delete lock[swap.PIN_FLAG];
+        delete lock[swap.PRESERVE_FLAG];
+        delete lock[swap.TARGET_FLAG];
+        cleaned += 1;
+        continue;
+      }
+      if (lock?.[swap.PRESERVE_FLAG] && lock.mode === "auto" && !lock.followUpFoodId) {
+        delete data.planLocks[key];
+        cleaned += 1;
+      }
+    }
+    return cleaned;
+  }
+
   function diversifyRebuiltWeek(targets, from) {
     let swap = globalScope.__plannerRandomSwap;
     if (!swap?.randomizePlannedMeal || !targets?.length) return { changed: 0, attempted: 0 };
@@ -97,18 +119,7 @@
     }
 
     if (changedKeys.size) {
-      for (let [key, lock] of Object.entries(state.planLocks || {})) {
-        if (!lock?.[swap.PIN_FLAG]) continue;
-        if (changedKeys.has(key)) {
-          delete lock[swap.PIN_FLAG];
-          delete lock[swap.PRESERVE_FLAG];
-          delete lock[swap.TARGET_FLAG];
-          continue;
-        }
-        if (lock?.[swap.PRESERVE_FLAG] && lock.mode === "auto" && !lock.followUpFoodId) {
-          delete state.planLocks[key];
-        }
-      }
+      cleanupWeekReplanPins(state, swap, changedKeys, from, addDays);
       save();
       if (previousRenderAll) previousRenderAll();
     }
@@ -206,6 +217,7 @@
     primarySlotCompletion,
     plannerMealIdentity,
     collectWeekReplanTargets,
+    cleanupWeekReplanPins,
     dayPlanRuntimePlannerInput,
     createDayPlanRuntimeCache,
   });

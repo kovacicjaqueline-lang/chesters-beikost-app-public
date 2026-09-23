@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { webkit } from "playwright";
 import { closeBrowserApp, startStaticServer } from "./helpers/app-harness.mjs";
+import { installBrowserTimingProbe } from "./helpers/browser-timing-probe.mjs";
 
 
 
@@ -53,12 +54,20 @@ async function selectLogOption(page, selector, value) {
 
 async function reset(page) {
   await page.evaluate(() => {
-    const state = window.__beikostTest.reset();
+    const state = structuredClone(window.__beikostTestBaseline);
     state.logs = [];
     state.followUps = {};
     state.shoppingHints = {};
     state.backupMeta.chesterContextSeeded = true;
     window.__beikostTest.setState(state);
+  });
+}
+
+async function captureTestBaseline(page) {
+  await page.evaluate(() => {
+    const api = window.__beikostTest;
+    api.reset();
+    window.__beikostTestBaseline = api.getState();
   });
 }
 
@@ -72,10 +81,12 @@ const context = await browser.newContext({
   hasTouch: true,
 });
 const page = await context.newPage();
+const timingProbe = installBrowserTimingProbe(page);
 
 try {
   await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "domcontentloaded" });
   await waitForApp(page);
+  await captureTestBaseline(page);
 
   // 1. Freier Eintrag: optionale tatsächliche Mahlzeit, bewusste Textur, Rollenpersistenz.
   await reset(page);
@@ -121,6 +132,7 @@ try {
   assert.equal(reloaded.textureKnown, true);
   assert.equal(reloaded.textureStage, 2);
   assert.equal(reloaded.foodRoles.karotte, "sample");
+  await captureTestBaseline(page);
 
   // Eine freie tatsächliche Mahlzeit schließt bei eindeutiger Zuordnung den offenen Plan-Slot ab.
   await reset(page);
@@ -500,6 +512,7 @@ try {
     "Freie Gaben dürfen im Familienstatus nicht über date|meal zusammenfallen",
   );
 } finally {
+  console.log(`[browser-timing-probe] ${JSON.stringify(timingProbe.report())}`);
   await closeBrowserApp({ context, browser, server });
 }
 

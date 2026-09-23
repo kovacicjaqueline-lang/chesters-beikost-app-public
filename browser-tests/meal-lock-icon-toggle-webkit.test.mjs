@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { webkit } from "playwright";
-import { closeBrowserApp, startStaticServer } from "./helpers/app-harness.mjs";
+import { closeBrowserApp, configureBrowserTestPage, startStaticServer } from "./helpers/app-harness.mjs";
 
 
 
@@ -60,7 +60,7 @@ try {
     isMobile: true,
     hasTouch: true,
   });
-  const page = await context.newPage();
+  const page = configureBrowserTestPage(await context.newPage());
   await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "domcontentloaded" });
   await waitForApp(page);
   const today = await resetPlan(page);
@@ -182,7 +182,10 @@ try {
   assert.equal(completedTracking.tracking, true, "Ein erledigter heutiger Slot behält seinen unsichtbaren Tracking-Snapshot");
 
   await page.locator("#planRecalculate").click();
-  await page.locator("#confirmPlanRebuild").click();
+  const confirmationButton = page.locator("#confirmPlanRebuild");
+  await confirmationButton.waitFor({ state: "visible" });
+  await confirmationButton.click();
+  await confirmationButton.waitFor({ state: "hidden" });
   const afterCompletedReplan = await page.evaluate((date) => {
     const state = window.__beikostTest.getState();
     const lock = state.planLocks?.[`${date}|lunch`];

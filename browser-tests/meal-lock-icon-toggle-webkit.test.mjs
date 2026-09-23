@@ -183,7 +183,9 @@ try {
 
   await page.locator("#planRecalculate").click();
   const confirmationButton = page.locator("#confirmPlanRebuild");
-  if (await confirmationButton.isVisible()) await confirmationButton.click();
+  await confirmationButton.waitFor({ state: "visible" });
+  await confirmationButton.click();
+  await confirmationButton.waitFor({ state: "hidden" });
   const afterCompletedReplan = await page.evaluate((date) => {
     const state = window.__beikostTest.getState();
     const lock = state.planLocks?.[`${date}|lunch`];

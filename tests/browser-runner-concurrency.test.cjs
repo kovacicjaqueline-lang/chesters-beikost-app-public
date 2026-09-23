@@ -128,6 +128,35 @@ test('browser runner applies and validates the browser process timeout', async (
   assert.equal(resolveBrowserTestProcessTimeout('invalid'), 300000);
 });
 
+test('runBrowserTests kills and reports a browser test that exceeds its process timeout', async () => {
+  const { runBrowserTests } = await runnerModule;
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), 'beikost-browser-timeout-'));
+  const artifactDir = path.join(rootDir, 'artifacts', 'browser-tests');
+  const testFile = path.join(rootDir, 'hang-webkit.test.mjs');
+  fs.writeFileSync(testFile, 'setInterval(() => {}, 1000);\n');
+
+  try {
+    const summary = await runBrowserTests({
+      rootDir,
+      artifactDir,
+      testFiles: [testFile],
+      childEnv: { BROWSER_TEST_PROCESS_TIMEOUT_MS: '250' },
+      forwardOutput: false,
+      concurrency: 1,
+    });
+
+    assert.equal(summary.failed, 1);
+    assert.equal(summary.results[0].status, 'failed');
+    assert.match(summary.results[0].error, /exceeded 250 ms/);
+    assert.match(
+      fs.readFileSync(path.join(rootDir, summary.results[0].log), 'utf8'),
+      /Runner timeout: browser test exceeded 250 ms/,
+    );
+  } finally {
+    fs.rmSync(rootDir, { recursive: true, force: true });
+  }
+});
+
 test('runBrowserTests executes only the selected shard', async () => {
   const { runBrowserTests } = await runnerModule;
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), 'beikost-browser-shard-'));

@@ -170,6 +170,7 @@ try {
     "Konsistenz soll nur den relevanten Bereich direkt zeigen, ohne ein Ein-Punkt-Untermenü",
   );
   assert.equal(await page.locator("#textureStage").isVisible(), true, "Konsistenzstufe muss ohne weiteren Tap direkt sichtbar sein");
+  assert.equal(await page.locator("#freezerDays").isVisible(), false, "Tiefkühl-Zielfrist gehört nicht in die Konsistenzansicht");
 
   await page.locator("#moreBack").click();
   await page.locator('#moreNavScreen .more-nav-row[data-more-title="Baby & Beikostphase"]').click();
@@ -185,6 +186,12 @@ try {
     await page.locator("#settingsSection .settings-group:not([hidden]) > summary").allTextContents(),
     ["Planung und Wiederholungen", "Reise und weitere Einstellungen"],
     "Einstellungen soll nur seine zwei App-Unterbereiche zeigen",
+  );
+  assert.equal(await page.locator("#freezerDays").isVisible(), true, "Tiefkühl-Zielfrist muss unter Einstellungen erreichbar bleiben");
+  assert.equal(
+    await page.locator("#freezerDays").evaluate((input) => input.closest(".settings-group")?.querySelector(":scope > summary")?.textContent?.trim()),
+    "Reise und weitere Einstellungen",
+    "Tiefkühl-Zielfrist soll im Bereich Reise und weitere Einstellungen liegen",
   );
 
   const overflow = await page.locator("main").evaluate((main) => main.scrollWidth - main.clientWidth);

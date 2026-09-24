@@ -25,6 +25,23 @@ function plannerFinalCanonicalIds(ids = []) {
   return [...new Set((ids || []).filter(Boolean))];
 }
 
+function plannerFinalAutoLockNeedsRepair(meal, date, stateData = null, unavailableFn = null) {
+  if (meal?.lockedMode !== "auto" || !date || !meal?.meal) return false;
+  let lock = stateData?.planLocks?.[`${date}|${meal.meal}`] || null;
+  if (!lock || lock.mode !== "auto") return false;
+  let isUnavailable = typeof unavailableFn === "function"
+    ? unavailableFn
+    : (typeof isFoodUnavailable === "function" ? isFoodUnavailable : null);
+  if (!isUnavailable) return false;
+  let lockedIds = plannerFinalCanonicalIds([
+    lock.focusId,
+    ...(lock.foodIds || []),
+    ...(lock.baseFoodIds || []),
+    ...(lock.sampleFoodIds || []),
+  ]);
+  return lockedIds.some((id) => isUnavailable(id));
+}
+
 function plannerFinalAutomaticRecipeSuitable(recipe, meal, baseSuitableFn = null) {
   if (!recipe) return false;
   if (Array.isArray(recipe.excludeMeals) && recipe.excludeMeals.includes(meal)) return false;
@@ -125,8 +142,17 @@ function installPlannerFinalQualityRuntime(globalScope = typeof globalThis !== "
     return plannerFinalAutomaticRecipeSuitable(recipe, meal);
   };
 
-  const assessmentFor = (meal) => plannerFinalMealAssessment(
+  const autoLockNeedsRepairFor = (meal, date) => plannerFinalAutoLockNeedsRepair(
     meal,
+    date,
+    state,
+    typeof isFoodUnavailable === "function" ? isFoodUnavailable : null,
+  );
+
+  const assessmentFor = (meal, ignoreAutoLock = false) => plannerFinalMealAssessment(
+    ignoreAutoLock && meal?.lockedMode === "auto"
+      ? { ...meal, lockedMode: null }
+      : meal,
     state?.foods || [],
     {
       recipeForMeal: plannerFinalRecipeForMeal,
@@ -318,17 +344,21 @@ function installPlannerFinalQualityRuntime(globalScope = typeof globalThis !== "
   buildDay = function finalQualityBuildDay(date, index, ctx) {
     let day = baseBuildDay(date, index, ctx);
     for (let meal of day?.meals || []) {
+      let staleAutoLock = autoLockNeedsRepairFor(meal, date);
       if (
         !meal?.active ||
         meal.empty ||
         !PLANNER_FINAL_MAIN_MEALS.has(String(meal.meal || "")) ||
-        plannerFinalProtectedMeal(meal) ||
+        (plannerFinalProtectedMeal(meal) && !staleAutoLock) ||
         state?.overrides?.[`${date}|${meal.meal}`]
       ) continue;
 
-      let assessment = assessmentFor(meal);
+      if (staleAutoLock && state?.planLocks) {
+        delete state.planLocks[`${date}|${meal.meal}`];
+      }
+
+      let assessment = assessmentFor(meal, staleAutoLock);
       if (assessment.allowed) continue;
-      let initialReason = assessment.reason;
 
       if (assessment.reason !== "recipe-meal-mismatch") {
         let companion = companionForFocus(
@@ -338,7 +368,7 @@ function installPlannerFinalQualityRuntime(globalScope = typeof globalThis !== "
         );
         if (companion) {
           applyCompanion(meal, companion, date, ctx);
-          assessment = assessmentFor(meal);
+          assessment = assessmentFor(meal, staleAutoLock);
         }
       }
 
@@ -346,11 +376,11 @@ function installPlannerFinalQualityRuntime(globalScope = typeof globalThis !== "
         let replacement = replacementKnownPair(meal, date, ctx, day);
         if (replacement) {
           applyReplacementPair(meal, replacement, date, ctx, day);
-          assessment = assessmentFor(meal);
+          assessment = assessmentFor(meal, staleAutoLock);
         }
       }
 
-      if (!assessment.allowed && initialReason === "recipe-meal-mismatch") {
+      if (!assessment.allowed) {
         makeEmpty(meal, date, ctx, day);
       }
     }
@@ -361,6 +391,7 @@ function installPlannerFinalQualityRuntime(globalScope = typeof globalThis !== "
   globalScope.PlannerFinalQuality = Object.freeze({
     recipeSuitable: plannerFinalAutomaticRecipeSuitable,
     mealAssessment: plannerFinalMealAssessment,
+    autoLockNeedsRepair: plannerFinalAutoLockNeedsRepair,
   });
   return true;
 }
@@ -374,6 +405,7 @@ if (typeof module !== "undefined" && module.exports) {
     PLANNER_FINAL_BREAKFAST_STYLE_CATEGORIES,
     PLANNER_FINAL_MAIN_MEALS,
     plannerFinalAutomaticRecipeSuitable,
+    plannerFinalAutoLockNeedsRepair,
     plannerFinalMealAssessment,
   };
 }

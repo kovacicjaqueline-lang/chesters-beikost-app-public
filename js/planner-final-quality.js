@@ -39,7 +39,7 @@ function plannerFinalAutomaticRecipeSuitable(recipe, meal, baseSuitableFn = null
 function plannerFinalProtectedMeal(meal) {
   return !!(
     meal?.manualAdded ||
-    meal?.lockedMode === "manual" ||
+    meal?.lockedMode ||
     meal?.mode === "manual"
   );
 }

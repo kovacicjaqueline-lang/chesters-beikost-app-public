@@ -177,14 +177,51 @@ function installPlannerFinalQualityRuntime(globalScope = typeof globalThis !== "
       (typeof isFoodUnavailable !== "function" || !isFoodUnavailable(foodRecord.id));
   }
 
-  function companionForFocus(focus, meal, date) {
+  function companionForFocus(focus, meal, date, ctx = null) {
     if (!availableFood(focus) || typeof companionFor !== "function") return null;
-    // Der aktuelle companionFor-Stack enthält bereits Auto-Eignung, Status,
-    // Rotation und kulinarische Sortierung. Ihn einmal mit dem vollständigen
-    // FOOD-Bestand aufzurufen ist fachlich identisch und vermeidet die frühere
-    // exhaustive O(n²)-Reparatursuche über künstliche Zweier-States.
+
+    // Zuerst den normalen vollständigen Planner-Pfad nutzen. Falls dessen
+    // Wrapper-Kette keinen Begleiter zurückgibt, werden die vorhandenen FOODs
+    // einzeln durch exakt dieselbe Kette geprüft. So werden keine Eligibility-
+    // oder Pairing-Regeln dupliziert, aber ein früher verworfener Kandidat
+    // blockiert nicht alle weiteren fachlich zulässigen Alternativen.
     let selected = companionFor(focus, meal.meal, date, meal.type || "");
-    return availableFood(selected) && selected.id !== focus.id ? selected : null;
+    if (availableFood(selected) && selected.id !== focus.id) return selected;
+
+    let allFoods = state?.foods || [];
+    let candidates = [];
+    for (let candidate of allFoods) {
+      if (!availableFood(candidate) || candidate.id === focus.id) continue;
+      let isolated = null;
+      let previousFoods = state.foods;
+      try {
+        state.foods = allFoods.filter((item) => item.id === focus.id || item.id === candidate.id);
+        isolated = companionFor(focus, meal.meal, date, meal.type || "");
+      } finally {
+        state.foods = previousFoods;
+      }
+      if (!isolated || isolated.id !== candidate.id) continue;
+
+      let score = typeof plannerCulinaryPairScore === "function"
+        ? plannerCulinaryPairScore(focus, candidate, meal.meal, { foods: allFoods })
+        : 0;
+      if (score <= -1000) continue;
+      let reserved = Number(ctx?.inventoryReserved?.get(candidate.id) || 0);
+      let stock = state.settings?.preferInventoryInPlan && typeof inventoryPortions === "function"
+        ? Number(inventoryPortions(candidate.id) || 0) > reserved
+        : false;
+      let plannedUse = Number(ctx?.plannedUse?.get(candidate.id) || 0);
+      let historicalUse = typeof usageCount === "function" ? usageCount(candidate.id) : 0;
+      candidates.push({ candidate, score, stock, plannedUse, historicalUse });
+    }
+
+    return candidates.sort((a, b) =>
+      Number(b.stock) - Number(a.stock) ||
+      b.score - a.score ||
+      a.plannedUse - b.plannedUse ||
+      a.historicalUse - b.historicalUse ||
+      (Number(a.candidate.priority) || 9999) - (Number(b.candidate.priority) || 9999)
+    )[0]?.candidate || null;
   }
 
   function clearRecipeIdentity(meal) {
@@ -301,7 +338,7 @@ function installPlannerFinalQualityRuntime(globalScope = typeof globalThis !== "
         recipeInventoryId: "",
         type: selected.type || "bekannt",
       };
-      let companion = companionForFocus(focus, probe, date);
+      let companion = companionForFocus(focus, probe, date, ctx);
       if (companion) return { focus, companion, type: probe.type };
       excluded.push(focus.id);
     }
@@ -373,6 +410,7 @@ function installPlannerFinalQualityRuntime(globalScope = typeof globalThis !== "
           typeof food === "function" ? food(meal.focusId) : null,
           meal,
           date,
+          ctx,
         );
         if (companion) {
           applyCompanion(meal, companion, date, ctx);

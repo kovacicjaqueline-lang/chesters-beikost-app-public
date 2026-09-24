@@ -367,6 +367,7 @@ function installPlannerFinalQualityRuntime(globalScope = typeof globalThis !== "
 
       let assessment = assessmentFor(meal);
       if (assessment.allowed) continue;
+      let initialReason = assessment.reason;
 
       if (assessment.reason !== "recipe-meal-mismatch") {
         let best = companionCandidates(meal, date, ctx)[0]?.candidate || null;
@@ -384,7 +385,9 @@ function installPlannerFinalQualityRuntime(globalScope = typeof globalThis !== "
         }
       }
 
-      if (!assessment.allowed) makeEmpty(meal, date, ctx, day);
+      if (!assessment.allowed && initialReason === "recipe-meal-mismatch") {
+        makeEmpty(meal, date, ctx, day);
+      }
     }
     return day;
   };

@@ -10,8 +10,6 @@
  */
 const PLANNER_FINAL_BREAKFAST_STYLE_CATEGORIES = new Set([
   "porridge",
-  "pancakes",
-  "baking",
 ]);
 const PLANNER_FINAL_MAIN_MEALS = new Set(["breakfast", "lunch", "dinner"]);
 const PLANNER_FINAL_LEARNING_TYPES = new Set([

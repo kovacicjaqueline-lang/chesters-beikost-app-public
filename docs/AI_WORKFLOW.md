@@ -64,7 +64,7 @@ Die verbindlichen Details stehen in `AGENTS.md`, `docs/FOOD_HANDLING_ORAL_PROCES
 
 ### Testbefehle nach Prüfbedarf
 
-Die Testgruppen werden durch `scripts/test-manifest.mjs` bestimmt und bleiben bei unbekannten oder querschnittlichen Änderungen fail-closed.
+Die Testgruppen werden durch `scripts/test-manifest.mjs` bestimmt und bleiben bei unbekannten oder querschnittlichen Änderungen fail-closed. Die historischen Namen `test:unit` und `test:integration` sind dabei nur praktische, dateinamenbasierte Teilmengen für schnelle lokale Läufe; sie definieren **keine** architektonische Unit-/Integrationsgrenze. Für belastbare Abdeckung sind die fachlich betroffenen Tests und die unten genannten Gates maßgeblich, nicht diese beiden Labels.
 
 ```bash
 # kleinste Node-Prüfung nach fachlicher Gruppe

@@ -1,21 +1,29 @@
 "use strict";
 
 const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const path = require("node:path");
 const test = require("node:test");
 
-const source = fs.readFileSync(path.resolve(__dirname, "..", "js", "plan-checks-ui-core.js"), "utf8");
+const { classifyPhaseReadinessReasons } = require("../js/plan-checks-ui-core.js");
 
-test("NotConfirmed-Readiness wird nicht als erfüllt einsortiert", () => {
-  assert.match(
-    source,
-    /item\.code\.endsWith\("Confirmed"\)\s*&&\s*!item\.code\.endsWith\("NotConfirmed"\)/,
-    "NotConfirmed darf wegen des Suffixes 'Confirmed' nicht in der Erfüllt-Gruppe landen",
-  );
-  assert.match(
-    source,
-    /item\.code\.endsWith\("NotConfirmed"\)\s*\|\|\s*item\.code\.endsWith\("Unknown"\)/,
-    "Negative und unbekannte Readiness-Gründe müssen in der Fehlt-noch-Gruppe bleiben",
-  );
+test("NotConfirmed-Readiness bleibt im sichtbaren Fehlt-noch-Ergebnis", () => {
+  const result = classifyPhaseReadinessReasons([
+    { code: "currentPatternAcceptedConfirmed", text: "Muster klappt." },
+    { code: "additionalMealCueNotConfirmed", text: "Signal fehlt." },
+    { code: "routineCompatibleUnknown", text: "Alltag noch offen." },
+  ]);
+
+  assert.deepEqual(result.fulfilled.map((item) => item.code), ["currentPatternAcceptedConfirmed"]);
+  assert.deepEqual(result.missing.map((item) => item.code), [
+    "additionalMealCueNotConfirmed",
+    "routineCompatibleUnknown",
+  ]);
+});
+
+test("fehlende Readiness-Voraussetzungen werden als offene UI-Gründe ergänzt", () => {
+  const result = classifyPhaseReadinessReasons([], ["additionalMealCue"]);
+  assert.deepEqual(result.fulfilled, []);
+  assert.deepEqual(result.missing, [{
+    code: "additionalMealCueUnknown",
+    text: "additionalMealCue ist noch nicht angegeben.",
+  }]);
 });

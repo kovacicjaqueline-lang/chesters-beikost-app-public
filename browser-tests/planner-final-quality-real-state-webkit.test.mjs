@@ -42,6 +42,37 @@ try {
 
   const diagnostics = await page.evaluate(() => {
     const api = window.__beikostTest;
+    const culinaryTrace = [];
+    const baseCulinaryAssessment = window.plannerCulinaryAssessment;
+    if (typeof baseCulinaryAssessment === "function") {
+      window.plannerCulinaryAssessment = function tracedPlannerCulinaryAssessment(ids, foods, meal, options = {}) {
+        const result = baseCulinaryAssessment(ids, foods, meal, options);
+        if (
+          result &&
+          !result.allowed &&
+          ["breakfast", "lunch", "dinner"].includes(meal)
+        ) {
+          culinaryTrace.push({
+            meal,
+            foodIds: [...(ids || [])],
+            foods: (ids || []).map((id) => {
+              const record = (foods || []).find((item) => item?.id === id) || null;
+              return {
+                id,
+                name: record?.name || "",
+                category: record?.category || "",
+                manualStatus: record?.manualStatus || "",
+              };
+            }),
+            issues: [...(result.issues || [])],
+            recipeBacked: !!options?.recipeBacked,
+            learningOnly: !!options?.learningOnly,
+            sampleOnly: !!options?.sampleOnly,
+          });
+        }
+        return result;
+      };
+    }
 
     api.reset();
     let everyday = api.getState();
@@ -87,6 +118,7 @@ try {
     };
     api.setState(everyday);
     const everydayDays = window.buildDays(everydayDate, 1, false);
+    const everydayTrace = culinaryTrace.splice(0);
 
     api.reset();
     let trusted = api.getState();
@@ -127,6 +159,10 @@ try {
     }];
     api.setState(trusted);
     const trustedDays = api.buildDays(on, 7);
+    const trustedTrace = culinaryTrace.splice(0);
+    if (typeof baseCulinaryAssessment === "function") {
+      window.plannerCulinaryAssessment = baseCulinaryAssessment;
+    }
 
     const compact = (days) => days.map((day) => ({
       date: day.date,
@@ -149,7 +185,9 @@ try {
 
     return {
       everyday: compact(everydayDays),
+      everydayTrace,
       trusted: compact(trustedDays),
+      trustedTrace,
     };
   });
 

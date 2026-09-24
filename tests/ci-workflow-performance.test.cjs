@@ -92,10 +92,10 @@ test('full app workflow runs the fast gate in exactly one browser shard', () => 
   assert.equal(occurrences(appWorkflow, 'run_fast: false'), 1);
   assert.ok(appWorkflow.includes('BROWSER_TEST_SHARD: ${{ matrix.shard }}/2'));
   assert.ok(
-    appWorkflow.includes('- name: Run fast verification gate\n        if: ${{ matrix.run_fast }}\n        run: |\n          mkdir -p artifacts/ci-logs\n          set -o pipefail\n          npm run verify:fast 2>&1 | tee artifacts/ci-logs/test-output.log'),
+    appWorkflow.includes('- name: Run fast verification gate\n        if: ${{ matrix.run_fast }}\n        shell: bash\n        run: |\n          mkdir -p artifacts/ci-logs\n          set -o pipefail\n          npm run verify:fast 2>&1 | tee artifacts/ci-logs/test-output.log'),
   );
   assert.ok(
-    appWorkflow.includes('- name: Run browser regression shard\n        if: ${{ !cancelled() }}\n        run: |\n          mkdir -p artifacts/ci-logs\n          set -o pipefail\n          npm run test:browser:standard 2>&1 | tee -a artifacts/ci-logs/test-output.log'),
+    appWorkflow.includes('- name: Run browser regression shard\n        if: ${{ !cancelled() }}\n        shell: bash\n        run: |\n          mkdir -p artifacts/ci-logs\n          set -o pipefail\n          npm run test:browser:standard 2>&1 | tee -a artifacts/ci-logs/test-output.log'),
   );
   assert.ok(appWorkflow.includes('browser-regression-diagnostics-${{ github.run_id }}-shard-${{ matrix.shard }}'));
   assert.ok(appWorkflow.includes('browser-performance:'));
@@ -108,6 +108,7 @@ test('full app workflow runs the fast gate in exactly one browser shard', () => 
 
 test('test jobs always preserve command output as downloadable artifacts', () => {
   assert.equal(occurrences(appWorkflow, 'set -o pipefail'), 5);
+  assert.equal(occurrences(appWorkflow, 'shell: bash'), 6);
   assert.equal(occurrences(appWorkflow, 'path: artifacts/ci-logs/test-output.log'), 4);
   assert.equal(
     occurrences(appWorkflow, '- name: Upload test output\n        if: ${{ always() }}\n        uses: actions/upload-artifact@v4'),

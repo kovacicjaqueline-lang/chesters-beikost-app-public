@@ -153,8 +153,39 @@ try {
 
   await page.locator('#moreNavScreen .more-nav-row[data-more-title="Konsistenz"]').click();
   assert.equal(await page.locator("#settingsSection").isVisible(), true, "Konsistenz soll die bestehende Einstellungs-Unterseite nutzen");
-  const settingsGroups = await page.locator("#settingsSection .settings-group").evaluateAll((groups) => groups.map((details) => details.open));
-  assert.deepEqual(settingsGroups, [false, false, false, true, false], "Konsistenz soll direkt den relevanten Einstellungsbereich fokussieren");
+  const textureSettingsState = await page.locator("#settingsSection .settings-group").evaluateAll((groups) => groups.map((details) => ({
+    open: details.open,
+    hidden: details.hidden,
+    summaryHidden: details.querySelector(":scope > summary")?.hidden || false,
+  })));
+  assert.deepEqual(
+    textureSettingsState,
+    [
+      { open: false, hidden: true, summaryHidden: false },
+      { open: false, hidden: true, summaryHidden: false },
+      { open: false, hidden: true, summaryHidden: false },
+      { open: true, hidden: false, summaryHidden: true },
+      { open: false, hidden: true, summaryHidden: false },
+    ],
+    "Konsistenz soll nur den relevanten Bereich direkt zeigen, ohne ein Ein-Punkt-Untermenü",
+  );
+  assert.equal(await page.locator("#textureStage").isVisible(), true, "Konsistenzstufe muss ohne weiteren Tap direkt sichtbar sein");
+
+  await page.locator("#moreBack").click();
+  await page.locator('#moreNavScreen .more-nav-row[data-more-title="Baby & Beikostphase"]').click();
+  assert.deepEqual(
+    await page.locator("#settingsSection .settings-group:not([hidden]) > summary").allTextContents(),
+    ["Baby und Beikoststart", "Phase und Tagesablauf"],
+    "Baby & Beikostphase soll nur seine zwei fachlich zusammengehörigen Unterbereiche zeigen",
+  );
+
+  await page.locator("#moreBack").click();
+  await page.locator('#moreNavScreen .more-nav-row[data-more-title="Einstellungen"]').click();
+  assert.deepEqual(
+    await page.locator("#settingsSection .settings-group:not([hidden]) > summary").allTextContents(),
+    ["Planung und Wiederholungen", "Reise und weitere Einstellungen"],
+    "Einstellungen soll nur seine zwei App-Unterbereiche zeigen",
+  );
 
   const overflow = await page.locator("main").evaluate((main) => main.scrollWidth - main.clientWidth);
   assert.ok(overflow <= 1, "Beikost und Mehr dürfen bei 390px keinen horizontalen App-Overflow erzeugen");

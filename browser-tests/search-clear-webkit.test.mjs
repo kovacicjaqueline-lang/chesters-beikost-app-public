@@ -16,7 +16,7 @@ try {
   await page.locator('nav button[data-view="foods"]').click();
   const foodSearch = page.locator("#foodSearch");
   const foodList = page.locator("#foodList");
-  await foodList.locator(".food-card").first().waitFor();
+  await page.waitForFunction(() => document.querySelectorAll("#foodList .foodcard:not([hidden])").length > 0);
   const foodsBefore = await foodList.innerText();
   await foodSearch.fill("unauffindbar-testwert");
   await foodSearch.dispatchEvent("input");
@@ -28,7 +28,9 @@ try {
   await page.locator('[data-catalog-mode="recipes"]').click();
   const recipeSearch = page.locator("#recipeSearch");
   const recipeList = page.locator("#recipeList");
-  await recipeList.locator(".recipe-card").first().waitFor();
+  await page.locator("#recipesSection").waitFor({ state: "visible" });
+  await page.waitForFunction(() => document.getElementById("recipesDetails")?.open === true);
+  await page.waitForFunction(() => document.querySelectorAll("#recipeList .recipe-card-v2:not([hidden])").length > 0);
   const recipesBefore = await recipeList.innerText();
   await recipeSearch.fill("unauffindbar-testwert");
   await recipeSearch.dispatchEvent("input");

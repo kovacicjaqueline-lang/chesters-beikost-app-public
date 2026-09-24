@@ -183,6 +183,45 @@
       .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")))[0] || null;
   }
 
+  function mealUsesSlotReplacement(meal) {
+    return meal === "breakfast" || meal === "lunch" || meal === "dinner";
+  }
+
+  function slotReplacementLogs(data, date, meal) {
+    if (!mealUsesSlotReplacement(meal)) return [];
+    return logsForDate(data, date)
+      .filter((log) =>
+        log?.meal === meal &&
+        !log?.plannedMealId &&
+        logQualifiesAsCompletion(log),
+      )
+      .slice()
+      .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
+  }
+
+  function planDisplayAssignments(data, plans = []) {
+    let planList = (plans || []).filter((plan) => plan?.planId && plan?.date && plan?.meal);
+    let byPlanId = new Map();
+    let claimedLogIds = new Set();
+
+    for (let plan of planList) {
+      let log = linkedCompletionLog(data, plan.planId, plan.date, plan.meal);
+      if (!log || claimedLogIds.has(log.id)) continue;
+      byPlanId.set(plan.planId, log);
+      claimedLogIds.add(log.id);
+    }
+
+    for (let plan of planList) {
+      if (byPlanId.has(plan.planId) || !mealUsesSlotReplacement(plan.meal)) continue;
+      let log = slotReplacementLogs(data, plan.date, plan.meal).find((candidate) => !claimedLogIds.has(candidate.id)) || null;
+      if (!log) continue;
+      byPlanId.set(plan.planId, log);
+      claimedLogIds.add(log.id);
+    }
+
+    return { byPlanId, claimedLogIds };
+  }
+
   function primaryPlanInstances(data) {
     ensurePlannerMeta(data);
     ensurePrimaryPlanIds(data);
@@ -351,19 +390,18 @@
 
   function dayPlannerEntries(data, date, plans = []) {
     let planList = (plans || []).filter((plan) => plan?.active && plan?.focusId);
-    let linkedIds = new Set();
+    let assignments = planDisplayAssignments(data, planList);
     let entries = [];
     for (let plan of planList) {
-      let log = linkedCompletionLog(data, plan.planId, date, plan.meal);
+      let log = assignments.byPlanId.get(plan.planId) || null;
       if (log) {
-        linkedIds.add(log.id);
         entries.push({ kind: "log", meal: log.meal, log, plan, planId: plan.planId, completedPlan: true });
       } else {
         entries.push({ kind: "plan", meal: plan.meal, plan, planId: plan.planId, completedPlan: false });
       }
     }
     for (let log of logsForDate(data, date)) {
-      if (linkedIds.has(log.id)) continue;
+      if (assignments.claimedLogIds.has(log.id)) continue;
       entries.push({ kind: "log", meal: log.meal, log, plan: null, planId: log.plannedMealId || "", completedPlan: false });
     }
     return entries.sort((a, b) => {

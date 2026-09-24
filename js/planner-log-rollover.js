@@ -199,11 +199,7 @@
       .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
   }
 
-  function slotReplacementLog(data, date, meal) {
-    return slotReplacementLogs(data, date, meal)[0] || null;
-  }
-
-  function planCompletionAssignments(data, plans = []) {
+  function planDisplayAssignments(data, plans = []) {
     let planList = (plans || []).filter((plan) => plan?.planId && plan?.date && plan?.meal);
     let byPlanId = new Map();
     let claimedLogIds = new Set();
@@ -224,13 +220,6 @@
     }
 
     return { byPlanId, claimedLogIds };
-  }
-
-  function completionLogForPlan(data, plan, plans = []) {
-    if (!plan?.planId || !plan?.date || !plan?.meal) return null;
-    let scope = (plans || []).filter((candidate) => candidate?.planId && candidate?.date && candidate?.meal).slice();
-    if (!scope.some((candidate) => candidate.planId === plan.planId)) scope.push(plan);
-    return planCompletionAssignments(data, scope).byPlanId.get(plan.planId) || null;
   }
 
   function primaryPlanInstances(data) {
@@ -290,9 +279,7 @@
     let handled = ensurePlannerMeta(data).rolloverHandled || {};
     let previousDay = previousIsoDate(todayValue);
     if (!previousDay) return [];
-    let completionByPlanId = planCompletionAssignments(data, allPlanInstances(data)).byPlanId;
     return openPlanInstances(data, (plan) => plan.date === previousDay && !handled[plan.planId] && !dayIsClosed(data, plan.date))
-      .filter((plan) => !completionByPlanId.has(plan.planId))
       .sort((a, b) => (MEAL_ORDER[a.meal] || 99) - (MEAL_ORDER[b.meal] || 99));
   }
 
@@ -336,7 +323,7 @@
     let moved = normalizeMovedPlan(plan, targetDate);
     let key = planKey(targetDate, moved.meal);
     let targetPrimary = primaryPlanInstances(data).find((candidate) => candidate.date === targetDate && candidate.meal === moved.meal) || null;
-    let targetPrimaryOpen = targetPrimary && !completionLogForPlan(data, targetPrimary, primaryPlanInstances(data));
+    let targetPrimaryOpen = targetPrimary && !linkedCompletionLog(data, targetPrimary.planId, targetDate, moved.meal);
     if (targetPrimaryOpen) throw new Error("Offener Zielplan muss vor dem Schreiben kaskadiert werden.");
 
     if (targetPrimary) {
@@ -403,7 +390,7 @@
 
   function dayPlannerEntries(data, date, plans = []) {
     let planList = (plans || []).filter((plan) => plan?.active && plan?.focusId);
-    let assignments = planCompletionAssignments(data, planList);
+    let assignments = planDisplayAssignments(data, planList);
     let entries = [];
     for (let plan of planList) {
       let log = assignments.byPlanId.get(plan.planId) || null;
@@ -437,10 +424,6 @@
     ensurePrimaryPlanIds,
     upgradePlannerLinking,
     linkedCompletionLog,
-    mealUsesSlotReplacement,
-    slotReplacementLog,
-    planCompletionAssignments,
-    completionLogForPlan,
     primaryPlanInstances,
     carriedPlanInstances,
     allPlanInstances,
@@ -495,11 +478,7 @@
   }
 
   function planCompletion(plan, date = plan?.date || "", meal = plan?.meal || "") {
-    if (!plan?.planId || !date || !meal) return null;
-    let candidate = { ...plan, date, meal };
-    let scope = CORE.allPlanInstances(state);
-    if (!scope.some((item) => item.planId === candidate.planId)) scope.push(candidate);
-    return CORE.completionLogForPlan(state, candidate, scope);
+    return CORE.linkedCompletionLog(state, plan?.planId, date, meal);
   }
 
   function linkedCompletionForSlot(date, meal) {
@@ -509,10 +488,6 @@
       .filter(Boolean)
       .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
     return candidates[0] || null;
-  }
-
-  function actualCompletionForSlot(date, meal) {
-    return linkedCompletionForSlot(date, meal) || CORE.slotReplacementLog(state, date, meal);
   }
 
   migrateState = function plannerAwareMigrateState(source) {
@@ -547,11 +522,11 @@
   };
 
   completedLog = function plannerAwareCompletedLog(date, meal) {
-    return actualCompletionForSlot(date, meal);
+    return linkedCompletionForSlot(date, meal);
   };
 
   mealIsCompleted = function plannerAwareMealIsCompleted(date, meal) {
-    return !!actualCompletionForSlot(date, meal);
+    return !!linkedCompletionForSlot(date, meal);
   };
 
   ensureAutoLocks = function plannerAwareEnsureAutoLocks(days) {
@@ -584,7 +559,7 @@
           !meal.empty &&
           meal.focusId &&
           !meal.manualAdded &&
-          !actualCompletionForSlot(day.date, meal.meal) &&
+          !linkedCompletionForSlot(day.date, meal.meal) &&
           !state.planLocks[key] &&
           !state.autoLockExcluded[key]
         ) {
@@ -913,7 +888,7 @@
     baseRenderHomeCore();
     let on = today();
     let carriedOpen = CORE.carriedPlanInstances(state)
-      .filter((plan) => plan.date === on && !planCompletion(plan, on, plan.meal));
+      .filter((plan) => plan.date === on && !CORE.linkedCompletionLog(state, plan.planId, on, plan.meal));
     if (!carriedOpen.length) return;
     let card = document.getElementById("todayCard");
     if (!card) return;

@@ -110,13 +110,17 @@ test('one free main-meal log replaces only one of multiple concrete same-slot pl
   assert.equal(entries.filter((entry) => entry.kind === 'plan').length, 1);
 });
 
-test('a free main-meal log satisfies rollover for that slot without changing concrete open-plan identity', () => {
+test('slot replacement stays display-only and does not complete concrete rollover identity', () => {
   const date = '2026-09-23';
+  const planned = plan('lunch-plan', date, 'lunch');
   const data = state({
     logs: [log('free-lunch', date, 'lunch')],
-    planLocks: { [`${date}|lunch`]: plan('lunch-plan', date, 'lunch') },
+    planLocks: { [`${date}|lunch`]: planned },
   });
 
+  const entries = core.dayPlannerEntries(data, date, [planned]);
+  assert.equal(entries.filter((entry) => entry.kind === 'plan').length, 0, 'the free lunch replaces the visible lunch plan');
+  assert.equal(entries.filter((entry) => entry.kind === 'log').length, 1);
   assert.equal(core.openPlanInstances(data).length, 1, 'free logs stay unlinked to a concrete plan id');
-  assert.deepEqual(core.outstandingPastPlans(data, '2026-09-24'), [], 'the actual lunch must prevent a false rollover prompt');
+  assert.equal(core.outstandingPastPlans(data, '2026-09-24').length, 1, 'display replacement must not rewrite rollover completion semantics');
 });

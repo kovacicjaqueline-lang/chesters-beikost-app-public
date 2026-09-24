@@ -133,6 +133,14 @@ function installPlannerFinalQualityRuntime(globalScope = typeof globalThis !== "
     plannerRecipeSuitableForMeal.__previous = basePlannerRecipeSuitableForMeal;
   }
 
+  if (typeof recipeSuitableForMeal === "function") {
+    const baseRecipeSuitableForMeal = recipeSuitableForMeal;
+    recipeSuitableForMeal = function finalQualityCoreRecipeSuitableForMeal(recipe, meal) {
+      return plannerFinalAutomaticRecipeSuitable(recipe, meal, baseRecipeSuitableForMeal);
+    };
+    recipeSuitableForMeal.__previous = baseRecipeSuitableForMeal;
+  }
+
   const recipeSuitable = (recipe, meal) => {
     if (!recipe) return false;
     if (typeof plannerRecipeSuitableForMeal === "function") {

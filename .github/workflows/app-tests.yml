@@ -67,6 +67,7 @@ jobs:
         run: npm ci
 
       - name: Run icon verification gate
+        shell: bash
         run: |
           mkdir -p artifacts/ci-logs
           set -o pipefail
@@ -143,6 +144,7 @@ jobs:
         run: npm ci
 
       - name: Run fast verification gate
+        shell: bash
         run: |
           mkdir -p artifacts/ci-logs
           set -o pipefail
@@ -191,6 +193,7 @@ jobs:
 
       - name: Run fast verification gate
         if: ${{ matrix.run_fast }}
+        shell: bash
         run: |
           mkdir -p artifacts/ci-logs
           set -o pipefail
@@ -198,6 +201,7 @@ jobs:
 
       - name: Run browser regression shard
         if: ${{ !cancelled() }}
+        shell: bash
         run: |
           mkdir -p artifacts/ci-logs
           set -o pipefail
@@ -277,6 +281,7 @@ jobs:
         run: npm ci
 
       - name: Run browser performance regressions
+        shell: bash
         run: |
           mkdir -p artifacts/ci-logs
           set -o pipefail

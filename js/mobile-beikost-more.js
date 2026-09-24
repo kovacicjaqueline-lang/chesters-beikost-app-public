@@ -304,8 +304,17 @@
       return document.getElementById(controlId)?.closest(".settings-group") || null;
     }
 
+    function organizeSettingsGroups() {
+      const freezerField = document.getElementById("freezerDays")?.closest(".field");
+      const appSettingsBody = settingsGroupFor("phMode")?.querySelector(":scope > .settings-group-body");
+      if (freezerField && appSettingsBody && freezerField.parentElement !== appSettingsBody) {
+        appSettingsBody.prepend(freezerField);
+      }
+    }
+
     function configureSettingsFocus(focus) {
       if (!settings) return;
+      organizeSettingsGroups();
       const settingGroups = [...settings.querySelectorAll(".settings-group")];
       settingGroups.forEach((details) => {
         details.hidden = false;

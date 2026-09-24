@@ -94,11 +94,13 @@ try {
     const snapshot = window.__beikostTest.getState();
     const mainDays = window.buildDays(start, 7, false);
     const lunchPorridgeAllowed = window.__beikostTest.recipeSuitableForMeal("Obst-Polentabrei", "lunch");
+    const lunchPancakesAllowed = window.__beikostTest.recipeSuitableForMeal("Ube-Bananen-Pancakes", "lunch");
 
-    return { start, snapshot, mainDays, lunchPorridgeAllowed };
+    return { start, snapshot, mainDays, lunchPorridgeAllowed, lunchPancakesAllowed };
   });
 
   assert.equal(setup.lunchPorridgeAllowed, false, "Obst-Polentabrei darf nicht automatisch in den Lunch-Slot rutschen");
+  assert.equal(setup.lunchPancakesAllowed, true, "Pancake-Rezepte bleiben im bestehenden Lunch-Pfad zulässig");
 
   const mainMeals = setup.mainDays.flatMap((day) =>
     (day.meals || [])
@@ -141,9 +143,9 @@ try {
     setup.mainDays,
   );
   assert.equal(
-    lunchRecipeCategories.some((entry) => ["porridge", "pancakes", "baking"].includes(entry.category)),
+    lunchRecipeCategories.some((entry) => entry.category === "porridge"),
     false,
-    `Lunch enthält Frühstücksrezept: ${JSON.stringify(lunchRecipeCategories)}`,
+    `Lunch enthält Porridge-Rezept: ${JSON.stringify(lunchRecipeCategories)}`,
   );
 
   const mainSignatures = mainMeals
@@ -189,6 +191,81 @@ try {
     normalizedPlan(setup.mainDays),
     "Hauptthread und 7-Tage-Worker müssen für denselben State denselben Plan liefern",
   );
+
+  const repairedAutoLock = await page.evaluate(({ start, snapshot }) => {
+    window.__beikostTest.setState(snapshot);
+    const current = window.__beikostTest.getState();
+    const key = `${start}|lunch`;
+    current.planLocks[key] = {
+      mode: "auto",
+      focusId: "bangus-milkfish",
+      foodIds: ["bangus-milkfish", "kartoffel"],
+      baseFoodIds: ["kartoffel"],
+      sampleFoodIds: [],
+      foodRoles: {
+        "bangus-milkfish": "component",
+        kartoffel: "base",
+      },
+      recipeName: "",
+      recipeInventoryId: "",
+      type: "bekannt",
+      portionTargetGrams: 60,
+      sampleTargetGrams: 0,
+      totalOfferedGrams: 60,
+      ingredientAmounts: {
+        "bangus-milkfish": 20,
+        kartoffel: 40,
+      },
+      createdAt: new Date().toISOString(),
+    };
+    window.__beikostTest.setState(current);
+
+    const day = window.buildDays(start, 1, true)[0];
+    const meal = (day.meals || []).find((entry) => entry.meal === "lunch") || null;
+    const nextState = window.__beikostTest.getState();
+    return { meal, lock: nextState.planLocks?.[key] || null };
+  }, { start: setup.start, snapshot: setup.snapshot });
+
+  assert.ok(repairedAutoLock.meal?.active && !repairedAutoLock.meal.empty, "fehlender FOOD im Auto-Lock muss zu einer neuen Lunch-Kombination führen");
+  assert.equal(repairedAutoLock.meal.foodIds.includes("bangus-milkfish"), false, "reparierter Lunch darf den fehlenden Bangus nicht behalten");
+  assert.ok(repairedAutoLock.meal.foodIds.length >= 2, `reparierter Auto-Lock darf keine Einzelzutat werden: ${JSON.stringify(repairedAutoLock.meal)}`);
+  assert.equal(repairedAutoLock.lock?.mode, "auto", "reparierte Mahlzeit muss wieder als Auto-Lock gespeichert werden");
+  assert.equal(repairedAutoLock.lock?.foodIds?.includes("bangus-milkfish"), false, "neu gespeicherter Auto-Lock darf die fehlende Zutat nicht behalten");
+  assert.ok((repairedAutoLock.lock?.foodIds || []).length >= 2, `neu gespeicherter Auto-Lock muss die vollständige Kombination enthalten: ${JSON.stringify(repairedAutoLock.lock)}`);
+
+  const unrepairedSingleton = await page.evaluate((start) => {
+    window.__beikostTest.reset();
+    const next = window.__beikostTest.addDays;
+    const current = window.__beikostTest.getState();
+    current.settings.phaseSelected = "kennenlernen";
+    current.settings.startDate = next(start, -60);
+    current.settings.planFrom = start;
+    current.settings.preferInventoryInPlan = false;
+    current.settings.seasonal = false;
+    current.settings.phMode = "off";
+    current.settings.newFoodEvery = 30;
+    current.logs = [];
+    current.manualMeals = {};
+    current.planLocks = {};
+    current.overrides = {};
+    current.autoLockExcluded = {};
+    current.shoppingHints = {};
+    current.pantry = {};
+    current.followUps = {};
+    current.deferred = { [start]: true };
+    current.inventory = [];
+    for (const item of current.foods) {
+      item.active = item.id === "huhn";
+      if (item.id === "huhn") item.manualStatus = "Regelmäßig";
+    }
+    window.__beikostTest.setState(current);
+    const day = window.buildDays(start, 1, false)[0];
+    return (day.meals || []).find((entry) => entry.meal === "lunch") || null;
+  }, setup.start);
+
+  assert.equal(unrepairedSingleton?.active, true, "Lunch-Slot muss in Phase Kennenlernen aktiv bleiben");
+  assert.equal(unrepairedSingleton?.empty, true, `unreparierbare normale Einzelzutat muss leer werden: ${JSON.stringify(unrepairedSingleton)}`);
+  assert.deepEqual(unrepairedSingleton?.foodIds || [], [], "ein unreparierbarer Slot darf keine Einzelzutat durchlassen");
 } finally {
   await closeBrowserApp({ context: typeof context !== "undefined" ? context : null, browser, server });
 }

@@ -72,8 +72,14 @@ test('app workflow classifies scope before choosing the gate', () => {
     appWorkflow.includes("test:\n    needs: scope\n    if: ${{ needs.scope.outputs.browser_required == 'true' }}"),
   );
   assert.ok(appWorkflow.includes('image: mcr.microsoft.com/playwright:v1.62.1-noble'));
-  assert.equal(occurrences(appWorkflow, 'run: npm run verify:fast'), 2);
-  assert.equal(occurrences(appWorkflow, 'run: npm run test:browser:standard'), 1);
+  assert.equal(
+    occurrences(appWorkflow, 'npm run verify:fast 2>&1 | tee artifacts/ci-logs/test-output.log'),
+    2,
+  );
+  assert.equal(
+    occurrences(appWorkflow, 'npm run test:browser:standard 2>&1 | tee -a artifacts/ci-logs/test-output.log'),
+    1,
+  );
   assert.equal(occurrences(appWorkflow, 'run: npm run verify:app'), 0);
 });
 
@@ -86,16 +92,39 @@ test('full app workflow runs the fast gate in exactly one browser shard', () => 
   assert.equal(occurrences(appWorkflow, 'run_fast: false'), 1);
   assert.ok(appWorkflow.includes('BROWSER_TEST_SHARD: ${{ matrix.shard }}/2'));
   assert.ok(
-    appWorkflow.includes('- name: Run fast verification gate\n        if: ${{ matrix.run_fast }}\n        run: npm run verify:fast'),
+    appWorkflow.includes('- name: Run fast verification gate\n        if: ${{ matrix.run_fast }}\n        shell: bash\n        run: |\n          mkdir -p artifacts/ci-logs\n          set -o pipefail\n          npm run verify:fast 2>&1 | tee artifacts/ci-logs/test-output.log'),
   );
   assert.ok(
-    appWorkflow.includes('- name: Run browser regression shard\n        if: ${{ !cancelled() }}\n        run: npm run test:browser:standard'),
+    appWorkflow.includes('- name: Run browser regression shard\n        if: ${{ !cancelled() }}\n        shell: bash\n        run: |\n          mkdir -p artifacts/ci-logs\n          set -o pipefail\n          npm run test:browser:standard 2>&1 | tee -a artifacts/ci-logs/test-output.log'),
   );
   assert.ok(appWorkflow.includes('browser-regression-diagnostics-${{ github.run_id }}-shard-${{ matrix.shard }}'));
   assert.ok(appWorkflow.includes('browser-performance:'));
-  assert.ok(appWorkflow.includes('run: npm run test:browser:performance'));
+  assert.ok(
+    appWorkflow.includes('npm run test:browser:performance 2>&1 | tee artifacts/ci-logs/test-output.log'),
+  );
   assert.ok(appWorkflow.includes('browser-performance-diagnostics-${{ github.run_id }}'));
   assert.ok(appWorkflow.includes('plan-checks-ux-screenshots-${{ github.run_id }}-shard-${{ matrix.shard }}'));
+});
+
+test('test jobs always preserve command output as downloadable artifacts', () => {
+  assert.equal(occurrences(appWorkflow, 'set -o pipefail'), 5);
+  assert.equal(occurrences(appWorkflow, 'shell: bash'), 6);
+  assert.equal(occurrences(appWorkflow, 'path: artifacts/ci-logs/test-output.log'), 4);
+  assert.equal(
+    occurrences(appWorkflow, '- name: Upload test output\n        if: ${{ always() }}\n        uses: actions/upload-artifact@v4'),
+    4,
+  );
+
+  for (const artifactName of [
+    'test-output-${{ github.run_id }}-icons',
+    'test-output-${{ github.run_id }}-fast',
+    'test-output-${{ github.run_id }}-shard-${{ matrix.shard }}',
+    'test-output-${{ github.run_id }}-performance',
+  ]) {
+    assert.ok(appWorkflow.includes(`name: ${artifactName}`));
+  }
+
+  assert.equal(occurrences(appWorkflow, 'if-no-files-found: warn'), 4);
 });
 
 test('green app runs do not upload plan-check screenshots', () => {

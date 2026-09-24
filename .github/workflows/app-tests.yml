@@ -5,37 +5,23 @@ on:
     branches:
       - main
       - test/audit-selective-runner
-    paths:
-      - 'index.html'
-      - '**/*.css'
-      - 'sw.js'
-      - 'sw-core.js'
-      - 'app.js'
-      - 'js/**'
-      - 'data/**'
-      - 'assets/illustrations-v2/**'
-      - 'tests/**'
-      - 'browser-tests/**'
-      - 'scripts/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - '.github/workflows/app-tests.yml'
+    paths-ignore:
+      - 'docs/**'
+      - 'README*'
+      - 'AGENTS.md'
+      - 'VERSION.json'
+      - 'wrangler.jsonc'
+      - 'js/wrangler.jsonc'
+      - '.gitignore'
   pull_request:
-    paths:
-      - 'index.html'
-      - '**/*.css'
-      - 'sw.js'
-      - 'sw-core.js'
-      - 'app.js'
-      - 'js/**'
-      - 'data/**'
-      - 'assets/illustrations-v2/**'
-      - 'tests/**'
-      - 'browser-tests/**'
-      - 'scripts/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - '.github/workflows/app-tests.yml'
+    paths-ignore:
+      - 'docs/**'
+      - 'README*'
+      - 'AGENTS.md'
+      - 'VERSION.json'
+      - 'wrangler.jsonc'
+      - 'js/wrangler.jsonc'
+      - '.gitignore'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}

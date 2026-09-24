@@ -38,6 +38,29 @@ test('all dependency-installing setup-node steps use the npm cache', () => {
   assert.equal(occurrences(deployWorkflow, 'cache-dependency-path: package-lock.json'), deploySetupCount);
 });
 
+test('app workflow trigger lets unknown app paths reach the fail-closed classifier', () => {
+  assert.equal(occurrences(appWorkflow, '    paths:\n'), 0);
+  assert.equal(occurrences(appWorkflow, '    paths-ignore:\n'), 2);
+
+  for (const ignoredPath of [
+    'docs/**',
+    'README*',
+    'AGENTS.md',
+    'VERSION.json',
+    'wrangler.jsonc',
+    'js/wrangler.jsonc',
+    '.gitignore',
+  ]) {
+    assert.equal(
+      occurrences(appWorkflow, `      - '${ignoredPath}'`),
+      2,
+      `${ignoredPath} must stay neutral for push and pull_request triggers`,
+    );
+  }
+
+  assert.equal(appWorkflow.includes("      - 'playwright.config.mjs'"), false);
+});
+
 test('app workflow classifies scope before choosing the gate', () => {
   assert.ok(appWorkflow.includes('scope:\n'));
   assert.ok(appWorkflow.includes('browser_required: ${{ steps.classify.outputs.browser_required }}'));

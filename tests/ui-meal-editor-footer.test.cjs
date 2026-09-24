@@ -97,8 +97,9 @@ test('isoliertes Footer-Stylesheet ist auch im PWA-Precache enthalten', () => {
   assert.match(serviceWorker, /ui-meal-editor-footer\.css/);
 });
 
-test('UI-Regressionen laufen bei HTML-, CSS- und Service-Worker-Änderungen automatisch', () => {
-  assert.match(workflow, /- 'index\.html'/);
-  assert.match(workflow, /- '\*\*\/\*\.css'/);
-  assert.match(workflow, /- 'sw\.js'/);
+test('UI-Regressionen werden bei HTML-, CSS- und Service-Worker-Änderungen nicht vom Workflow-Trigger ausgeschlossen', () => {
+  assert.match(workflow, /paths-ignore:/);
+  assert.doesNotMatch(workflow, /- 'index\.html'/);
+  assert.doesNotMatch(workflow, /- '\*\*\/\*\.css'/);
+  assert.doesNotMatch(workflow, /- 'sw\.js'/);
 });

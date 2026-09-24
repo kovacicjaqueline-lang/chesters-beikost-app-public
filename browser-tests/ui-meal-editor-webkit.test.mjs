@@ -20,16 +20,21 @@ async function waitForApp(page) {
 }
 
 async function openManualCard(locator) {
+  const date = await locator.evaluate((element) => element.querySelector("[data-date]")?.dataset.date || "");
+  if (date) {
+    await locator.evaluate((_element, targetDate) => {
+      const dayButton = document.querySelector(`#planWeekOverview .plan-week-day[data-plan-date="${targetDate}"]`);
+      if (dayButton) dayButton.click();
+    }, date);
+    await locator.waitFor({ state: "attached" });
+  }
+
   await locator.evaluate((element) => {
-    const date = element.querySelector("[data-date]")?.dataset.date || "";
-    const dayButton = date
-      ? document.querySelector(`#planWeekOverview .plan-week-day[data-plan-date="${date}"]`)
-      : null;
-    if (dayButton) dayButton.click();
     const day = element.closest("details.day-details");
     if (day) day.open = true;
     element.open = true;
   });
+  await locator.locator(".manual-meal-actions").waitFor({ state: "attached" });
 }
 
 async function clickSelectorRow(page, selector) {

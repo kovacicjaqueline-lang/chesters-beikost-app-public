@@ -50,6 +50,13 @@ const areaRules = [
   { name: "ci", changed: [/^\.github\//, /^scripts\//, /^tests\/ci-/], node: [/^(browser-|ci-|pre-push)/], browser: [] },
 ];
 
+const sharedNodeDependencies = [
+  {
+    changed: /^data\/foods\.js$/,
+    node: [/^plan-07-custom-meals\.test\.js$/],
+  },
+];
+
 const neutralChangedPaths = [
   /^docs\//,
   /^README(?:\.[^/]+)?$/,
@@ -84,7 +91,13 @@ export function selectRelevantTests(files) {
   if (classification.full) return { ...classification, node: nodeTestFiles, browser: browserTestFiles };
 
   const rules = areaRules.filter((rule) => classification.areas.includes(rule.name));
-  const node = nodeTestFiles.filter((file) => rules.some((rule) => matchesAny(file, rule.node)));
+  const node = nodeTestFiles.filter((file) => (
+    rules.some((rule) => matchesAny(file, rule.node))
+    || sharedNodeDependencies.some((dependency) => (
+      normalized.some((changedFile) => dependency.changed.test(changedFile))
+      && matchesAny(file, dependency.node)
+    ))
+  ));
   const browser = browserTestFiles.filter((file) => rules.some((rule) => matchesAny(file, rule.browser)));
   return { ...classification, node, browser };
 }

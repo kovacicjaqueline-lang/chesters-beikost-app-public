@@ -260,7 +260,7 @@
         items: [
           [ids.allergen, "Allergene", "Einführen und wiederholen", ""],
           [ids.settings, "Baby & Beikostphase", "Start, Phase und Tagesablauf", "baby"],
-          [ids.settings, "Konsistenz", "Mengenorientierung und Struktur", "texture"],
+          [ids.settings, "Konsistenz", "Mengenorientierung und Konsistenz", "texture"],
         ],
       },
       {
@@ -282,7 +282,7 @@
     panelScreen.className = "more-panel-screen";
     panelScreen.id = "morePanelScreen";
     panelScreen.hidden = true;
-    panelScreen.innerHTML = `<div class="more-panel-header"><button class="more-back-button" id="moreBack" type="button" aria-label="Zurück zu Mehr">‹</button><div><span class="today-section-kicker">Mehr</span><h2 id="morePanelTitle">Mehr</h2></div></div><div class="more-panel-host" id="morePanelHost"></div>`;
+    panelScreen.innerHTML = `<div class="more-panel-header"><button class="more-back-button" id="moreBack" type="button" aria-label="Zurück zu Mehr">‹</button><button class="more-panel-title-button" id="morePanelTitleButton" type="button" aria-label="Zurück zu Mehr"><span class="today-section-kicker">Mehr</span><span class="more-panel-title" id="morePanelTitle">Mehr</span></button></div><div class="more-panel-host" id="morePanelHost"></div>`;
     const host = panelScreen.querySelector("#morePanelHost");
 
     destinations.forEach((card) => {
@@ -300,20 +300,45 @@
       }
     }
 
+    function settingsGroupFor(controlId) {
+      return document.getElementById(controlId)?.closest(".settings-group") || null;
+    }
+
+    function organizeSettingsGroups() {
+      const freezerField = document.getElementById("freezerDays")?.closest(".field");
+      const appSettingsBody = settingsGroupFor("phMode")?.querySelector(":scope > .settings-group-body");
+      if (freezerField && appSettingsBody && freezerField.parentElement !== appSettingsBody) {
+        appSettingsBody.prepend(freezerField);
+      }
+    }
+
     function configureSettingsFocus(focus) {
       if (!settings) return;
-      const outer = settings.querySelector(":scope > details");
-      if (outer) outer.open = true;
+      organizeSettingsGroups();
       const settingGroups = [...settings.querySelectorAll(".settings-group")];
+      settingGroups.forEach((details) => {
+        details.hidden = false;
+        details.querySelector(":scope > summary")?.removeAttribute("hidden");
+      });
       if (!focus) return;
 
-      settingGroups.forEach((details) => { details.open = false; });
-      if (focus === "baby") {
-        [settingGroups[0], settingGroups[1]].filter(Boolean).forEach((details) => { details.open = true; });
-      } else if (focus === "texture") {
-        if (settingGroups[3]) settingGroups[3].open = true;
-      } else if (focus === "app") {
-        [settingGroups[2], settingGroups[4]].filter(Boolean).forEach((details) => { details.open = true; });
+      const focusGroups = {
+        baby: [settingsGroupFor("birthDate"), settingsGroupFor("settingsPhaseSummary")],
+        texture: [settingsGroupFor("textureStage")],
+        app: [settingsGroupFor("allergenDays"), settingsGroupFor("phMode")],
+      };
+      const visibleGroups = new Set((focusGroups[focus] || []).filter(Boolean));
+      if (!visibleGroups.size) return;
+
+      settingGroups.forEach((details) => {
+        const isVisible = visibleGroups.has(details);
+        details.hidden = !isVisible;
+        details.open = isVisible;
+      });
+
+      if (visibleGroups.size === 1) {
+        const [singleGroup] = visibleGroups;
+        singleGroup.querySelector(":scope > summary")?.setAttribute("hidden", "");
       }
     }
 
@@ -336,6 +361,7 @@
 
     function showMenu() {
       activeDestination = null;
+      configureSettingsFocus("");
       destinations.forEach((card) => { card.hidden = true; });
       panelScreen.hidden = true;
       navScreen.hidden = false;
@@ -351,6 +377,7 @@
       ));
     });
     panelScreen.querySelector("#moreBack")?.addEventListener("click", showMenu);
+    panelScreen.querySelector("#morePanelTitleButton")?.addEventListener("click", showMenu);
 
     const directOpenDetails = [
       [log?.querySelector(":scope > details"), ids.log, "Protokoll"],

@@ -140,13 +140,59 @@ try {
   assert.equal(await page.locator("#logSection").isVisible(), true, "bestehendes Protokoll muss auf der Unterseite weiterverwendet werden");
   assert.equal(await page.locator("#appBarTitle").textContent(), "Protokoll", "App-Bar soll das geöffnete Mehr-Ziel benennen");
 
+  const titleBackButton = page.locator("#morePanelTitleButton");
+  assert.equal(await titleBackButton.evaluate((button) => button.tagName), "BUTTON", "Überschriftsbereich soll ein semantischer Button sein");
+  assert.equal(await titleBackButton.getAttribute("aria-label"), "Zurück zu Mehr", "Überschriftsbutton braucht eine eindeutige Zurück-Beschriftung");
+  assert.ok(await titleBackButton.evaluate((button) => button.getBoundingClientRect().height >= 44), "Überschriftsbutton muss ein mobiles Touch-Ziel bleiben");
+  await titleBackButton.tap();
+  assert.equal(await page.locator("#moreNavScreen").isVisible(), true, "Touch auf die Überschrift soll zurück in die gruppierte Mehr-Navigation führen");
+
+  await page.locator('#moreNavScreen .more-nav-row[data-more-title="Protokoll"]').click();
   await page.locator("#moreBack").click();
-  assert.equal(await page.locator("#moreNavScreen").isVisible(), true, "Zurück soll wieder in die gruppierte Mehr-Navigation führen");
+  assert.equal(await page.locator("#moreNavScreen").isVisible(), true, "Zurück-Pfeil soll weiter in die gruppierte Mehr-Navigation führen");
 
   await page.locator('#moreNavScreen .more-nav-row[data-more-title="Konsistenz"]').click();
   assert.equal(await page.locator("#settingsSection").isVisible(), true, "Konsistenz soll die bestehende Einstellungs-Unterseite nutzen");
-  const settingsGroups = await page.locator("#settingsSection .settings-group").evaluateAll((groups) => groups.map((details) => details.open));
-  assert.deepEqual(settingsGroups, [false, false, false, true, false], "Konsistenz soll direkt den relevanten Einstellungsbereich fokussieren");
+  const textureSettingsState = await page.locator("#settingsSection .settings-group").evaluateAll((groups) => groups.map((details) => ({
+    open: details.open,
+    hidden: details.hidden,
+    summaryHidden: details.querySelector(":scope > summary")?.hidden || false,
+  })));
+  assert.deepEqual(
+    textureSettingsState,
+    [
+      { open: false, hidden: true, summaryHidden: false },
+      { open: false, hidden: true, summaryHidden: false },
+      { open: false, hidden: true, summaryHidden: false },
+      { open: true, hidden: false, summaryHidden: true },
+      { open: false, hidden: true, summaryHidden: false },
+    ],
+    "Konsistenz soll nur den relevanten Bereich direkt zeigen, ohne ein Ein-Punkt-Untermenü",
+  );
+  assert.equal(await page.locator("#textureStage").isVisible(), true, "Konsistenzstufe muss ohne weiteren Tap direkt sichtbar sein");
+  assert.equal(await page.locator("#freezerDays").isVisible(), false, "Tiefkühl-Zielfrist gehört nicht in die Konsistenzansicht");
+
+  await page.locator("#moreBack").click();
+  await page.locator('#moreNavScreen .more-nav-row[data-more-title="Baby & Beikostphase"]').click();
+  assert.deepEqual(
+    await page.locator("#settingsSection .settings-group:not([hidden]) > summary").allTextContents(),
+    ["Baby und Beikoststart", "Phase und Tagesablauf"],
+    "Baby & Beikostphase soll nur seine zwei fachlich zusammengehörigen Unterbereiche zeigen",
+  );
+
+  await page.locator("#moreBack").click();
+  await page.locator('#moreNavScreen .more-nav-row[data-more-title="Einstellungen"]').click();
+  assert.deepEqual(
+    await page.locator("#settingsSection .settings-group:not([hidden]) > summary").allTextContents(),
+    ["Planung und Wiederholungen", "Reise und weitere Einstellungen"],
+    "Einstellungen soll nur seine zwei App-Unterbereiche zeigen",
+  );
+  assert.equal(await page.locator("#freezerDays").isVisible(), true, "Tiefkühl-Zielfrist muss unter Einstellungen erreichbar bleiben");
+  assert.equal(
+    await page.locator("#freezerDays").evaluate((input) => input.closest(".settings-group")?.querySelector(":scope > summary")?.textContent?.trim()),
+    "Reise und weitere Einstellungen",
+    "Tiefkühl-Zielfrist soll im Bereich Reise und weitere Einstellungen liegen",
+  );
 
   const overflow = await page.locator("main").evaluate((main) => main.scrollWidth - main.clientWidth);
   assert.ok(overflow <= 1, "Beikost und Mehr dürfen bei 390px keinen horizontalen App-Overflow erzeugen");

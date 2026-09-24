@@ -51,3 +51,12 @@ test('standard browser gate and performance gate are complete and disjoint', asy
     ],
   );
 });
+
+test('food data changes include custom-meal tests that load the shared FOOD_DB', async () => {
+  const manifest = await import(path.join(root, 'scripts/test-manifest.mjs'));
+  const result = manifest.selectRelevantTests(['data/foods.js']);
+
+  assert.equal(result.full, false);
+  assert.ok(result.areas.includes('food'));
+  assert.ok(result.node.some((file) => file.endsWith('plan-07-custom-meals.test.js')));
+});

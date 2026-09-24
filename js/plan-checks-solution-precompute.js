@@ -222,6 +222,11 @@
         return;
       }
 
+      if (activeGoalFlow) {
+        baseRenderPlanQuality(days);
+        return;
+      }
+
       scheduleGoalBatch(days, goals);
       const introductions = goals.filter((item) => item.code === solutions.INTRO_OPEN_CODE);
       if (introductions.length) {

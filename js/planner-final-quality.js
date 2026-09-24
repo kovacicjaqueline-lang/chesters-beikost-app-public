@@ -144,8 +144,7 @@ function installPlannerFinalQualityRuntime(globalScope = typeof globalThis !== "
       (typeof isFoodUnavailable !== "function" || !isFoodUnavailable(foodRecord.id));
   }
 
-  function companionCandidates(meal, date, ctx) {
-    let focus = typeof food === "function" ? food(meal.focusId) : null;
+  function companionCandidatesForFocus(focus, meal, date, ctx) {
     if (!availableFood(focus) || typeof companionFor !== "function") return [];
     let allFoods = state?.foods || [];
     let candidates = [];
@@ -187,6 +186,11 @@ function installPlannerFinalQualityRuntime(globalScope = typeof globalThis !== "
     );
   }
 
+  function companionCandidates(meal, date, ctx) {
+    let focus = typeof food === "function" ? food(meal.focusId) : null;
+    return companionCandidatesForFocus(focus, meal, date, ctx);
+  }
+
   function clearRecipeIdentity(meal) {
     meal.recipeName = "";
     meal.recipeInventoryId = "";
@@ -196,13 +200,27 @@ function installPlannerFinalQualityRuntime(globalScope = typeof globalThis !== "
     delete meal.recipePairingKey;
   }
 
-  function applyCompanion(meal, companion, date, ctx) {
-    if (!meal || !companion) return meal;
-    let focusId = meal.focusId;
-    let sampleIds = plannerFinalCanonicalIds(meal.sampleFoodIds || []);
-    meal.foodIds = plannerFinalCanonicalIds([focusId, companion.id, ...sampleIds]);
-    clearRecipeIdentity(meal);
+  function releaseInventory(meal, ctx) {
+    if (typeof plannerReleaseFoodInventoryReservations === "function") {
+      plannerReleaseFoodInventoryReservations(meal, ctx);
+    }
+  }
 
+  function reserveInventory(meal, ctx) {
+    if (typeof reserveMealInventory === "function") {
+      reserveMealInventory(meal, ctx);
+      return;
+    }
+    if (!state.settings?.preferInventoryInPlan || typeof inventoryPortions !== "function") return;
+    for (let id of meal?.foodIds || []) {
+      let reserved = Number(ctx?.inventoryReserved?.get(id) || 0);
+      if (Number(inventoryPortions(id) || 0) <= reserved) continue;
+      meal.inventoryFoodIds = plannerFinalCanonicalIds([...(meal.inventoryFoodIds || []), id]);
+      ctx?.inventoryReserved?.set(id, reserved + 1);
+    }
+  }
+
+  function applyAutomaticRoles(meal, date) {
     if (
       typeof plannerAutomaticFoodRoleState === "function" &&
       typeof plannerApplyAutomaticFoodRoleState === "function" &&
@@ -213,23 +231,113 @@ function installPlannerFinalQualityRuntime(globalScope = typeof globalThis !== "
         (id, mealKey, on, context) => manualMealRoleInfo(id, mealKey, on, context),
         date,
       );
-      if (roles) plannerApplyAutomaticFoodRoleState(meal, roles);
-    } else {
-      meal.baseFoodIds = meal.foodIds.filter((id) => id !== focusId && !sampleIds.includes(id));
-    }
-
-    if (state.settings?.preferInventoryInPlan && typeof inventoryPortions === "function") {
-      let reserved = Number(ctx?.inventoryReserved?.get(companion.id) || 0);
-      if (Number(inventoryPortions(companion.id) || 0) > reserved) {
-        meal.inventoryFoodIds = plannerFinalCanonicalIds([...(meal.inventoryFoodIds || []), companion.id]);
-        ctx?.inventoryReserved?.set(companion.id, reserved + 1);
+      if (roles) {
+        plannerApplyAutomaticFoodRoleState(meal, roles);
+        return;
       }
     }
+    let samples = new Set(meal.sampleFoodIds || []);
+    meal.baseFoodIds = (meal.foodIds || []).filter((id) => id !== meal.focusId && !samples.has(id));
+  }
+
+  function updateFocusContext(previousFocusId, nextFocusId, date, day, meal, ctx) {
+    if (!previousFocusId || previousFocusId === nextFocusId) {
+      if (nextFocusId && ctx?.lastFocus?.set) ctx.lastFocus.set(nextFocusId, date);
+      return;
+    }
+
+    if (ctx?.plannedUse?.get && ctx?.plannedUse?.set) {
+      let previousCount = Number(ctx.plannedUse.get(previousFocusId) || 0);
+      if (previousCount <= 1) ctx.plannedUse.delete?.(previousFocusId);
+      else ctx.plannedUse.set(previousFocusId, previousCount - 1);
+      if (nextFocusId) {
+        ctx.plannedUse.set(nextFocusId, Number(ctx.plannedUse.get(nextFocusId) || 0) + 1);
+      }
+    }
+
+    if (ctx?.lastFocus?.get && ctx?.lastFocus?.set) {
+      let previousStillUsed = (day?.meals || []).some(
+        (candidate) => candidate !== meal && candidate?.active && !candidate.empty && candidate.focusId === previousFocusId,
+      );
+      if (!previousStillUsed && ctx.lastFocus.get(previousFocusId) === date) {
+        ctx.lastFocus.delete?.(previousFocusId);
+      }
+      if (nextFocusId) ctx.lastFocus.set(nextFocusId, date);
+    }
+  }
+
+  function applyCompanion(meal, companion, date, ctx) {
+    if (!meal || !companion) return meal;
+    releaseInventory(meal, ctx);
+    let focusId = meal.focusId;
+    let sampleIds = plannerFinalCanonicalIds(meal.sampleFoodIds || []);
+    meal.foodIds = plannerFinalCanonicalIds([focusId, companion.id, ...sampleIds]);
+    meal.inventoryFoodIds = [];
+    clearRecipeIdentity(meal);
+    applyAutomaticRoles(meal, date);
     if (typeof applyPlannedMealAmounts === "function") applyPlannedMealAmounts(meal);
+    reserveInventory(meal, ctx);
     return meal;
   }
 
-  function makeEmpty(meal) {
+  function replacementKnownPair(meal, date, ctx, day) {
+    if (typeof knownCandidate !== "function") return null;
+    let excluded = plannerFinalCanonicalIds([
+      meal.focusId,
+      ...(day?.meals || [])
+        .filter((candidate) => candidate !== meal && candidate?.active && !candidate.empty)
+        .map((candidate) => candidate.focusId),
+    ]);
+    let limit = Math.max(1, (state?.foods || []).length);
+
+    for (let attempt = 0; attempt < limit; attempt++) {
+      let selected = knownCandidate(meal.meal, date, ctx, excluded);
+      let focus = selected?.f || null;
+      if (!availableFood(focus) || excluded.includes(focus.id)) return null;
+
+      let probe = {
+        ...meal,
+        empty: false,
+        focusId: focus.id,
+        foodIds: [focus.id],
+        baseFoodIds: [],
+        sampleFoodIds: [],
+        recipeName: "",
+        recipeInventoryId: "",
+        type: selected.type || "bekannt",
+      };
+      let best = companionCandidatesForFocus(focus, probe, date, ctx)[0]?.candidate || null;
+      if (best) return { focus, companion: best, type: probe.type };
+      excluded.push(focus.id);
+    }
+    return null;
+  }
+
+  function applyReplacementPair(meal, replacement, date, ctx, day) {
+    if (!meal || !replacement?.focus || !replacement?.companion) return meal;
+    let previousFocusId = meal.focusId;
+    releaseInventory(meal, ctx);
+    meal.empty = false;
+    meal.focusId = replacement.focus.id;
+    meal.foodIds = plannerFinalCanonicalIds([replacement.focus.id, replacement.companion.id]);
+    meal.baseFoodIds = [];
+    meal.sampleFoodIds = [];
+    meal.optionalAddons = [];
+    meal.inventoryFoodIds = [];
+    meal.foodRoles = {};
+    meal.ingredientAmounts = {};
+    meal.type = replacement.type || "bekannt";
+    clearRecipeIdentity(meal);
+    applyAutomaticRoles(meal, date);
+    if (typeof applyPlannedMealAmounts === "function") applyPlannedMealAmounts(meal);
+    reserveInventory(meal, ctx);
+    updateFocusContext(previousFocusId, meal.focusId, date, day, meal, ctx);
+    return meal;
+  }
+
+  function makeEmpty(meal, date, ctx, day) {
+    let previousFocusId = meal.focusId;
+    releaseInventory(meal, ctx);
     meal.empty = true;
     meal.focusId = "";
     meal.foodIds = [];
@@ -241,6 +349,7 @@ function installPlannerFinalQualityRuntime(globalScope = typeof globalThis !== "
     meal.ingredientAmounts = {};
     clearRecipeIdentity(meal);
     meal.note = "Noch keine fachlich passende automatische Kombination verfügbar.";
+    updateFocusContext(previousFocusId, "", date, day, meal, ctx);
     return meal;
   }
 
@@ -252,26 +361,30 @@ function installPlannerFinalQualityRuntime(globalScope = typeof globalThis !== "
         !meal?.active ||
         meal.empty ||
         !PLANNER_FINAL_MAIN_MEALS.has(String(meal.meal || "")) ||
-        plannerFinalProtectedMeal(meal)
+        plannerFinalProtectedMeal(meal) ||
+        state?.overrides?.[`${date}|${meal.meal}`]
       ) continue;
 
       let assessment = assessmentFor(meal);
       if (assessment.allowed) continue;
 
-      // Ein automatisches Rezept im falschen Slot wird nicht stillschweigend in
-      // dieselben Zutaten ohne Rezeptlabel umgedeutet. Der Slot wird durch den
-      // normalen Planner beim naechsten Lauf neu aufgebaut.
-      if (assessment.reason === "recipe-meal-mismatch") {
-        makeEmpty(meal);
-        continue;
+      if (assessment.reason !== "recipe-meal-mismatch") {
+        let best = companionCandidates(meal, date, ctx)[0]?.candidate || null;
+        if (best) {
+          applyCompanion(meal, best, date, ctx);
+          assessment = assessmentFor(meal);
+        }
       }
 
-      let best = companionCandidates(meal, date, ctx)[0]?.candidate || null;
-      if (best) {
-        applyCompanion(meal, best, date, ctx);
-        assessment = assessmentFor(meal);
+      if (!assessment.allowed) {
+        let replacement = replacementKnownPair(meal, date, ctx, day);
+        if (replacement) {
+          applyReplacementPair(meal, replacement, date, ctx, day);
+          assessment = assessmentFor(meal);
+        }
       }
-      if (!assessment.allowed) makeEmpty(meal);
+
+      if (!assessment.allowed) makeEmpty(meal, date, ctx, day);
     }
     return day;
   };

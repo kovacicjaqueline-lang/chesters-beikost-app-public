@@ -131,3 +131,14 @@ test("Runtime legt App- und Planner-Einstieg auf dieselbe zentrale Funktion", ()
   );
   assert.equal(context.__plannerRecipeMealEligibilityCoreInstalled, true);
 });
+
+test("Haupt-App führt die zentrale Rezept-Eignung nach app.js tatsächlich aus", () => {
+  const html = fs.readFileSync(path.resolve(__dirname, "..", "index.html"), "utf8");
+  const appScript = '<script src="app.js?v=10.1.26"></script>';
+  const eligibilityScript = '<script src="js/planner-meal-eligibility.js?v=10.1.26"></script>';
+  const appIndex = html.indexOf(appScript);
+  const eligibilityIndex = html.indexOf(eligibilityScript);
+
+  assert.ok(appIndex >= 0, "app.js muss im Haupt-Boot vorhanden sein");
+  assert.ok(eligibilityIndex > appIndex, "zentrale Rezept-Eignung muss nach app.js ausgeführt werden");
+});

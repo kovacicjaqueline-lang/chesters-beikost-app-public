@@ -96,7 +96,10 @@ function plannerFinalMealAssessment(meal, foods = [], helpers = {}) {
   }
 
   let learningOnly = plannerFinalLearningOnly(meal);
-  let recipeBacked = !!recipe;
+  let recipeBacked = !!recipe || (
+    typeof helpers.recipeBackedPair === "function" &&
+    helpers.recipeBackedPair(ids, meal.meal)
+  );
   if (typeof helpers.culinaryAssessment === "function") {
     let assessment = helpers.culinaryAssessment(ids, foods, meal.meal, {
       recipeBacked,
@@ -150,6 +153,33 @@ function installPlannerFinalQualityRuntime(globalScope = typeof globalThis !== "
     return plannerFinalAutomaticRecipeSuitable(recipe, meal);
   };
 
+  let runtimeRecipes = null;
+  const recipesForPairing = () => {
+    if (runtimeRecipes) return runtimeRecipes;
+    runtimeRecipes = typeof recipeStates === "function"
+      ? recipeStates()
+      : (typeof RECIPES !== "undefined" ? RECIPES : []);
+    return runtimeRecipes;
+  };
+  const recipeBackedPair = (ids, meal) => {
+    if (typeof plannerCulinaryRecipeHasPair !== "function") return false;
+    let pairIds = plannerFinalCanonicalIds(ids);
+    if (pairIds.length !== 2) return false;
+    let allFoods = state?.foods || [];
+    let pairFoods = pairIds
+      .map((id) => typeof food === "function" ? food(id) : allFoods.find((item) => item?.id === id))
+      .filter(Boolean);
+    if (pairFoods.length !== 2) return false;
+    return plannerCulinaryRecipeHasPair(
+      pairFoods[0],
+      pairFoods[1],
+      meal,
+      recipesForPairing(),
+      allFoods.length ? allFoods : pairFoods,
+      recipeSuitable,
+    );
+  };
+
   const autoLockNeedsRepairFor = (meal, date) => plannerFinalAutoLockNeedsRepair(
     meal,
     date,
@@ -165,6 +195,7 @@ function installPlannerFinalQualityRuntime(globalScope = typeof globalThis !== "
     {
       recipeForMeal: plannerFinalRecipeForMeal,
       recipeSuitable,
+      recipeBackedPair,
       culinaryAssessment: typeof plannerCulinaryAssessment === "function"
         ? plannerCulinaryAssessment
         : null,
@@ -203,7 +234,10 @@ function installPlannerFinalQualityRuntime(globalScope = typeof globalThis !== "
       if (!isolated || isolated.id !== candidate.id) continue;
 
       let score = typeof plannerCulinaryPairScore === "function"
-        ? plannerCulinaryPairScore(focus, candidate, meal.meal, { foods: allFoods })
+        ? plannerCulinaryPairScore(focus, candidate, meal.meal, {
+            foods: allFoods,
+            recipeBacked: recipeBackedPair([focus.id, candidate.id], meal.meal),
+          })
         : 0;
       if (score <= -1000) continue;
       let reserved = Number(ctx?.inventoryReserved?.get(candidate.id) || 0);

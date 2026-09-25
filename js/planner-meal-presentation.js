@@ -391,6 +391,10 @@ function loadManualMealFlowRuntime() {
 
 function loadRecipeV2ComponentOptionsRuntime() {
   if (typeof document === "undefined") return false;
+  if (typeof globalThis.installRecipeV2ComponentOptions === "function") {
+    loadManualMealFlowRuntime();
+    return true;
+  }
   let existing = document.querySelector('script[data-recipe-v2-component-options="v1"]');
   if (existing) {
     existing.addEventListener("load", loadManualMealFlowRuntime, { once: true });

@@ -392,7 +392,9 @@ function loadManualMealFlowRuntime() {
 function loadRecipeV2ComponentOptionsRuntime() {
   if (typeof document === "undefined") return false;
   if (typeof globalThis.installRecipeV2ComponentOptions === "function") {
-    loadManualMealFlowRuntime();
+    // Der frühere zweite Script-Load setzte die Fortsetzung in einen eigenen
+    // Task. Diese Reihenfolge bleibt erhalten, ohne denselben Pfad erneut zu laden.
+    setTimeout(loadManualMealFlowRuntime, 0);
     return true;
   }
   let existing = document.querySelector('script[data-recipe-v2-component-options="v1"]');

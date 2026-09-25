@@ -1,9 +1,9 @@
 "use strict";
 
-/* Zentrale Mahlzeiteneignung für automatische Planner-Pfade.
+/* Zentrale automatische FOOD- und Rezept-Mahlzeiteneignung für Planner/App.
  * FOOD.meals ist für Frühstück, Mittag und Abend eine harte Eingangsvoraussetzung.
  * Snack bleibt bewusst rezeptgetrieben und erhält kein neues allgemeines FOOD-snack-Feld.
- * Die automatische Rezept-Mahlzeiteneignung wird hier ebenfalls zentral gehalten,
+ * autoPlan, Verfügbarkeit, Mindestphase und Mindestalter werden hier zentral gehalten,
  * damit App- und Planner-Pfad dieselbe Regelquelle verwenden.
  */
 
@@ -12,6 +12,74 @@ const PLANNER_MEAL_ELIGIBILITY_MAIN_MEALS = new Set([
   "lunch",
   "dinner",
 ]);
+const PLANNER_FOOD_PHASE_ORDER = Object.freeze([
+  "kennenlernen",
+  "aufbau",
+  "drei",
+  "familie",
+]);
+
+function plannerFoodMonthsOld(on, birthDate) {
+  let [ay, am, ad] = String(birthDate || "").split("-").map(Number);
+  let [by, bm, bd] = String(on || "").split("-").map(Number);
+  if (![ay, am, ad, by, bm, bd].every(Number.isFinite)) return 0;
+  let months = (by - ay) * 12 + (bm - am);
+  if (bd < ad) months--;
+  return Math.max(0, months);
+}
+
+function plannerAutomaticFoodEligibilityCore(
+  foodRecord,
+  on,
+  settings = {},
+  isUnavailableFn = null,
+) {
+  if (!foodRecord) return false;
+  if (foodRecord.autoPlan === false) return false;
+  if (typeof isUnavailableFn === "function" && isUnavailableFn(foodRecord.id)) return false;
+
+  if (foodRecord.minPhase) {
+    let current = PLANNER_FOOD_PHASE_ORDER.indexOf(
+      settings.phaseSelected || "kennenlernen",
+    );
+    let required = PLANNER_FOOD_PHASE_ORDER.indexOf(foodRecord.minPhase);
+    if (required < 0 || current < required) return false;
+  }
+
+  if (
+    foodRecord.minAgeMonths !== undefined &&
+    foodRecord.minAgeMonths !== null &&
+    foodRecord.minAgeMonths !== ""
+  ) {
+    let minimum = Number(foodRecord.minAgeMonths);
+    if (
+      Number.isFinite(minimum) &&
+      plannerFoodMonthsOld(on, settings.birthDate) < minimum
+    ) return false;
+  }
+
+  return true;
+}
+
+function plannerRuntimeFoodUnavailable(foodId) {
+  return typeof isFoodUnavailable === "function" && isFoodUnavailable(foodId);
+}
+
+function plannerAutomaticFoodEligibilityRuntime(foodRecord, on, settings = {}) {
+  return plannerAutomaticFoodEligibilityCore(
+    foodRecord,
+    on,
+    settings,
+    plannerRuntimeFoodUnavailable,
+  );
+}
+
+function installPlannerAutomaticFoodEligibilityRuntime() {
+  if (typeof globalThis === "undefined") return false;
+  globalThis.automaticFoodEligibility = plannerAutomaticFoodEligibilityRuntime;
+  globalThis.__plannerAutomaticFoodEligibilityCoreInstalled = true;
+  return true;
+}
 
 function plannerFoodMealEligible(foodRecord, meal) {
   if (!foodRecord) return false;
@@ -27,6 +95,14 @@ function plannerAutomaticFoodMealEligible(
   automaticEligibilityFn = null,
 ) {
   if (!plannerFoodMealEligible(foodRecord, meal)) return false;
+  if (
+    !plannerAutomaticFoodEligibilityCore(
+      foodRecord,
+      on,
+      settings,
+      plannerRuntimeFoodUnavailable,
+    )
+  ) return false;
   return typeof automaticEligibilityFn === "function"
     ? automaticEligibilityFn(foodRecord, on, settings)
     : true;
@@ -150,6 +226,7 @@ function pruneMealIneligibleAutomaticPlanState(currentState) {
 
 function installPlannerMealEligibilityRuntime() {
   if (typeof globalThis === "undefined") return false;
+  installPlannerAutomaticFoodEligibilityRuntime();
   installPlannerRecipeMealEligibilityRuntime();
   if (globalThis.__plannerMealEligibilityRuntimeInstalled) return false;
   if (
@@ -183,9 +260,6 @@ function installPlannerMealEligibilityRuntime() {
           meal,
           on,
           state.settings || {},
-          typeof automaticFoodEligibility === "function"
-            ? automaticFoodEligibility
-            : null,
         ),
     );
     try {
@@ -285,6 +359,7 @@ function installPlannerMealEligibilityRuntime() {
 }
 
 if (typeof window !== "undefined" && typeof document !== "undefined") {
+  installPlannerAutomaticFoodEligibilityRuntime();
   installPlannerRecipeMealEligibilityRuntime();
   installPlannerMealEligibilityRuntime();
 }
@@ -292,6 +367,11 @@ if (typeof window !== "undefined" && typeof document !== "undefined") {
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     PLANNER_MEAL_ELIGIBILITY_MAIN_MEALS,
+    PLANNER_FOOD_PHASE_ORDER,
+    plannerFoodMonthsOld,
+    plannerAutomaticFoodEligibilityCore,
+    plannerAutomaticFoodEligibilityRuntime,
+    installPlannerAutomaticFoodEligibilityRuntime,
     plannerFoodMealEligible,
     plannerAutomaticFoodMealEligible,
     plannerRecipeBreakfastHasBaseCore,

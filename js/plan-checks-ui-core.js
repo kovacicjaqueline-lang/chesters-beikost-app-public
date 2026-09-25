@@ -1,5 +1,16 @@
 "use strict";
 
+function classifyPhaseReadinessReasons(reasons = [], missingPrerequisites = []) {
+  const described = (reasons || []).filter((item) => item?.text);
+  const fulfilled = described.filter((item) => item.code.endsWith("Confirmed") && !item.code.endsWith("NotConfirmed"));
+  const missing = described.filter((item) => item.code.endsWith("NotConfirmed") || item.code.endsWith("Unknown"));
+  const representedMissing = new Set(missing.flatMap((item) => ["currentPatternAccepted", "additionalMealCue", "routineCompatible"].filter((signal) => item.code.startsWith(signal))));
+  for (const signal of missingPrerequisites || []) {
+    if (!representedMissing.has(signal)) missing.push({ code: `${signal}Unknown`, text: `${signal} ist noch nicht angegeben.` });
+  }
+  return { fulfilled, missing };
+}
+
 /*
  * Sichtbare UX für den strukturierten AP3-/Solution-Vertrag.
  * Auswahl, Scoring, Validierung und Planmutation bleiben in PlannerPlanCheckSolutions.
@@ -323,11 +334,11 @@
     const phase = currentPhase();
     if (!readiness) return;
     const reasons = (readiness.reasons || []).map((code) => ({ code, text: readinessReasonText(code) })).filter((item) => item.text);
-    const fulfilled = reasons.filter((item) => item.code.endsWith("Confirmed") && !item.code.endsWith("NotConfirmed"));
-    const missing = reasons.filter((item) => item.code.endsWith("NotConfirmed") || item.code.endsWith("Unknown"));
-    const representedMissing = new Set(missing.flatMap((item) => ["currentPatternAccepted", "additionalMealCue", "routineCompatible"].filter((signal) => item.code.startsWith(signal))));
-    for (const signal of readiness.missingPrerequisites || []) {
-      if (!representedMissing.has(signal)) missing.push({ code: `${signal}Unknown`, text: `${readinessSignalLabel(signal)} ist noch nicht angegeben.` });
+    const { fulfilled, missing } = classifyPhaseReadinessReasons(reasons, readiness.missingPrerequisites);
+    for (const item of missing) {
+      if (!item.text || !item.code.endsWith("Unknown")) continue;
+      const signal = ["currentPatternAccepted", "additionalMealCue", "routineCompatible"].find((candidate) => item.code.startsWith(candidate));
+      if (signal && item.text === `${signal} ist noch nicht angegeben.`) item.text = `${readinessSignalLabel(signal)} ist noch nicht angegeben.`;
     }
 
     const signalRows = ["currentPatternAccepted", "additionalMealCue", "routineCompatible"].map((signal) => {
@@ -470,3 +481,5 @@
   if (typeof renderCurrentView === "function") renderCurrentView();
   else renderAll();
 })(typeof globalThis !== "undefined" ? globalThis : this);
+
+if (typeof module !== "undefined" && module.exports) module.exports = { classifyPhaseReadinessReasons };

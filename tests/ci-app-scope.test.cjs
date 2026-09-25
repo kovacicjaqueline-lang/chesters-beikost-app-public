@@ -55,6 +55,20 @@ test('UI, browser, workflow, package and mixed runtime changes keep full app gat
   );
 });
 
+test('browser and CI infrastructure node tests keep full app gate', async () => {
+  const { classifyAppScope } = await scopeModule;
+
+  for (const file of [
+    'tests/browser-test-runner.test.cjs',
+    'tests/browser-runner-concurrency.test.cjs',
+    'tests/ci-app-scope.test.cjs',
+    'tests/ci-workflow-performance.test.cjs',
+    'tests/test-manifest.test.cjs',
+  ]) {
+    assert.equal(classifyAppScope([file]), 'app', `${file} must keep browser coverage`);
+  }
+});
+
 test('classifier fails closed for new planner-like files and empty input', async () => {
   const { classifyAppScope, browserRequiredForFiles } = await scopeModule;
 

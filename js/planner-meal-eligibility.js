@@ -3,6 +3,8 @@
 /* Zentrale Mahlzeiteneignung für automatische Planner-Pfade.
  * FOOD.meals ist für Frühstück, Mittag und Abend eine harte Eingangsvoraussetzung.
  * Snack bleibt bewusst rezeptgetrieben und erhält kein neues allgemeines FOOD-snack-Feld.
+ * Die automatische Rezept-Mahlzeiteneignung wird hier ebenfalls zentral gehalten,
+ * damit App- und Planner-Pfad dieselbe Regelquelle verwenden.
  */
 
 const PLANNER_MEAL_ELIGIBILITY_MAIN_MEALS = new Set([
@@ -28,6 +30,93 @@ function plannerAutomaticFoodMealEligible(
   return typeof automaticEligibilityFn === "function"
     ? automaticEligibilityFn(foodRecord, on, settings)
     : true;
+}
+
+function plannerRecipeBreakfastHasBaseCore(
+  recipe,
+  foods = [],
+  canBeBaseFn = null,
+) {
+  if (recipe?.breakfastBase === false) return false;
+  let names = [
+    ...(recipe?.requires || []),
+    ...(recipe?.alternatives || []).flat(),
+    ...(recipe?.oneOf || []),
+    ...(recipe?.milkChoices || []),
+  ].filter(Boolean);
+
+  if (Array.isArray(foods) && foods.length) {
+    return names.some((name) => {
+      let item = foods.find((food) => food?.name === name);
+      return ["Getreide/Stärke", "Milchprodukt"].includes(item?.category) &&
+        (typeof canBeBaseFn !== "function" || canBeBaseFn(item)) &&
+        item.id !== "kuhmilch";
+    });
+  }
+
+  return names.some((name) =>
+    /hafer|hirse|polenta|reis|quinoa|buchweizen|weizen|dinkel|grieß|griess|naturjoghurt|joghurt|buttermilch|quark|skyr/i.test(String(name)),
+  );
+}
+
+function plannerRecipeSuitableForMealCore(
+  recipe,
+  meal,
+  foods = [],
+  canBeBaseFn = null,
+) {
+  if (!recipe) return false;
+  let excludedMeals = Array.isArray(recipe.excludeMeals) ? recipe.excludeMeals : [];
+  if (excludedMeals.includes(meal)) return false;
+
+  let category = String(recipe.category || "");
+  if (meal === "snack") {
+    return (recipe.tags || []).some(
+      (tag) => String(tag || "").trim().toLowerCase() === "snack",
+    );
+  }
+  if (meal === "breakfast") {
+    return ["porridge", "pancakes", "baking"].includes(category) &&
+      plannerRecipeBreakfastHasBaseCore(recipe, foods, canBeBaseFn);
+  }
+  if (meal === "dinner") {
+    return category !== "philippines" || Number(recipe.stage || 1) <= 3;
+  }
+  return true;
+}
+
+function installPlannerRecipeMealEligibilityRuntime() {
+  if (typeof globalThis === "undefined") return false;
+
+  let runtimeRecipeSuitableForMeal = (recipe, meal) => {
+    let foods = typeof state !== "undefined" && Array.isArray(state?.foods)
+      ? state.foods
+      : typeof FOOD_DB !== "undefined" && Array.isArray(FOOD_DB)
+        ? FOOD_DB
+        : [];
+    let canBeBaseFn = typeof plannerFoodCanBeBase === "function"
+      ? plannerFoodCanBeBase
+      : null;
+    return plannerRecipeSuitableForMealCore(recipe, meal, foods, canBeBaseFn);
+  };
+
+  let runtimeBreakfastHasBase = (recipe) => {
+    let foods = typeof state !== "undefined" && Array.isArray(state?.foods)
+      ? state.foods
+      : typeof FOOD_DB !== "undefined" && Array.isArray(FOOD_DB)
+        ? FOOD_DB
+        : [];
+    let canBeBaseFn = typeof plannerFoodCanBeBase === "function"
+      ? plannerFoodCanBeBase
+      : null;
+    return plannerRecipeBreakfastHasBaseCore(recipe, foods, canBeBaseFn);
+  };
+
+  globalThis.recipeSuitableForMeal = runtimeRecipeSuitableForMeal;
+  globalThis.plannerRecipeSuitableForMeal = runtimeRecipeSuitableForMeal;
+  globalThis.plannerRecipeBreakfastHasBase = runtimeBreakfastHasBase;
+  globalThis.__plannerRecipeMealEligibilityCoreInstalled = true;
+  return true;
 }
 
 function pruneMealIneligibleAutomaticPlanState(currentState) {
@@ -61,6 +150,7 @@ function pruneMealIneligibleAutomaticPlanState(currentState) {
 
 function installPlannerMealEligibilityRuntime() {
   if (typeof globalThis === "undefined") return false;
+  installPlannerRecipeMealEligibilityRuntime();
   if (globalThis.__plannerMealEligibilityRuntimeInstalled) return false;
   if (
     typeof companionFor !== "function" ||
@@ -195,6 +285,7 @@ function installPlannerMealEligibilityRuntime() {
 }
 
 if (typeof window !== "undefined" && typeof document !== "undefined") {
+  installPlannerRecipeMealEligibilityRuntime();
   installPlannerMealEligibilityRuntime();
 }
 
@@ -203,6 +294,9 @@ if (typeof module !== "undefined" && module.exports) {
     PLANNER_MEAL_ELIGIBILITY_MAIN_MEALS,
     plannerFoodMealEligible,
     plannerAutomaticFoodMealEligible,
+    plannerRecipeBreakfastHasBaseCore,
+    plannerRecipeSuitableForMealCore,
+    installPlannerRecipeMealEligibilityRuntime,
     pruneMealIneligibleAutomaticPlanState,
     installPlannerMealEligibilityRuntime,
   };

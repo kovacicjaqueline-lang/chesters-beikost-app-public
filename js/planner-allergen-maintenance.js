@@ -250,6 +250,11 @@
   if (typeof module !== "undefined" && module.exports) module.exports = CORE;
   if (typeof window === "undefined" || typeof document === "undefined") return;
 
+  let currentScript = document.currentScript;
+  if (currentScript && !currentScript.dataset.plannerAllergenMaintenance) {
+    currentScript.dataset.plannerAllergenMaintenance = "maintenance-v2";
+  }
+
   let baseLockedMeal = lockedMeal;
   let baseBuildDay = buildDay;
   let baseBuildDays = buildDays;

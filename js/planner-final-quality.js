@@ -213,6 +213,12 @@ function installPlannerFinalQualityRuntime(globalScope = typeof globalThis !== "
         : null,
     },
   );
+  const assessAutomaticMeal = (meal) => {
+    if (!meal || typeof meal !== "object") return { allowed: false, reason: "empty" };
+    const candidate = { ...meal, lockedMode: null, mode: null, manualAdded: false };
+    delete candidate.followUpFoodId;
+    return assessmentFor(candidate);
+  };
 
   function availableFood(foodRecord) {
     return !!foodRecord &&
@@ -493,6 +499,7 @@ function installPlannerFinalQualityRuntime(globalScope = typeof globalThis !== "
   globalScope.PlannerFinalQuality = Object.freeze({
     recipeSuitable: plannerFinalAutomaticRecipeSuitable,
     mealAssessment: plannerFinalMealAssessment,
+    assessAutomaticMeal,
     autoLockNeedsRepair: plannerFinalAutoLockNeedsRepair,
   });
   return true;

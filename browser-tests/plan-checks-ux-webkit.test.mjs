@@ -283,7 +283,12 @@ try {
   }, firstTitle);
   const secondStepTitle = (await page.locator("#genericTitle").textContent()).trim();
   const secondStepBody = (await page.locator("#genericBody").textContent()).trim();
-  await page.locator("#applyPlanGoalSolution").click({ timeout: 30_000 });
+  if (await page.locator("#applyPlanGoalSolution").isVisible()) {
+    await page.locator("#applyPlanGoalSolution").click({ timeout: 30_000 });
+  } else {
+    assert.match(secondStepBody, /Für diese Woche gibt es keine passende Möglichkeit/);
+    await page.locator("#leavePlanGoal").click({ timeout: 30_000 });
+  }
   try {
     await page.waitForFunction(() => !document.getElementById("genericModal")?.classList.contains("open"));
   } catch (error) {

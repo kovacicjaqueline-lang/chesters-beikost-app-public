@@ -61,6 +61,35 @@ test("manual meals are not rewritten by the automatic quality gate", () => {
   assert.equal(plannerFinalMealAssessment(manual, [{ id: "huhn", category: "Fleisch" }]).allowed, true);
 });
 
+test("Plan-Check-Kandidaten durchlaufen finale Qualität auch bei geschütztem Ausgangs-Slot", () => {
+  const source = fs.readFileSync(path.join(__dirname, "..", "js", "planner-final-quality.js"), "utf8");
+  const context = {
+    state: { foods: [{ id: "brot" }, { id: "karotte" }] },
+    buildDay: () => ({ meals: [] }),
+    plannerCulinaryAssessment: (ids) => ({ allowed: ids.length >= 2 }),
+  };
+  vm.createContext(context);
+  vm.runInContext(`${source}\ninstallPlannerFinalQualityRuntime(globalThis);`, context);
+
+  const manualSingleton = {
+    active: true,
+    meal: "lunch",
+    focusId: "brot",
+    foodIds: ["brot"],
+    lockedMode: "manual",
+    manualAdded: true,
+  };
+  assert.equal(
+    context.PlannerFinalQuality.assessAutomaticMeal(manualSingleton).allowed,
+    false,
+    "eine vorgeschlagene automatische Änderung darf den Schutz des Ausgangs-Slots nicht als Qualitätsfreigabe übernehmen",
+  );
+  assert.equal(
+    context.PlannerFinalQuality.assessAutomaticMeal({ ...manualSingleton, foodIds: ["brot", "karotte"] }).allowed,
+    true,
+  );
+});
+
 test("an open automatic snapshot does not protect an unsuitable singleton", () => {
   const autoLockedBread = {
     active: true,

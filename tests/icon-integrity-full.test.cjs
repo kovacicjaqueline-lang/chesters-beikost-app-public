@@ -5,7 +5,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
-const { assertV2Asset } = require("./helpers/icon-integrity-png.cjs");
+const { assertV2Asset, measureV2Asset } = require("./helpers/icon-integrity-png.cjs");
 const {
   clonePlain,
   duplicateGroups,
@@ -18,6 +18,23 @@ const {
 
 const ROOT = path.resolve(__dirname, "..");
 const KNOWN_RUNTIME_FOOD_V2_GAPS = Object.freeze([]);
+const CHECKERBOARD_REPAIRED_RECIPE_ASSETS = Object.freeze([
+  "apfel-bananen-baked-oatmeal",
+  "apfel-milchreisschnitten",
+  "bananen-french-toast-finger",
+  "bunte-gemuese-nuggets",
+  "gefuellte-paprika-mit-linsenreis",
+  "gemuese-couscous-schnitten",
+  "griessschnitten-ohne-panade",
+  "huhn-spinat-quinoa-auflauf",
+  "karotten-linsen-aufstrich",
+  "lachs-brokkoli-kartoffel-auflauf",
+  "rote-linsen-gemuese-shepherds-pie",
+  "spinat-zucchini-lasagne",
+  "weiche-apfel-hafer-riegel",
+  "weiche-gemuese-reis-finger",
+  "weisse-bohnen-paprika-aufstrich",
+].map((name) => `assets/illustrations-v2/recipes/${name}.svg`));
 
 function read(relativePath) {
   return fs.readFileSync(path.join(ROOT, relativePath), "utf8");
@@ -220,4 +237,14 @@ test("V2-Mappings, Dateibestand und Service-Worker-Precache sind exakt deckungsg
 
 test("sämtliche Food-/Recipe-V2-SVGs erfüllen 128×128, PNG-CRC/Decode und Alpha-Integrität", () => {
   for (const relativePath of allAssets) assertV2Asset(ROOT, relativePath);
+});
+
+test("bereinigte Recipe-V2-Assets behalten echten transparenten Sicherheitsrand statt Checkerboard", () => {
+  for (const relativePath of CHECKERBOARD_REPAIRED_RECIPE_ASSETS) {
+    const geometry = measureV2Asset(ROOT, relativePath);
+    assert.ok(
+      geometry.minMargin >= 7,
+      `${relativePath}: Motivrand muss mindestens 7 Wrapper-Pixel betragen; eingebrannter Checkerboard-Hintergrund würde diesen Rand belegen`,
+    );
+  }
 });

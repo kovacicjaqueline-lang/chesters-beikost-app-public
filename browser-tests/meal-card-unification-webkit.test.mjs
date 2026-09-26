@@ -22,6 +22,7 @@ async function seedTodayMeal(page) {
     window.__beikostTest.reset();
     const state = window.__beikostTest.getState();
     const today = window.__beikostTest.today();
+    state.settings.phaseSelected = "aufbau";
     state.settings.planFrom = today;
     state.settings.preferInventoryInPlan = true;
     for (const food of state.foods) {

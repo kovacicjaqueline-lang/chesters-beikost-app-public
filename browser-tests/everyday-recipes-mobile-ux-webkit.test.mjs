@@ -20,10 +20,7 @@ async function seedEverydayPlan(page) {
     bridge.reset();
     const state = bridge.getState();
     for (const item of state.foods) {
-      if (item.allergenGroup) {
-        item.active = false;
-        item.manualStatus = "auto";
-      } else if (item.active && item.category !== "Fett" && item.category !== "Kraut/Gewürz") {
+      if (item.active && !item.allergenGroup && item.category !== "Fett" && item.category !== "Kraut/Gewürz") {
         item.manualStatus = "Verträgliche Basis";
       }
     }

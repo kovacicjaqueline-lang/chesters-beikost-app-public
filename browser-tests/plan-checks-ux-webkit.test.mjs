@@ -317,6 +317,9 @@ try {
       todayBreakfastLock: window.__beikostTest.getState().planLocks[
         `${window.__beikostTest.today()}|breakfast`
       ] || null,
+      todayLunchLock: window.__beikostTest.getState().planLocks[
+        `${window.__beikostTest.today()}|lunch`
+      ] || null,
     }), { firstTitle, secondStepTitle, secondStepBody });
     throw new Error(`Plan-Check-Flow schloss nach der letzten Übernahme nicht: ${JSON.stringify(flowState)}; ${error.message}`);
   }

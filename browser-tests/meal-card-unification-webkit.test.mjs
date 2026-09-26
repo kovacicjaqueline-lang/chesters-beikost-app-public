@@ -165,6 +165,11 @@ try {
   assert.equal(homeLock.backgroundColor, "rgba(0, 0, 0, 0)", "Schloss erhält keine hervorgehobene Buttonfläche mehr");
 
   const homeStockBadge = homeMeal.locator(".stock-chip");
+  const stockDiagnostics = await page.evaluate((date) => ({
+    lock: window.__beikostTest.getState().planLocks[`${date}|lunch`] || null,
+    meal: planDisplayDays(date, 1).flatMap((day) => day.meals || []).find((meal) => meal.meal === "lunch") || null,
+  }), today);
+  assert.equal(await homeStockBadge.count(), 1, `Vorratsbadge fehlt: ${JSON.stringify(stockDiagnostics)}`);
   assert.equal(await homeStockBadge.innerText(), "Vorrat: Kartoffel");
   assert.doesNotMatch(await homeStockBadge.innerText(), /❄/);
   assert.equal(await homeStockBadge.getAttribute("aria-label"), "Aus Vorrat: Kartoffel");

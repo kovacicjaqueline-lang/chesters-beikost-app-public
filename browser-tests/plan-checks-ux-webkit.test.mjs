@@ -281,12 +281,17 @@ try {
     const title = document.getElementById("genericTitle")?.textContent?.trim();
     return document.getElementById("genericModal")?.classList.contains("open") && title && title !== before;
   }, firstTitle);
+  const secondStepTitle = (await page.locator("#genericTitle").textContent()).trim();
+  const secondStepBody = (await page.locator("#genericBody").textContent()).trim();
   await page.locator("#applyPlanGoalSolution").click({ timeout: 30_000 });
   try {
     await page.waitForFunction(() => !document.getElementById("genericModal")?.classList.contains("open"));
   } catch (error) {
-    const flowState = await page.evaluate(() => ({
+    const flowState = await page.evaluate(({ firstTitle, secondStepTitle, secondStepBody }) => ({
       modalOpen: document.getElementById("genericModal")?.classList.contains("open"),
+      firstTitle,
+      secondStepTitle,
+      secondStepBody,
       title: document.getElementById("genericTitle")?.textContent?.trim() || "",
       body: document.getElementById("genericBody")?.textContent?.trim() || "",
       goals: window.__beikostTest.planCheckOpenGoals().map((item) => ({
@@ -309,7 +314,10 @@ try {
       glutenLocks: Object.entries(window.__beikostTest.getState().planLocks || {})
         .filter(([, lock]) => (lock.foodIds || []).includes("weizen"))
         .map(([key, lock]) => ({ key, recipeName: lock.recipeName, foodIds: lock.foodIds, mode: lock.mode })),
-    }));
+      todayBreakfastLock: window.__beikostTest.getState().planLocks[
+        `${window.__beikostTest.today()}|breakfast`
+      ] || null,
+    }), { firstTitle, secondStepTitle, secondStepBody });
     throw new Error(`Plan-Check-Flow schloss nach der letzten Übernahme nicht: ${JSON.stringify(flowState)}; ${error.message}`);
   }
   await page.waitForFunction(() => document.getElementById("toast")?.classList.contains("show") && document.getElementById("toastText")?.textContent === "Plan aktualisiert");

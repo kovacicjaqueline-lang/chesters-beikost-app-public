@@ -149,7 +149,12 @@ try {
   assert.equal(await homeMeal.locator(".meal-plan-actions .moveMeal").count(), 1);
   assert.equal(await homeMeal.locator(".meal-plan-actions .removePlannedMeal").count(), 1);
 
-  await homeMeal.locator(".meal-lock.locked").waitFor();
+  await homeMeal.locator(".meal-lock.unlocked").waitFor();
+  assert.equal(
+    await homeMeal.locator(".meal-lock").getAttribute("aria-label"),
+    "Mahlzeit vor automatischer Änderung schützen",
+    "Ein neu bewerteter Auto-Plan bleibt änderbar und kann bewusst geschützt werden",
+  );
   assert.equal(await homeMeal.locator(".lock-label").count(), 0, "Auto-Lock zeigt keine redundante Fest-eingeplant-Zeile");
   assert.doesNotMatch(await homeMeal.innerText(), /Fest eingeplant/);
   const homeLock = await lockPresentation(homeMeal);

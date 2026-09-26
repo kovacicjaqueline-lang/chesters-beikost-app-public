@@ -282,7 +282,21 @@ try {
     return document.getElementById("genericModal")?.classList.contains("open") && title && title !== before;
   }, firstTitle);
   await page.locator("#applyPlanGoalSolution").click({ timeout: 30_000 });
-  await page.waitForFunction(() => !document.getElementById("genericModal")?.classList.contains("open"));
+  try {
+    await page.waitForFunction(() => !document.getElementById("genericModal")?.classList.contains("open"));
+  } catch (error) {
+    const flowState = await page.evaluate(() => ({
+      modalOpen: document.getElementById("genericModal")?.classList.contains("open"),
+      title: document.getElementById("genericTitle")?.textContent?.trim() || "",
+      body: document.getElementById("genericBody")?.textContent?.trim() || "",
+      goals: window.__beikostTest.planCheckOpenGoals().map((item) => ({
+        code: item.code,
+        goalKey: PlannerPlanCheckSolutions.goalKey(item),
+      })),
+      precompute: window.__beikostTest.planCheckSolutionPrecompute(),
+    }));
+    throw new Error(`Plan-Check-Flow schloss nach der letzten Übernahme nicht: ${JSON.stringify(flowState)}; ${error.message}`);
+  }
   await page.waitForFunction(() => document.getElementById("toast")?.classList.contains("show") && document.getElementById("toastText")?.textContent === "Plan aktualisiert");
 
   // 4. „Andere Lösung“ bietet nicht erneut dieselbe strukturierte Solution an.

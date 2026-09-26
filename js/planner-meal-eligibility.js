@@ -1,8 +1,10 @@
 "use strict";
 
-/* Zentrale Mahlzeiteneignung für automatische Planner-Pfade.
+/* Zentrale automatische FOOD- und Rezept-Mahlzeiteneignung für Planner/App.
  * FOOD.meals ist für Frühstück, Mittag und Abend eine harte Eingangsvoraussetzung.
  * Snack bleibt bewusst rezeptgetrieben und erhält kein neues allgemeines FOOD-snack-Feld.
+ * autoPlan, Verfügbarkeit, Mindestphase und Mindestalter werden hier zentral gehalten,
+ * damit App- und Planner-Pfad dieselbe Regelquelle verwenden.
  */
 
 const PLANNER_MEAL_ELIGIBILITY_MAIN_MEALS = new Set([
@@ -10,6 +12,74 @@ const PLANNER_MEAL_ELIGIBILITY_MAIN_MEALS = new Set([
   "lunch",
   "dinner",
 ]);
+const PLANNER_FOOD_PHASE_ORDER = Object.freeze([
+  "kennenlernen",
+  "aufbau",
+  "drei",
+  "familie",
+]);
+
+function plannerFoodMonthsOld(on, birthDate) {
+  let [ay, am, ad] = String(birthDate || "").split("-").map(Number);
+  let [by, bm, bd] = String(on || "").split("-").map(Number);
+  if (![ay, am, ad, by, bm, bd].every(Number.isFinite)) return 0;
+  let months = (by - ay) * 12 + (bm - am);
+  if (bd < ad) months--;
+  return Math.max(0, months);
+}
+
+function plannerAutomaticFoodEligibilityCore(
+  foodRecord,
+  on,
+  settings = {},
+  isUnavailableFn = null,
+) {
+  if (!foodRecord) return false;
+  if (foodRecord.autoPlan === false) return false;
+  if (typeof isUnavailableFn === "function" && isUnavailableFn(foodRecord.id)) return false;
+
+  if (foodRecord.minPhase) {
+    let current = PLANNER_FOOD_PHASE_ORDER.indexOf(
+      settings.phaseSelected || "kennenlernen",
+    );
+    let required = PLANNER_FOOD_PHASE_ORDER.indexOf(foodRecord.minPhase);
+    if (required < 0 || current < required) return false;
+  }
+
+  if (
+    foodRecord.minAgeMonths !== undefined &&
+    foodRecord.minAgeMonths !== null &&
+    foodRecord.minAgeMonths !== ""
+  ) {
+    let minimum = Number(foodRecord.minAgeMonths);
+    if (
+      Number.isFinite(minimum) &&
+      plannerFoodMonthsOld(on, settings.birthDate) < minimum
+    ) return false;
+  }
+
+  return true;
+}
+
+function plannerRuntimeFoodUnavailable(foodId) {
+  return typeof isFoodUnavailable === "function" && isFoodUnavailable(foodId);
+}
+
+function plannerAutomaticFoodEligibilityRuntime(foodRecord, on, settings = {}) {
+  return plannerAutomaticFoodEligibilityCore(
+    foodRecord,
+    on,
+    settings,
+    plannerRuntimeFoodUnavailable,
+  );
+}
+
+function installPlannerAutomaticFoodEligibilityRuntime() {
+  if (typeof globalThis === "undefined") return false;
+  globalThis.automaticFoodEligibility = plannerAutomaticFoodEligibilityRuntime;
+  globalThis.__plannerAutomaticFoodEligibilityCoreInstalled = true;
+  return true;
+}
 
 function plannerFoodMealEligible(foodRecord, meal) {
   if (!foodRecord) return false;
@@ -25,9 +95,104 @@ function plannerAutomaticFoodMealEligible(
   automaticEligibilityFn = null,
 ) {
   if (!plannerFoodMealEligible(foodRecord, meal)) return false;
+  if (
+    !plannerAutomaticFoodEligibilityCore(
+      foodRecord,
+      on,
+      settings,
+      plannerRuntimeFoodUnavailable,
+    )
+  ) return false;
   return typeof automaticEligibilityFn === "function"
     ? automaticEligibilityFn(foodRecord, on, settings)
     : true;
+}
+
+function plannerRecipeBreakfastHasBaseCore(
+  recipe,
+  foods = [],
+  canBeBaseFn = null,
+) {
+  if (recipe?.breakfastBase === false) return false;
+  let names = [
+    ...(recipe?.requires || []),
+    ...(recipe?.alternatives || []).flat(),
+    ...(recipe?.oneOf || []),
+    ...(recipe?.milkChoices || []),
+  ].filter(Boolean);
+
+  if (Array.isArray(foods) && foods.length) {
+    return names.some((name) => {
+      let item = foods.find((food) => food?.name === name);
+      return ["Getreide/Stärke", "Milchprodukt"].includes(item?.category) &&
+        (typeof canBeBaseFn !== "function" || canBeBaseFn(item)) &&
+        item.id !== "kuhmilch";
+    });
+  }
+
+  return names.some((name) =>
+    /hafer|hirse|polenta|reis|quinoa|buchweizen|weizen|dinkel|grieß|griess|naturjoghurt|joghurt|buttermilch|quark|skyr/i.test(String(name)),
+  );
+}
+
+function plannerRecipeSuitableForMealCore(
+  recipe,
+  meal,
+  foods = [],
+  canBeBaseFn = null,
+) {
+  if (!recipe) return false;
+  let excludedMeals = Array.isArray(recipe.excludeMeals) ? recipe.excludeMeals : [];
+  if (excludedMeals.includes(meal)) return false;
+
+  let category = String(recipe.category || "");
+  if (meal === "snack") {
+    return (recipe.tags || []).some(
+      (tag) => String(tag || "").trim().toLowerCase() === "snack",
+    );
+  }
+  if (meal === "breakfast") {
+    return ["porridge", "pancakes", "baking"].includes(category) &&
+      plannerRecipeBreakfastHasBaseCore(recipe, foods, canBeBaseFn);
+  }
+  if (meal === "dinner") {
+    return category !== "philippines" || Number(recipe.stage || 1) <= 3;
+  }
+  return true;
+}
+
+function installPlannerRecipeMealEligibilityRuntime() {
+  if (typeof globalThis === "undefined") return false;
+
+  let runtimeRecipeSuitableForMeal = (recipe, meal) => {
+    let foods = typeof state !== "undefined" && Array.isArray(state?.foods)
+      ? state.foods
+      : typeof FOOD_DB !== "undefined" && Array.isArray(FOOD_DB)
+        ? FOOD_DB
+        : [];
+    let canBeBaseFn = typeof plannerFoodCanBeBase === "function"
+      ? plannerFoodCanBeBase
+      : null;
+    return plannerRecipeSuitableForMealCore(recipe, meal, foods, canBeBaseFn);
+  };
+
+  let runtimeBreakfastHasBase = (recipe) => {
+    let foods = typeof state !== "undefined" && Array.isArray(state?.foods)
+      ? state.foods
+      : typeof FOOD_DB !== "undefined" && Array.isArray(FOOD_DB)
+        ? FOOD_DB
+        : [];
+    let canBeBaseFn = typeof plannerFoodCanBeBase === "function"
+      ? plannerFoodCanBeBase
+      : null;
+    return plannerRecipeBreakfastHasBaseCore(recipe, foods, canBeBaseFn);
+  };
+
+  globalThis.recipeSuitableForMeal = runtimeRecipeSuitableForMeal;
+  globalThis.plannerRecipeSuitableForMeal = runtimeRecipeSuitableForMeal;
+  globalThis.plannerRecipeBreakfastHasBase = runtimeBreakfastHasBase;
+  globalThis.__plannerRecipeMealEligibilityCoreInstalled = true;
+  return true;
 }
 
 function pruneMealIneligibleAutomaticPlanState(currentState) {
@@ -61,6 +226,8 @@ function pruneMealIneligibleAutomaticPlanState(currentState) {
 
 function installPlannerMealEligibilityRuntime() {
   if (typeof globalThis === "undefined") return false;
+  installPlannerAutomaticFoodEligibilityRuntime();
+  installPlannerRecipeMealEligibilityRuntime();
   if (globalThis.__plannerMealEligibilityRuntimeInstalled) return false;
   if (
     typeof companionFor !== "function" ||
@@ -93,9 +260,6 @@ function installPlannerMealEligibilityRuntime() {
           meal,
           on,
           state.settings || {},
-          typeof automaticFoodEligibility === "function"
-            ? automaticFoodEligibility
-            : null,
         ),
     );
     try {
@@ -195,14 +359,24 @@ function installPlannerMealEligibilityRuntime() {
 }
 
 if (typeof window !== "undefined" && typeof document !== "undefined") {
+  installPlannerAutomaticFoodEligibilityRuntime();
+  installPlannerRecipeMealEligibilityRuntime();
   installPlannerMealEligibilityRuntime();
 }
 
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     PLANNER_MEAL_ELIGIBILITY_MAIN_MEALS,
+    PLANNER_FOOD_PHASE_ORDER,
+    plannerFoodMonthsOld,
+    plannerAutomaticFoodEligibilityCore,
+    plannerAutomaticFoodEligibilityRuntime,
+    installPlannerAutomaticFoodEligibilityRuntime,
     plannerFoodMealEligible,
     plannerAutomaticFoodMealEligible,
+    plannerRecipeBreakfastHasBaseCore,
+    plannerRecipeSuitableForMealCore,
+    installPlannerRecipeMealEligibilityRuntime,
     pruneMealIneligibleAutomaticPlanState,
     installPlannerMealEligibilityRuntime,
   };

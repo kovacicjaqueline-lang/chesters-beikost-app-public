@@ -86,6 +86,7 @@ async function seedTodayMeal(page) {
       manualAdded: false,
       active: true,
       mode: "auto",
+      plannerTrackingSnapshot: true,
       planId: "ui-unified-today",
       createdAt: new Date().toISOString(),
     };

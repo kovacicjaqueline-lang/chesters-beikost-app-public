@@ -356,7 +356,7 @@ test("Runtime: erledigter Lock mit tried zählt weder als Projektion noch als hi
 test("Katalog-Hafer kann Glutenpflege abdecken, ohne selbst als Allergen geführt zu werden", () => {
   const context = vm.createContext({});
   const catalogSource = fs.readFileSync(path.join(root, "data", "foods.js"), "utf8");
-  vm.runInContext(`${catalogSource}\\nthis.__catalogFoods = FOOD_DB;`, context);
+  vm.runInContext(`${catalogSource}\nthis.__catalogFoods = FOOD_DB;`, context);
   const hafer = context.__catalogFoods.find((item) => item.id === "hafer");
   assert.ok(hafer);
   assert.equal(hafer.allergenGroup, "");

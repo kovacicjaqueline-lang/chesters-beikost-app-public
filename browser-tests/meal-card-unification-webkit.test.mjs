@@ -55,6 +55,21 @@ async function seedTodayMeal(page) {
       },
     ];
 
+    state.manualMeals[`${today}|lunch`] = {
+      date: today,
+      meal: "lunch",
+      focusId: "kartoffel",
+      foodIds: ["kartoffel", "karotte"],
+      baseFoodIds: ["kartoffel"],
+      sampleFoodIds: [],
+      optionalAddons: [],
+      inventoryFoodIds: ["kartoffel"],
+      recipeName: "",
+      type: "bekannt kombinieren",
+      manualAdded: false,
+      active: true,
+      mode: "manual",
+    };
     state.planLocks[`${today}|lunch`] = {
       date: today,
       meal: "lunch",

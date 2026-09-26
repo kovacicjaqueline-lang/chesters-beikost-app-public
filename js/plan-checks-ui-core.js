@@ -192,7 +192,10 @@ function classifyPhaseReadinessReasons(reasons = [], missingPrerequisites = []) 
     const updated = !!activeGoalFlow?.appliedAny;
     activeGoalFlow = null;
     closeGeneric();
-    if (updated) showToast("Plan aktualisiert");
+    if (updated) {
+      renderAll();
+      showToast("Plan aktualisiert");
+    }
   }
 
   function nextFlowGoal(preferredKey = "") {
@@ -245,7 +248,6 @@ function classifyPhaseReadinessReasons(reasons = [], missingPrerequisites = []) 
       if (!solutions.applySolution(solution)) return;
       activeGoalFlow.appliedAny = true;
       save();
-      renderAll();
       openGoalStep();
     });
     document.getElementById("otherPlanGoalSolution")?.addEventListener("click", () => {

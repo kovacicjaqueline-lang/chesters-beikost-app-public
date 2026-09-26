@@ -133,7 +133,10 @@ try {
 
   assert.equal(await homeMeal.locator(".homeLog").count(), 0, "Heute verwendet keinen separaten Home-Kartenpfad mehr");
   assert.equal(await homeMeal.locator(":scope > .logMeal").count(), 1, "Essen eintragen bleibt direkte Primary-Aktion");
-  assert.equal(await homeMeal.locator(".meal-type-text").first().innerText(), "Mittag", "Normale Mahlzeiten wiederholen nicht mehr das Wort Mahlzeit");
+  assert.ok(
+    ["Mittag", "Rezept · Mittag"].includes(await homeMeal.locator(".meal-type-text").first().innerText()),
+    "Normale Mahlzeiten und Rezepte wiederholen nicht mehr das Wort Mahlzeit",
+  );
   assert.deepEqual(
     await directActionLabels(homeMeal),
     ["Plan ändern", "Essen eintragen"],

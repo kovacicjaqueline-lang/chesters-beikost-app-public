@@ -27,6 +27,8 @@ async function seedTodayMeal(page) {
 
     const potato = state.foods.find((food) => food.id === "kartoffel");
     if (potato) potato.manualStatus = "Verträgliche Basis";
+    const carrot = state.foods.find((food) => food.id === "karotte");
+    if (carrot) carrot.manualStatus = "Verträgliche Basis";
 
     state.inventory = [
       {
@@ -44,7 +46,7 @@ async function seedTodayMeal(page) {
       date: today,
       meal: "lunch",
       focusId: "kartoffel",
-      foodIds: ["kartoffel"],
+      foodIds: ["kartoffel", "karotte"],
       baseFoodIds: ["kartoffel"],
       sampleFoodIds: [],
       optionalAddons: [],

@@ -50,7 +50,7 @@ async function seedTodayMeal(page) {
       baseFoodIds: ["kartoffel"],
       sampleFoodIds: [],
       optionalAddons: [],
-      inventoryFoodIds: [],
+      inventoryFoodIds: ["kartoffel"],
       recipeName: "",
       recipeInventoryId: "",
       type: "bekannt kombinieren",

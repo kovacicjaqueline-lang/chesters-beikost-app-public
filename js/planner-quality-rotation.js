@@ -66,31 +66,41 @@ function plannerQualityEnsureContext(ctx) {
   return ctx;
 }
 
-function plannerQualityKeptPlanInstances(stateValue, date) {
+function plannerQualityKeptPlanIndex(stateValue) {
+  let byDate = new Map();
   let handled = stateValue?.backupMeta?.plannerLinking?.rolloverHandled;
-  if (!handled || typeof handled !== "object" || Array.isArray(handled)) return [];
+  if (!handled || typeof handled !== "object" || Array.isArray(handled)) return byDate;
 
-  let candidates = [];
+  let seen = new Set();
+  let addPlan = (plan) => {
+    let planId = String(plan?.planId || "");
+    let date = String(plan?.date || "");
+    let key = `${date}|${planId}`;
+    if (!planId || !date || seen.has(key) || handled[planId]?.action !== "keep") return;
+    seen.add(key);
+    if (!byDate.has(date)) byDate.set(date, []);
+    byDate.get(date).push(plan);
+  };
+
   for (let [key, plan] of Object.entries(stateValue?.planLocks || {})) {
     let [planDate, meal] = key.split("|");
-    candidates.push({ ...(plan || {}), date: plan?.date || planDate, meal: plan?.meal || meal });
+    addPlan({ ...(plan || {}), date: plan?.date || planDate, meal: plan?.meal || meal });
   }
   for (let [key, plan] of Object.entries(stateValue?.manualMeals || {})) {
     let [planDate, meal] = key.split("|");
-    candidates.push({ ...(plan || {}), date: plan?.date || planDate, meal: plan?.meal || meal });
+    addPlan({ ...(plan || {}), date: plan?.date || planDate, meal: plan?.meal || meal });
   }
   for (let plan of Object.values(stateValue?.backupMeta?.plannerLinking?.carriedPlans || {})) {
-    candidates.push({ ...(plan || {}) });
+    addPlan({ ...(plan || {}) });
   }
+  return byDate;
+}
 
-  let seen = new Set();
-  return candidates.filter((plan) => {
-    let planId = String(plan?.planId || "");
-    if (!planId || seen.has(planId)) return false;
-    if (plan.date !== date || handled[planId]?.action !== "keep") return false;
-    seen.add(planId);
-    return true;
-  });
+function plannerQualityKeptPlanInstances(stateValue, date, keptPlanIndex = null) {
+  let index = keptPlanIndex instanceof Map
+    ? keptPlanIndex
+    : plannerQualityKeptPlanIndex(stateValue);
+  return [...(index.get(date) || [])];
 }
 
 function plannerQualityPreviousDate(date) {
@@ -106,7 +116,15 @@ function plannerQualitySeedKeptPlans(ctx, date, stateValue) {
   if (ctx.qualityKeptSeededDates.has(date)) return ctx;
   ctx.qualityKeptSeededDates.add(date);
 
-  for (let plan of plannerQualityKeptPlanInstances(stateValue, plannerQualityPreviousDate(date))) {
+  if (ctx.qualityKeptPlanIndexState !== stateValue || !(ctx.qualityKeptPlanIndex instanceof Map)) {
+    ctx.qualityKeptPlanIndexState = stateValue;
+    ctx.qualityKeptPlanIndex = plannerQualityKeptPlanIndex(stateValue);
+  }
+  for (let plan of plannerQualityKeptPlanInstances(
+    stateValue,
+    plannerQualityPreviousDate(date),
+    ctx.qualityKeptPlanIndex,
+  )) {
     let ids = [...new Set(plan.foodIds || [])].filter(Boolean);
     if (!ids.length && plan.focusId) ids = [plan.focusId];
     if (!ids.length) continue;
@@ -566,6 +584,7 @@ if (typeof module !== "undefined" && module.exports) {
     plannerQualityPairKey,
     plannerQualityRelatedIds,
     plannerQualityEnsureContext,
+    plannerQualityKeptPlanIndex,
     plannerQualityKeptPlanInstances,
     plannerQualityPreviousDate,
     plannerQualitySeedKeptPlans,

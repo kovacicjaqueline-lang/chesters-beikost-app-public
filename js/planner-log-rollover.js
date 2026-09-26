@@ -258,6 +258,17 @@
       .map((plan) => ({ ...clonePlain(plan), active: true, source: "carried", carriedPlannerPlan: true }));
   }
 
+  function carriedPlanAllowedForPhase(plan, activeMealFn = null) {
+    if (
+      !plan?.visibleSnapshot ||
+      plan.mode !== "auto" ||
+      plan.manualAdded ||
+      plan.followUpFoodId ||
+      typeof activeMealFn !== "function"
+    ) return true;
+    return !!activeMealFn(plan.meal, plan.date);
+  }
+
   function allPlanInstances(data) {
     let seen = new Set();
     let result = [];
@@ -426,6 +437,7 @@
     linkedCompletionLog,
     primaryPlanInstances,
     carriedPlanInstances,
+    carriedPlanAllowedForPhase,
     allPlanInstances,
     openPlanInstances,
     outstandingPastPlans,
@@ -590,7 +602,11 @@
       let existing = new Set((day.meals || []).map((meal) => meal?.planId).filter(Boolean));
       day.meals ||= [];
       day.meals.push(...carried
-        .filter((plan) => plan.date === day.date && !existing.has(plan.planId))
+        .filter((plan) =>
+          plan.date === day.date &&
+          !existing.has(plan.planId) &&
+          CORE.carriedPlanAllowedForPhase(plan, typeof activeMeal === "function" ? activeMeal : null),
+        )
         .map((plan) => ({ ...plan, active: true })));
     }
     return days;

@@ -292,8 +292,23 @@ try {
       goals: window.__beikostTest.planCheckOpenGoals().map((item) => ({
         code: item.code,
         goalKey: PlannerPlanCheckSolutions.goalKey(item),
+        details: item.details,
+        foodIds: item.refs?.foodIds || [],
       })),
       precompute: window.__beikostTest.planCheckSolutionPrecompute(),
+      currentPlan: planDisplayDays(visiblePlanStart(), 7).flatMap((day) => (day.meals || [])
+        .filter((meal) => meal.active && !meal.empty)
+        .map((meal) => ({
+          date: day.date,
+          meal: meal.meal,
+          recipeName: meal.recipeName || "",
+          foodIds: meal.foodIds || [],
+          baseFoodIds: meal.baseFoodIds || [],
+          sampleFoodIds: meal.sampleFoodIds || [],
+        }))),
+      glutenLocks: Object.entries(window.__beikostTest.getState().planLocks || {})
+        .filter(([, lock]) => (lock.foodIds || []).includes("weizen"))
+        .map(([key, lock]) => ({ key, recipeName: lock.recipeName, foodIds: lock.foodIds, mode: lock.mode })),
     }));
     throw new Error(`Plan-Check-Flow schloss nach der letzten Übernahme nicht: ${JSON.stringify(flowState)}; ${error.message}`);
   }

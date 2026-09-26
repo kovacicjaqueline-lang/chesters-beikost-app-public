@@ -152,7 +152,7 @@ try {
   await homeMeal.locator(".meal-lock.unlocked").waitFor();
   assert.equal(
     await homeMeal.locator(".meal-lock").getAttribute("aria-label"),
-    "Mahlzeit vor automatischer Änderung schützen",
+    "Mahlzeit bei automatischer Neuplanung behalten",
     "Ein neu bewerteter Auto-Plan bleibt änderbar und kann bewusst geschützt werden",
   );
   assert.equal(await homeMeal.locator(".lock-label").count(), 0, "Auto-Lock zeigt keine redundante Fest-eingeplant-Zeile");

@@ -240,7 +240,7 @@ try {
     has: page.locator(`.replaceMeal[data-date="${today}"][data-meal="lunch"]`),
   });
   await planMeal.waitFor();
-  await planMeal.locator(".meal-lock.locked").waitFor();
+  await planMeal.locator(".meal-lock.unlocked").waitFor();
   assert.equal(await planMeal.locator(".lock-label").count(), 0);
   assert.equal(await planMeal.locator(".meal-type-text").first().innerText(), "Mittag");
   assert.deepEqual(await directActionLabels(planMeal), await directActionLabels(homeMeal), "Heute und Plan verwenden dieselbe direkte Aktionshierarchie");

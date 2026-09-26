@@ -128,20 +128,21 @@ function installPlannerFinalQualityRuntime(globalScope = typeof globalThis !== "
   if (typeof buildDay !== "function") return false;
   globalScope.__plannerFinalQualityRuntimeInstalled = true;
 
-  if (typeof plannerRecipeSuitableForMeal === "function") {
-    const basePlannerRecipeSuitableForMeal = plannerRecipeSuitableForMeal;
-    plannerRecipeSuitableForMeal = function finalQualityRecipeSuitableForMeal(recipe, meal) {
-      return plannerFinalAutomaticRecipeSuitable(recipe, meal, basePlannerRecipeSuitableForMeal);
+  const basePlannerRecipeSuitableForMeal = typeof plannerRecipeSuitableForMeal === "function"
+    ? plannerRecipeSuitableForMeal
+    : null;
+  const baseRecipeSuitableForMeal = typeof recipeSuitableForMeal === "function"
+    ? recipeSuitableForMeal
+    : null;
+  const baseRecipeSuitableForMealRuntime =
+    basePlannerRecipeSuitableForMeal || baseRecipeSuitableForMeal;
+  if (baseRecipeSuitableForMealRuntime) {
+    const finalQualityRecipeSuitableForMeal = function finalQualityRecipeSuitableForMeal(recipe, meal) {
+      return plannerFinalAutomaticRecipeSuitable(recipe, meal, baseRecipeSuitableForMealRuntime);
     };
-    plannerRecipeSuitableForMeal.__previous = basePlannerRecipeSuitableForMeal;
-  }
-
-  if (typeof recipeSuitableForMeal === "function") {
-    const baseRecipeSuitableForMeal = recipeSuitableForMeal;
-    recipeSuitableForMeal = function finalQualityCoreRecipeSuitableForMeal(recipe, meal) {
-      return plannerFinalAutomaticRecipeSuitable(recipe, meal, baseRecipeSuitableForMeal);
-    };
-    recipeSuitableForMeal.__previous = baseRecipeSuitableForMeal;
+    finalQualityRecipeSuitableForMeal.__previous = baseRecipeSuitableForMealRuntime;
+    if (basePlannerRecipeSuitableForMeal) plannerRecipeSuitableForMeal = finalQualityRecipeSuitableForMeal;
+    if (baseRecipeSuitableForMeal) recipeSuitableForMeal = finalQualityRecipeSuitableForMeal;
   }
 
   const recipeSuitable = (recipe, meal) => {

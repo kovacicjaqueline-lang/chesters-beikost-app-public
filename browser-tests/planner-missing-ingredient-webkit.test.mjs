@@ -108,6 +108,14 @@ try {
       const item = state.foods.find((food) => food.id === id);
       if (item) item.manualStatus = "Regelmäßig";
     }
+    for (const item of state.foods) {
+      if (item.allergenGroup) {
+        item.active = false;
+        item.manualStatus = "auto";
+      } else if (item.active && item.category !== "Fett" && item.category !== "Kraut/Gewürz" && item.manualStatus === "auto") {
+        item.manualStatus = "Verträgliche Basis";
+      }
+    }
 
     const currentKey = `${current}|breakfast`;
     const currentMeal = {

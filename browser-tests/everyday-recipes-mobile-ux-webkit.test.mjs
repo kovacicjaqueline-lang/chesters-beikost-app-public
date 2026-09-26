@@ -19,6 +19,14 @@ async function seedEverydayPlan(page) {
     const bridge = window.__beikostTest;
     bridge.reset();
     const state = bridge.getState();
+    for (const item of state.foods) {
+      if (item.allergenGroup) {
+        item.active = false;
+        item.manualStatus = "auto";
+      } else if (item.active && item.category !== "Fett" && item.category !== "Kraut/Gewürz") {
+        item.manualStatus = "Verträgliche Basis";
+      }
+    }
     const date = bridge.today();
     const banana = bridge.foodId("Banane");
     const egg = bridge.foodId("Ei");

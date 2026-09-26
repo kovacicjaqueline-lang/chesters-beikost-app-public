@@ -19,6 +19,11 @@ async function seedEverydayPlan(page) {
     const bridge = window.__beikostTest;
     bridge.reset();
     const state = bridge.getState();
+    for (const item of state.foods) {
+      if (item.active && !item.allergenGroup && item.category !== "Fett" && item.category !== "Kraut/Gewürz") {
+        item.manualStatus = "Verträgliche Basis";
+      }
+    }
     const date = bridge.today();
     const banana = bridge.foodId("Banane");
     const egg = bridge.foodId("Ei");
@@ -94,9 +99,10 @@ try {
   assert.match(await todayCard.innerText(), /Frühstück/);
   assert.match(await todayCard.innerText(), /Bananen-Ei-Pancakes/);
   assert.match(await todayCard.innerText(), /Neue Kostprobe|Allergen-Aufgabe/);
-  assert.equal(await todayCard.locator(".everyday-recipe-visual .recipe-illustration").count(), 1, "Vorhandenes Recipe-V2-Bild wird an der geplanten Rezeptmahlzeit gezeigt");
+  const pancakeMeal = todayCard.locator(".today-everyday-meal").filter({ hasText: "Bananen-Ei-Pancakes" });
+  assert.equal(await pancakeMeal.locator(".everyday-recipe-visual .recipe-illustration").count(), 1, "Vorhandenes Recipe-V2-Bild wird an der geplanten Pancake-Mahlzeit gezeigt");
   assert.equal(await todayCard.locator(".everyday-recipe-open").count(), 0, "Die Rezeptkarte braucht keinen zusätzlichen Öffnen-Button");
-  assert.equal(await todayCard.locator(".planned-recipe-title").count(), 1, "Der Rezeptname bleibt direkt öffnbar");
+  assert.equal(await pancakeMeal.locator(".planned-recipe-title").count(), 1, "Der Rezeptname bleibt direkt öffnbar");
 
   const recipeMeal = todayCard.locator(".today-everyday-meal").filter({
     has: page.locator(".everyday-recipe-visual"),
@@ -152,7 +158,7 @@ try {
   assert.equal(foodRoleLayout.display, "flex", "Lebensmittelrollen werden als ruhige Inline-Zeile statt als Spalten dargestellt");
   assert.equal(foodRoleLayout.gridTemplateColumns, "none", "Lebensmittelrollen erzeugen keine zweite Statusspalte");
 
-  await todayCard.locator(".planned-recipe-title").click();
+  await pancakeMeal.locator(".planned-recipe-title").click();
   await page.locator("#genericModal.open").waitFor();
   assert.equal(await page.locator("#genericTitle").innerText(), "Rezept");
   assert.match(await page.locator("#genericBody").innerText(), /Bananen-Ei-Pancakes/);

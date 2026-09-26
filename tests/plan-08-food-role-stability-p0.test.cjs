@@ -258,16 +258,18 @@ test("PLAN-08 P0: Einführung behält sichere Basis und genau eine Kostprobe", (
   });
 });
 
-test("PLAN-08 P0: Loader installiert Proactive Recipe-first, Rollenstabilität, Qualitätsrotation, Einführungspolicy und Allergenpflege vor dem sichtbaren Abschlussrender", () => {
+test("PLAN-08 P0: Loader installiert Proactive Recipe-first, Rollenstabilität, Qualitätsrotation, Einführungspolicy, Final-Quality und Allergenpflege vor dem sichtbaren Abschlussrender", () => {
   const utils = fs.readFileSync(path.join(root, "js", "utils.js"), "utf8");
   assert.ok(utils.includes(`planner-proactive-recipe.js?v=${appVersion}`));
   assert.ok(utils.includes(`planner-quality-rotation.js?v=${appVersion}`));
   assert.ok(utils.includes(`planner-introduction-policy.js?v=${appVersion}`));
+  assert.ok(utils.includes(`planner-final-quality.js?v=${appVersion}`));
   assert.ok(utils.includes(`planner-allergen-maintenance.js?v=${appVersion}`));
   assert.match(utils, /installPlannerRecipeFirstRuntime\(\);\s*loadProactiveRecipePolicy\(\);/);
   assert.match(utils, /installPlannerProactiveRecipeRuntime\(\);\s*loadRoleStabilityPolicy\(\);/);
   assert.match(utils, /installPlannerFoodRoleStabilityRuntime\(\);\s*loadQualityPolicy\(\);/);
   assert.match(utils, /installPlannerQualityRotationRuntime\(\);\s*loadIntroductionPolicy\(\);/);
-  assert.match(utils, /installPlannerIntroductionPolicyRuntime\(\);\s*loadMaintenancePolicy\(\);/);
+  assert.match(utils, /installPlannerIntroductionPolicyRuntime\(\);\s*loadFinalQualityPolicy\(\);/);
+  assert.match(utils, /installPlannerFinalQualityRuntime\(\);\s*loadMaintenancePolicy\(\);/);
   assert.match(utils, /PlannerAllergenMaintenance[\s\S]*finishPlannerPolicies\(\);/);
 });

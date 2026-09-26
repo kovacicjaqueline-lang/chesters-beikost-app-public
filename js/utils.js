@@ -300,6 +300,32 @@ if (typeof window !== "undefined" && typeof document !== "undefined") {
                 document.head.appendChild(maintenanceScript);
               };
 
+              let loadFinalQualityPolicy = () => {
+                let existingFinalQuality = document.querySelector('script[data-planner-final-quality="planner-final-quality"]');
+                let installFinalQualityAndContinue = () => {
+                  if (typeof installPlannerFinalQualityRuntime !== "function") {
+                    failPlannerPolicies(new Error("Planner-Final-Quality-Policy fehlt."));
+                    return;
+                  }
+                  installPlannerFinalQualityRuntime();
+                  loadMaintenancePolicy();
+                };
+                if (existingFinalQuality) {
+                  if (typeof installPlannerFinalQualityRuntime === "function") installFinalQualityAndContinue();
+                  else {
+                    existingFinalQuality.addEventListener("load", installFinalQualityAndContinue, { once: true });
+                    attachPlannerLoadError(existingFinalQuality);
+                  }
+                  return;
+                }
+                let finalQualityScript = document.createElement("script");
+                finalQualityScript.src = "js/planner-final-quality.js?v=10.1.26";
+                finalQualityScript.dataset.plannerFinalQuality = "planner-final-quality";
+                finalQualityScript.addEventListener("load", installFinalQualityAndContinue, { once: true });
+                attachPlannerLoadError(finalQualityScript);
+                document.head.appendChild(finalQualityScript);
+              };
+
               let existingIntroduction = document.querySelector('script[data-planner-introduction-policy="daily-food-introductions"]');
               let installIntroductionAndContinue = () => {
                 if (typeof installPlannerIntroductionPolicyRuntime !== "function") {
@@ -307,7 +333,7 @@ if (typeof window !== "undefined" && typeof document !== "undefined") {
                   return;
                 }
                 installPlannerIntroductionPolicyRuntime();
-                loadMaintenancePolicy();
+                loadFinalQualityPolicy();
               };
               if (existingIntroduction) {
                 if (typeof installPlannerIntroductionPolicyRuntime === "function") installIntroductionAndContinue();

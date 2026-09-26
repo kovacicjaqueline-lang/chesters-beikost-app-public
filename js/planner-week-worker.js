@@ -57,6 +57,7 @@
     "./recipe-v2-component-options.js?v=10.1.26",
     "./log.js?v=10.1.26",
     "./food-status-preferences.js?v=10.1.26",
+    "./planner-culinary-quality.js?v=10.1.26",
     "./ui.js?v=10.1.26",
     "../app.js?v=10.1.26"
   );
@@ -73,12 +74,17 @@
     if (booted) return;
     installNoopUi();
 
-    // Diese Schicht muss vor den späteren Policy-Wrappern installiert werden,
+    // Diese Schicht muss vor den spaeteren Policy-Wrappern installiert werden,
     // damit der Worker dieselbe Plan-ID-/Rollover-Basis wie die App verwendet.
     importScripts("./planner-log-rollover.js?v=10.1.26");
 
     if (typeof installFoodStatusPreferencePolicy === "function") {
       installFoodStatusPreferencePolicy();
+    }
+    // Im Browser liegt Culinary bereits vor app.js und damit vor der
+    // Food-Policy. Der Worker reproduziert exakt diese Wrapper-Reihenfolge.
+    if (typeof installPlannerCulinaryQualityRuntime === "function") {
+      installPlannerCulinaryQualityRuntime();
     }
     if (typeof installFoodPolicyRuntime === "function") {
       installFoodPolicyRuntime();
@@ -88,17 +94,18 @@
       "./planner-meal-eligibility.js?v=10.1.26",
       "./planner-milk-policy.js?v=10.1.26",
       "./planner-iron-preference.js?v=10.1.26",
-      "./planner-culinary-quality.js?v=10.1.26",
       "./planner-meal-presentation.js?v=10.1.26",
       "./planner-recipe-first.js?v=10.1.26",
       "./planner-proactive-recipe.js?v=10.1.26",
       "./planner-food-role-stability.js?v=10.1.26",
       "./planner-quality-rotation.js?v=10.1.26",
       "./planner-introduction-policy.js?v=10.1.26",
+      "./planner-final-quality.js?v=10.1.26",
       "./planner-allergen-maintenance.js?v=10.1.26",
       "./handling-readiness.js?v=10.1.26"
     );
 
+    globalScope.__plannerPoliciesReady = true;
     booted = true;
   }
 

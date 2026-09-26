@@ -50,6 +50,7 @@ try {
     const current = window.__beikostTest.getState();
     return {
       stats: window.__plannerWeekCache.workerStats(),
+      cacheSize: window.__plannerWeekCache.size,
       planLocks: JSON.stringify(current.planLocks || {}),
       manualMeals: JSON.stringify(current.manualMeals || {}),
       overrides: JSON.stringify(current.overrides || {}),
@@ -59,6 +60,7 @@ try {
   assert.equal(result.stats.fallbacks, 0, "Worker-Fallback unerwartet: " + JSON.stringify(result.stats));
   assert.equal(result.stats.completed > 0, true, "Worker lieferte kein Ergebnis: " + JSON.stringify(result.stats));
   assert.equal(result.stats.requests > 0, true);
+  assert.equal(result.cacheSize >= 6, true, "Worker legte nicht alle sechs Folgewochen ab: " + JSON.stringify(result));
   assert.equal(result.planLocks, before.planLocks, "Worker darf keine Plan-Locks im Hauptthread verändern");
   assert.equal(result.manualMeals, before.manualMeals, "Worker darf keine manuellen Mahlzeiten im Hauptthread verändern");
   assert.equal(result.overrides, before.overrides, "Worker darf keine Overrides im Hauptthread verändern");

@@ -70,3 +70,34 @@ test("gültige Wochen werden wiederverwendet und fachliche Saves verwerfen den C
   assert.equal(context.__plannerWeekCache.revision, revisionBeforeNavigationSave + 1);
   assert.equal(context.__plannerWeekCache.size, 0);
 });
+
+
+test("ein Phasenwechsel kann keinen Wochenplan aus der vorherigen Phase zurückgeben", () => {
+  let buildCalls = 0;
+  const context = {
+    state: { settings: { phaseSelected: "drei" } },
+    visiblePlanStart: () => "2026-09-26",
+    addDays: (date, offset) => `${date}+${offset}`,
+    buildDays: (from) => {
+      buildCalls += 1;
+      const meals = context.state.settings.phaseSelected === "aufbau"
+        ? ["lunch", "dinner"]
+        : ["breakfast", "lunch", "dinner"];
+      return [{ date: from, meals: meals.map((meal) => ({ meal, active: true })) }];
+    },
+    planDisplayDays: (from, count) => context.buildDays(from, count),
+    clone: (value) => JSON.parse(JSON.stringify(value)),
+    requestIdleCallback: () => 1,
+    cancelIdleCallback: () => {},
+  };
+  vm.createContext(context);
+  vm.runInContext(source, context);
+
+  const threeMeals = context.planDisplayDays("2026-09-26", 7);
+  context.state.settings.phaseSelected = "aufbau";
+  const twoMeals = context.planDisplayDays("2026-09-26", 7);
+
+  assert.deepEqual(threeMeals[0].meals.map((meal) => meal.meal), ["breakfast", "lunch", "dinner"]);
+  assert.deepEqual(twoMeals[0].meals.map((meal) => meal.meal), ["lunch", "dinner"]);
+  assert.equal(buildCalls, 2);
+});

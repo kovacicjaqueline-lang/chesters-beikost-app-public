@@ -53,11 +53,22 @@ function plannerFinalAutomaticRecipeSuitable(recipe, meal, baseSuitableFn = null
   return true;
 }
 
-function plannerFinalProtectedMeal(meal) {
+function plannerFinalProtectedMeal(meal, storedLock = null) {
   return !!(
     meal?.manualAdded ||
-    meal?.lockedMode ||
-    meal?.mode === "manual"
+    meal?.lockedMode === "manual" ||
+    meal?.mode === "manual" ||
+    meal?.followUpFoodId ||
+    storedLock?.followUpFoodId
+  );
+}
+
+function plannerFinalShouldReleaseAutoLock(meal, storedLock, allowed) {
+  return !!(
+    !allowed &&
+    meal?.lockedMode === "auto" &&
+    storedLock?.mode === "auto" &&
+    !storedLock.followUpFoodId
   );
 }
 
@@ -202,6 +213,12 @@ function installPlannerFinalQualityRuntime(globalScope = typeof globalThis !== "
         : null,
     },
   );
+  const assessAutomaticMeal = (meal) => {
+    if (!meal || typeof meal !== "object") return { allowed: false, reason: "empty" };
+    const candidate = { ...meal, lockedMode: null, mode: null, manualAdded: false };
+    delete candidate.followUpFoodId;
+    return assessmentFor(candidate);
+  };
 
   function availableFood(foodRecord) {
     return !!foodRecord &&
@@ -425,11 +442,12 @@ function installPlannerFinalQualityRuntime(globalScope = typeof globalThis !== "
     let day = baseBuildDay(date, index, ctx);
     for (let meal of day?.meals || []) {
       let staleAutoLock = autoLockNeedsRepairFor(meal, date);
+      let storedLock = state?.planLocks?.[`${date}|${meal?.meal}`] || null;
       if (
         !meal?.active ||
         meal.empty ||
         !PLANNER_FINAL_MAIN_MEALS.has(String(meal.meal || "")) ||
-        (plannerFinalProtectedMeal(meal) && !staleAutoLock) ||
+        (plannerFinalProtectedMeal(meal, storedLock) && !staleAutoLock) ||
         state?.overrides?.[`${date}|${meal.meal}`]
       ) continue;
 
@@ -439,6 +457,15 @@ function installPlannerFinalQualityRuntime(globalScope = typeof globalThis !== "
 
       let assessment = assessmentFor(meal, staleAutoLock);
       if (assessment.allowed) continue;
+
+      // Automatic snapshots are not a conscious "keep" decision. Release an
+      // unsuitable one before repairing it so the corrected result can be
+      // regenerated and persisted on the next build. Follow-ups and manual
+      // locks remain protected by plannerFinalProtectedMeal above.
+      let lockKey = `${date}|${meal.meal}`;
+      if (plannerFinalShouldReleaseAutoLock(meal, storedLock, assessment.allowed)) {
+        delete state.planLocks[lockKey];
+      }
 
       if (assessment.reason !== "recipe-meal-mismatch") {
         let companion = companionForFocus(
@@ -472,6 +499,7 @@ function installPlannerFinalQualityRuntime(globalScope = typeof globalThis !== "
   globalScope.PlannerFinalQuality = Object.freeze({
     recipeSuitable: plannerFinalAutomaticRecipeSuitable,
     mealAssessment: plannerFinalMealAssessment,
+    assessAutomaticMeal,
     autoLockNeedsRepair: plannerFinalAutoLockNeedsRepair,
   });
   return true;
@@ -487,6 +515,7 @@ if (typeof module !== "undefined" && module.exports) {
     PLANNER_FINAL_MAIN_MEALS,
     plannerFinalAutomaticRecipeSuitable,
     plannerFinalAutoLockNeedsRepair,
+    plannerFinalShouldReleaseAutoLock,
     plannerFinalMealAssessment,
   };
 }

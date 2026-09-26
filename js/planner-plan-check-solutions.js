@@ -655,6 +655,8 @@
       const proposedMap = planMealMap(proposedDays);
       const after = proposedMap.get(meta.key) || null;
       if (!after || sameMealPlan(before, after) || !mealCoversGoal(item, after)) return null;
+      const finalAssessment = globalScope.PlannerFinalQuality?.assessAutomaticMeal?.(after);
+      if (finalAssessment && !finalAssessment.allowed) return null;
       if (item.code === INTRO_OPEN_CODE && !CORE.introductionMutationKeepsMealContext(item, before, after)) return null;
       const proposedReport = report(proposedDays);
       if ((proposedReport.items || []).some((entry) => entry.type === "hard_blocker")) return null;

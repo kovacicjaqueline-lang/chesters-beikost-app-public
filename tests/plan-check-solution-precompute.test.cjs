@@ -129,6 +129,22 @@ test("Der erste Lösungsschritt verwendet die vorberechnete Lösung statt erneut
   assert.match(precompute, /preparedMatches[\s\S]*\? preparedSolution[\s\S]*: solutions\.findSolution/);
 });
 
+test("ein aktiver Lösungsflow rendert erst nach dem letzten Schritt neu", () => {
+  for (const source of [precompute, uiCore]) {
+    const apply = source.slice(
+      source.indexOf("if (!solutions.applySolution(solution)) return;"),
+      source.indexOf('document.getElementById("otherPlanGoalSolution")', source.indexOf("if (!solutions.applySolution(solution)) return;")),
+    );
+    const finish = source.slice(
+      source.indexOf("function finishGoalFlow()"),
+      source.indexOf("function nextFlowGoal", source.indexOf("function finishGoalFlow()")),
+    );
+    assert.match(apply, /save\(\);\s*openGoalStep\(\);/);
+    assert.doesNotMatch(apply, /renderAll\(\)/);
+    assert.ok(finish.indexOf("activeGoalFlow = null") < finish.indexOf("renderAll()"));
+  }
+});
+
 test("Runtime und Offline-Precache laden kooperative Suche und Vorberechnung", () => {
   assert.match(loader, /plan-checks-cooperative-search\.js/);
   assert.match(loader, /plan-checks-solution-precompute\.js/);

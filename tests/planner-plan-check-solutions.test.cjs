@@ -250,3 +250,36 @@ test("Allergen-Fortsetzung darf eine bestehende Basis weiterverwenden", () => {
   };
   assert.equal(solutions.introductionMutationKeepsMealContext(item, before, after), true);
 });
+
+
+test("Bekannter Hafer deckt eine einzelne Weizengrieß-Exposition als Glutenpflege ab", () => {
+  const hafer = {
+    id: "hafer",
+    name: "Hafer",
+    allergenGroup: "",
+    allergenMaintenanceGroup: "Glutenhaltiges Getreide",
+    allergenFamily: "hafer",
+  };
+  const weizengriess = {
+    id: "weizengriess",
+    name: "Weizengrieß",
+    allergenGroup: "Glutenhaltiges Getreide",
+  };
+  const establishedTargets = maintenance.establishedTargets(
+    [hafer, weizengriess],
+    (food) => food.id === "hafer" ? 2 : 1,
+  );
+
+  assert.equal(solutions.allergenIntroductionTarget(hafer), null);
+  assert.equal(solutions.allergenIntroductionTarget(weizengriess).key, "food:weizengriess");
+  assert.equal(
+    solutions.allergenIntroductionNeedsContinuation(
+      weizengriess,
+      1,
+      establishedTargets,
+      groupLevelTargets,
+      maintenance.targetForFood,
+    ),
+    false,
+  );
+});

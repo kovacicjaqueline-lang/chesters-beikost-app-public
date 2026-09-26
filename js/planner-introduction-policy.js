@@ -3,8 +3,8 @@
 /* Planner-Einführungsfrequenz und Snack-Obst.
  *
  * Fachlicher Vertrag:
- * - geeignete offene Nicht-Allergene dürfen täglich und in jeder aktiven
- *   Hauptmahlzeit (Frühstück/Mittag/Abend) jeweils einmal eingeführt werden;
+ * - gewöhnliche offene Nicht-Allergene werden nicht automatisch als Lernaufgabe
+ *   eingeplant; manuelle Planung und passende Rezepte bleiben möglich;
  * - ein bloß erfolgreich probiertes FOOD blockiert keine weitere Einführung;
  * - eine echte Ablehnung darf weiterhin als gezielte Wiederholung priorisiert werden;
  * - sobald eine Allergen-Einführung oder Allergen-Wiederholung geplant ist, bleibt

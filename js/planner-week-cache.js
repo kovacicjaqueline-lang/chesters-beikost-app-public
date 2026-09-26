@@ -47,7 +47,8 @@
   }
 
   function cacheKey(from, count) {
-    return `${CACHE_VERSION}|${revision}|${String(from || "")}|${Number(count) || 0}`;
+    const phase = String(currentState()?.settings?.phaseSelected || "");
+    return `${CACHE_VERSION}|${revision}|${phase}|${String(from || "")}|${Number(count) || 0}`;
   }
 
   function invalidate(reason = "state-change") {

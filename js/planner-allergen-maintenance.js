@@ -18,7 +18,7 @@
   function targetForFood(foodRecord) {
     if (!foodRecord) return null;
     let family = text(foodRecord.allergenFamily);
-    let group = text(foodRecord.allergenGroup);
+    let group = text(foodRecord.allergenMaintenanceGroup) || text(foodRecord.allergenGroup);
     if (!group) return null;
 
     if (GROUP_LEVEL_MAINTENANCE_TARGET_SET.has(group)) {

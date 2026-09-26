@@ -72,6 +72,30 @@ test('visible future auto plans are archived without creating a planLock', () =>
   assert.equal(data.backupMeta.plannerLinking.carriedPlans['visible-24'].visibleSnapshot, true);
 });
 
+test('an inactive visible auto snapshot does not reappear as a meal after a phase change', () => {
+  const phaseTwoSlots = (meal) => ['lunch', 'dinner'].includes(meal);
+  const staleBreakfast = {
+    ...plan('old-breakfast', '2026-08-24', 'breakfast'),
+    source: 'carried',
+    visibleSnapshot: true,
+  };
+  assert.equal(core.carriedPlanAllowedForPhase(staleBreakfast, phaseTwoSlots), false);
+  assert.equal(
+    core.carriedPlanAllowedForPhase({ ...staleBreakfast, mode: 'manual' }, phaseTwoSlots),
+    true,
+    'a manually kept meal remains visible across phase changes',
+  );
+  assert.equal(
+    core.carriedPlanAllowedForPhase({ ...staleBreakfast, followUpFoodId: 'brot' }, phaseTwoSlots),
+    true,
+    'an explicit follow-up remains visible',
+  );
+  assert.equal(
+    core.carriedPlanAllowedForPhase({ ...staleBreakfast, meal: 'lunch' }, phaseTwoSlots),
+    true,
+  );
+});
+
 test('an archived visible plan remains discoverable after its date passes', () => {
   const data = state();
   fixes.persistVisibleAutoPlans(

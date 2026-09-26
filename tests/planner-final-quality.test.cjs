@@ -1,9 +1,13 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const vm = require("node:vm");
 
 const {
   plannerFinalAutomaticRecipeSuitable,
   plannerFinalAutoLockNeedsRepair,
+  plannerFinalShouldReleaseAutoLock,
   plannerFinalMealAssessment,
 } = require("../js/planner-final-quality.js");
 
@@ -57,7 +61,130 @@ test("manual meals are not rewritten by the automatic quality gate", () => {
   assert.equal(plannerFinalMealAssessment(manual, [{ id: "huhn", category: "Fleisch" }]).allowed, true);
 });
 
-test("valid auto locks stay protected but an unavailable stored ingredient reopens repair", () => {
+test("Plan-Check-Kandidaten durchlaufen finale Qualität auch bei geschütztem Ausgangs-Slot", () => {
+  const source = fs.readFileSync(path.join(__dirname, "..", "js", "planner-final-quality.js"), "utf8");
+  const context = {
+    state: { foods: [{ id: "brot" }, { id: "karotte" }] },
+    buildDay: () => ({ meals: [] }),
+    plannerCulinaryAssessment: (ids) => ({ allowed: ids.length >= 2 }),
+  };
+  vm.createContext(context);
+  vm.runInContext(`${source}\ninstallPlannerFinalQualityRuntime(globalThis);`, context);
+
+  const manualSingleton = {
+    active: true,
+    meal: "lunch",
+    focusId: "brot",
+    foodIds: ["brot"],
+    lockedMode: "manual",
+    manualAdded: true,
+  };
+  assert.equal(
+    context.PlannerFinalQuality.assessAutomaticMeal(manualSingleton).allowed,
+    false,
+    "eine vorgeschlagene automatische Änderung darf den Schutz des Ausgangs-Slots nicht als Qualitätsfreigabe übernehmen",
+  );
+  assert.equal(
+    context.PlannerFinalQuality.assessAutomaticMeal({ ...manualSingleton, foodIds: ["brot", "karotte"] }).allowed,
+    true,
+  );
+});
+
+test("an open automatic snapshot does not protect an unsuitable singleton", () => {
+  const autoLockedBread = {
+    active: true,
+    meal: "lunch",
+    focusId: "brot",
+    foodIds: ["brot"],
+    sampleFoodIds: [],
+    type: "Allergen weiter anbieten",
+    lockedMode: "auto",
+  };
+  const manualKeep = { ...autoLockedBread, lockedMode: "manual" };
+  const foods = [{ id: "brot", category: "Getreide/Stärke" }];
+
+  assert.equal(
+    plannerFinalMealAssessment(autoLockedBread, foods).allowed,
+    false,
+    "ein offener automatischer Snapshot ist kein bewusstes Behalten und muss die Qualitätsprüfung durchlaufen",
+  );
+  assert.equal(
+    plannerFinalMealAssessment(manualKeep, foods).allowed,
+    true,
+    "eine bewusst manuell geschützte Mahlzeit bleibt unverändert",
+  );
+  assert.equal(
+    plannerFinalMealAssessment({ ...autoLockedBread, followUpFoodId: "brot" }, foods).allowed,
+    true,
+    "ein fachlich bewusstes Follow-up bleibt geschützt",
+  );
+  assert.equal(
+    plannerFinalShouldReleaseAutoLock(autoLockedBread, { mode: "auto" }, false),
+    true,
+    "ein ungeeigneter automatischer Snapshot muss zur Neuplanung freigegeben werden",
+  );
+  assert.equal(
+    plannerFinalShouldReleaseAutoLock(
+      { ...autoLockedBread, followUpFoodId: "brot" },
+      { mode: "auto", followUpFoodId: "brot" },
+      false,
+    ),
+    false,
+  );
+});
+
+test("an unsuitable automatic singleton lock is released by the final runtime gate", () => {
+  const source = fs.readFileSync(path.join(__dirname, "..", "js", "planner-final-quality.js"), "utf8");
+  const date = "2026-09-26";
+  const state = {
+    foods: [{ id: "brot", category: "Getreide/Stärke", active: true }],
+    planLocks: {
+      [`${date}|lunch`]: {
+        mode: "auto",
+        focusId: "brot",
+        foodIds: ["brot"],
+        sampleFoodIds: [],
+      },
+    },
+  };
+  const context = {
+    state,
+    food: (id) => state.foods.find((item) => item.id === id) || null,
+    isFoodUnavailable: () => false,
+    buildDay: (plannedDate) => ({
+      date: plannedDate,
+      meals: [{
+        active: true,
+        meal: "lunch",
+        focusId: "brot",
+        foodIds: ["brot"],
+        sampleFoodIds: [],
+        type: "Allergen weiter anbieten",
+        lockedMode: "auto",
+      }],
+    }),
+  };
+  vm.createContext(context);
+  vm.runInContext(`${source}\ninstallPlannerFinalQualityRuntime(globalThis);`, context);
+  const day = vm.runInContext(`buildDay("${date}", 0, {})`, context);
+
+  assert.equal(day.meals[0].empty, true);
+  assert.equal(state.planLocks[`${date}|lunch`], undefined);
+
+  const followUpLock = {
+    mode: "auto",
+    focusId: "brot",
+    foodIds: ["brot"],
+    sampleFoodIds: [],
+    followUpFoodId: "brot",
+  };
+  state.planLocks[`${date}|lunch`] = followUpLock;
+  const followUpDay = vm.runInContext(`buildDay("${date}", 0, {})`, context);
+  assert.equal(followUpDay.meals[0].empty, undefined);
+  assert.equal(state.planLocks[`${date}|lunch`], followUpLock);
+});
+
+test("availability repair still reopens an automatic lock with an unavailable ingredient", () => {
   const date = "2026-09-24";
   const meal = {
     active: true,

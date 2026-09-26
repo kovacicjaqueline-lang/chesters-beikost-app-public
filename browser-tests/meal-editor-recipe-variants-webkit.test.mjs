@@ -38,6 +38,7 @@ try {
   });
 
   await page.evaluate((date) => window.__beikostTest.openManualMealSelector(date, "breakfast"), today);
+  await page.locator("#genericBody").getByText("Noch kein Rezept ausgewählt.").waitFor();
   assert.match(await page.locator("#genericBody").innerText(), /Noch kein Rezept ausgewählt\./);
   assert.match(await page.locator("#genericBody").innerText(), /Bitte ein Rezept auswählen\./);
 

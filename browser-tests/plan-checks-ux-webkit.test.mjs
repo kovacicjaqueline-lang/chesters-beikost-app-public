@@ -281,8 +281,53 @@ try {
     const title = document.getElementById("genericTitle")?.textContent?.trim();
     return document.getElementById("genericModal")?.classList.contains("open") && title && title !== before;
   }, firstTitle);
-  await page.locator("#applyPlanGoalSolution").click({ timeout: 30_000 });
-  await page.waitForFunction(() => !document.getElementById("genericModal")?.classList.contains("open"));
+  const secondStepTitle = (await page.locator("#genericTitle").textContent()).trim();
+  const secondStepBody = (await page.locator("#genericBody").textContent()).trim();
+  if (await page.locator("#applyPlanGoalSolution").isVisible()) {
+    await page.locator("#applyPlanGoalSolution").click({ timeout: 30_000 });
+  } else {
+    assert.match(secondStepBody, /Für diese Woche gibt es keine passende Möglichkeit/);
+    await page.locator("#leavePlanGoal").click({ timeout: 30_000 });
+  }
+  try {
+    await page.waitForFunction(() => !document.getElementById("genericModal")?.classList.contains("open"));
+  } catch (error) {
+    const flowState = await page.evaluate(({ firstTitle, secondStepTitle, secondStepBody }) => ({
+      modalOpen: document.getElementById("genericModal")?.classList.contains("open"),
+      firstTitle,
+      secondStepTitle,
+      secondStepBody,
+      title: document.getElementById("genericTitle")?.textContent?.trim() || "",
+      body: document.getElementById("genericBody")?.textContent?.trim() || "",
+      goals: window.__beikostTest.planCheckOpenGoals().map((item) => ({
+        code: item.code,
+        goalKey: PlannerPlanCheckSolutions.goalKey(item),
+        details: item.details,
+        foodIds: item.refs?.foodIds || [],
+      })),
+      precompute: window.__beikostTest.planCheckSolutionPrecompute(),
+      currentPlan: planDisplayDays(visiblePlanStart(), 7).flatMap((day) => (day.meals || [])
+        .filter((meal) => meal.active && !meal.empty)
+        .map((meal) => ({
+          date: day.date,
+          meal: meal.meal,
+          recipeName: meal.recipeName || "",
+          foodIds: meal.foodIds || [],
+          baseFoodIds: meal.baseFoodIds || [],
+          sampleFoodIds: meal.sampleFoodIds || [],
+        }))),
+      glutenLocks: Object.entries(window.__beikostTest.getState().planLocks || {})
+        .filter(([, lock]) => (lock.foodIds || []).includes("weizen"))
+        .map(([key, lock]) => ({ key, recipeName: lock.recipeName, foodIds: lock.foodIds, mode: lock.mode })),
+      todayBreakfastLock: window.__beikostTest.getState().planLocks[
+        `${window.__beikostTest.today()}|breakfast`
+      ] || null,
+      todayLunchLock: window.__beikostTest.getState().planLocks[
+        `${window.__beikostTest.today()}|lunch`
+      ] || null,
+    }), { firstTitle, secondStepTitle, secondStepBody });
+    throw new Error(`Plan-Check-Flow schloss nach der letzten Übernahme nicht: ${JSON.stringify(flowState)}; ${error.message}`);
+  }
   await page.waitForFunction(() => document.getElementById("toast")?.classList.contains("show") && document.getElementById("toastText")?.textContent === "Plan aktualisiert");
 
   // 4. „Andere Lösung“ bietet nicht erneut dieselbe strukturierte Solution an.

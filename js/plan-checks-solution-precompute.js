@@ -246,7 +246,10 @@
       const updated = !!activeGoalFlow?.appliedAny;
       activeGoalFlow = null;
       closeGeneric();
-      if (updated) showToast("Plan aktualisiert");
+      if (updated) {
+        renderAll();
+        showToast("Plan aktualisiert");
+      }
     }
 
     function nextFlowGoal(preferredKey = "") {
@@ -303,7 +306,6 @@
         if (!solutions.applySolution(solution)) return;
         activeGoalFlow.appliedAny = true;
         save();
-        renderAll();
         openGoalStep();
       });
       document.getElementById("otherPlanGoalSolution")?.addEventListener("click", () => {

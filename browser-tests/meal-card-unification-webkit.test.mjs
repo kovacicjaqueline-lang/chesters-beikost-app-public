@@ -24,11 +24,23 @@ async function seedTodayMeal(page) {
     const today = window.__beikostTest.today();
     state.settings.planFrom = today;
     state.settings.preferInventoryInPlan = true;
+    for (const food of state.foods) {
+      if (food.allergenGroup) {
+        food.active = false;
+        food.manualStatus = "auto";
+      }
+    }
 
     const potato = state.foods.find((food) => food.id === "kartoffel");
-    if (potato) potato.manualStatus = "Verträgliche Basis";
+    if (potato) {
+      potato.active = true;
+      potato.manualStatus = "Verträgliche Basis";
+    }
     const carrot = state.foods.find((food) => food.id === "karotte");
-    if (carrot) carrot.manualStatus = "Verträgliche Basis";
+    if (carrot) {
+      carrot.active = true;
+      carrot.manualStatus = "Verträgliche Basis";
+    }
 
     state.inventory = [
       {

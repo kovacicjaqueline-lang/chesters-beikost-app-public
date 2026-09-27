@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 19280)
-Total output lines: 1725
-
 "use strict";
 
 /* Planung und Wiedervorlagen
@@ -830,7 +827,280 @@ function mealSnapshot(date, meal, generated, mode = "manual") {
     manualAdded: !!generated.manualAdded,
     mode,
     portionTargetGrams: allocation.targetGrams,
-…3280 tokens truncated… ctx.introduced.push(c.f.id); }
+    sampleTargetGrams: allocation.sampleGrams,
+    totalOfferedGrams: allocation.totalOfferedGrams,
+    ingredientAmounts: { ...allocation.amounts },
+    createdAt: generated.createdAt || new Date().toISOString(),
+  };
+}
+function lockSnapshot(date, meal) {
+  let manual = manualMealFor(date, meal);
+  if (manual) return mealSnapshot(date, meal, manual, "manual");
+  let generated = buildDaysUnlocked(date, 1)[0]?.meals.find(
+    (m) => m.meal === meal,
+  );
+  return mealSnapshot(date, meal, generated, "manual");
+}
+function validPlanLock(lock) {
+  if (!lock || !food(lock.focusId)) return false;
+  if (status(food(lock.focusId)) === "Pausiert") return false;
+  return (lock.foodIds || []).every((id) => {
+    let f = food(id);
+    return !!f && (f.active || !!state.inactivePlanKept?.[id]);
+  });
+}
+function lockedMeal(date, meal) {
+  let key = planLockKey(date, meal);
+  let lock = state.planLocks?.[key];
+  if (!validPlanLock(lock)) {
+    if (lock) delete state.planLocks[key];
+    return null;
+  }
+  return {
+    meal,
+    active: true,
+    focusId: lock.focusId,
+    foodIds: [...lock.foodIds],
+    baseFoodIds: [...(lock.baseFoodIds || [])],
+    sampleFoodIds: [...(lock.sampleFoodIds || [])],
+    foodRoles: { ...(lock.foodRoles || foodRolesFor(lock.foodIds || [], lock.baseFoodIds || [], lock.sampleFoodIds || [])) },
+    optionalAddons: [...(lock.optionalAddons || [])],
+    inventoryFoodIds: [...(lock.inventoryFoodIds || [])],
+    recipeName: lock.recipeName || "",
+    recipeInventoryId: lock.recipeInventoryId || "",
+    type: lock.type || "bekannt",
+    note: lock.note || "Diese Mahlzeit ist fest eingeplant.",
+    manualAdded: !!lock.manualAdded,
+    portionTargetGrams: Number.isFinite(Number(lock.portionTargetGrams)) ? Number(lock.portionTargetGrams) : (meal === "snack" ? 0 : phasePortion()),
+    sampleTargetGrams: Number(lock.sampleTargetGrams) || 0,
+    totalOfferedGrams: Number.isFinite(Number(lock.totalOfferedGrams)) ? Number(lock.totalOfferedGrams) : (meal === "snack" ? 0 : (Number(lock.portionTargetGrams) || phasePortion())),
+    ingredientAmounts: { ...(lock.ingredientAmounts || plannedMealAmounts(lock).amounts) },
+    lockedMode: lock.mode || "manual",
+    createdAt: lock.createdAt,
+  };
+}
+function ensureAutoLocks(days) {
+  state.planLocks ||= {};
+  state.autoLockExcluded ||= {};
+  let changed = false;
+  for (let [key, lock] of Object.entries(state.planLocks)) {
+    let date = key.split("|")[0];
+    if (lock.mode === "auto" && !lock.followUpFoodId && !isAutoLockDate(date)) {
+      delete state.planLocks[key];
+      changed = true;
+    }
+    if (date < today()) delete state.autoLockExcluded[key];
+  }
+  for (let day of days) {
+    if (!isAutoLockDate(day.date)) continue;
+    for (let meal of day.meals) {
+      let key = planLockKey(day.date, meal.meal);
+      if (
+        meal.active &&
+        !meal.empty &&
+        meal.focusId &&
+        !meal.manualAdded &&
+        !mealIsCompleted(day.date, meal.meal) &&
+        !state.planLocks[key] &&
+        !state.autoLockExcluded[key]
+      ) {
+        state.planLocks[key] = mealSnapshot(day.date, meal.meal, meal, "auto");
+        changed = true;
+      }
+    }
+  }
+  if (changed) save();
+  return changed;
+}
+function toggleMealLock(date, meal, shownMeal = null) {
+  let key = planLockKey(date, meal);
+  let existing = state.planLocks?.[key];
+  state.planLocks ||= {};
+  state.autoLockExcluded ||= {};
+  if (existing) {
+    if (state.manualMeals?.[key]?.manualAdded) {
+      showToast("Manuell hinzugefügte Mahlzeiten bleiben fest eingeplant.");
+      return;
+    }
+    delete state.planLocks[key];
+    if (isAutoLockDate(date)) state.autoLockExcluded[key] = true;
+    showToast(
+      existing.mode === "auto"
+        ? "Feste Planung aufgehoben."
+        : "Schutz der Mahlzeit aufgehoben.",
+    );
+  } else {
+    let snapshot = shownMeal?.focusId
+      ? mealSnapshot(date, meal, shownMeal, "manual")
+      : lockSnapshot(date, meal);
+    if (!snapshot) return;
+    snapshot.mode = "manual";
+    state.planLocks[key] = snapshot;
+    delete state.autoLockExcluded[key];
+    showToast("Mahlzeit vor automatischen Änderungen geschützt.");
+  }
+  save();
+  renderAll();
+}
+function clearAutomaticPlanState(from = state.settings.planFrom || today(), days = 7) {
+  state.planLocks ||= {};
+  state.overrides ||= {};
+  state.autoLockExcluded ||= {};
+  let end = addDays(from, Math.max(0, days - 1));
+  let inRange = (key) => { let date = key.split("|")[0]; return date >= from && date <= end; };
+  for (let [key, lock] of Object.entries(state.planLocks)) {
+    if (!inRange(key)) continue;
+    if (lock.mode === "auto" && !lock.followUpFoodId) delete state.planLocks[key];
+  }
+  for (let [key] of Object.entries(state.overrides)) {
+    if (!inRange(key)) continue;
+    let lock = state.planLocks[key];
+    if (!lock || (lock.mode === "auto" && !lock.followUpFoodId)) delete state.overrides[key];
+  }
+  for (let key of Object.keys(state.autoLockExcluded)) if (inRange(key)) delete state.autoLockExcluded[key];
+}
+function clearAutomaticLocks() {
+  let from = state.settings.planFrom || today();
+  clearAutomaticPlanState(from, 7);
+  save();
+  renderAll();
+  showToast("Der sichtbare Bereich wurde neu geplant; manuell geschützte Mahlzeiten und Wiedervorlagen bleiben erhalten.");
+}
+function rebuildVisiblePlan(releaseManualLocks = false) {
+  let from = state.settings.planFrom || today();
+  let end = addDays(from, 6);
+  clearAutomaticPlanState(from, 7);
+  if (releaseManualLocks) {
+    for (let [key, lock] of Object.entries(state.planLocks || {})) {
+      let date = key.split("|")[0];
+      if (date < from || date > end || completedLog(date, key.split("|")[1])) continue;
+      if (lock.followUpFoodId || state.manualMeals?.[key]?.manualAdded) continue;
+      delete state.planLocks[key];
+      delete state.overrides?.[key];
+    }
+  }
+  save();
+  renderAll();
+}
+function openFullPlanRebuild() {
+  let from = state.settings.planFrom || today();
+  openGeneric("Sichtbare Woche vollständig neu planen", `<p>Neu erstellt wird der Zeitraum <b>${nice(from, true)} bis ${nice(addDays(from, 6), true)}</b>.</p><div class="notice olive"><b>Erhalten bleiben immer:</b> protokollierte Mahlzeiten, manuell hinzugefügte Mahlzeiten und Wiedervorlagen.</div><div class="stack-actions"><button class="btn secondary full" id="rebuildKeepLocks">Neu planen · geschützte Mahlzeiten behalten</button><button class="btn secondary full" id="rebuildReleaseLocks">Neu planen · lösbare feste Planungen aufheben</button></div>`);
+  document.getElementById("rebuildKeepLocks").onclick = () => { closeGeneric(); rebuildVisiblePlan(false); showToast("Woche vollständig neu geplant; manuell geschützte Mahlzeiten wurden behalten."); };
+  document.getElementById("rebuildReleaseLocks").onclick = () => { closeGeneric(); rebuildVisiblePlan(true); showToast("Woche vollständig neu geplant; lösbare feste Planungen wurden aufgehoben."); };
+}
+function removeUnavailableGeneratedFoods(meal) {
+  if (!meal || typeof isFoodUnavailable !== "function") return meal;
+  let unavailableIds = new Set((meal.foodIds || []).filter((id) => isFoodUnavailable(id)));
+  if (!unavailableIds.size) return meal;
+  if (meal.focusId && unavailableIds.has(meal.focusId)) return null;
+
+  for (let field of ["foodIds", "baseFoodIds", "sampleFoodIds", "optionalAddons", "inventoryFoodIds", "recipeIngredientFoodIds", "additionalFoodIds"]) {
+    if (Array.isArray(meal[field])) meal[field] = meal[field].filter((id) => !unavailableIds.has(id));
+  }
+  if (meal.foodRoles && typeof meal.foodRoles === "object") {
+    meal.foodRoles = Object.fromEntries(
+      Object.entries(meal.foodRoles).filter(([id]) => !unavailableIds.has(id)),
+    );
+  }
+  if (meal.ingredientAmounts && typeof meal.ingredientAmounts === "object") {
+    meal.ingredientAmounts = Object.fromEntries(
+      Object.entries(meal.ingredientAmounts).filter(([id]) => !unavailableIds.has(id)),
+    );
+  }
+  if (
+    meal.recipeName &&
+    (meal.recipeIngredientFoodIds || []).some((id) => unavailableIds.has(id))
+  ) {
+    meal.recipeName = "";
+    meal.recipeInventoryId = "";
+    delete meal.compositionMode;
+    delete meal.recipeIngredientFoodIds;
+    delete meal.additionalFoodIds;
+    delete meal.recipePairingKey;
+  }
+  return meal;
+}
+
+function buildDay(date, index, ctx) {
+  let meals = [];
+  function recordMealForQualityRotation(mealPlan) {
+    if (typeof plannerQualityMarkMealInProgress === "function") {
+      let lock = state.planLocks?.[planLockKey(date, mealPlan?.meal)];
+      // Random-swap pins snapshot the rest of the visible plan. Do not let
+      // their temporary regeneration cascade into later same-day slots.
+      if (lock?.randomSwapPinned || lock?.randomSwapPreserved || lock?.randomSwapTarget) return;
+      plannerQualityMarkMealInProgress(mealPlan, date, ctx);
+    }
+  }
+  let activeMeals = ["breakfast", "lunch", "snack", "dinner"].filter((m) =>
+    activeMeal(m, date) || plannerManualMealIsExplicitlyAdded(state.manualMeals?.[manualMealKey(date, m)]),
+  );
+  // A later fixed/manual milk meal must already protect earlier automatic meals on the same day.
+  let hasPresetFullMilk = ["breakfast", "lunch", "snack", "dinner"].some((meal) => {
+    let preset = manualMealFor(date, meal) || lockedMeal(date, meal);
+    return mealMilkLevel(preset) === "full";
+  });
+  if (hasPresetFullMilk) ctx.fullMilkDates?.add(date);
+  let forcedIntroMeal = activeMeals.find((m) => { let f = food(state.overrides[date + "|" + m]); return f && rank(f) < 2; }) || "";
+  let introDue = !state.deferred?.[date] && (forcedIntroMeal || index % Math.max(1, Number(state.settings.newFoodEvery) || 2) === 0);
+  let introAssigned = false;
+  let used = [];
+  for (let meal of ["breakfast", "lunch", "snack", "dinner"]) {
+    let manual = manualMealFor(date, meal);
+    if (manual) {
+      reserveMealInventory(manual, ctx);
+      if (mealMilkLevel(manual) === "full") ctx.fullMilkDates?.add(date);
+      meals.push(manual); recordMealForQualityRotation(manual); used.push(manual.focusId); continue;
+    }
+    if (!activeMeals.includes(meal)) { meals.push({ meal, active: false }); continue; }
+    let fixed = lockedMeal(date, meal);
+    if (fixed) {
+      reserveMealInventory(fixed, ctx);
+      if (mealMilkLevel(fixed) === "full") ctx.fullMilkDates?.add(date);
+      meals.push(fixed); recordMealForQualityRotation(fixed); used.push(fixed.focusId);
+      ctx.plannedUse.set(fixed.focusId, (ctx.plannedUse.get(fixed.focusId) || 0) + 1); ctx.lastFocus.set(fixed.focusId, date);
+      if (["neu", "gezielt wiederholen", "Allergen einführen", "Allergen wiederholen", "manuell"].includes(fixed.type)) { introAssigned = true; ctx.reserved.add(fixed.focusId); ctx.introduced.push(fixed.focusId); }
+      continue;
+    }
+    if (meal === "snack") {
+      let snack = buildSnackRecipeMeal(snackRecipeCandidate(date, ctx), date, ctx);
+      if (!snack) { meals.push({ meal, active: true, empty: true }); continue; }
+      if (mealMilkLevel(snack) === "full") ctx.fullMilkDates?.add(date);
+      meals.push(snack); recordMealForQualityRotation(snack); used.push(snack.focusId);
+      continue;
+    }
+    let c = null;
+    let breakfastBaseRequired = meal === "breakfast" &&
+      !state.overrides[date + "|" + meal] &&
+      !knownBase(meal, used);
+    let breakfastBaseIntroduction = false;
+    if (breakfastBaseRequired) {
+      c = breakfastBaseIntroductionCandidate(meal, date, ctx, used);
+      breakfastBaseIntroduction = !!c;
+    } else if (introDue && !introAssigned && (!forcedIntroMeal || meal === forcedIntroMeal)) {
+      c = introductionCandidate(meal, date, ctx, used);
+    }
+    if (c && ["neu", "gezielt wiederholen", "bekannt kombinieren", "Allergen einführen", "Allergen wiederholen", "manuell"].includes(c.type)) {
+      introAssigned = true; ctx.reserved.add(c.f.id); ctx.introduced.push(c.f.id);
+    }
+    if (!c && breakfastBaseRequired) {
+      meals.push({ meal, active: true, empty: true, note: "Für ein sinnvolles Frühstück wird zuerst eine geeignete Basis eingeführt." });
+      continue;
+    }
+    if (!c && (!introDue || introAssigned)) {
+      let recipe = recipeStockCandidate(meal, date, ctx);
+      if (recipe) {
+        let batch = oldestRecipeBatch(recipe.name), ids = recipeFoodIds(recipe);
+        let recipeMeal = applyPlannedMealAmounts({ meal, active: true, focusId: ids[0], foodIds: ids, baseFoodIds: ids, sampleFoodIds: [], optionalAddons: [], inventoryFoodIds: [], recipeName: recipe.name, recipeInventoryId: batch?.id || "", milkMeal: recipe.milkMeal || "", type: "Rezeptvorrat", note: "Eine vorbereitete Portion aus dem Gefriervorrat verwenden." });
+        reserveMealInventory(recipeMeal, ctx);
+        if (recipe.milkMeal === "full") ctx.fullMilkDates?.add(date);
+        meals.push(recipeMeal); recordMealForQualityRotation(recipeMeal); used.push(recipeMeal.focusId); continue;
+      }
+    }
+    if (!c) c = knownCandidate(meal, date, ctx, used);
+    if (!c && introDue && !introAssigned && (!forcedIntroMeal || meal === forcedIntroMeal)) {
+      c = introductionCandidate(meal, date, ctx, used);
+      if (c) { introAssigned = true; ctx.reserved.add(c.f.id); ctx.introduced.push(c.f.id); }
     }
     if (!c) { meals.push({ meal, active: true, empty: true }); continue; }
     let f = c.f;

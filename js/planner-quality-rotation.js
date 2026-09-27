@@ -156,6 +156,17 @@ function plannerQualityRecordMeal(
   return ctx;
 }
 
+function plannerQualityMarkMealInProgress(meal, date, ctx) {
+  if (!meal?.active || meal.empty || !ctx || !date) return ctx;
+  plannerQualityEnsureContext(ctx);
+  // buildDay selects slots in order; publish only recency here so later slots
+  // can rotate. Counts and pair statistics are still recorded once afterward.
+  for (let id of new Set(meal.foodIds || [])) {
+    if (id) ctx.qualityLastFoodUse.set(id, date);
+  }
+  return ctx;
+}
+
 function plannerQualityRecencyBucket(lastDateValue, on, diffFn) {
   if (!lastDateValue || typeof diffFn !== "function") return 0;
   let distance = Number(diffFn(on, lastDateValue));
@@ -570,6 +581,7 @@ if (typeof module !== "undefined" && module.exports) {
     plannerQualityPreviousDate,
     plannerQualitySeedKeptPlans,
     plannerQualityRecordMeal,
+    plannerQualityMarkMealInProgress,
     plannerQualityRecencyBucket,
     plannerQualityCandidateTuple,
     plannerQualityCompareTuple,

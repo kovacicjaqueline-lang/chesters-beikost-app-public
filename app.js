@@ -168,6 +168,7 @@ function plannerAutomaticLockRoleViolation(lock, foods = []) {
 function plannerRecipeSuitableForMeal(recipe, meal) {
   let excludedMeals = Array.isArray(recipe?.excludeMeals) ? recipe.excludeMeals : [];
   if (excludedMeals.includes(meal)) return false;
+  if (meal === "lunch" && recipe?.breakfastStyle === true) return false;
   let category = String(recipe?.category || "");
   let hasSnackTag = (recipe?.tags || []).some(
     (tag) => String(tag || "").trim().toLowerCase() === "snack",

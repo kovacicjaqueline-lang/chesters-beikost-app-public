@@ -382,6 +382,7 @@ const RECIPES = [
   {
     "name": "Obst-Haferbrei",
     "category": "porridge",
+    "breakfastStyle": true,
     "requires": [
       "Hafer"
     ],
@@ -409,6 +410,7 @@ const RECIPES = [
   {
     "name": "Obst-Hirsebrei",
     "category": "porridge",
+    "breakfastStyle": true,
     "requires": [
       "Hirse"
     ],
@@ -436,6 +438,7 @@ const RECIPES = [
   {
     "name": "Obst-Polentabrei",
     "category": "porridge",
+    "breakfastStyle": true,
     "requires": [
       "Polenta"
     ],
@@ -463,6 +466,7 @@ const RECIPES = [
   {
     "name": "Obst-Reisbrei",
     "category": "porridge",
+    "breakfastStyle": true,
     "requires": [
       "Reis"
     ],
@@ -490,6 +494,7 @@ const RECIPES = [
   {
     "name": "Obst-Quinoabrei",
     "category": "porridge",
+    "breakfastStyle": true,
     "requires": [
       "Quinoa"
     ],
@@ -517,6 +522,7 @@ const RECIPES = [
   {
     "name": "Obst-Buchweizenbrei",
     "category": "porridge",
+    "breakfastStyle": true,
     "requires": [
       "Buchweizen"
     ],
@@ -544,6 +550,7 @@ const RECIPES = [
   {
     "name": "Obst-Grießbrei",
     "category": "porridge",
+    "breakfastStyle": true,
     "requires": [
       "Weizen"
     ],
@@ -966,6 +973,7 @@ const RECIPES = [
   {
     "name": "Bananen-Haferbrei mit Erdnussmus",
     "category": "porridge",
+    "breakfastStyle": true,
     "requires": [
       "Banane",
       "Hafer",
@@ -1002,6 +1010,7 @@ const RECIPES = [
   {
     "name": "Apfel-Hirse-Brei mit Mandelmus",
     "category": "porridge",
+    "breakfastStyle": true,
     "requires": [
       "Apfel",
       "Hirse",
@@ -1609,6 +1618,7 @@ const RECIPES = [
   {
     "name": "Obst-Joghurt",
     "category": "porridge",
+    "breakfastStyle": true,
     "requires": [
       "Naturjoghurt"
     ],
@@ -1643,6 +1653,7 @@ const RECIPES = [
   {
     "name": "Obst-Hafer-Joghurt",
     "category": "porridge",
+    "breakfastStyle": true,
     "requires": [
       "Hafer",
       "Naturjoghurt"
@@ -1695,6 +1706,7 @@ const RECIPES = [
   {
     "name": "Obst-Hirse-Joghurt",
     "category": "porridge",
+    "breakfastStyle": true,
     "requires": [
       "Hirse",
       "Naturjoghurt"
@@ -1730,6 +1742,7 @@ const RECIPES = [
   {
     "name": "Obst-Grieß-Joghurt",
     "category": "porridge",
+    "breakfastStyle": true,
     "requires": [
       "Weizen",
       "Naturjoghurt"
@@ -1766,6 +1779,7 @@ const RECIPES = [
   {
     "name": "Buttermilch-Hafer-Obstbrei",
     "category": "porridge",
+    "breakfastStyle": true,
     "requires": [
       "Buttermilch",
       "Hafer"
@@ -1802,6 +1816,7 @@ const RECIPES = [
   {
     "name": "Buttermilch-Hirse-Obstbrei",
     "category": "porridge",
+    "breakfastStyle": true,
     "requires": [
       "Buttermilch",
       "Hirse"
@@ -1838,6 +1853,7 @@ const RECIPES = [
   {
     "name": "Buttermilch-Grieß-Obstbrei",
     "category": "porridge",
+    "breakfastStyle": true,
     "requires": [
       "Buttermilch",
       "Weizen"

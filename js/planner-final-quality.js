@@ -8,9 +8,6 @@
  * eine sinnvolle Mahlzeit ist. Bewusste Kostproben, Snacks und manuelle Plaene
  * bleiben unberuehrt.
  */
-const PLANNER_FINAL_BREAKFAST_STYLE_CATEGORIES = new Set([
-  "porridge",
-]);
 const PLANNER_FINAL_MAIN_MEALS = new Set(["breakfast", "lunch", "dinner"]);
 const PLANNER_FINAL_LEARNING_TYPES = new Set([
   "neu",
@@ -46,10 +43,7 @@ function plannerFinalAutomaticRecipeSuitable(recipe, meal, baseSuitableFn = null
   if (!recipe) return false;
   if (Array.isArray(recipe.excludeMeals) && recipe.excludeMeals.includes(meal)) return false;
   if (typeof baseSuitableFn === "function" && !baseSuitableFn(recipe, meal)) return false;
-  if (
-    meal === "lunch" &&
-    PLANNER_FINAL_BREAKFAST_STYLE_CATEGORIES.has(String(recipe.category || ""))
-  ) return false;
+  if (meal === "lunch" && recipe.breakfastStyle === true) return false;
   return true;
 }
 
@@ -511,7 +505,6 @@ if (typeof window !== "undefined" && typeof document !== "undefined") {
 
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
-    PLANNER_FINAL_BREAKFAST_STYLE_CATEGORIES,
     PLANNER_FINAL_MAIN_MEALS,
     plannerFinalAutomaticRecipeSuitable,
     plannerFinalAutoLockNeedsRepair,

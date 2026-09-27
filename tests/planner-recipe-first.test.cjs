@@ -146,6 +146,16 @@ test("PLAN-08 recipe-first: kanonische Rezept-Mahlzeiteneignung bleibt hart", ()
   assert.equal(plannerRecipeSuitableForMeal(excluded, "breakfast"), false);
 });
 
+test("PLAN-08 recipe-first: herzhafter Süßkartoffel-Linsen-Brei bleibt Mittagskandidat", () => {
+  const lunchNames = candidates(["Süßkartoffel", "Rote Linsen"], "lunch")
+    .map((recipe) => recipe.name);
+  assert.ok(lunchNames.includes("Süßkartoffel-Rote-Linsen-Brei"));
+
+  const breakfastNames = candidates(["Hafer", "Apfel"], "lunch")
+    .map((recipe) => recipe.name);
+  assert.ok(!breakfastNames.includes("Obst-Haferbrei"));
+});
+
 test("PLAN-08 recipe-first: Runtime verwendet plannerRecipeSuitableForMeal statt des älteren Core-Fallbacks", () => {
   const meal = {
     meal: "breakfast",

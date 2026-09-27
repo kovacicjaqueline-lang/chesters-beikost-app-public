@@ -1025,13 +1025,12 @@ function buildDay(date, index, ctx) {
   let meals = [];
   function recordMealForQualityRotation(mealPlan) {
     if (typeof plannerQualityMarkMealInProgress === "function") {
-      let randomSwapPinnedDay = Object.entries(state.planLocks || {}).some(([key, lock]) =>
-        key.startsWith(`${date}|`) &&
-        (lock?.randomSwapPinned || lock?.randomSwapPreserved || lock?.randomSwapTarget),
+      let hasSnapshotForDay = Object.keys(state.planLocks || {}).some((key) =>
+        key.startsWith(`${date}|`),
       );
-      // A random swap snapshots the visible plan for the whole day. Do not let
-      // its temporary regeneration cascade into any other same-day slot.
-      if (randomSwapPinnedDay) return;
+      // A retained same-day snapshot is user-visible plan state. Do not let a
+      // partial rebuild cascade through other slots around that snapshot.
+      if (hasSnapshotForDay) return;
       plannerQualityMarkMealInProgress(mealPlan, date, ctx);
     }
   }

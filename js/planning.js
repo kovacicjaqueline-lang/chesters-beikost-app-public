@@ -1025,10 +1025,13 @@ function buildDay(date, index, ctx) {
   let meals = [];
   function recordMealForQualityRotation(mealPlan) {
     if (typeof plannerQualityMarkMealInProgress === "function") {
-      let lock = state.planLocks?.[planLockKey(date, mealPlan?.meal)];
-      // Random-swap pins snapshot the rest of the visible plan. Do not let
-      // their temporary regeneration cascade into later same-day slots.
-      if (lock?.randomSwapPinned || lock?.randomSwapPreserved || lock?.randomSwapTarget) return;
+      let randomSwapPinnedDay = Object.entries(state.planLocks || {}).some(([key, lock]) =>
+        key.startsWith(`${date}|`) &&
+        (lock?.randomSwapPinned || lock?.randomSwapPreserved || lock?.randomSwapTarget),
+      );
+      // A random swap snapshots the visible plan for the whole day. Do not let
+      // its temporary regeneration cascade into any other same-day slot.
+      if (randomSwapPinnedDay) return;
       plannerQualityMarkMealInProgress(mealPlan, date, ctx);
     }
   }

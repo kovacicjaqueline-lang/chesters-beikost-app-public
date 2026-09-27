@@ -96,3 +96,26 @@ test("echter buildDays-Plan erzeugt eine abwechslungsreiche 7-Tage-Woche", () =>
   }
   assert.equal(state.logs.length, 32);
 });
+
+test("echter Tagesplan rotiert einen bekannten Begleiter zwischen Mittag- und Abendessen", () => {
+  const { context, state } = loadPlanner();
+  state.foods = state.foods.filter((food) =>
+    !food.ironRich && !["Fleisch", "Fisch", "Meeresfrucht"].includes(food.category),
+  );
+  state.overrides["2026-09-22|lunch"] = "zucchini";
+  state.overrides["2026-09-22|dinner"] = "apfel";
+
+  const day = context.__buildDays("2026-09-22", 1, false)[0];
+  const lunch = day.meals.find((meal) => meal.meal === "lunch");
+  const dinner = day.meals.find((meal) => meal.meal === "dinner");
+  const lunchComponents = lunch.foodIds.filter((id) => id !== lunch.focusId);
+
+  assert.equal(lunch.focusId, "zucchini");
+  assert.equal(dinner.focusId, "apfel");
+  assert.ok(lunchComponents.length > 0, "Mittagessen muss im Fixture einen Begleiter haben");
+  assert.equal(
+    lunchComponents.some((id) => dinner.foodIds.includes(id)),
+    false,
+    "der Abend darf keinen Mittagsbegleiter wiederverwenden, wenn bekannte Alternativen verfügbar sind",
+  );
+});

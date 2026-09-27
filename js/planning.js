@@ -1023,6 +1023,11 @@ function removeUnavailableGeneratedFoods(meal) {
 
 function buildDay(date, index, ctx) {
   let meals = [];
+  function recordMealForQualityRotation(mealPlan) {
+    if (typeof plannerQualityMarkMealInProgress === "function") {
+      plannerQualityMarkMealInProgress(mealPlan, date, ctx);
+    }
+  }
   let activeMeals = ["breakfast", "lunch", "snack", "dinner"].filter((m) =>
     activeMeal(m, date) || plannerManualMealIsExplicitlyAdded(state.manualMeals?.[manualMealKey(date, m)]),
   );
@@ -1041,14 +1046,14 @@ function buildDay(date, index, ctx) {
     if (manual) {
       reserveMealInventory(manual, ctx);
       if (mealMilkLevel(manual) === "full") ctx.fullMilkDates?.add(date);
-      meals.push(manual); used.push(manual.focusId); continue;
+      meals.push(manual); recordMealForQualityRotation(manual); used.push(manual.focusId); continue;
     }
     if (!activeMeals.includes(meal)) { meals.push({ meal, active: false }); continue; }
     let fixed = lockedMeal(date, meal);
     if (fixed) {
       reserveMealInventory(fixed, ctx);
       if (mealMilkLevel(fixed) === "full") ctx.fullMilkDates?.add(date);
-      meals.push(fixed); used.push(fixed.focusId);
+      meals.push(fixed); recordMealForQualityRotation(fixed); used.push(fixed.focusId);
       ctx.plannedUse.set(fixed.focusId, (ctx.plannedUse.get(fixed.focusId) || 0) + 1); ctx.lastFocus.set(fixed.focusId, date);
       if (["neu", "gezielt wiederholen", "Allergen einführen", "Allergen wiederholen", "manuell"].includes(fixed.type)) { introAssigned = true; ctx.reserved.add(fixed.focusId); ctx.introduced.push(fixed.focusId); }
       continue;
@@ -1057,7 +1062,7 @@ function buildDay(date, index, ctx) {
       let snack = buildSnackRecipeMeal(snackRecipeCandidate(date, ctx), date, ctx);
       if (!snack) { meals.push({ meal, active: true, empty: true }); continue; }
       if (mealMilkLevel(snack) === "full") ctx.fullMilkDates?.add(date);
-      meals.push(snack); used.push(snack.focusId);
+      meals.push(snack); recordMealForQualityRotation(snack); used.push(snack.focusId);
       continue;
     }
     let c = null;
@@ -1085,7 +1090,7 @@ function buildDay(date, index, ctx) {
         let recipeMeal = applyPlannedMealAmounts({ meal, active: true, focusId: ids[0], foodIds: ids, baseFoodIds: ids, sampleFoodIds: [], optionalAddons: [], inventoryFoodIds: [], recipeName: recipe.name, recipeInventoryId: batch?.id || "", milkMeal: recipe.milkMeal || "", type: "Rezeptvorrat", note: "Eine vorbereitete Portion aus dem Gefriervorrat verwenden." });
         reserveMealInventory(recipeMeal, ctx);
         if (recipe.milkMeal === "full") ctx.fullMilkDates?.add(date);
-        meals.push(recipeMeal); used.push(recipeMeal.focusId); continue;
+        meals.push(recipeMeal); recordMealForQualityRotation(recipeMeal); used.push(recipeMeal.focusId); continue;
       }
     }
     if (!c) c = knownCandidate(meal, date, ctx, used);
@@ -1149,7 +1154,7 @@ function buildDay(date, index, ctx) {
     generated = removeUnavailableGeneratedFoods(generated);
     if (!generated) { meals.push({ meal, active: true, empty: true }); continue; }
     if (mealMilkLevel(generated) === "full") ctx.fullMilkDates?.add(date);
-    reserveMealInventory(generated, ctx); meals.push(generated);
+    reserveMealInventory(generated, ctx); meals.push(generated); recordMealForQualityRotation(generated);
   }
   return { date, index, meals, introDue, introAssigned };
 }

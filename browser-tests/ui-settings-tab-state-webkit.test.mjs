@@ -130,6 +130,23 @@ try {
   await page.locator("#structuredChewCapability").check();
   await page.locator("#saveSettings").click();
 
+  const saveToast = page.locator("#toast");
+  await saveToast.waitFor({ state: "visible" });
+  assert.equal(await page.locator("#toastText").textContent(), "Einstellungen gespeichert.");
+  const saveToastLayout = await page.evaluate(() => {
+    const toast = document.querySelector("#toast").getBoundingClientRect();
+    const discard = document.querySelector("#discardSettings").getBoundingClientRect();
+    const save = document.querySelector("#saveSettings").getBoundingClientRect();
+    return { toastBottom: toast.bottom, actionsTop: Math.min(discard.top, save.top), toastTop: toast.top, actionsBottom: Math.max(discard.bottom, save.bottom) };
+  });
+  assert.ok(
+    saveToastLayout.toastBottom <= saveToastLayout.actionsTop || saveToastLayout.toastTop >= saveToastLayout.actionsBottom,
+    "Speicherhinweis darf die Einstellungsbuttons nicht überdecken",
+  );
+  await page.locator("#discardSettings").click();
+  assert.equal(await page.locator("#toastText").textContent(), "Nicht gespeicherte Änderungen verworfen.", "Buttons müssen trotz sichtbarem Toast bedienbar bleiben");
+  await saveToast.waitFor({ state: "hidden", timeout: 3500 });
+
   assert.deepEqual(
     await page.evaluate(() => window.__beikostTest.getState().settings.handlingCapabilities),
     { smallSoftPieces: true, gradedBite: true, structuredChew: true },

@@ -22,7 +22,7 @@ function showToast(message, undoFn = null) {
   document.getElementById("toastText").textContent = message;
   undo.style.display = undoFn ? "block" : "none";
   toast.classList.add("show");
-  toastTimer = setTimeout(() => toast.classList.remove("show"), 5500);
+  toastTimer = setTimeout(() => toast.classList.remove("show"), 2200);
 }
 let activeViewRenderCycle = null;
 function withViewRenderCycle(viewId, callback) {

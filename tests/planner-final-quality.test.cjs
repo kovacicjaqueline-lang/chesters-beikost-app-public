@@ -11,18 +11,64 @@ const {
   plannerFinalMealAssessment,
 } = require("../js/planner-final-quality.js");
 
-test("automatic lunch rejects porridge while keeping other existing lunch recipe paths eligible", () => {
-  const porridge = { name: "Obst-Polentabrei", category: "porridge" };
+test("automatic lunch blocks breakfast-style porridge, not savory porridge", () => {
+  const breakfastPorridge = {
+    name: "Obst-Polentabrei",
+    category: "porridge",
+    breakfastStyle: true,
+  };
+  const savoryPorridge = {
+    name: "Süßkartoffel-Rote-Linsen-Brei",
+    category: "porridge",
+  };
   const pancakes = { name: "Ube-Bananen-Pancakes", category: "pancakes" };
   const baking = { name: "Gemüse-Muffins", category: "baking" };
   const family = { name: "Huhn-Brokkoli-Reis", category: "family" };
   const baseSuitable = () => true;
 
-  assert.equal(plannerFinalAutomaticRecipeSuitable(porridge, "lunch", baseSuitable), false);
-  assert.equal(plannerFinalAutomaticRecipeSuitable(porridge, "dinner", baseSuitable), true);
+  assert.equal(plannerFinalAutomaticRecipeSuitable(breakfastPorridge, "lunch", baseSuitable), false);
+  assert.equal(plannerFinalAutomaticRecipeSuitable(breakfastPorridge, "dinner", baseSuitable), true);
+  assert.equal(plannerFinalAutomaticRecipeSuitable(savoryPorridge, "lunch", baseSuitable), true);
+  assert.equal(plannerFinalAutomaticRecipeSuitable(savoryPorridge, "dinner", baseSuitable), true);
   assert.equal(plannerFinalAutomaticRecipeSuitable(pancakes, "lunch", baseSuitable), true);
   assert.equal(plannerFinalAutomaticRecipeSuitable(baking, "lunch", baseSuitable), true);
   assert.equal(plannerFinalAutomaticRecipeSuitable(family, "lunch", baseSuitable), true);
+});
+
+test("breakfastStyle marks only the audited breakfast porridges", () => {
+  const source = fs.readFileSync(path.join(__dirname, "..", "data", "recipes.js"), "utf8");
+  const context = {};
+  vm.createContext(context);
+  vm.runInContext(`${source}\nthis.__recipes = RECIPES;`, context);
+  const recipes = JSON.parse(JSON.stringify(context.__recipes));
+  const actual = recipes
+    .filter((recipe) => recipe.breakfastStyle === true)
+    .map((recipe) => recipe.name)
+    .sort();
+  const expected = [
+    "Apfel-Hirse-Brei mit Mandelmus",
+    "Bananen-Haferbrei mit Erdnussmus",
+    "Buttermilch-Grieß-Obstbrei",
+    "Buttermilch-Hafer-Obstbrei",
+    "Buttermilch-Hirse-Obstbrei",
+    "Obst-Buchweizenbrei",
+    "Obst-Grieß-Joghurt",
+    "Obst-Grießbrei",
+    "Obst-Hafer-Joghurt",
+    "Obst-Haferbrei",
+    "Obst-Hirse-Joghurt",
+    "Obst-Hirsebrei",
+    "Obst-Joghurt",
+    "Obst-Polentabrei",
+    "Obst-Quinoabrei",
+    "Obst-Reisbrei",
+  ].sort();
+
+  assert.deepEqual(actual, expected);
+  assert.equal(
+    recipes.find((recipe) => recipe.name === "Süßkartoffel-Rote-Linsen-Brei").breakfastStyle,
+    undefined,
+  );
 });
 
 test("automatic recipe exclusions stay a hard gate", () => {

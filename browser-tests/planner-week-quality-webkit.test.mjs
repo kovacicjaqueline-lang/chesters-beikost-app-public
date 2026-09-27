@@ -133,19 +133,22 @@ try {
     }
   }
 
-  const lunchRecipeCategories = await page.evaluate((days) =>
+  const lunchRecipeStyles = await page.evaluate((days) =>
     days.flatMap((day) => (day.meals || [])
       .filter((meal) => meal.meal === "lunch" && meal.recipeName)
-      .map((meal) => ({
-        recipeName: meal.recipeName,
-        category: window.recipeByName(meal.recipeName)?.category || "",
-      }))),
+      .map((meal) => {
+        const recipe = window.recipeByName(meal.recipeName);
+        return {
+          recipeName: meal.recipeName,
+          breakfastStyle: recipe?.breakfastStyle === true,
+        };
+      })),
     setup.mainDays,
   );
   assert.equal(
-    lunchRecipeCategories.some((entry) => entry.category === "porridge"),
+    lunchRecipeStyles.some((entry) => entry.breakfastStyle),
     false,
-    `Lunch enthält Porridge-Rezept: ${JSON.stringify(lunchRecipeCategories)}`,
+    `Lunch enthält Frühstücksbrei: ${JSON.stringify(lunchRecipeStyles)}`,
   );
 
   const mainSignatures = mainMeals

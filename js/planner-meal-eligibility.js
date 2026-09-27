@@ -144,6 +144,7 @@ function plannerRecipeSuitableForMealCore(
   if (!recipe) return false;
   let excludedMeals = Array.isArray(recipe.excludeMeals) ? recipe.excludeMeals : [];
   if (excludedMeals.includes(meal)) return false;
+  if (meal === "lunch" && recipe.breakfastStyle === true) return false;
 
   let category = String(recipe.category || "");
   if (meal === "snack") {

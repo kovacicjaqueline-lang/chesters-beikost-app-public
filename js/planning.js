@@ -533,7 +533,7 @@ function ironCompanion(f, meal, on, exclude = []) {
   );
   return pool[0] || null;
 }
-function introductionCandidate(meal, on, ctx, exclude = []) {
+function introductionCandidate(meal, on, ctx, exclude = [], baseExclude = exclude) {
   let key = on + "|" + meal,
     override = state.overrides[key];
   if (override) {
@@ -541,7 +541,7 @@ function introductionCandidate(meal, on, ctx, exclude = []) {
     if (f && eligible(f, meal, on))
       return { f, type: rank(f) >= 2 ? "bekannt" : "manuell" };
   }
-  let baseExists = !!knownBase(meal, exclude);
+  let baseExists = !!knownBase(meal, baseExclude);
   let pool = state.foods.filter(
     (f) =>
       eligible(f, meal, on) &&

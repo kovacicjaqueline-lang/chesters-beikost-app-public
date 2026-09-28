@@ -238,7 +238,8 @@ function installPlannerIntroductionPolicyRuntime() {
     );
     let max = (state?.foods?.length || 0) + 1;
     for (let i = 0; i < max; i++) {
-      let result = originalIntroductionCandidate(meal, on, ctx, blocked);
+      // Keep policy-filtered focus candidates separate from the trusted-base pool.
+      let result = originalIntroductionCandidate(meal, on, ctx, blocked, exclude);
       if (!result?.f) return null;
       result = plannerIntroductionNormalizeCandidate(
         result,

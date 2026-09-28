@@ -175,5 +175,9 @@ test("echter buildDay lässt bewusst gewähltes Brot und automatische Ei-Einfüh
     assert.equal(policy.plannerIntroductionCandidateShouldSkip(
       { f: item, type: "Allergen einführen" }, () => 0, () => "", true, false,
     ), false);
+    const meal = buildRealDay({ focusId: id, focusRank: 0 });
+    assert.equal(meal?.focusId, id, `${id} bleibt mit bekannter Basis einführbar`);
+    assert.equal(meal?.type, "Allergen einführen");
+    assert.deepEqual(meal?.baseFoodIds, ["karotte"]);
   }
 });

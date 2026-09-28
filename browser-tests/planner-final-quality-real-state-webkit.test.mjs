@@ -245,6 +245,8 @@ try {
     };
     const originalKnownRecipeCandidate = knownRecipeCandidate;
     const recipeCalls = [];
+    debug.cacheBefore = window.__dayPlanRuntimeCache?.stats();
+    window.invalidateDayPlanRuntimeCache?.();
     knownRecipeCandidate = function tracedKnownRecipeCandidate(meal, date, ctx) {
       const candidate = originalKnownRecipeCandidate(meal, date, ctx);
       recipeCalls.push({ meal, date, name: candidate?.recipe?.name || "", used: [...(ctx.recipeLastUse || [])] });

@@ -243,7 +243,22 @@ try {
       candidate: chiliCandidate?.recipe?.name || "",
       locks: Object.keys(state.planLocks || {}).filter((key) => key.startsWith(`${on}|`)),
     };
-    const smooth = window.buildDays(on, 1, false)[0].meals.find((m) => m.meal === "lunch");
+    const originalKnownRecipeCandidate = knownRecipeCandidate;
+    const recipeCalls = [];
+    knownRecipeCandidate = function tracedKnownRecipeCandidate(meal, date, ctx) {
+      const candidate = originalKnownRecipeCandidate(meal, date, ctx);
+      recipeCalls.push({ meal, date, name: candidate?.recipe?.name || "", used: [...(ctx.recipeLastUse || [])] });
+      return candidate;
+    };
+    let smooth;
+    try {
+      smooth = window.buildDays(on, 1, false)[0].meals.find((m) => m.meal === "lunch");
+    } finally {
+      knownRecipeCandidate = originalKnownRecipeCandidate;
+    }
+    debug.recipeCalls = recipeCalls;
+    debug.deferred = state.deferred?.[on];
+    debug.finalAssessment = window.PlannerFinalQuality?.assessAutomaticMeal(smooth);
     debug.smooth = { recipeName: smooth.recipeName, foodIds: smooth.foodIds, type: smooth.type, note: smooth.note, lockedMode: smooth.lockedMode };
     s.inventory[0].preparationMode = "";
     api.setState(s);

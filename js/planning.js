@@ -733,23 +733,30 @@ function knownRecipeCandidate(meal, on, ctx) {
   candidates = candidates.filter((candidate) => ctx.recipeLastUse?.get(candidate.recipe.name) !== on);
   if (!candidates.length) return null;
   let prior = ctx.qualityLastFoodUse || ctx.lastFocus;
-  candidates.sort((a, b) => {
-    let recent = (candidate) => candidate.ids.reduce((sum, id) => {
+  let rank = (candidate) => {
+    let recent = candidate.ids.reduce((sum, id) => {
       let last = prior?.get(id);
       return sum + (last && diffDays(on, last) <= 1 ? 2 : last && diffDays(on, last) <= 3 ? 1 : 0);
     }, 0);
-    let used = (candidate) => ctx.recipePlannedUse?.get(candidate.recipe.name) || 0;
-    let culinary = (candidate) => typeof plannerCulinaryRecipeScore === "function"
+    let used = ctx.recipePlannedUse?.get(candidate.recipe.name) || 0;
+    let culinary = typeof plannerCulinaryRecipeScore === "function"
       ? plannerCulinaryRecipeScore(candidate.recipe, candidate.ids, state.foods, meal) : 0;
-    let stock = (candidate) => candidate.batch ? 1 : 0;
-    return recent(a) - recent(b) || used(a) - used(b) || culinary(b) - culinary(a) ||
-      stock(b) - stock(a) || a.recipe.name.localeCompare(b.recipe.name, "de");
+    let stock = candidate.batch ? 1 : 0;
+    return [recent, used, -culinary, -stock];
+  };
+  let compareRank = (a, b) => {
+    let left = rank(a), right = rank(b);
+    for (let i = 0; i < left.length; i++) {
+      if (left[i] !== right[i]) return left[i] - right[i];
+    }
+    return 0;
+  };
+  candidates.sort((a, b) => {
+    return compareRank(a, b) || a.recipe.name.localeCompare(b.recipe.name, "de");
   });
   let generation = Math.max(0, Number(state.settings?.planRebuildGeneration) || 0);
   let best = candidates[0];
-  let tied = candidates.filter((candidate) =>
-    (ctx.recipePlannedUse?.get(candidate.recipe.name) || 0) ===
-    (ctx.recipePlannedUse?.get(best.recipe.name) || 0));
+  let tied = candidates.filter((candidate) => compareRank(candidate, best) === 0);
   if (generation && tied.length > 1) best = tied[generation % tied.length];
   return best;
 }

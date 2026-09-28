@@ -161,6 +161,30 @@ test("bekanntes geeignetes Rezept wird vor freiem Paar gewählt und mit allen Zu
   assert.notEqual(dinner.recipeName, lunch.recipeName, "dasselbe Rezept nicht zweimal am Tag");
 });
 
+test("Woche neu planen rotiert nur zwischen gleichwertigen Rezepten", () => {
+  const { context, state } = loadPlanner();
+  const recipes = [
+    { name: "A Frisch", unlocked: true, ids: ["kuerbis", "brokkoli"] },
+    { name: "Z Kürzlich", unlocked: true, ids: ["karotte", "zucchini"] },
+  ];
+  context.recipeStates = () => recipes;
+  context.plannerRecipeVariantIdSets = (recipe) => [recipe.ids];
+  context.recipeSuitableForMeal = () => true;
+  context.plannerFoodCanBeAutomaticFocus = () => true;
+  context.eligible = () => true;
+  context.canCombine = () => true;
+  context.combinationPaused = () => false;
+  context.plannerCulinaryRecipeScore = () => 10;
+  state.settings.planRebuildGeneration = 1;
+  const ctx = context.freshPlanContext();
+  ctx.qualityLastFoodUse = new Map([
+    ["karotte", "2026-09-21"], ["zucchini", "2026-09-21"],
+  ]);
+
+  const selected = context.knownRecipeCandidate("lunch", "2026-09-22", ctx);
+  assert.equal(selected.recipe.name, "A Frisch", "Replan darf eine schlechter bewertete Rezeptoption nicht über Rotation bevorzugen");
+});
+
 test("freie bekannte Mahlzeit darf eine dritte passende Zutat erhalten, ohne neue FOODS einzuführen", () => {
   const { context, state } = loadPlanner();
   vm.runInContext(read("js/planner-culinary-quality.js"), context);

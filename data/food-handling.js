@@ -70,6 +70,7 @@ const RECIPE_CONTRACT_GROUPS = Object.freeze({
     "Fleisch-Gemüse-Bällchen",
     "Grießschnitten ohne Panade",
     "Apfel-Milchreisschnitten",
+    "Bananen-Hirseschnitten",
     "Bananen-French-Toast-Finger",
     "Gemüse-Couscous-Schnitten",
     "Bunte Gemüse-Nuggets",
@@ -305,6 +306,9 @@ const RECIPE_CONTRACT_OVERRIDES = Object.freeze({
   }),
   "Apfel-Milchreisschnitten": Object.freeze({
     servingRequirement: "Feucht und weich als breite Sticks anbieten; keine klebrig-kompakte Masse und keine kleinen runden Reisstücke.",
+  }),
+  "Bananen-Hirseschnitten": Object.freeze({
+    servingRequirement: "Als breite, sehr weiche Schnitten anbieten. Die Hirse muss vollständig weich und die Masse feucht gebunden sein; die Schnitte muss zwischen zwei Fingern leicht zerdrückbar bleiben. Keine trockenen oder harten Kanten und keine ganzen oder gehackten Nüsse.",
   }),
   "Apfel-Bananen-Baked-Oatmeal": Object.freeze({
     servingRequirement: "Zunächst löffelbar und feucht anbieten; spätere Stücke müssen weich zerdrückbar bleiben. Nicht trocken ausbacken.",

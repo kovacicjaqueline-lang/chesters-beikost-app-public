@@ -5,6 +5,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
+const { assertV2Asset, measureV2Asset } = require("./helpers/icon-integrity-png.cjs");
 
 const root = path.resolve(__dirname, "..");
 const recipesSource = fs.readFileSync(path.join(root, "data", "recipes.js"), "utf8");
@@ -56,4 +57,18 @@ test("Bananen-Hirseschnitten: Handling ist weiches greifbares Fingerfood ohne zu
   assert.equal(contract.oralRequiredCapability, undefined);
   assert.match(contract.servingRequirement, /zwischen zwei Fingern leicht zerdrückbar/i);
   assert.match(contract.servingRequirement, /keine ganzen oder gehackten Nüsse/i);
+});
+
+test("Bananen-Hirseschnitten: eigenes Recipe-V2-Icon ist gemappt, transparent und offline verfügbar", () => {
+  const iconPath = "assets/illustrations-v2/recipes/bananen-hirseschnitten.svg";
+  const iconSource = fs.readFileSync(path.join(root, "js", "icons.js"), "utf8");
+  const serviceWorkerSource = fs.readFileSync(path.join(root, "sw.js"), "utf8");
+  const aliasesStart = iconSource.indexOf("const RECIPE_RUNTIME_ICON_ALIASES");
+  const aliasesEnd = iconSource.indexOf("});", aliasesStart);
+  const aliasesSource = iconSource.slice(aliasesStart, aliasesEnd);
+  assert.ok(aliasesSource.includes(`"Bananen-Hirseschnitten": "${iconPath}"`), "eigenes zentrales Runtime-Recipe-Icon-Mapping fehlt");
+  assert.ok(serviceWorkerSource.includes(`\"./${iconPath}\"`), "eigenes Recipe-Icon fehlt im Offline-Precache");
+  assertV2Asset(root, iconPath);
+  const geometry = measureV2Asset(root, iconPath);
+  assert.ok(geometry.minMargin >= 2, `Recipe-Icon braucht mindestens 2 px transparenten Rand; aktuell ${geometry.minMargin}px`);
 });

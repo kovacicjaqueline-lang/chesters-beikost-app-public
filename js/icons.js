@@ -229,6 +229,7 @@ const RECIPE_ICON_PATHS = Object.freeze({
   "Rote-Linsen-Bratlinge": "assets/illustrations-v2/recipes/rote-linsen-bratlinge.svg",
   "Polenta-Zucchini-Sticks": "assets/illustrations-v2/recipes/polenta-zucchini-sticks.svg",
   "Süßkartoffel-Hirse-Sticks": "assets/illustrations-v2/recipes/suesskartoffel-hirse-sticks.svg",
+  "Herzhafte Hirseschnitten": "assets/illustrations-v2/recipes/herzhafte-hirseschnitten.svg",
   "Omelettstreifen": "assets/illustrations-v2/recipes/omelettstreifen.svg",
   "Zucchini-Omelett": "assets/illustrations-v2/recipes/zucchini-omelett.svg",
   "Obst-Haferbrei": "assets/illustrations-v2/recipes/obst-haferbrei.svg",

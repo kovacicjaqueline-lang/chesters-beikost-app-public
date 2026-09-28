@@ -523,6 +523,7 @@ const RECIPE_RESEARCH_GUIDANCE = Object.freeze({
   "Rote-Linsen-Bratlinge": Object.freeze(["100 g sehr weich gekochte rote Linsen, 15 g feine Haferflocken, ¼ TL milder Kreuzkümmel, 1 TL Petersilie", 6]),
   "Polenta-Zucchini-Sticks": Object.freeze(["40 g feine Polenta, 160 ml Wasser, 60 g fein geriebene und weich gegarte Zucchini, 1 TL Butter oder Rapsöl, 1 TL Petersilie", 6]),
   "Süßkartoffel-Hirse-Sticks": Object.freeze(["150 g Süßkartoffelpüree, 60 g sehr weich gekochte Hirse", 7]),
+  "Herzhafte Hirseschnitten": Object.freeze(["120 g Goldhirse, 1 kleine Karotte, 1 kleine Zucchini, 2 Eier, 2 EL Frischkäse, 2 EL Rapsöl", null]),
   "Omelettstreifen": Object.freeze(["1 Ei, 15 ml Wasser, 1 TL Butter, 1 TL Petersilie oder Schnittlauch", 6]),
   "Quinoa-Huhn-Süßkartoffel-Finger": Object.freeze(["100 g Huhn, 70 g Quinoa, 160 g Süßkartoffel, 1 TL Rapsöl, 1 TL Petersilie", 8]),
   "Quinoa-Linsen-Gemüse-Khichdi": Object.freeze(["60 g Quinoa, 60 g rote Linsen, 120 g Karotte, 100 g Zucchini, 450 ml Wasser, 1 TL Rapsöl, 1 TL Petersilie", 7]),

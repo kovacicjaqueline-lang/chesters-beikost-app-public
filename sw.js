@@ -172,6 +172,7 @@ const UI_PRECACHE = [
 ];
 
 const RECIPE_RUNTIME_PRECACHE = [
+  "./assets/illustrations-v2/recipes/herzhafte-hirseschnitten.svg",
   "./assets/illustrations-v2/recipes/pizza-wrap.svg",
   "./assets/illustrations-v2/recipes/chicken-fajita-wrap.svg",
   "./assets/illustrations-v2/recipes/griessschnitten-ohne-panade.svg",

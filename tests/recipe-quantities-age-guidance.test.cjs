@@ -24,9 +24,9 @@ function loadCatalog() {
   return { before, after, guidance };
 }
 
-test("recipe quantities: runtime catalog has 138 unique recipes after Bananen-Hirseschnitten addition", () => {
+test("recipe quantities: runtime catalog has 139 unique recipes after form, fish and Hirseschnitten additions", () => {
   const { after } = loadCatalog();
-  assert.equal(after.length, 138);
+  assert.equal(after.length, 139);
   const names = after.map((recipe) => recipe.name);
   assert.equal(new Set(names).size, names.length);
   assert.equal(names.includes("Gemüse-Fleisch-Nockerl"), false);
@@ -44,6 +44,8 @@ test("recipe quantities: runtime catalog has 138 unique recipes after Bananen-Hi
     "Bulgur-Linsen-Suppe",
     "Forelle-Kartoffel-Bällchen",
     "Kabeljau-Süßkartoffel-Fischküchlein",
+    "Bananen-Hirseschnitten",
+    "Herzhafte Hirseschnitten",
   ]) assert.equal(names.includes(name), true, `${name} fehlt`);
 });
 

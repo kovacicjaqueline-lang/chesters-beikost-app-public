@@ -97,12 +97,28 @@ const REQUIRED_NOTE_FRAGMENTS = Object.freeze({
   "Süßkartoffel-Linsen-Muffins": [/Süßkartoffel/i, /Linsen/i, /Hafer/i, /vermeng/i],
 });
 
-test("recipe preparation audit covers the full 138-recipe runtime catalog", () => {
+test("recipe preparation audit covers the full 139-recipe runtime catalog", () => {
   const recipes = loadCatalog();
-  assert.equal(recipes.length, 138);
+  assert.equal(recipes.length, 139);
   assert.equal(INCOMPLETE_PREPARATIONS.length, 20);
   assert.equal(TERSE_PREPARATIONS.length, 23);
   assert.equal(new Set([...INCOMPLETE_PREPARATIONS, ...TERSE_PREPARATIONS]).size, 43);
+});
+
+test("recipe preparation completeness: Herzhafte Hirseschnitten sind vollständig gegart und weich servierbar", () => {
+  const recipes = loadCatalog();
+  const matches = recipes.filter((item) => item.name === "Herzhafte Hirseschnitten");
+  assert.equal(matches.length, 1, "Rezept muss genau einmal im Runtime-Katalog vorkommen");
+  const recipe = matches[0];
+  assert.deepEqual(recipe.requires, ["Hirse", "Karotte", "Zucchini", "Ei", "Frischkäse", "Rapsöl"]);
+  for (const fragment of [/120 g Goldhirse/i, /kleine Karotte/i, /kleine Zucchini/i, /2 Eier/i, /2 EL Frischkäse/i, /2 EL Rapsöl/i]) {
+    assert.match(recipe.ingredients, fragment, `Zutat fehlt (${fragment})`);
+  }
+  for (const fragment of [/Goldhirse gründlich ausspülen/i, /vollständig weich kochen/i, /Zucchini raspeln/i, /Karotte fein reiben/i, /gut ausdrücken/i, /180 °C Ober-\/Unterhitze/i, /20–25 Minuten/i, /vollständig durchbacken/i, /breite, gut greifbare Sticks/i, /ohne zugesetztes Salz/i]) {
+    assert.match(recipe.note, fragment, `Safety-/Zubereitungshinweis fehlt (${fragment})`);
+  }
+  assert.equal(recipe.freezable, true);
+  assert.equal(recipe.minMonths, undefined, "Werbeaussage 'ab Beikostreife' ist kein gespeichertes Altersgate");
 });
 
 

@@ -81,6 +81,13 @@ test("Hirsotto hat ein eigenes Recipe-V2-Asset, Mapping und Core-Precache", () =
   assert.ok(core.includes(`"./${asset}"`), "Hirsotto: Core-Precache fehlt");
 });
 
+test("Herzhafte Hirseschnitten haben ein eigenes Recipe-V2-Asset, Mapping und Runtime-Precache", () => {
+  const asset = "assets/illustrations-v2/recipes/herzhafte-hirseschnitten.svg";
+  assert.ok(fs.existsSync(path.join(ROOT, asset)), "Hirseschnitten: eigenes Recipe-V2-Asset fehlt");
+  assert.ok(icons.includes(`"Herzhafte Hirseschnitten": "${asset}"`), "Hirseschnitten: kanonisches Mapping fehlt");
+  assert.ok(worker.includes(`"./${asset}"`), "Hirseschnitten: Runtime-Precache fehlt");
+});
+
 test("der frisch gecachte Stylesheet enthält die zentrierte Recipe-V2-Brei-Normalisierung", () => {
   assert.match(
     recipeCss,

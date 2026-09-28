@@ -65,6 +65,7 @@ function settings(overrides = {}) {
 
 function auditedLegacyFingerNames() {
   const expandedNames = new Set([
+    "Herzhafte Hirseschnitten",
     "Grießschnitten ohne Panade", "Apfel-Milchreisschnitten", "Bananen-French-Toast-Finger",
     "Gemüse-Couscous-Schnitten", "Bunte Gemüse-Nuggets", "Weiche Gemüse-Reis-Finger",
     "Apfel-Bananen-Baked-Oatmeal", "Weiche Apfel-Hafer-Riegel",
@@ -108,20 +109,20 @@ test("HANDLING: feedingApproach sortiert nur Präferenzen und entfernt keine sic
   ]);
 });
 
-test("HANDLING: alle 138 Laufzeitrezepte sind explizit und genau einmal migriert", () => {
+test("HANDLING: alle 139 Laufzeitrezepte sind explizit und genau einmal migriert", () => {
   const runtimeNames = runtimeRecipeNames();
   const contractNames = Object.keys(RECIPE_HANDLING_CONTRACT);
   const grouped = Object.values(RECIPE_CONTRACT_GROUPS).flat();
-  assert.equal(runtimeNames.length, 138);
-  assert.equal(contractNames.length, 138);
-  assert.equal(new Set(grouped).size, 138, "Contract-Gruppen dürfen sich nicht überlappen");
+  assert.equal(runtimeNames.length, 139);
+  assert.equal(contractNames.length, 139);
+  assert.equal(new Set(grouped).size, 139, "Contract-Gruppen dürfen sich nicht überlappen");
   assert.deepEqual([...contractNames].sort(), [...runtimeNames].sort());
   assert.deepEqual([...grouped].sort(), [...runtimeNames].sort());
 });
 
 test("HANDLING: aktuelle Auditmatrix bleibt vollständig erhalten", () => {
   const entries = Object.values(RECIPE_HANDLING_CONTRACT);
-  assert.equal(entries.filter((entry) => !entry.laterKind).length, 110);
+  assert.equal(entries.filter((entry) => !entry.laterKind).length, 111);
   assert.equal(entries.filter((entry) => entry.laterKind === "oral-capability").length, 4);
   assert.equal(entries.filter((entry) => entry.laterKind === "handling-capability").length, 3);
   assert.equal(entries.filter((entry) => entry.laterKind === "soft-orientation").length, 19);
@@ -162,6 +163,18 @@ test("ORAL: easy-chew ist post-separation und die alte Mischsemantik ist kein Or
   assert.equal(ORAL_PROCESSING_PROFILES.EASY_BITE_SEPARATE, undefined);
   assert.equal(RECIPE_HANDLING_CONTRACT["Obst-Hafer-Pancakes"].oralProcessing, ORAL_PROCESSING_PROFILES.EASY_CHEW);
   assert.equal(RECIPE_HANDLING_CONTRACT["Omelettstreifen"].biteSeparation, BITE_SEPARATION_PROFILES.LOW_RESISTANCE_SEPARATE);
+});
+
+test("BITE/ORAL: Herzhafte Hirseschnitten haben eine eigenständige weiche Fingerfood-Einordnung", () => {
+  const entry = RECIPE_HANDLING_CONTRACT["Herzhafte Hirseschnitten"];
+  assert.deepEqual(entry.modes, [HANDLING_MODES.FINGER_GRASPABLE]);
+  assert.equal(entry.biteSeparation, BITE_SEPARATION_PROFILES.EASY_BITE_SEPARATE);
+  assert.equal(entry.oralProcessing, ORAL_PROCESSING_PROFILES.EASY_CHEW);
+  assert.equal(entry.biteRequiredCapability, undefined);
+  assert.equal(entry.oralRequiredCapability, undefined);
+  assert.match(entry.servingRequirement, /breite, gut greifbare Sticks/i);
+  assert.match(entry.servingRequirement, /leicht zerdrücken/i);
+  assert.match(entry.servingRequirement, /harte oder dunkle Kruste/i);
 });
 
 test("BITE/ORAL: vier bisherige strukturierte Rezepte bleiben bite-seitig easy und verlangen nur structured-chew", () => {

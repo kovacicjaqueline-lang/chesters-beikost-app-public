@@ -140,6 +140,9 @@
           }
           existing[PIN_FLAG] = true;
           existing[PRESERVE_FLAG] = true;
+          // A tracking-only snapshot is ignored by lockedMeal. Once explicitly
+          // pinned for a swap, it must become a real automatic fixed snapshot.
+          delete existing.plannerTrackingSnapshot;
           delete data.autoLockExcluded?.[key];
           pinned += 1;
           continue;

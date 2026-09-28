@@ -182,16 +182,17 @@ function plannerSelectProactiveRecipe(candidates, ctx = {}) {
       used: ctx.recipePlannedUse?.get(candidate.recipe?.name) || 0,
     }))
     .sort((a, b) =>
-      b.culinaryScore - a.culinaryScore ||
       a.added - b.added ||
       a.used - b.used ||
+      b.culinaryScore - a.culinaryScore ||
       String(a.candidate.recipe?.name || "").localeCompare(String(b.candidate.recipe?.name || ""), "de"),
     );
   if (!ranked.length) return null;
   if (
     ranked.length > 1 &&
     ranked[0].added === ranked[1].added &&
-    ranked[0].used === ranked[1].used
+    ranked[0].used === ranked[1].used &&
+    ranked[0].culinaryScore === ranked[1].culinaryScore
   ) return null;
   return ranked[0].candidate;
 }

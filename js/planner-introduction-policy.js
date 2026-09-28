@@ -3,8 +3,8 @@
 /* Planner-Einführungsfrequenz und Snack-Obst.
  *
  * Fachlicher Vertrag:
- * - gewöhnliche offene Nicht-Allergene werden nicht automatisch als Lernaufgabe
- *   eingeplant; manuelle Planung und passende Rezepte bleiben möglich;
+ * - eine geeignete offene Nicht-Allergen-Kostprobe darf genau einen freien
+ *   Lernslot pro Tag belegen; manuelle Planung und passende Rezepte bleiben möglich;
  * - ein bloß erfolgreich probiertes FOOD blockiert keine weitere Einführung;
  * - eine echte Ablehnung darf weiterhin als gezielte Wiederholung priorisiert werden;
  * - sobald eine Allergen-Einführung oder Allergen-Wiederholung geplant ist, bleibt
@@ -14,7 +14,7 @@
  *
  * Bestehende Auto-, Safety-, Rollen-, Milch-, Recipe-first-, Lock- und
  * Mahlzeiteneignungs-Gates bleiben vorgeschaltet und werden nicht gelockert.
- * Zusätzliche Nicht-Allergen-Einführungen werden deshalb nicht frei konstruiert,
+ * Nicht-Allergen-Einführungen werden deshalb nicht frei konstruiert,
  * sondern erneut durch den vollständigen bestehenden buildDay-Stack erzeugt.
  */
 
@@ -24,9 +24,9 @@ const PLANNER_INTRODUCTION_MAIN_MEALS = Object.freeze([
   "dinner",
 ]);
 
-// Gewöhnliche Lebensmittel werden nicht automatisch als Lernaufgabe
-// eingeschoben. Manuelle Planung und passende Rezepte bleiben möglich.
-const PLANNER_INTRODUCTION_AUTOPLAN_NON_ALLERGENS = false;
+// Eine geeignete offene Nicht-Allergen-Kostprobe darf an einem Tag ohne
+// Allergen-Lernaufgabe genau einen freien Hauptmahlzeitenslot belegen.
+const PLANNER_INTRODUCTION_AUTOPLAN_NON_ALLERGENS = true;
 
 const PLANNER_INTRODUCTION_LEARNING_TYPES = new Set([
   "neu",
@@ -190,11 +190,13 @@ function installPlannerIntroductionPolicyRuntime() {
   let originalManualMealRoleInfo = manualMealRoleInfo;
   let supplementalNonAllergenOnly = false;
   let baselineBlocksAllergens = false;
+  let baselineBlocksNonAllergens = false;
 
   let slotProtected = (date, meal) => {
     let key = `${date}|${meal}`;
+    let lock = state?.planLocks?.[key];
     return !!state?.manualMeals?.[key] ||
-      !!state?.planLocks?.[key] ||
+      (!!lock && (!lock.plannerTrackingSnapshot || lock.rolloverShifted)) ||
       !!state?.overrides?.[key] ||
       (typeof mealIsCompleted === "function" && mealIsCompleted(date, meal));
   };
@@ -253,7 +255,7 @@ function installPlannerIntroductionPolicyRuntime() {
       ctx,
       exclude,
       allowAllergen,
-      PLANNER_INTRODUCTION_AUTOPLAN_NON_ALLERGENS,
+      PLANNER_INTRODUCTION_AUTOPLAN_NON_ALLERGENS && !baselineBlocksNonAllergens,
     );
   };
 
@@ -512,12 +514,15 @@ function installPlannerIntroductionPolicyRuntime() {
     if (!wasDeferred && state?.settings) state.settings.newFoodEvery = 1;
 
     let previousBlock = baselineBlocksAllergens;
+    let previousNonAllergenBlock = baselineBlocksNonAllergens;
     baselineBlocksAllergens = normalization.hasNonAllergenLearning;
+    baselineBlocksNonAllergens = normalization.hasNonAllergenLearning || normalization.hasAllergenLearning;
     let day;
     try {
       day = originalBuildDay(date, index, ctx);
     } finally {
       baselineBlocksAllergens = previousBlock;
+      baselineBlocksNonAllergens = previousNonAllergenBlock;
       normalization.restore();
       if (state?.settings) state.settings.newFoodEvery = oldEvery;
     }
@@ -526,8 +531,8 @@ function installPlannerIntroductionPolicyRuntime() {
     restoreDisplayedPresets(day, date, normalization.displays);
     plannerIntroductionRestoreContext(ctx, dayStartContext);
 
-    let allergenDay = normalization.hasAllergenLearning || day.meals.some((meal) =>
-      plannerIntroductionMealIsAllergenLearning(meal, food),
+    let learningDay = normalization.hasNonAllergenLearning || normalization.hasAllergenLearning || day.meals.some((meal) =>
+      plannerIntroductionMealIsLearning(meal),
     );
     let used = [];
     let finalMeals = [];
@@ -555,7 +560,7 @@ function installPlannerIntroductionPolicyRuntime() {
       if (
         PLANNER_INTRODUCTION_AUTOPLAN_NON_ALLERGENS &&
         !wasDeferred &&
-        !allergenDay &&
+        !learningDay &&
         PLANNER_INTRODUCTION_MAIN_MEALS.includes(meal.meal) &&
         !protectedSlot &&
         !currentIsLearning
@@ -571,6 +576,7 @@ function installPlannerIntroductionPolicyRuntime() {
         if (generated) {
           meal = generated;
           currentIsLearning = true;
+          learningDay = true;
         }
       }
 

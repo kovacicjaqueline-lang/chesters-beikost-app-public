@@ -1025,8 +1025,8 @@ function buildDay(date, index, ctx) {
   let meals = [];
   function recordMealForQualityRotation(mealPlan) {
     if (typeof plannerQualityMarkMealInProgress === "function") {
-      let hasSnapshotForDay = Object.keys(state.planLocks || {}).some((key) =>
-        key.startsWith(`${date}|`),
+      let hasSnapshotForDay = Object.entries(state.planLocks || {}).some(([key, lock]) =>
+        key.startsWith(`${date}|`) && (!lock?.plannerTrackingSnapshot || lock?.rolloverShifted),
       );
       // A retained same-day snapshot is user-visible plan state. Do not let a
       // partial rebuild cascade through other slots around that snapshot.

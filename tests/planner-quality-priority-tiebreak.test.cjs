@@ -28,7 +28,7 @@ function priorityOptions({ preferInventoryInPlan = false, inventory = {}, usage 
   };
 }
 
-test("Weekly Rotation verdrängt keinen bevorzugten Vorratskandidaten", () => {
+test("frisch verwendeter Vorrat verdrängt keine gleich geeignete Alternative", () => {
   const ctx = context();
   ctx.qualityFoodUse.set("vorrat", 3);
   ctx.qualityLastFoodUse.set("vorrat", "2026-08-20");
@@ -48,8 +48,18 @@ test("Weekly Rotation verdrängt keinen bevorzugten Vorratskandidaten", () => {
   );
   assert.equal(
     quality.plannerQualityChooseKnownResult(results, ctx, on, diffDays, options).f.id,
-    "vorrat",
+    "ohne-vorrat",
   );
+});
+
+test("bewusstes Neuplanen rotiert gleichwertige Kandidaten", () => {
+  const ctx = context();
+  const results = ["a", "b", "c"].map((id) => ({ f: { id } }));
+  assert.equal(quality.plannerQualityChooseResult(results, ctx, on, diffDays).f.id, "a");
+  ctx.qualityReplanGeneration = 1;
+  assert.equal(quality.plannerQualityChooseResult(results, ctx, on, diffDays).f.id, "c");
+  ctx.qualityReplanGeneration = 2;
+  assert.equal(quality.plannerQualityChooseResult(results, ctx, on, diffDays).f.id, "b");
 });
 
 test("Weekly Rotation verdrängt keinen effectivePriority-Vorteil für Saison oder Reise", () => {
@@ -75,7 +85,7 @@ test("Weekly Rotation verdrängt keinen effectivePriority-Vorteil für Saison od
   );
 });
 
-test("Weekly Rotation bleibt Tie-Breaker zwischen ansonsten gleich priorisierten Kandidaten", () => {
+test("aktuelle Nutzung bleibt vor älterer Basispriorität sichtbar", () => {
   const ctx = context();
   ctx.qualityFoodUse.set("wiederholt", 2);
   ctx.qualityLastFoodUse.set("wiederholt", "2026-08-20");
@@ -85,11 +95,7 @@ test("Weekly Rotation bleibt Tie-Breaker zwischen ansonsten gleich priorisierten
   ];
   const options = priorityOptions();
 
-  assert.deepEqual(
-    quality.plannerQualityKnownCandidatePriorityTuple(results[0], on, ctx, options),
-    quality.plannerQualityKnownCandidatePriorityTuple(results[1], on, ctx, options),
-    "Testkandidaten müssen nach den bisherigen Planner-Prioritäten gleichwertig sein",
-  );
+  assert.ok(quality.plannerQualityKnownCandidatePriorityTuple(results[0], on, ctx, options)[2] > 0);
   assert.equal(
     quality.plannerQualityChooseKnownResult(results, ctx, on, diffDays, options).f.id,
     "frisch",

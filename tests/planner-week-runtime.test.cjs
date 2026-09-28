@@ -119,3 +119,25 @@ test("echter Tagesplan rotiert einen bekannten Begleiter zwischen Mittag- und Ab
     "der Abend darf keinen Mittagsbegleiter wiederverwenden, wenn bekannte Alternativen verfügbar sind",
   );
 });
+
+test("reiner Tracking-Snapshot blockiert die Rotation der übrigen Tagesslots nicht", () => {
+  const { context, state } = loadPlanner();
+  state.foods = state.foods.filter((item) =>
+    !item.ironRich && !["Fleisch", "Fisch", "Meeresfrucht"].includes(item.category),
+  );
+  state.overrides["2026-09-22|lunch"] = "zucchini";
+  state.overrides["2026-09-22|dinner"] = "apfel";
+  state.planLocks["2026-09-22|lunch"] = {
+    mode: "auto", plannerTrackingSnapshot: true, focusId: "zucchini",
+    foodIds: ["zucchini", "polenta"], baseFoodIds: ["polenta"],
+  };
+  const originalLockedMeal = context.lockedMeal;
+  context.lockedMeal = (date, meal) => state.planLocks[`${date}|${meal}`]?.plannerTrackingSnapshot
+    ? null : originalLockedMeal(date, meal);
+
+  const day = context.__buildDays("2026-09-22", 1, false)[0];
+  const lunch = day.meals.find((meal) => meal.meal === "lunch");
+  const dinner = day.meals.find((meal) => meal.meal === "dinner");
+  assert.ok(lunch.foodIds.length > 1);
+  assert.equal(lunch.foodIds.some((id) => dinner.foodIds.includes(id)), false);
+});

@@ -204,7 +204,7 @@ try {
   const preparedChili = await page.evaluate(() => {
     const api = window.__beikostTest;
     api.reset();
-    const on = api.today();
+    const on = api.addDays(api.today(), 4);
     const s = api.getState();
     s.settings.planFrom = on;
     s.settings.phaseSelected = "aufbau";
@@ -222,14 +222,14 @@ try {
     }
     for (const id of ids) {
       s.logs.push({
-        id: `known-${id}`, date: api.addDays(on, -3), meal: "lunch",
+        id: `known-${id}`, date: api.addDays(api.today(), -3), meal: "lunch",
         foodIds: [id], foodOutcomes: { [id]: "eaten" }, outcome: "eaten",
-        createdAt: `${api.addDays(on, -3)}T12:00:00.000Z`,
+        createdAt: `${api.addDays(api.today(), -3)}T12:00:00.000Z`,
       });
     }
     s.inventory = [{
       id: "prepared-chili", kind: "recipe", recipeName: "Mildes Bohnen-Süßkartoffel-Chili",
-      foodIds: ids, portions: 2, size: "Portion", frozenDate: api.addDays(on, -1),
+      foodIds: ids, portions: 2, size: "Portion", frozenDate: api.addDays(api.today(), -1),
       preparationMode: "spoon-smooth", note: "Testcharge",
     }];
     api.setState(s);
@@ -241,8 +241,10 @@ try {
       batchAllowed: plannerRecipeBatchFor(chiliState, on, freshPlanContext())?.id || "",
       variants: chiliVariants.map((v) => ({ ids: v, eligible: v.map((id) => eligible(food(id), "lunch", on)), known: v.map((id) => canCombine(food(id))), score: plannerCulinaryRecipeScore(chiliState, v, state.foods, "lunch") })),
       candidate: chiliCandidate?.recipe?.name || "",
+      locks: Object.keys(state.planLocks || {}).filter((key) => key.startsWith(`${on}|`)),
     };
     const smooth = window.buildDays(on, 1, false)[0].meals.find((m) => m.meal === "lunch");
+    debug.smooth = { recipeName: smooth.recipeName, foodIds: smooth.foodIds, type: smooth.type, note: smooth.note, lockedMode: smooth.lockedMode };
     s.inventory[0].preparationMode = "";
     api.setState(s);
     const unmarked = window.buildDays(on, 1, false)[0].meals.find((m) => m.meal === "lunch");

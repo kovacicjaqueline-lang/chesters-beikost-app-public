@@ -40,20 +40,20 @@ function aliases(food) {
     .filter(Boolean);
 }
 
-test("Mais und Polenta bleiben sichtbar und semantisch getrennt", () => {
+test("Mais und Polenta bleiben sichtbar, getrennt und automatisch planbar", () => {
   const context = loadContext();
   const mais = context.__foodDb.find((food) => food.id === "mais-polenta");
   const polenta = context.__foodDb.find((food) => food.id === "polenta");
 
   assert.equal(mais?.name, "Mais");
-  assert.equal(mais?.autoPlan, false);
+  assert.notEqual(mais?.autoPlan, false);
   assert.equal(aliases(mais).includes("Polenta"), false);
   assert.equal(polenta?.name, "Polenta");
   assert.equal(context.__foodByName("Polenta")?.id, "polenta");
   assert.equal(context.__foodByName("Mais")?.id, "mais-polenta");
 });
 
-test("historische mais-polenta-ID wird manuell verfügbar, aber nicht auto-planbar migriert", () => {
+test("historische mais-polenta-ID wird migrationssicher und auto-planbar migriert", () => {
   const context = loadContext();
   const foods = context.__foodDb.map((food) => ({ ...food }));
   const aliasesById = {};
@@ -62,7 +62,7 @@ test("historische mais-polenta-ID wird manuell verfügbar, aber nicht auto-planb
 
   const mais = foods.find((food) => food.id === "mais");
   assert.ok(mais);
-  assert.equal(mais.autoPlan, false);
+  assert.notEqual(mais.autoPlan, false);
   assert.equal(mais.alias, "");
   assert.equal(aliasesById["mais-polenta"], "mais");
 });

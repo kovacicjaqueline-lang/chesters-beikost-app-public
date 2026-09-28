@@ -43,11 +43,13 @@ try {
   const diagnostics = await page.evaluate(() => {
     const api = window.__beikostTest;
     const culinaryTrace = [];
+    let traceCulinary = false;
     const baseCulinaryAssessment = window.plannerCulinaryAssessment;
     if (typeof baseCulinaryAssessment === "function") {
       window.plannerCulinaryAssessment = function tracedPlannerCulinaryAssessment(ids, foods, meal, options = {}) {
         const result = baseCulinaryAssessment(ids, foods, meal, options);
         if (
+          traceCulinary &&
           result &&
           !result.allowed &&
           ["breakfast", "lunch", "dinner"].includes(meal)
@@ -191,7 +193,14 @@ try {
     };
   });
 
-  console.log(`[planner-final-quality-real-state] ${JSON.stringify(diagnostics)}`);
+  console.log(`[planner-final-quality-real-state] ${JSON.stringify({
+    everyday: diagnostics.everyday,
+    trusted: diagnostics.trusted,
+    culinaryIssueCounts: {
+      everyday: diagnostics.everydayTrace.length,
+      trusted: diagnostics.trustedTrace.length,
+    },
+  })}`);
 
   const trustedVisible = diagnostics.trusted.flatMap((day) => day.meals)
     .filter((meal) => meal.active && !meal.empty && meal.focusId);
@@ -233,6 +242,7 @@ try {
       preparationMode: "spoon-smooth", note: "Testcharge",
     }];
     api.setState(s);
+    traceCulinary = true;
     const chiliState = recipeStates().find((recipe) => recipe.name === "Mildes Bohnen-Süßkartoffel-Chili");
     const chiliVariants = plannerRecipeVariantIdSets(chiliState, state.foods, recipeIngredientReady);
     const chiliCandidate = knownRecipeCandidate("lunch", on, freshPlanContext());
@@ -257,6 +267,8 @@ try {
         variants: plannerRecipeVariantIdSets(recipe, state.foods, recipeIngredientReady),
         context: { recipeReserved: [...(ctx.recipeReserved || [])], recipePlannedUse: [...(ctx.recipePlannedUse || [])], recipeLastUse: [...(ctx.recipeLastUse || [])], fullMilk: [...(ctx.fullMilkDates || [])],
           focusAllowed: ids.map((id) => plannerFoodCanBeAutomaticFocus(food(id))), eligible: ids.map((id) => eligible(food(id), meal, date)), combine: ids.map((id) => canCombine(food(id))), paused: combinationPaused(ids, date),
+          unavailable: ids.map((id) => isFoodUnavailable(id)), automaticEligibility: ids.map((id) => window.automaticFoodEligibility(food(id), date, state.settings)),
+          foodRules: ids.map((id) => { const item = food(id); return { id, meals: item?.meals, active: item?.active, manualStatus: item?.manualStatus, autoPlan: item?.autoPlan ?? null, minPhase: item?.minPhase ?? null, minAgeMonths: item?.minAgeMonths ?? null, shoppingHint: state.shoppingHints?.[id] || null, pantry: !!state.pantry?.[id], settings: { phaseSelected: state.settings?.phaseSelected, birthDate: state.settings?.birthDate } }; }),
           override: state.overrides?.[`${date}|${meal}`] || "" },
         inventory: state.inventory.map((batch) => [batch.id, batch.portions, batch.preparationMode]),
       });
@@ -286,7 +298,7 @@ try {
   await page.locator("#saveInv").click();
   const savedChili = await page.evaluate(() => {
     const api = window.__beikostTest;
-    const on = api.today();
+    const on = api.addDays(api.today(), 4);
     return {
       batch: api.getState().inventory.find((item) => item.id === "prepared-chili"),
       meal: window.buildDays(on, 1, false)[0].meals.find((item) => item.meal === "lunch"),

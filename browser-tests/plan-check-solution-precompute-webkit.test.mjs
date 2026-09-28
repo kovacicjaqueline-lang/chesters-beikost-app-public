@@ -60,8 +60,8 @@ try {
     seed.inactivePlanKept = {};
 
     // Bekannte Nicht-Allergene bleiben als echte Planbasis aktiv; konkurrierende
-    // Allergene werden deaktiviert. Brot bleibt für die erste Planerzeugung ebenfalls
-    // deaktiviert, damit die später abgeschlossenen Plan-Slots garantiert brotfrei sind.
+    // Allergene werden deaktiviert. Ei bleibt für die erste Planerzeugung ebenfalls
+    // deaktiviert, damit die später abgeschlossenen Plan-Slots garantiert eifrei sind.
     for (const record of seed.foods) {
       if (record.allergenGroup) {
         record.active = false;
@@ -71,27 +71,27 @@ try {
       }
     }
 
-    const bread = seed.foods.find((record) => record.id === "brot");
-    if (!bread) throw new Error("Brot-FOOD fehlt");
-    bread.active = false;
-    bread.manualStatus = "auto";
+    const egg = seed.foods.find((record) => record.id === "ei");
+    if (!egg) throw new Error("Ei-FOOD fehlt");
+    egg.active = false;
+    egg.manualStatus = "auto";
 
     const exposureDate = api.addDays(on, -1);
     seed.logs = [{
-      id: "no-solution-bread",
+      id: "no-solution-egg",
       date: exposureDate,
       meal: "lunch",
       entryType: "meal",
-      focusId: bread.id,
-      foodIds: [bread.id],
-      baseFoodIds: [bread.id],
+      focusId: egg.id,
+      foodIds: [egg.id],
+      baseFoodIds: [egg.id],
       sampleFoodIds: [],
       outcome: "eaten",
-      foodOutcomes: { [bread.id]: "eaten" },
+      foodOutcomes: { [egg.id]: "eaten" },
       createdAt: `${exposureDate}T12:00:00.000Z`,
     }];
 
-    // Stufe 1: einen echten brotfreien Wochenplan erzeugen. buildDays() liefert die
+    // Stufe 1: einen echten eifreien Wochenplan erzeugen. buildDays() liefert die
     // vollständigen Mahlzeitenobjekte samt den von der Produktionslogik vergebenen IDs.
     api.setState(seed);
     const plannedSlots = api.buildDays(on, 7)
@@ -111,22 +111,22 @@ try {
       throw new Error(`Die Testlage muss 21 sichtbare Hauptmahlzeiten erzeugen, erhalten: ${plannedSlots.length}`);
     }
     if (plannedSlots.some((slot) => !slot.planId)) throw new Error("Jeder sichtbare Test-Slot braucht eine echte planId");
-    if (plannedSlots.some((slot) => (slot.plan.foodIds || []).includes(bread.id))) {
-      throw new Error("Der brotfreie Ausgangsplan darf Brot nicht enthalten");
+    if (plannedSlots.some((slot) => (slot.plan.foodIds || []).includes(egg.id))) {
+      throw new Error("Der eifreie Ausgangsplan darf Ei nicht enthalten");
     }
 
     // Stufe 2: alle sieben Tage als ausdrücklich manuelle Planinstanzen persistieren.
     // Anders als Auto-Locks dürfen diese auch jenseits der Drei-Tage-Fixierung bestehen.
-    // Brot wird erst danach reaktiviert; Abschlusslogs referenzieren die realen planIds.
+    // Ei wird erst danach reaktiviert; Abschlusslogs referenzieren die realen planIds.
     const linked = api.getState();
     linked.settings.planCheckEvaluationRevision = 7002;
     linked.logs ||= [];
     linked.manualMeals ||= {};
     linked.planLocks ||= {};
-    const linkedBread = linked.foods.find((record) => record.id === bread.id);
-    if (!linkedBread) throw new Error("Brot-FOOD fehlt nach dem ersten State-Roundtrip");
-    linkedBread.active = true;
-    linkedBread.manualStatus = "auto";
+    const linkedEgg = linked.foods.find((record) => record.id === egg.id);
+    if (!linkedEgg) throw new Error("Ei-FOOD fehlt nach dem ersten State-Roundtrip");
+    linkedEgg.active = true;
+    linkedEgg.manualStatus = "auto";
 
     plannedSlots.forEach((slot, index) => {
       if (typeof mealSnapshot !== "function") throw new Error("mealSnapshot fehlt");
@@ -149,7 +149,7 @@ try {
 
       const actualFoodIds = [...new Set(slot.plan.foodIds || [])].filter(Boolean);
       if (!actualFoodIds.length) throw new Error(`Plan-Slot ohne FOODs: ${slot.date}|${slot.meal}`);
-      if (actualFoodIds.includes(bread.id)) throw new Error("Brot darf nicht in einem Abschlusslog vorkommen");
+      if (actualFoodIds.includes(egg.id)) throw new Error("Ei darf nicht in einem Abschlusslog vorkommen");
       linked.logs.push({
         id: `completed-${index}`,
         date: slot.date,
@@ -196,7 +196,7 @@ try {
   );
   assert.ok(
     pendingSnapshot.goals.some((item) => item.code === "ALLERGEN_INTRODUCTION_CONTINUE"),
-    "Die Testlage muss ein offenes Brot-Einführungsziel erzeugen",
+    "Die Testlage muss ein offenes Ei-Einführungsziel erzeugen",
   );
   assert.ok(
     pendingSnapshot.states.some((entry) => entry.status === "pending"),

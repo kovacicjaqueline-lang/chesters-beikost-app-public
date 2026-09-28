@@ -179,6 +179,7 @@ const RECIPE_RUNTIME_PRECACHE = [
   "./assets/illustrations-v2/recipes/apfel-bananen-baked-oatmeal.svg",
   "./assets/illustrations-v2/recipes/weiche-apfel-hafer-riegel.svg",
   "./assets/illustrations-v2/recipes/bananen-french-toast-finger.svg",
+  "./assets/illustrations-v2/recipes/bananen-hirseschnitten.svg",
   "./assets/illustrations-v2/recipes/karotten-linsen-aufstrich.svg",
   "./assets/illustrations-v2/recipes/weisse-bohnen-paprika-aufstrich.svg",
   "./assets/illustrations-v2/recipes/erbsen-basilikum-pesto-ohne-salz.svg",

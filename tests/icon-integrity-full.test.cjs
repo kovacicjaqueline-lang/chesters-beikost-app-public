@@ -209,6 +209,7 @@ test("V2-Mappings, Dateibestand und Service-Worker-Precache sind exakt deckungsg
     "assets/illustrations-v2/recipes/apfel-bananen-baked-oatmeal.svg",
     "assets/illustrations-v2/recipes/apfel-milchreisschnitten.svg",
     "assets/illustrations-v2/recipes/bananen-french-toast-finger.svg",
+    "assets/illustrations-v2/recipes/bananen-hirseschnitten.svg",
     "assets/illustrations-v2/recipes/bunte-gemuese-nuggets.svg",
     "assets/illustrations-v2/recipes/erbsen-basilikum-pesto-ohne-salz.svg",
     "assets/illustrations-v2/recipes/forelle-kartoffel-baellchen.svg",

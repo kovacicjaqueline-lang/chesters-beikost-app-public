@@ -328,6 +328,7 @@ const RECIPE_RUNTIME_ICON_ALIASES = Object.freeze({
   "Apfel-Bananen-Baked-Oatmeal": "assets/illustrations-v2/recipes/apfel-bananen-baked-oatmeal.svg",
   "Weiche Apfel-Hafer-Riegel": "assets/illustrations-v2/recipes/weiche-apfel-hafer-riegel.svg",
   "Bananen-French-Toast-Finger": "assets/illustrations-v2/recipes/bananen-french-toast-finger.svg",
+  "Bananen-Hirseschnitten": "assets/illustrations-v2/recipes/bananen-hirseschnitten.svg",
   "Karotten-Linsen-Aufstrich": "assets/illustrations-v2/recipes/karotten-linsen-aufstrich.svg",
   "Weiße-Bohnen-Paprika-Aufstrich": "assets/illustrations-v2/recipes/weisse-bohnen-paprika-aufstrich.svg",
   "Erbsen-Basilikum-Pesto ohne Salz": "assets/illustrations-v2/recipes/erbsen-basilikum-pesto-ohne-salz.svg",

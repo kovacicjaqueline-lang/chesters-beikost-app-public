@@ -1429,6 +1429,7 @@ function addInventoryForm(preset = {}) {
   function preserveInventoryDraft() {
     preset.portions = document.getElementById("invPortions")?.value || preset.portions;
     preset.size = document.getElementById("invSize")?.value || preset.size;
+    preset.preparationMode = document.getElementById("invPreparationMode")?.value || "";
     preset.frozenDate = document.getElementById("invDate")?.value || preset.frozenDate;
     preset.note = document.getElementById("invNote")?.value ?? preset.note;
   }
@@ -1451,6 +1452,7 @@ function addInventoryForm(preset = {}) {
       <div class="live-results ${selectedKey && !q ? "inventory-results-collapsed" : ""}">${results.length ? results.map((item) => { let key = kind === "food" ? item.id : item.name; let meta = kind === "food" ? `${item.category}${item.active ? "" : " · nicht im Plan aktiv"}` : `${item.unlocked ? "Jetzt passend" : item.almost ? "Fast passend" : "Später passend"} · einfrierbar`; return `<button class="live-result chooseInventoryTarget ${selectedKey === key ? "selected" : ""}" data-key="${encodeURIComponent(key)}">${kind === "food" ? foodIconSvg(item) : recipeIconSvg(item)}<span class="grow"><b>${esc(item.name)}</b><span class="small" style="display:block">${esc(meta)}</span></span><span class="selector-check" aria-hidden="true">${selectedKey === key ? "✓" : ""}</span></button>`; }).join("") : (q ? '<div class="empty">Kein Treffer.</div>' : "")}</div>
       <div class="grid2"><div class="field"><label>${kind === "recipe" ? "Anzahl" : "Portionen"}</label><input id="invPortions" type="number" min="1" step="1" value="${esc(Math.max(1, Math.floor(Number(preset.portions) || 4)))}"></div><div class="field"><label>${kind === "recipe" ? "Einheit" : "Größe/Form"}</label><select id="invSize">${renderedSizeOptions.map((option) => `<option ${option === currentSize ? "selected" : ""}>${esc(option)}</option>`).join("")}</select></div></div>
       <div class="field"><label>Eingefroren</label><input id="invDate" type="date" value="${esc(preset.frozenDate || today())}"></div>
+      ${kind === "recipe" && recipeByName(selectedKey)?.smoothBatchAllowed ? `<div class="field"><label>So wurde diese Portion zubereitet</label><select id="invPreparationMode"><option value="">Wie im Rezept / nicht angegeben</option><option value="spoon-smooth" ${preset.preparationMode === "spoon-smooth" ? "selected" : ""}>Vollständig glatt püriert</option></select><div class="small">Nur auswählen, wenn die gesamte Portion einschließlich aller Stücke glatt püriert wurde. Die Zutaten- und Altersprüfung bleibt bestehen.</div></div>` : ""}
       <div class="field"><label>Notiz</label><input id="invNote" value="${esc(preset.note || "")}" placeholder="z. B. einzeln vorgefroren"></div>
       <p class="small inventory-form-note">Jeder Koch- oder Einfriervorgang bleibt als eigener Vorratseintrag erhalten. Rezeptzutaten werden im Protokoll weiterhin einzeln berücksichtigt.</p>
       <div class="sticky-form-actions ds-actionbar"><button class="btn secondary" id="cancelInv" type="button">Abbrechen</button><button class="btn" id="saveInv" ${selectedKey ? "" : "disabled"}>${editing ? "Änderungen speichern" : "Als neuen Vorrat speichern"}</button></div>`;
@@ -1468,8 +1470,9 @@ function addInventoryForm(preset = {}) {
       let selectedSize = document.getElementById("invSize").value;
       let gramsPerPortion = kind === "food" ? prepPortionGramsFromSize(selectedSize) : 0;
       let values = { kind, foodId: kind === "food" ? selectedKey : "", recipeName: kind === "recipe" ? selectedKey : "", foodIds: kind === "recipe" ? recipeFoodIds(recipe) : [], portions: Math.max(1, Math.floor(Number(document.getElementById("invPortions").value) || 1)), size: selectedSize, frozenDate: document.getElementById("invDate").value || today(), note: document.getElementById("invNote").value };
+      if (kind === "recipe" && document.getElementById("invPreparationMode")?.value === "spoon-smooth") values.preparationMode = "spoon-smooth";
       if (gramsPerPortion > 0) values.gramsPerPortion = gramsPerPortion;
-      if (editing) { let item = state.inventory.find((entry) => entry.id === preset.editId); if (!item) return; Object.assign(item, values); if (!gramsPerPortion) delete item.gramsPerPortion; }
+      if (editing) { let item = state.inventory.find((entry) => entry.id === preset.editId); if (!item) return; Object.assign(item, values); if (!gramsPerPortion) delete item.gramsPerPortion; if (!values.preparationMode) delete item.preparationMode; }
       else state.inventory.push({ id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, ...values });
       if (typeof invalidateInventoryAggregateCache === "function") invalidateInventoryAggregateCache();
       let label = candidateName(selectedKey);

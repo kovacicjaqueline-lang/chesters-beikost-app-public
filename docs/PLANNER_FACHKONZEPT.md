@@ -361,6 +361,9 @@ Ein echtes vorhandenes Rezept kann eine Kombination über seinen eigenen Rezeptv
 ## 8.3 Single-Starch bleibt hart
 
 Automatische freie Kombinationen sollen nicht mehrere konkurrierende Stärkequellen erzwingen. Die bestehende Single-Starch-Schranke bleibt erhalten.
+Ein vorhandenes kuratiertes Rezept ist keine freie FOOD-Kombination: Seine
+kanonischen Zutaten werden nicht allein wegen zweier als Basis klassifizierter
+Zutaten (z. B. Süßkartoffel und Mais im Bohnen-Chili) verworfen.
 
 ## 8.4 Kulinarische Mahlzeitenqualität
 
@@ -393,6 +396,18 @@ Kein Rezeptname darf nur aus einer optisch ähnlichen Kombination erfunden werde
 
 ## 9.2 Proaktive Rezeptwahl
 
+Bei einer **bekannten** automatischen Hauptmahlzeit wählt der Planner zuerst
+aus bestehenden, für den Slot geeigneten und mit ausschließlich bekannten,
+automatisch geeigneten Zutaten herstellbaren Rezeptvarianten. Die konkrete
+Variante und alle ihre FOOD-IDs gehören in den Plan; ein zufällig gewähltes
+FOOD-Paar ist keine Voraussetzung mehr. Wiederholung derselben Rezeptidentität
+am selben Tag wird vermieden. Erst ohne geeignetes Rezept wird eine freie
+bekannte Mahlzeit gebildet; zu einer freien Zweierkombination darf eine weitere
+bekannte geeignete Zutat treten, wenn dies die kulinarische Struktur verbessert.
+Eine bewusst geplante Einführung behält ihren Lernslot und die bestehende
+Ein-Rezept-neues-FOOD-Regel. Vorrat ist ein weicher Vorteil zwischen ansonsten
+passenden Rezepten, kein Ersatz für Rezept- oder FOOD-Eignung.
+
 Eine bereits geplante FOOD-Mahlzeit darf um **bekannte und automatisch geeignete** Rezeptzutaten erweitert werden, wenn dadurch eine eindeutige passende Rezeptvariante entsteht.
 
 Dabei gilt verbindlich:
@@ -417,6 +432,14 @@ Technische Auswahlpriorität bei proaktiven Kandidaten:
 4. bei weiterem Gleichstand keine automatische Auswahl.
 
 ## 9.4 Vorrat und Prep
+
+Eine konkret eingefrorene Rezeptcharge kann als **vollständig glatt püriert**
+gekennzeichnet werden. Nur bei einem dafür einzeln freigegebenen Rezept darf
+der Planner dann die ursprüngliche Textur-/Darreichungsstufe für genau diese
+Charge abweichend bewerten. Zutatenbereitschaft, automatische FOOD-Eignung,
+Mindestalter, Mahlzeiteneignung und übrige Safety-Gates bleiben unverändert.
+Fehlende/alte Vorratsangaben oder Freitextnotizen werden niemals stillschweigend
+als püriert interpretiert; das Originalrezept bleibt unverändert.
 
 - echter Rezeptvorrat darf bevorzugt verwendet werden, wenn die Vorratspräferenz aktiv und Bestand vorhanden ist;
 - eine frische Recipe-first-Mahlzeit behält ihre einzelnen Zutatenreservierungen;

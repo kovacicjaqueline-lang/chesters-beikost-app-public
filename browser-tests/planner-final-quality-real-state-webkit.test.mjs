@@ -200,6 +200,62 @@ try {
     21,
     `Sieben Tage mit bekannten Nicht-Allergenen müssen 21 vollständige Hauptmahlzeiten liefern: ${JSON.stringify(diagnostics.trusted)}`,
   );
+
+  const preparedChili = await page.evaluate(() => {
+    const api = window.__beikostTest;
+    api.reset();
+    const on = api.today();
+    const s = api.getState();
+    s.settings.planFrom = on;
+    s.settings.phaseSelected = "aufbau";
+    s.settings.textureStage = "2";
+    s.settings.preferInventoryInPlan = true;
+    s.planLocks = {};
+    s.manualMeals = {};
+    s.overrides = {};
+    s.deferred = { [on]: true };
+    s.logs = [];
+    const ids = ["weisse-bohnen", "suesskartoffel", "tomate", "mais"];
+    for (const f of s.foods) {
+      f.active = ids.includes(f.id);
+      if (f.active) f.manualStatus = "Verträgliche Basis";
+    }
+    for (const id of ids) {
+      s.logs.push({
+        id: `known-${id}`, date: api.addDays(on, -3), meal: "lunch",
+        foodIds: [id], foodOutcomes: { [id]: "eaten" }, outcome: "eaten",
+        createdAt: `${api.addDays(on, -3)}T12:00:00.000Z`,
+      });
+    }
+    s.inventory = [{
+      id: "prepared-chili", kind: "recipe", recipeName: "Mildes Bohnen-Süßkartoffel-Chili",
+      foodIds: ids, portions: 2, size: "Portion", frozenDate: api.addDays(on, -1),
+      preparationMode: "spoon-smooth", note: "Testcharge",
+    }];
+    api.setState(s);
+    const smooth = window.buildDays(on, 1, false)[0].meals.find((m) => m.meal === "lunch");
+    s.inventory[0].preparationMode = "";
+    api.setState(s);
+    const unmarked = window.buildDays(on, 1, false)[0].meals.find((m) => m.meal === "lunch");
+    return { smooth, unmarked };
+  });
+  assert.equal(preparedChili.smooth.recipeName, "Mildes Bohnen-Süßkartoffel-Chili");
+  assert.equal(preparedChili.smooth.recipeInventoryId, "prepared-chili");
+  assert.equal(preparedChili.smooth.presentationMode, "spoon-smooth");
+  assert.notEqual(preparedChili.unmarked.recipeName, "Mildes Bohnen-Süßkartoffel-Chili");
+  await page.evaluate(() => editInventoryForm("prepared-chili"));
+  await page.locator("#invPreparationMode").selectOption("spoon-smooth");
+  await page.locator("#saveInv").click();
+  const savedChili = await page.evaluate(() => {
+    const api = window.__beikostTest;
+    const on = api.today();
+    return {
+      batch: api.getState().inventory.find((item) => item.id === "prepared-chili"),
+      meal: window.buildDays(on, 1, false)[0].meals.find((item) => item.meal === "lunch"),
+    };
+  });
+  assert.equal(savedChili.batch.preparationMode, "spoon-smooth");
+  assert.equal(savedChili.meal.recipeName, "Mildes Bohnen-Süßkartoffel-Chili");
 } finally {
   await closeBrowserApp({ context: typeof context !== "undefined" ? context : null, browser, server });
 }

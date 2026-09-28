@@ -685,6 +685,106 @@ function recipeStockCandidate(meal, on, ctx) {
     });
   return states[0] || null;
 }
+function plannerSmoothRecipeBatch(recipe, batch, on) {
+  if (!recipe?.smoothBatchAllowed || batch?.preparationMode !== "spoon-smooth" ||
+      batch.kind !== "recipe" || Number(batch.portions) <= 0 ||
+      !recipeNameMatches(batch.recipeName, recipe.name)) return false;
+  if (recipe.hardMinMonths && monthsOld(on) < Number(recipe.hardMinMonths)) return false;
+  // Changing the serving texture never waives missing ingredients, hard age or
+  // automatic FOOD eligibility. Only the recipe's original texture stage differs.
+  return (recipe.ingredientMissing || []).length === 0 &&
+    (recipe.requirementMissing || []).length > 0 &&
+    (recipe.requirementMissing || []).every((missing) =>
+      String(missing).startsWith("Konsistenz:") ||
+      missing === "Darreichungsform: aktuell noch nicht passend");
+}
+function plannerRecipeBatchFor(recipe, on, ctx) {
+  if (!state.settings.preferInventoryInPlan) return null;
+  let reserved = ctx.recipeReserved?.get(recipe.name) || 0;
+  let batches = state.inventory.filter((batch) => batch.kind === "recipe" &&
+    recipeNameMatches(batch.recipeName, recipe.name) && Number(batch.portions) > 0 &&
+    (recipe.unlocked || plannerSmoothRecipeBatch(recipe, batch, on)))
+    .sort((a, b) => String(a.frozenDate).localeCompare(String(b.frozenDate)));
+  for (let batch of batches) {
+    let portions = Math.max(0, Math.floor(Number(batch.portions) || 0));
+    if (reserved < portions) return batch;
+    reserved -= portions;
+  }
+  return null;
+}
+function knownRecipeCandidate(meal, on, ctx) {
+  if (typeof recipeStates !== "function" || typeof plannerRecipeVariantIdSets !== "function") return null;
+  let explicit = food(state.overrides?.[`${on}|${meal}`]);
+  if (explicit && eligible(explicit, meal, on)) return null;
+  let candidates = recipeStates().filter((r) =>
+    (r.unlocked || plannerRecipeBatchFor(r, on, ctx)) && recipeSuitableForMeal(r, meal) &&
+    !(r.milkMeal === "full" && (ctx.fullMilkDates?.has(on) || recipeContainsMeatOrFish(r)))
+  ).flatMap((recipe) => plannerRecipeVariantIdSets(recipe, state.foods, recipeIngredientReady)
+    .filter((ids) => ids.some((id) =>
+      typeof plannerFoodCanBeAutomaticFocus !== "function" ||
+      plannerFoodCanBeAutomaticFocus(food(id))) && ids.every((id) => {
+      let item = food(id);
+      return item && eligible(item, meal, on) && canCombine(item);
+    }) && !combinationPaused(ids, on) &&
+      (typeof plannerCulinaryRecipeScore !== "function" ||
+        plannerCulinaryRecipeScore(recipe, ids, state.foods, meal) > -1000))
+    .map((ids) => ({ recipe, ids, batch: plannerRecipeBatchFor(recipe, on, ctx) })));
+  if (!candidates.length) return null;
+  candidates = candidates.filter((candidate) => ctx.recipeLastUse?.get(candidate.recipe.name) !== on);
+  if (!candidates.length) return null;
+  let prior = ctx.qualityLastFoodUse || ctx.lastFocus;
+  candidates.sort((a, b) => {
+    let recent = (candidate) => candidate.ids.reduce((sum, id) => {
+      let last = prior?.get(id);
+      return sum + (last && diffDays(on, last) <= 1 ? 2 : last && diffDays(on, last) <= 3 ? 1 : 0);
+    }, 0);
+    let used = (candidate) => ctx.recipePlannedUse?.get(candidate.recipe.name) || 0;
+    let culinary = (candidate) => typeof plannerCulinaryRecipeScore === "function"
+      ? plannerCulinaryRecipeScore(candidate.recipe, candidate.ids, state.foods, meal) : 0;
+    let stock = (candidate) => candidate.batch ? 1 : 0;
+    return recent(a) - recent(b) || used(a) - used(b) || culinary(b) - culinary(a) ||
+      stock(b) - stock(a) || a.recipe.name.localeCompare(b.recipe.name, "de");
+  });
+  let generation = Math.max(0, Number(state.settings?.planRebuildGeneration) || 0);
+  let best = candidates[0];
+  let tied = candidates.filter((candidate) =>
+    (ctx.recipePlannedUse?.get(candidate.recipe.name) || 0) ===
+    (ctx.recipePlannedUse?.get(best.recipe.name) || 0));
+  if (generation && tied.length > 1) best = tied[generation % tied.length];
+  return best;
+}
+function enrichKnownFreeMeal(meal, on, ctx) {
+  if (!meal || meal.recipeName || meal.compositionMode ||
+      (meal.sampleFoodIds || []).length || (meal.foodIds || []).length !== 2 ||
+      typeof plannerCulinaryAssessment !== "function") return meal;
+  let ids = meal.foodIds;
+  let original = plannerCulinaryAssessment(ids, state.foods, meal.meal);
+  let candidates = state.foods.filter((item) =>
+    !ids.includes(item.id) && !item.allergenGroup && canCombine(item) &&
+    eligible(item, meal.meal, on) &&
+    ["Gemüse", "Wurzel/Knolle", "Hülsenfrucht", "Fleisch", "Fisch", "Soja/Tofu"].includes(item.category) &&
+    !(isStarchyFood(item) && ids.some((id) => isStarchyFood(food(id)))) &&
+    !combinationPaused([...ids, item.id], on) &&
+    !(isMeatOrFish(item) && mealContainsMilkProduct(ids))
+  ).map((item) => ({
+    item,
+    assessment: plannerCulinaryAssessment([...ids, item.id], state.foods, meal.meal),
+  })).filter(({ assessment }) => assessment.allowed && assessment.score > original.score);
+  candidates.sort((a, b) => {
+    let last = (item) => ctx.qualityLastFoodUse?.get(item.id) || ctx.lastFocus?.get(item.id);
+    let recent = (item) => last(item) && diffDays(on, last(item)) <= 1 ? 1 : 0;
+    return recent(a.item) - recent(b.item) ||
+      b.assessment.score - a.assessment.score ||
+      (ctx.qualityFoodUse?.get(a.item.id) || 0) - (ctx.qualityFoodUse?.get(b.item.id) || 0) ||
+      usageCount(a.item.id) - usageCount(b.item.id) ||
+      a.item.priority - b.item.priority;
+  });
+  if (!candidates.length) return meal;
+  let extra = candidates[0].item.id;
+  meal.foodIds = [...ids, extra];
+  meal.baseFoodIds = [...new Set([...(meal.baseFoodIds || []), extra])];
+  return applyPlannedMealAmounts(meal);
+}
 function snackRecipeCandidate(on, ctx) {
   let candidates = (typeof viewRenderRecipeStates === "function" ? viewRenderRecipeStates() : recipeStates())
     .filter((r) =>
@@ -817,6 +917,7 @@ function mealSnapshot(date, meal, generated, mode = "manual") {
     inventoryFoodIds: [...(generated.inventoryFoodIds || [])],
     recipeName: generated.recipeName || "",
     recipeInventoryId: generated.recipeInventoryId || "",
+    preparationMode: generated.preparationMode || "",
     compositionMode: generated.compositionMode || "",
     recipeIngredientFoodIds: [...(generated.recipeIngredientFoodIds || [])],
     additionalFoodIds: [...(generated.additionalFoodIds || [])],
@@ -1090,11 +1191,15 @@ function buildDay(date, index, ctx) {
       continue;
     }
     if (!c && (!introDue || introAssigned)) {
-      let recipe = recipeStockCandidate(meal, date, ctx);
-      if (recipe) {
-        let batch = oldestRecipeBatch(recipe.name), ids = recipeFoodIds(recipe);
-        let recipeMeal = applyPlannedMealAmounts({ meal, active: true, focusId: ids[0], foodIds: ids, baseFoodIds: ids, sampleFoodIds: [], optionalAddons: [], inventoryFoodIds: [], recipeName: recipe.name, recipeInventoryId: batch?.id || "", milkMeal: recipe.milkMeal || "", type: "Rezeptvorrat", note: "Eine vorbereitete Portion aus dem Gefriervorrat verwenden." });
+      let selected = knownRecipeCandidate(meal, date, ctx);
+      if (selected) {
+        let { recipe, ids, batch } = selected;
+        let focusId = ids.find((id) => typeof plannerFoodCanBeAutomaticFocus !== "function" || plannerFoodCanBeAutomaticFocus(food(id))) || ids[0];
+        let smoothBatch = batch && recipe.smoothBatchAllowed && batch.preparationMode === "spoon-smooth";
+        let recipeMeal = applyPlannedMealAmounts({ meal, active: true, focusId, foodIds: ids, baseFoodIds: ids, sampleFoodIds: [], optionalAddons: [], inventoryFoodIds: [], recipeName: recipe.name, recipeInventoryId: batch?.id || "", preparationMode: smoothBatch ? "spoon-smooth" : "", milkMeal: recipe.milkMeal || "", type: batch ? "Rezeptvorrat" : "Rezept", note: smoothBatch ? "Diese Vorratsportion wurde vollständig glatt püriert; nur diese Zubereitungsform anbieten." : batch ? "Eine vorbereitete Portion aus dem Gefriervorrat verwenden." : "Passendes vorhandenes Rezept zubereiten." });
         reserveMealInventory(recipeMeal, ctx);
+        ctx.recipePlannedUse?.set(recipe.name, (ctx.recipePlannedUse.get(recipe.name) || 0) + 1);
+        ctx.recipeLastUse?.set(recipe.name, date);
         if (recipe.milkMeal === "full") ctx.fullMilkDates?.add(date);
         meals.push(recipeMeal); recordMealForQualityRotation(recipeMeal); used.push(recipeMeal.focusId); continue;
       }
@@ -1157,6 +1262,7 @@ function buildDay(date, index, ctx) {
           : "Bekannte Lebensmittel sinnvoll rotieren; Vorrat bevorzugt nutzen.";
     let generated = applyPlannedMealAmounts({ meal, active: true, focusId: f.id, foodIds: ids, baseFoodIds, sampleFoodIds, optionalAddons, milkMeal: mealContainsMilkProduct(ids) ? (introduction ? "small" : "full") : "", type: c.type, note });
     generated = applyRecipeFoodComposition(generated, date, ctx);
+    generated = enrichKnownFreeMeal(generated, date, ctx);
     generated = removeUnavailableGeneratedFoods(generated);
     if (!generated) { meals.push({ meal, active: true, empty: true }); continue; }
     if (mealMilkLevel(generated) === "full") ctx.fullMilkDates?.add(date);
@@ -1173,6 +1279,7 @@ function freshPlanContext() {
     inventoryReserved: new Map(),
     recipeReserved: new Map(),
     recipePlannedUse: new Map(),
+    recipeLastUse: new Map(),
     fullMilkDates: new Set(),
   };
 }

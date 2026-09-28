@@ -188,6 +188,13 @@ function presentationModeForMeal(
   ) return "";
 
   if (meal.recipeName) {
+    if (meal.recipeInventoryId && meal.preparationMode === "spoon-smooth" &&
+        typeof recipeByName === "function" && recipeByName(meal.recipeName)?.smoothBatchAllowed &&
+        typeof state !== "undefined" && state.inventory?.some((batch) =>
+          batch.id === meal.recipeInventoryId && batch.kind === "recipe" &&
+          batch.preparationMode === "spoon-smooth" && Number(batch.portions) > 0)) {
+      return "spoon-smooth";
+    }
     let map = recipeContractMap || (
       typeof RECIPE_HANDLING_CONTRACT !== "undefined"
         ? RECIPE_HANDLING_CONTRACT
@@ -553,7 +560,11 @@ function installPresentationModeRuntime() {
           state.settings,
           RECIPE_HANDLING_CONTRACT,
         );
-        if (handling.migrated && !handling.eligibleModes.length) {
+        let smoothBatch = plannedMeal.recipeInventoryId && plannedMeal.preparationMode === "spoon-smooth" &&
+          recipe?.smoothBatchAllowed && state.inventory?.some((batch) =>
+            batch.id === plannedMeal.recipeInventoryId && batch.kind === "recipe" &&
+            batch.preparationMode === "spoon-smooth" && Number(batch.portions) > 0);
+        if (handling.migrated && !handling.eligibleModes.length && !smoothBatch) {
           delete state.planLocks[key];
           if (typeof save === "function") save();
           return null;

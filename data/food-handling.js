@@ -82,6 +82,7 @@ const RECIPE_CONTRACT_GROUPS = Object.freeze({
     "Kabeljau-Süßkartoffel-Fischküchlein"
   ]),
   fingerEasyChew: Object.freeze([
+    "Herzhafte Hirseschnitten",
     "Obst-Hafer-Pancakes",
     "Birne-Hirse-Pancakes",
     "Gemüse-Hafer-Pancakes",
@@ -303,6 +304,9 @@ const RECIPE_CONTRACT_OVERRIDES = Object.freeze({
   }),
   "Grießschnitten ohne Panade": Object.freeze({
     servingRequirement: "Sehr weich und feucht als handlange Sticks anbieten; ohne Panade, harte Kanten oder trockene Kruste. Die Schnitte muss zwischen zwei Fingern leicht zerdrückbar sein.",
+  }),
+  "Herzhafte Hirseschnitten": Object.freeze({
+    servingRequirement: "Als breite, gut greifbare Sticks anbieten. Die Hirse muss vollständig weich gekocht und die Schnitten vollständig durchgebacken, feucht und ohne harte oder dunkle Kruste sein. Vor dem Servieren prüfen, dass sich ein Stick zwischen zwei Fingern leicht zerdrücken lässt; nur aufrecht sitzend und direkt beaufsichtigt anbieten.",
   }),
   "Apfel-Milchreisschnitten": Object.freeze({
     servingRequirement: "Feucht und weich als breite Sticks anbieten; keine klebrig-kompakte Masse und keine kleinen runden Reisstücke.",

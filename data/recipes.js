@@ -349,6 +349,32 @@ const RECIPES = [
     "skillRequirement": "Kann weiche kompakte Fingerfoodstücke sicher abbeißen und kauen. Das Stück muss zwischen zwei Fingern leicht zerdrückbar sein; nur aufrecht sitzend und direkt beaufsichtigt anbieten."
   },
   {
+    "name": "Herzhafte Hirseschnitten",
+    "category": "balls",
+    "requires": [
+      "Hirse",
+      "Karotte",
+      "Zucchini",
+      "Ei",
+      "Frischkäse",
+      "Rapsöl"
+    ],
+    "stage": 3,
+    "batch": "ca. 1 Backblech weiche Schnitten",
+    "ingredients": "120 g Goldhirse, 1 kleine Karotte, 1 kleine Zucchini, 2 Eier, 2 EL Frischkäse, 2 EL Rapsöl",
+    "note": "Goldhirse gründlich ausspülen und in der doppelten Menge Wasser vollständig weich kochen. Zucchini raspeln und Karotte fein reiben; beides gut ausdrücken. Mit vollständig verquirlten Eiern, Frischkäse und Rapsöl unter die Hirse rühren. Die Masse gleichmäßig und nicht zu dünn auf ein Blech streichen und bei 180 °C Ober-/Unterhitze etwa 20–25 Minuten vollständig durchbacken. Die Mitte muss durchgegart, feucht und weich sein; keine harte oder dunkle Kruste entstehen lassen. Abkühlen lassen und in breite, gut greifbare Sticks schneiden. Vor dem Servieren prüfen, dass sie sich zwischen zwei Fingern leicht zerdrücken lassen; ohne zugesetztes Salz zubereiten.",
+    "freezable": true,
+    "freezerNote": "Vollständig abkühlen lassen, portionsweise einfrieren und im Kühlschrank auftauen; vor dem Servieren gleichmäßig erwärmen und wieder auf weiche, leicht zerdrückbare Konsistenz prüfen.",
+    "tags": [
+      "Snack",
+      "Fingerfood",
+      "Backen",
+      "einfrierbar"
+    ],
+    "searchAliases": [],
+    "skillRequirement": "Als breite, weiche Sticks anbieten; sie müssen sich zwischen zwei Fingern leicht zerdrücken lassen. Nur aufrecht sitzend und direkt beaufsichtigt essen lassen."
+  },
+  {
     "name": "Omelettstreifen",
     "category": "balls",
     "requires": [

@@ -269,6 +269,40 @@ try {
   assert.equal(unrepairedSingleton?.active, true, "Lunch-Slot muss in Phase Kennenlernen aktiv bleiben");
   assert.equal(unrepairedSingleton?.empty, true, `unreparierbare normale Einzelzutat muss leer werden: ${JSON.stringify(unrepairedSingleton)}`);
   assert.deepEqual(unrepairedSingleton?.foodIds || [], [], "ein unreparierbarer Slot darf keine Einzelzutat durchlassen");
+
+  await page.evaluate((snapshot) => {
+    window.__beikostTest.setState(snapshot);
+    window.__originalWeekReplanHook = window.__plannerWeekReplanWithDiversification;
+    window.__plannerWeekReplanCalls = 0;
+    window.__plannerWeekReplanWithDiversification = (...args) => {
+      window.__plannerWeekReplanCalls += 1;
+      return window.__originalWeekReplanHook(...args);
+    };
+  }, setup.snapshot);
+
+  await page.locator('nav button[data-view="plan"]').click();
+  await page.locator("#plan .plan-secondary-toggle").click();
+  await page.locator("#planRecalculate").click();
+  await page.locator("#confirmPlanRebuild").click();
+  const replanCalls = await page.evaluate(() => {
+    return {
+      generation: window.__beikostTest.getState().settings.planRebuildGeneration,
+      calls: window.__plannerWeekReplanCalls,
+    };
+  });
+  assert.ok(
+    replanCalls.generation > 0,
+    "Woche neu planen muss die nächste fachlich gleichwertige Rotationsrunde speichern",
+  );
+  assert.ok(
+    replanCalls.calls > 0,
+    "die sichtbare Wochen-Neuplanung muss den Rotations-Hook erreichen",
+  );
+  await page.evaluate(() => {
+    window.__plannerWeekReplanWithDiversification = window.__originalWeekReplanHook;
+    delete window.__originalWeekReplanHook;
+    delete window.__plannerWeekReplanCalls;
+  });
 } finally {
   await closeBrowserApp({ context: typeof context !== "undefined" ? context : null, browser, server });
 }

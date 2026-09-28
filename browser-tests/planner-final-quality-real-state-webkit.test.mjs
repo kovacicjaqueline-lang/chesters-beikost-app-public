@@ -249,7 +249,14 @@ try {
     window.invalidateDayPlanRuntimeCache?.();
     knownRecipeCandidate = function tracedKnownRecipeCandidate(meal, date, ctx) {
       const candidate = originalKnownRecipeCandidate(meal, date, ctx);
-      recipeCalls.push({ meal, date, name: candidate?.recipe?.name || "", used: [...(ctx.recipeLastUse || [])] });
+      const recipe = recipeStates().find((item) => item.name === "Mildes Bohnen-Süßkartoffel-Chili");
+      recipeCalls.push({ meal, date, name: candidate?.recipe?.name || "", used: [...(ctx.recipeLastUse || [])],
+        foods: state.foods.length, active: ids.map((id) => !!food(id)?.active),
+        ready: recipe?.ingredientMissing, requirement: recipe?.requirementMissing,
+        batch: plannerRecipeBatchFor(recipe, date, ctx)?.id || "", suitable: recipeSuitableForMeal(recipe, meal),
+        variants: plannerRecipeVariantIdSets(recipe, state.foods, recipeIngredientReady),
+        inventory: state.inventory.map((batch) => [batch.id, batch.portions, batch.preparationMode]),
+      });
       return candidate;
     };
     let smooth;

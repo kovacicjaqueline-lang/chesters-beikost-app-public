@@ -233,13 +233,22 @@ try {
       preparationMode: "spoon-smooth", note: "Testcharge",
     }];
     api.setState(s);
+    const chiliState = recipeStates().find((recipe) => recipe.name === "Mildes Bohnen-Süßkartoffel-Chili");
+    const chiliVariants = plannerRecipeVariantIdSets(chiliState, state.foods, recipeIngredientReady);
+    const chiliCandidate = knownRecipeCandidate("lunch", on, freshPlanContext());
+    const debug = {
+      status: chiliState ? { unlocked: chiliState.unlocked, ingredientMissing: chiliState.ingredientMissing, requirementMissing: chiliState.requirementMissing, smoothBatchAllowed: chiliState.smoothBatchAllowed } : null,
+      batchAllowed: plannerRecipeBatchFor(chiliState, on, freshPlanContext())?.id || "",
+      variants: chiliVariants.map((v) => ({ ids: v, eligible: v.map((id) => eligible(food(id), "lunch", on)), known: v.map((id) => canCombine(food(id))), score: plannerCulinaryRecipeScore(chiliState, v, state.foods, "lunch") })),
+      candidate: chiliCandidate?.recipe?.name || "",
+    };
     const smooth = window.buildDays(on, 1, false)[0].meals.find((m) => m.meal === "lunch");
     s.inventory[0].preparationMode = "";
     api.setState(s);
     const unmarked = window.buildDays(on, 1, false)[0].meals.find((m) => m.meal === "lunch");
-    return { smooth, unmarked };
+    return { smooth, unmarked, debug };
   });
-  assert.equal(preparedChili.smooth.recipeName, "Mildes Bohnen-Süßkartoffel-Chili");
+  assert.equal(preparedChili.smooth.recipeName, "Mildes Bohnen-Süßkartoffel-Chili", JSON.stringify(preparedChili.debug));
   assert.equal(preparedChili.smooth.recipeInventoryId, "prepared-chili");
   assert.equal(preparedChili.smooth.presentationMode, "spoon-smooth");
   assert.notEqual(preparedChili.unmarked.recipeName, "Mildes Bohnen-Süßkartoffel-Chili");

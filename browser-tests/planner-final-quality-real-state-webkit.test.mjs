@@ -255,6 +255,9 @@ try {
         ready: recipe?.ingredientMissing, requirement: recipe?.requirementMissing,
         batch: plannerRecipeBatchFor(recipe, date, ctx)?.id || "", suitable: recipeSuitableForMeal(recipe, meal),
         variants: plannerRecipeVariantIdSets(recipe, state.foods, recipeIngredientReady),
+        context: { recipeReserved: [...(ctx.recipeReserved || [])], recipePlannedUse: [...(ctx.recipePlannedUse || [])], recipeLastUse: [...(ctx.recipeLastUse || [])], fullMilk: [...(ctx.fullMilkDates || [])],
+          focusAllowed: ids.map((id) => plannerFoodCanBeAutomaticFocus(food(id))), eligible: ids.map((id) => eligible(food(id), meal, date)), combine: ids.map((id) => canCombine(food(id))), paused: combinationPaused(ids, date),
+          override: state.overrides?.[`${date}|${meal}`] || "" },
         inventory: state.inventory.map((batch) => [batch.id, batch.portions, batch.preparationMode]),
       });
       return candidate;

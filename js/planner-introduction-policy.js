@@ -5,6 +5,8 @@
  * Fachlicher Vertrag:
  * - gewöhnliche offene Nicht-Allergene werden nicht automatisch als Lernaufgabe
  *   eingeplant; manuelle Planung und passende Rezepte bleiben möglich;
+ * - FOODs mit explizitem Einführungsmodus "none" werden nicht automatisch als
+ *   Allergen-Einführung oder -Wiederholung geplant; manuelle Auswahl bleibt möglich;
  * - ein bloß erfolgreich probiertes FOOD blockiert keine weitere Einführung;
  * - eine echte Ablehnung darf weiterhin als gezielte Wiederholung priorisiert werden;
  * - sobald eine Allergen-Einführung oder Allergen-Wiederholung geplant ist, bleibt
@@ -41,6 +43,23 @@ const PLANNER_INTRODUCTION_ALLERGEN_TYPES = new Set([
   "Allergen wiederholen",
 ]);
 
+// Bestehende fachliche Ausnahme aus dem Plan-Check auch im Auto-Planner anwenden.
+// Explizite Stammdaten dürfen die Fallback-Policy jederzeit ersetzen.
+const PLANNER_INTRODUCTION_MODE_BY_FOOD_ID = Object.freeze({
+  brot: "none",
+});
+
+function plannerIntroductionModeForFood(item) {
+  let explicitMode = String(item?.plannerIntroductionMode || "").trim();
+  if (explicitMode) return explicitMode;
+  return PLANNER_INTRODUCTION_MODE_BY_FOOD_ID[String(item?.id || "")] || "food";
+}
+
+function plannerIntroductionFoodAllowsAutomaticAllergenLearning(item) {
+  if (!item?.allergenGroup) return true;
+  return plannerIntroductionModeForFood(item) !== "none";
+}
+
 function plannerIntroductionMealIsLearning(meal) {
   if (!meal?.active || meal.empty) return false;
   if ((meal.sampleFoodIds || []).length) return true;
@@ -63,6 +82,11 @@ function plannerIntroductionCandidateShouldSkip(
 ) {
   let item = result?.f;
   if (!item) return true;
+  if (
+    item.allergenGroup &&
+    result.type !== "manuell" &&
+    !plannerIntroductionFoodAllowsAutomaticAllergenLearning(item)
+  ) return true;
   if (item.allergenGroup && !allowAllergen) return true;
   if (
     !item.allergenGroup &&
@@ -88,7 +112,10 @@ function plannerIntroductionPrefilterBlockedFoods(
   for (let item of foods || []) {
     if (!item?.id || blocked.has(item.id)) continue;
     if (item.allergenGroup) {
-      if (!allowAllergen) blocked.add(item.id);
+      if (
+        !allowAllergen ||
+        (item.id !== overrideId && !plannerIntroductionFoodAllowsAutomaticAllergenLearning(item))
+      ) blocked.add(item.id);
       continue;
     }
     if (
@@ -109,6 +136,7 @@ function plannerIntroductionNormalizeCandidate(
   if (!result?.f) return result;
   if (
     result.f.allergenGroup &&
+    plannerIntroductionFoodAllowsAutomaticAllergenLearning(result.f) &&
     typeof dueFn === "function" &&
     dueFn(result.f, on) &&
     result.type !== "Allergen einführen"
@@ -626,6 +654,9 @@ if (typeof module !== "undefined" && module.exports) {
     PLANNER_INTRODUCTION_LEARNING_TYPES,
     PLANNER_INTRODUCTION_ALLERGEN_TYPES,
     PLANNER_INTRODUCTION_AUTOPLAN_NON_ALLERGENS,
+    PLANNER_INTRODUCTION_MODE_BY_FOOD_ID,
+    plannerIntroductionModeForFood,
+    plannerIntroductionFoodAllowsAutomaticAllergenLearning,
     plannerIntroductionMealIsLearning,
     plannerIntroductionMealIsAllergenLearning,
     plannerIntroductionCandidateShouldSkip,

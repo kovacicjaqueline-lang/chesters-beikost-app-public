@@ -104,9 +104,11 @@ test("Brot ist explizit kein eigenes fortsetzbares Allergen-Einführungsziel", (
     id: "brot",
     name: "Brot",
     allergenGroup: "Glutenhaltiges Getreide",
+    plannerIntroductionMode: "none",
   };
   assert.equal(solutions.allergenIntroductionTargetMode(brot), "none");
   assert.equal(solutions.allergenIntroductionTarget(brot), null);
+  assert.equal(maintenance.targetForFood(brot)?.key, "allergen:Glutenhaltiges Getreide");
   assert.equal(
     solutions.allergenIntroductionNeedsContinuation(
       brot,

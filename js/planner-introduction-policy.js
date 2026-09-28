@@ -43,16 +43,8 @@ const PLANNER_INTRODUCTION_ALLERGEN_TYPES = new Set([
   "Allergen wiederholen",
 ]);
 
-// Bestehende fachliche Ausnahme aus dem Plan-Check auch im Auto-Planner anwenden.
-// Explizite Stammdaten dürfen die Fallback-Policy jederzeit ersetzen.
-const PLANNER_INTRODUCTION_MODE_BY_FOOD_ID = Object.freeze({
-  brot: "none",
-});
-
 function plannerIntroductionModeForFood(item) {
-  let explicitMode = String(item?.plannerIntroductionMode || "").trim();
-  if (explicitMode) return explicitMode;
-  return PLANNER_INTRODUCTION_MODE_BY_FOOD_ID[String(item?.id || "")] || "food";
+  return String(item?.plannerIntroductionMode || "").trim() || "food";
 }
 
 function plannerIntroductionFoodAllowsAutomaticAllergenLearning(item) {
@@ -654,7 +646,6 @@ if (typeof module !== "undefined" && module.exports) {
     PLANNER_INTRODUCTION_LEARNING_TYPES,
     PLANNER_INTRODUCTION_ALLERGEN_TYPES,
     PLANNER_INTRODUCTION_AUTOPLAN_NON_ALLERGENS,
-    PLANNER_INTRODUCTION_MODE_BY_FOOD_ID,
     plannerIntroductionModeForFood,
     plannerIntroductionFoodAllowsAutomaticAllergenLearning,
     plannerIntroductionMealIsLearning,

@@ -26,16 +26,14 @@
   }
 
   function familyKey(record) {
-    if (!record) return "";
-    if (text(record.allergenFamily)) return `family:${text(record.allergenFamily)}`;
-    return `food:${text(record.id)}`;
+    return baseSolutions.allergenIntroductionTarget(record)?.key || "";
   }
 
   function familyFoodIds(record) {
     const key = familyKey(record);
     if (!key) return [];
     return (state?.foods || [])
-      .filter((candidate) => candidate?.allergenGroup && familyKey(candidate) === key)
+      .filter((candidate) => familyKey(candidate) === key)
       .map((candidate) => candidate.id);
   }
 
@@ -88,7 +86,7 @@
     const groups = new Map();
 
     for (const record of state.foods) {
-      if (!record?.active || !record.allergenGroup) continue;
+      if (!record?.active || !familyKey(record)) continue;
       if (typeof status === "function" && status(record) === "Pausiert") continue;
       if (successfulFamilyExposureCount(record) !== 1) continue;
 

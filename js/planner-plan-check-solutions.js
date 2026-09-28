@@ -15,13 +15,6 @@
   const MEAL_ORDER = Object.freeze({ breakfast: 0, lunch: 1, snack: 2, dinner: 3 });
   const OPEN_GOAL = "open_goal";
   const PROJECTED_GOAL = "projected_covered_goal";
-  // Manche FOODs tragen relevante Allergeninformation, sind aber kein eigenes
-  // fortsetzbares Einführungsziel. Diese Produktentscheidung lebt zentral an der
-  // Zieldefinition statt als FOOD-Sonderfall in der Fortsetzungslogik.
-  const ALLERGEN_INTRODUCTION_TARGET_POLICY = Object.freeze({
-    brot: "none",
-  });
-
   function text(value) {
     return String(value == null ? "" : value).trim();
   }
@@ -52,9 +45,7 @@
   }
 
   function allergenIntroductionTargetMode(record = {}) {
-    const explicit = text(record?.plannerIntroductionMode);
-    if (explicit) return explicit;
-    return ALLERGEN_INTRODUCTION_TARGET_POLICY[text(record?.id)] || "default";
+    return text(record?.plannerIntroductionMode) || "default";
   }
 
   function allergenIntroductionTarget(record = {}) {
@@ -174,7 +165,6 @@
     FEATURE_VERSION,
     INTRO_OPEN_CODE,
     INTRO_PROJECTED_CODE,
-    ALLERGEN_INTRODUCTION_TARGET_POLICY,
     allergenIntroductionTargetMode,
     allergenIntroductionTarget,
     foodSpecificIntroductionCoveredByEstablishedMaintenance,

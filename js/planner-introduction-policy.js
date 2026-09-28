@@ -5,6 +5,8 @@
  * Fachlicher Vertrag:
  * - gewöhnliche offene Nicht-Allergene werden nicht automatisch als Lernaufgabe
  *   eingeplant; manuelle Planung und passende Rezepte bleiben möglich;
+ * - FOODs mit explizitem Einführungsmodus "none" werden nicht automatisch als
+ *   Allergen-Einführung oder -Wiederholung geplant; manuelle Auswahl bleibt möglich;
  * - ein bloß erfolgreich probiertes FOOD blockiert keine weitere Einführung;
  * - eine echte Ablehnung darf weiterhin als gezielte Wiederholung priorisiert werden;
  * - sobald eine Allergen-Einführung oder Allergen-Wiederholung geplant ist, bleibt
@@ -41,6 +43,15 @@ const PLANNER_INTRODUCTION_ALLERGEN_TYPES = new Set([
   "Allergen wiederholen",
 ]);
 
+function plannerIntroductionModeForFood(item) {
+  return String(item?.plannerIntroductionMode || "").trim() || "food";
+}
+
+function plannerIntroductionFoodAllowsAutomaticAllergenLearning(item) {
+  if (!item?.allergenGroup) return true;
+  return plannerIntroductionModeForFood(item) !== "none";
+}
+
 function plannerIntroductionMealIsLearning(meal) {
   if (!meal?.active || meal.empty) return false;
   if ((meal.sampleFoodIds || []).length) return true;
@@ -63,6 +74,11 @@ function plannerIntroductionCandidateShouldSkip(
 ) {
   let item = result?.f;
   if (!item) return true;
+  if (
+    item.allergenGroup &&
+    result.type !== "manuell" &&
+    !plannerIntroductionFoodAllowsAutomaticAllergenLearning(item)
+  ) return true;
   if (item.allergenGroup && !allowAllergen) return true;
   if (
     !item.allergenGroup &&
@@ -88,7 +104,10 @@ function plannerIntroductionPrefilterBlockedFoods(
   for (let item of foods || []) {
     if (!item?.id || blocked.has(item.id)) continue;
     if (item.allergenGroup) {
-      if (!allowAllergen) blocked.add(item.id);
+      if (
+        !allowAllergen ||
+        (item.id !== overrideId && !plannerIntroductionFoodAllowsAutomaticAllergenLearning(item))
+      ) blocked.add(item.id);
       continue;
     }
     if (
@@ -109,6 +128,7 @@ function plannerIntroductionNormalizeCandidate(
   if (!result?.f) return result;
   if (
     result.f.allergenGroup &&
+    plannerIntroductionFoodAllowsAutomaticAllergenLearning(result.f) &&
     typeof dueFn === "function" &&
     dueFn(result.f, on) &&
     result.type !== "Allergen einführen"
@@ -218,7 +238,8 @@ function installPlannerIntroductionPolicyRuntime() {
     );
     let max = (state?.foods?.length || 0) + 1;
     for (let i = 0; i < max; i++) {
-      let result = originalIntroductionCandidate(meal, on, ctx, blocked);
+      // Keep policy-filtered focus candidates separate from the trusted-base pool.
+      let result = originalIntroductionCandidate(meal, on, ctx, blocked, exclude);
       if (!result?.f) return null;
       result = plannerIntroductionNormalizeCandidate(
         result,
@@ -626,6 +647,8 @@ if (typeof module !== "undefined" && module.exports) {
     PLANNER_INTRODUCTION_LEARNING_TYPES,
     PLANNER_INTRODUCTION_ALLERGEN_TYPES,
     PLANNER_INTRODUCTION_AUTOPLAN_NON_ALLERGENS,
+    plannerIntroductionModeForFood,
+    plannerIntroductionFoodAllowsAutomaticAllergenLearning,
     plannerIntroductionMealIsLearning,
     plannerIntroductionMealIsAllergenLearning,
     plannerIntroductionCandidateShouldSkip,

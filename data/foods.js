@@ -3270,6 +3270,7 @@ const FOOD_DB = [
     "priority": 152,
     "active": true,
     "allergenGroup": "Glutenhaltiges Getreide",
+    "plannerIntroductionMode": "none",
     "ironRich": false,
     "ph": false,
     "alias": "",

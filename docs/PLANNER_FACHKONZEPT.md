@@ -272,6 +272,7 @@ Neue Allergengruppen müssen durch dieselbe Plannerlogik laufen wie bereits vorh
 
 ## 6.2 Einführung und gezielte Wiederholung ✅ main
 
+- `allergenGroup` beschreibt auch Lebensmittel, die ein Allergen enthalten oder für dessen Pflege zählen; daraus folgt kein eigenes FOOD-Einführungsziel. `plannerIntroductionMode: "none"` im kanonischen FOOD-Stamm schließt ein solches Ziel aus. Brot bleibt manuell anbietbar und kann als bekannte glutenhaltige Quelle zur Pflege beitragen, wird aber nicht selbst als „Brot-Allergen“ eingeführt oder gezielt wiederholt. Die Einführung tatsächlicher Quellen wie Weizen und Ei bleibt davon getrennt.
 - Ein noch offenes Allergen benötigt grundsätzlich eine geeignete bekannte Basis. Fachlich ausdrücklich als eigenständig geeignete Allergene gekennzeichnete FOODs dürfen davon abweichen; aktuell gilt das für Ei (`plannerIntroductionMode: "standalone"`), das als gut durchgegarte eigenständige Speise eingeführt oder gezielt wiederholt werden darf. Andere Allergene bleiben basispflichtig, sofern nicht separat fachlich freigegeben.
 - Eine gezielte Wiederholung bleibt Teil der Lernphase, wenn sie fachlich noch zur Einführung gehört, etwa als bewusstes Follow-up nach einer Einführung oder Reaktion/Ablehnung.
 - Solche Allergen-Wiederholungen dürfen vorhandene harte Mahlzeiten-/Safety-Gates nicht umgehen.

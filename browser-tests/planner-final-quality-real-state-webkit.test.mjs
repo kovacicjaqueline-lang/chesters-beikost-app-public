@@ -43,11 +43,13 @@ try {
   const diagnostics = await page.evaluate(() => {
     const api = window.__beikostTest;
     const culinaryTrace = [];
+    let traceCulinary = false;
     const baseCulinaryAssessment = window.plannerCulinaryAssessment;
     if (typeof baseCulinaryAssessment === "function") {
       window.plannerCulinaryAssessment = function tracedPlannerCulinaryAssessment(ids, foods, meal, options = {}) {
         const result = baseCulinaryAssessment(ids, foods, meal, options);
         if (
+          traceCulinary &&
           result &&
           !result.allowed &&
           ["breakfast", "lunch", "dinner"].includes(meal)
@@ -191,7 +193,14 @@ try {
     };
   });
 
-  console.log(`[planner-final-quality-real-state] ${JSON.stringify(diagnostics)}`);
+  console.log(`[planner-final-quality-real-state] ${JSON.stringify({
+    everyday: diagnostics.everyday,
+    trusted: diagnostics.trusted,
+    culinaryIssueCounts: {
+      everyday: diagnostics.everydayTrace.length,
+      trusted: diagnostics.trustedTrace.length,
+    },
+  })}`);
 
   const trustedVisible = diagnostics.trusted.flatMap((day) => day.meals)
     .filter((meal) => meal.active && !meal.empty && meal.focusId);
@@ -200,6 +209,103 @@ try {
     21,
     `Sieben Tage mit bekannten Nicht-Allergenen müssen 21 vollständige Hauptmahlzeiten liefern: ${JSON.stringify(diagnostics.trusted)}`,
   );
+
+  const preparedChili = await page.evaluate(() => {
+    const api = window.__beikostTest;
+    api.reset();
+    const on = api.addDays(api.today(), 4);
+    const s = api.getState();
+    s.settings.planFrom = on;
+    s.settings.phaseSelected = "aufbau";
+    s.settings.textureStage = "2";
+    s.settings.preferInventoryInPlan = true;
+    s.planLocks = {};
+    s.manualMeals = {};
+    s.overrides = {};
+    s.deferred = { [on]: true };
+    s.logs = [];
+    const ids = ["weisse-bohnen", "suesskartoffel", "tomate", "mais"];
+    for (const f of s.foods) {
+      f.active = ids.includes(f.id);
+      if (f.active) f.manualStatus = "Verträgliche Basis";
+    }
+    for (const id of ids) {
+      s.logs.push({
+        id: `known-${id}`, date: api.addDays(api.today(), -3), meal: "lunch",
+        foodIds: [id], foodOutcomes: { [id]: "eaten" }, outcome: "eaten",
+        createdAt: `${api.addDays(api.today(), -3)}T12:00:00.000Z`,
+      });
+    }
+    s.inventory = [{
+      id: "prepared-chili", kind: "recipe", recipeName: "Mildes Bohnen-Süßkartoffel-Chili",
+      foodIds: ids, portions: 2, size: "Portion", frozenDate: api.addDays(api.today(), -1),
+      preparationMode: "spoon-smooth", note: "Testcharge",
+    }];
+    api.setState(s);
+    traceCulinary = true;
+    const chiliState = recipeStates().find((recipe) => recipe.name === "Mildes Bohnen-Süßkartoffel-Chili");
+    const chiliVariants = plannerRecipeVariantIdSets(chiliState, state.foods, recipeIngredientReady);
+    const chiliCandidate = knownRecipeCandidate("lunch", on, freshPlanContext());
+    const debug = {
+      status: chiliState ? { unlocked: chiliState.unlocked, ingredientMissing: chiliState.ingredientMissing, requirementMissing: chiliState.requirementMissing, smoothBatchAllowed: chiliState.smoothBatchAllowed } : null,
+      batchAllowed: plannerRecipeBatchFor(chiliState, on, freshPlanContext())?.id || "",
+      variants: chiliVariants.map((v) => ({ ids: v, eligible: v.map((id) => eligible(food(id), "lunch", on)), known: v.map((id) => canCombine(food(id))), score: plannerCulinaryRecipeScore(chiliState, v, state.foods, "lunch") })),
+      candidate: chiliCandidate?.recipe?.name || "",
+      locks: Object.keys(state.planLocks || {}).filter((key) => key.startsWith(`${on}|`)),
+    };
+    const originalKnownRecipeCandidate = knownRecipeCandidate;
+    const recipeCalls = [];
+    debug.cacheBefore = window.__dayPlanRuntimeCache?.stats();
+    window.invalidateDayPlanRuntimeCache?.();
+    knownRecipeCandidate = function tracedKnownRecipeCandidate(meal, date, ctx) {
+      const candidate = originalKnownRecipeCandidate(meal, date, ctx);
+      const recipe = recipeStates().find((item) => item.name === "Mildes Bohnen-Süßkartoffel-Chili");
+      recipeCalls.push({ meal, date, name: candidate?.recipe?.name || "", used: [...(ctx.recipeLastUse || [])],
+        foods: state.foods.length, active: ids.map((id) => !!food(id)?.active),
+        ready: recipe?.ingredientMissing, requirement: recipe?.requirementMissing,
+        batch: plannerRecipeBatchFor(recipe, date, ctx)?.id || "", suitable: recipeSuitableForMeal(recipe, meal),
+        variants: plannerRecipeVariantIdSets(recipe, state.foods, recipeIngredientReady),
+        context: { recipeReserved: [...(ctx.recipeReserved || [])], recipePlannedUse: [...(ctx.recipePlannedUse || [])], recipeLastUse: [...(ctx.recipeLastUse || [])], fullMilk: [...(ctx.fullMilkDates || [])],
+          focusAllowed: ids.map((id) => plannerFoodCanBeAutomaticFocus(food(id))), eligible: ids.map((id) => eligible(food(id), meal, date)), combine: ids.map((id) => canCombine(food(id))), paused: combinationPaused(ids, date),
+          unavailable: ids.map((id) => isFoodUnavailable(id)), automaticEligibility: ids.map((id) => window.automaticFoodEligibility(food(id), date, state.settings)),
+          foodRules: ids.map((id) => { const item = food(id); return { id, meals: item?.meals, active: item?.active, manualStatus: item?.manualStatus, autoPlan: item?.autoPlan ?? null, minPhase: item?.minPhase ?? null, minAgeMonths: item?.minAgeMonths ?? null, shoppingHint: state.shoppingHints?.[id] || null, pantry: !!state.pantry?.[id], settings: { phaseSelected: state.settings?.phaseSelected, birthDate: state.settings?.birthDate } }; }),
+          override: state.overrides?.[`${date}|${meal}`] || "" },
+        inventory: state.inventory.map((batch) => [batch.id, batch.portions, batch.preparationMode]),
+      });
+      return candidate;
+    };
+    let smooth;
+    try {
+      smooth = window.buildDays(on, 1, false)[0].meals.find((m) => m.meal === "lunch");
+    } finally {
+      knownRecipeCandidate = originalKnownRecipeCandidate;
+    }
+    debug.recipeCalls = recipeCalls;
+    debug.deferred = state.deferred?.[on];
+    debug.finalAssessment = window.PlannerFinalQuality?.assessAutomaticMeal(smooth);
+    debug.smooth = { recipeName: smooth.recipeName, foodIds: smooth.foodIds, type: smooth.type, note: smooth.note, lockedMode: smooth.lockedMode };
+    s.inventory[0].preparationMode = "";
+    api.setState(s);
+    const unmarked = window.buildDays(on, 1, false)[0].meals.find((m) => m.meal === "lunch");
+    return { smooth, unmarked, debug };
+  });
+  assert.equal(preparedChili.smooth.recipeName, "Mildes Bohnen-Süßkartoffel-Chili", JSON.stringify(preparedChili.debug));
+  assert.equal(preparedChili.smooth.recipeInventoryId, "prepared-chili");
+  assert.equal(preparedChili.smooth.presentationMode, "spoon-smooth");
+  assert.notEqual(preparedChili.unmarked.recipeName, "Mildes Bohnen-Süßkartoffel-Chili");
+  await page.evaluate(() => editInventoryForm("prepared-chili"));
+  await page.locator("#invPreparationMode").selectOption("spoon-smooth");
+  await page.locator("#saveInv").click();
+  const savedChili = await page.evaluate(() => {
+    const api = window.__beikostTest;
+    const on = api.addDays(api.today(), 4);
+    return {
+      batch: api.getState().inventory.find((item) => item.id === "prepared-chili"),
+      meal: window.buildDays(on, 1, false)[0].meals.find((item) => item.meal === "lunch"),
+    };
+  });
+  assert.equal(savedChili.batch.preparationMode, "spoon-smooth");
+  assert.equal(savedChili.meal.recipeName, "Mildes Bohnen-Süßkartoffel-Chili");
 } finally {
   await closeBrowserApp({ context: typeof context !== "undefined" ? context : null, browser, server });
 }

@@ -292,6 +292,7 @@ const RECIPE_CATALOG_ADDITIONS = Object.freeze([
   Object.freeze({
     name: "Mildes Bohnen-Süßkartoffel-Chili",
     category: "family",
+    smoothBatchAllowed: true,
     requires: Object.freeze(["Weiße Bohnen", "Süßkartoffel", "Tomate", "Mais"]),
     stage: 4,
     batch: "4 Familienportionen",

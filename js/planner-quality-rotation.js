@@ -177,12 +177,13 @@ function plannerQualityRecencyBucket(lastDateValue, on, diffFn) {
   return 0;
 }
 
-function plannerQualityCandidateTuple(result, index, ctx, on, diffFn, focusId = "") {
+function plannerQualityCandidateTuple(result, index, ctx, on, diffFn, focusId = "", optionCount = 1) {
   let id = result?.f?.id || "";
   let pairUse = focusId ? Number(ctx?.qualityPairUse?.get(plannerQualityPairKey(focusId, id)) || 0) : 0;
   let recency = plannerQualityRecencyBucket(ctx?.qualityLastFoodUse?.get(id), on, diffFn);
   let use = Number(ctx?.qualityFoodUse?.get(id) || 0);
-  return [pairUse, recency, use, index];
+  let generation = Math.max(0, Number(ctx?.qualityReplanGeneration) || 0);
+  return [pairUse, recency, use, (index + generation) % Math.max(1, optionCount)];
 }
 
 function plannerQualityCompareTuple(a, b) {
@@ -196,7 +197,7 @@ function plannerQualityCompareTuple(a, b) {
 function plannerQualityChooseResult(results, ctx, on, diffFn, focusId = "") {
   if (!Array.isArray(results) || !results.length) return null;
   return results
-    .map((result, index) => ({ result, tuple: plannerQualityCandidateTuple(result, index, ctx, on, diffFn, focusId) }))
+    .map((result, index) => ({ result, tuple: plannerQualityCandidateTuple(result, index, ctx, on, diffFn, focusId, results.length) }))
     .sort((a, b) => plannerQualityCompareTuple(a.tuple, b.tuple))[0]?.result || null;
 }
 
@@ -256,6 +257,8 @@ function plannerQualityKnownCandidatePriorityTuple(
 
   return [
     recentFocusPenalty,
+    Number(effectivePriorityFn(item, on) || 0) - (Number(item.priority) || 0),
+    plannerQualityRecencyBucket(ctx?.qualityLastFoodUse?.get(item.id), on, diffFn),
     inventoryPreference,
     Number(ctx?.plannedUse?.get(item.id) || 0),
     Number(usageCountFn(item.id) || 0),
@@ -267,8 +270,10 @@ function plannerQualityChooseKnownResult(results, ctx, on, diffFn, priorityOptio
   if (!Array.isArray(results) || !results.length) return null;
   if (results.length < 2) return results[0] || null;
 
-  let baseline = plannerQualityKnownCandidatePriorityTuple(results[0], on, ctx, priorityOptions);
-  if (!baseline) return results[0] || null;
+  let ranked = results.map((result) => ({ result, tuple: plannerQualityKnownCandidatePriorityTuple(result, on, ctx, priorityOptions) }));
+  if (ranked.some((entry) => !entry.tuple)) return results[0] || null;
+  ranked.sort((a, b) => plannerQualityCompareTuple(a.tuple, b.tuple));
+  let baseline = ranked[0].tuple;
   let samePriority = results.filter((result) => {
     let tuple = plannerQualityKnownCandidatePriorityTuple(result, on, ctx, priorityOptions);
     return tuple && plannerQualityCompareTuple(tuple, baseline) === 0;
@@ -452,7 +457,9 @@ function installPlannerQualityRotationRuntime() {
   };
 
   freshPlanContext = function plannerQualityFreshPlanContext() {
-    return plannerQualityEnsureContext(originalFreshPlanContext());
+    let ctx = plannerQualityEnsureContext(originalFreshPlanContext());
+    ctx.qualityReplanGeneration = Math.max(0, Number(state?.settings?.planRebuildGeneration) || 0);
+    return ctx;
   };
 
   let presetMealsFor = (date) => ["breakfast", "lunch", "snack", "dinner"]

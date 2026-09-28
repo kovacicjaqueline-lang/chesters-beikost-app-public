@@ -109,6 +109,28 @@ test('RANDOM-SWAP-04: sichtbare automatische Folgeslots werden eingefroren, Schu
   assert.equal(data.autoLockExcluded['2026-08-23|breakfast'], undefined);
 });
 
+test('RANDOM-SWAP-04b: heutiger Tracking-Snapshot wird beim Tauschen zum wirksamen Pin', () => {
+  const key = '2026-08-20|dinner';
+  const data = {
+    planLocks: {
+      [key]: { mode: 'auto', focusId: 'apfel', foodIds: ['apfel', 'hirse'], recipeName: 'Obst-Hirsebrei', plannerTrackingSnapshot: true, planId: 'plan-sichtbar' },
+    },
+  };
+  const count = swap.pinVisibleAutomaticMeals(
+    data,
+    [{ date: '2026-08-20', meals: [{ active: true, meal: 'dinner', focusId: 'apfel', foodIds: ['apfel', 'hirse'] }] }],
+    '2026-08-20|lunch',
+    () => { throw new Error('bestehender Snapshot muss verwendet werden'); },
+    () => false,
+    '2026-08-20',
+  );
+  assert.equal(count, 1);
+  assert.equal(data.planLocks[key].plannerTrackingSnapshot, undefined);
+  assert.equal(data.planLocks[key][swap.PIN_FLAG], true);
+  assert.equal(data.planLocks[key].planId, 'plan-sichtbar');
+  assert.equal(data.planLocks[key].recipeName, 'Obst-Hirsebrei');
+});
+
 test('RANDOM-SWAP-05: Browser-Loader, Heute-Zugang und Offline-Precache enthalten das Tauschmodul', () => {
   const cascade = fs.readFileSync(path.join(root, 'js', 'planner-log-rollover-cascade.js'), 'utf8');
   const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');

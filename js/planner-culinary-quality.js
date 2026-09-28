@@ -152,7 +152,7 @@ function plannerCulinaryAssessment(ids, foods = [], meal = "lunch", options = {}
   }
 
   const baseCount = roles.filter((role) => role === "base").length;
-  if (baseCount > 1) {
+  if (baseCount > 1 && !options.recipeBacked) {
     assessment.allowed = false;
     assessment.issues.push("mehr als eine sättigende Basis");
   }

@@ -213,7 +213,7 @@ test("Snack-FOOD-Pfad ist eng auf bekanntes geeignetes Obst begrenzt", () => {
   assert.equal(policy.plannerIntroductionKnownSnackFruitEligible({ id: "kartoffel", active: true, category: "Wurzel/Knolle", allergenGroup: "", known: true }, "2026-08-23", options), false);
 });
 
-test("Runtime erzwingt keine automatische Nicht-Allergen-Einführung mehr", () => {
+test("Runtime plant höchstens eine geeignete neue Nicht-Allergen-Kostprobe pro Tag", () => {
   withRuntimeGlobals(() => {
     installFakePlanner({
       foods: [
@@ -230,10 +230,10 @@ test("Runtime erzwingt keine automatische Nicht-Allergen-Einführung mehr", () =
   }, () => {
     const day = global.buildDay("2026-08-23", 1, blankContext());
     const byMeal = Object.fromEntries(day.meals.map((meal) => [meal.meal, meal]));
-    assert.deepEqual(byMeal.breakfast.sampleFoodIds, []);
+    assert.deepEqual(byMeal.breakfast.sampleFoodIds, ["frueh"]);
     assert.deepEqual(byMeal.lunch.sampleFoodIds, []);
     assert.deepEqual(byMeal.dinner.sampleFoodIds, []);
-    assert.equal(byMeal.breakfast.focusId, "basis");
+    assert.equal(byMeal.breakfast.focusId, "frueh");
     assert.equal(byMeal.lunch.focusId, "basis");
     assert.equal(byMeal.dinner.focusId, "basis");
     assert.equal(byMeal.breakfast.stackApplied, true);
@@ -244,7 +244,7 @@ test("Runtime erzwingt keine automatische Nicht-Allergen-Einführung mehr", () =
     assert.equal(global.manualMealRoleInfo("banane", "snack").role, "base");
     assert.equal(global.manualMealRoleInfo("frueh", "snack").role, "excluded");
     assert.equal(global.state.settings.newFoodEvery, 4, "Legacy-Einstellung darf nicht mutiert werden");
-    assert.equal(policy.PLANNER_INTRODUCTION_AUTOPLAN_NON_ALLERGENS, false);
+    assert.equal(policy.PLANNER_INTRODUCTION_AUTOPLAN_NON_ALLERGENS, true);
   });
 });
 

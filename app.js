@@ -308,7 +308,6 @@ function applyFoodPolicyData(foodDb, idAliases = {}) {
   let mais = byId.get("mais");
   if (mais) {
     mais.foodFamily = "mais";
-    mais.autoPlan = false;
   }
   let polenta = byId.get("polenta");
   if (polenta) polenta.foodFamily = "mais";

@@ -62,3 +62,14 @@ test("ein vorhandenes Rezept darf eine reduzierte Zutatenstruktur erklären", ()
 
   assert.equal(result.allowed, true);
 });
+
+test("kuratiertes Chili mit Mais und Süßkartoffel bleibt Rezept, freie Doppelbasis nicht", () => {
+  const chiliFoods = [...foods,
+    { id: "suesskartoffel", name: "Süßkartoffel", category: "Wurzel/Knolle" },
+    { id: "tomate", name: "Tomate", category: "Gemüse" },
+    { id: "weisse-bohnen", name: "Weiße Bohnen", category: "Hülsenfrucht" },
+  ];
+  const ids = ["mais", "suesskartoffel", "tomate", "weisse-bohnen"];
+  assert.equal(quality.plannerCulinaryAssessment(ids, chiliFoods, "lunch").allowed, false);
+  assert.equal(quality.plannerCulinaryAssessment(ids, chiliFoods, "lunch", { recipeBacked: true }).allowed, true);
+});

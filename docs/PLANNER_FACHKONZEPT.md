@@ -112,7 +112,7 @@ Für jeden aktiven Mahlzeitenslot gilt fachlich folgende Reihenfolge:
 
 1. **bestehende manuelle/feste Planung respektieren**;
 2. **harte Auto-Eignung prüfen**;
-3. in Frühstück, Mittagessen und Abendessen vorhandene geeignete Rezept-/FOOD-Planung verwenden; gewöhnliche offene Nicht-Allergene werden nicht automatisch als Lernaufgabe eingeschoben;
+3. in Frühstück, Mittagessen und Abendessen geeignete neue Lebensmittel (höchstens eine Lernaufgabe pro Tag) und vorhandene Rezept-/FOOD-Planung verwenden;
 4. ansonsten vorhandenen geeigneten Rezeptvorrat bzw. bekannte Planung verwenden;
 5. FOOD-Begleiter nur innerhalb der bestehenden Gates auswählen;
 6. Recipe-first darf eine fachlich passende Rezeptdarstellung herstellen;
@@ -227,18 +227,18 @@ Die bestehende strenge Editor-Validierung wird nicht gelockert. Der Planner muss
 
 # 5. Einführung neuer Lebensmittel und Wiederholungen
 
-## 5.1 Gewöhnliche Lebensmittel ohne automatische Einführung ✅ main
+## 5.1 Begrenzte automatische Einführung gewöhnlicher Lebensmittel
 
 Für gewöhnliche Nicht-Hauptallergene gilt:
 
-- der Planner erzeugt keine automatische Kostprobe nur deshalb, weil ein FOOD noch offen ist;
+- der Planner darf ein geeignetes offenes FOOD als einzige neue Kostprobe des Tages in einem freien Hauptmahlzeitenslot vorschlagen;
 - ein offenes FOOD darf weiterhin über eine manuelle Mahlzeit oder ein passendes Rezept erstmals angeboten werden;
 - ein erfolgreich probiertes FOOD wird danach normal kombinierbar und erzeugt keine Pflicht-Wiederholung;
-- „Probiert“ blockiert keine normale Rezept- oder FOOD-Planung, wird aber auch nicht mehr als tägliche Lernaufgabe priorisiert;
+- „Probiert“ blockiert keine normale Rezept- oder FOOD-Planung und erzeugt keine Pflicht-Wiederholung;
 - eine echte Ablehnung (`not_accepted`) bleibt als gezieltes bewusstes Follow-up möglich;
 - explizite manuelle Mahlzeiten, Locks, Overrides und harte Eignungs-/Safety-Gates bleiben unverändert geschützt.
 
-Die App dokumentiert weiterhin tatsächliche Angebote und Ergebnisse, verwendet die Einführung gewöhnlicher Lebensmittel aber nicht mehr als automatische Planer-Warteschlange.
+Eine feste Kostprobe oder eine Allergen-Lernaufgabe belegt den einzigen Lernslot des Tages. Die Planung prüft weiterhin die vollständigen Auto-, Safety- und Mahlzeiten-Gates.
 
 ## 5.2 Einführungsarten ✅ main
 
@@ -258,7 +258,7 @@ Eine neue Kostprobe bleibt als `sampleFoodId` erkennbar und wird nicht durch Rec
 
 ## 5.3 Keine automatische Wiederholungslogik für gewöhnliche Lebensmittel ✅ main
 
-Das frühere automatische Einführungs- und Wiederholungsmodell für gewöhnliche Lebensmittel steuert den normalen Planner nicht mehr. Das historische Setting `newFoodEvery` bleibt ausschließlich aus Daten-/Backup-Kompatibilitätsgründen im State erhalten und wird nicht als Mindestabstand oder Lernrhythmus verwendet.
+Erfolgreich probierte gewöhnliche Lebensmittel lösen keine automatische Pflicht-Wiederholung aus. Das historische Setting `newFoodEvery` bleibt ausschließlich aus Daten-/Backup-Kompatibilitätsgründen im State erhalten und wird nicht als Mindestabstand oder Lernrhythmus verwendet.
 
 Allergen-Einführungen, echte gezielte Wiederholungen nach Ablehnung und langfristige Allergenpflege behalten ihre jeweils getrennte Logik.
 
@@ -362,6 +362,9 @@ Ein echtes vorhandenes Rezept kann eine Kombination über seinen eigenen Rezeptv
 ## 8.3 Single-Starch bleibt hart
 
 Automatische freie Kombinationen sollen nicht mehrere konkurrierende Stärkequellen erzwingen. Die bestehende Single-Starch-Schranke bleibt erhalten.
+Ein vorhandenes kuratiertes Rezept ist keine freie FOOD-Kombination: Seine
+kanonischen Zutaten werden nicht allein wegen zweier als Basis klassifizierter
+Zutaten (z. B. Süßkartoffel und Mais im Bohnen-Chili) verworfen.
 
 ## 8.4 Kulinarische Mahlzeitenqualität
 
@@ -394,6 +397,18 @@ Kein Rezeptname darf nur aus einer optisch ähnlichen Kombination erfunden werde
 
 ## 9.2 Proaktive Rezeptwahl
 
+Bei einer **bekannten** automatischen Hauptmahlzeit wählt der Planner zuerst
+aus bestehenden, für den Slot geeigneten und mit ausschließlich bekannten,
+automatisch geeigneten Zutaten herstellbaren Rezeptvarianten. Die konkrete
+Variante und alle ihre FOOD-IDs gehören in den Plan; ein zufällig gewähltes
+FOOD-Paar ist keine Voraussetzung mehr. Wiederholung derselben Rezeptidentität
+am selben Tag wird vermieden. Erst ohne geeignetes Rezept wird eine freie
+bekannte Mahlzeit gebildet; zu einer freien Zweierkombination darf eine weitere
+bekannte geeignete Zutat treten, wenn dies die kulinarische Struktur verbessert.
+Eine bewusst geplante Einführung behält ihren Lernslot und die bestehende
+Ein-Rezept-neues-FOOD-Regel. Vorrat ist ein weicher Vorteil zwischen ansonsten
+passenden Rezepten, kein Ersatz für Rezept- oder FOOD-Eignung.
+
 Eine bereits geplante FOOD-Mahlzeit darf um **bekannte und automatisch geeignete** Rezeptzutaten erweitert werden, wenn dadurch eine eindeutige passende Rezeptvariante entsteht.
 
 Dabei gilt verbindlich:
@@ -414,9 +429,18 @@ Technische Auswahlpriorität bei proaktiven Kandidaten:
 
 1. möglichst wenige zusätzliche bekannte Zutaten;
 2. danach geringere `recipePlannedUse`-Nutzung;
-3. bei weiterem Gleichstand keine automatische Auswahl.
+3. danach eindeutig besserer kulinarischer Score;
+4. bei weiterem Gleichstand keine automatische Auswahl.
 
 ## 9.4 Vorrat und Prep
+
+Eine konkret eingefrorene Rezeptcharge kann als **vollständig glatt püriert**
+gekennzeichnet werden. Nur bei einem dafür einzeln freigegebenen Rezept darf
+der Planner dann die ursprüngliche Textur-/Darreichungsstufe für genau diese
+Charge abweichend bewerten. Zutatenbereitschaft, automatische FOOD-Eignung,
+Mindestalter, Mahlzeiteneignung und übrige Safety-Gates bleiben unverändert.
+Fehlende/alte Vorratsangaben oder Freitextnotizen werden niemals stillschweigend
+als püriert interpretiert; das Originalrezept bleibt unverändert.
 
 - echter Rezeptvorrat darf bevorzugt verwendet werden, wenn die Vorratspräferenz aktiv und Bestand vorhanden ist;
 - eine frische Recipe-first-Mahlzeit behält ihre einzelnen Zutatenreservierungen;
@@ -476,7 +500,7 @@ Verbindliche Grenzen:
 - ein vorhandener Rezept-/FOOD-Vorrat darf nur reserviert werden, wenn er tatsächlich für die geplante Mahlzeit verwendet wird;
 - Neuplanung und Auto-Lock-Rebuild dürfen keine Doppelreservierung erzeugen.
 
-Die konkrete Gewichtung von Vorrat gegenüber anderen gleich geeigneten Kandidaten ist Bestandsverhalten und keine implizite neue Fachregel. Eine geeignete neue Nicht-Allergen-Einführung hat in einem freien Hauptmahlzeitenslot fachlich Vorrang vor einer rein bekannten Planung; innerhalb gleichartiger bekannter Alternativen bleibt die bestehende Vorrats-/Rotationsgewichtung bestehen.
+Eine geeignete neue Nicht-Allergen-Einführung hat in einem freien Hauptmahlzeitenslot Vorrang vor rein bekannter Planung. Bei bekannten Alternativen wird kürzliche Nutzung vor Vorratspräferenz bewertet, damit derselbe Bestand nicht unmittelbar wiederholt wird; innerhalb derselben Rotationsstufe bleibt Vorrat bevorzugt.
 
 ---
 
@@ -525,6 +549,8 @@ Der bestehende Planner kann `ph`/Reisevorbereitung als Priorisierung verwenden. 
 ## 14.1 „Woche neu planen“
 
 Für die sichtbaren sieben Tage gibt es genau eine sichtbare Wochen-Neuplanung: **„Woche neu planen“**. Sie berechnet normale automatische Vorschläge aus dem aktuellen fachlichen Zustand neu.
+
+Jede bewusste Neuplanung rotiert bei fachlich gleichwertigen Kandidaten die technische Reihenfolge. Sind keine weiteren geeigneten Kandidaten verfügbar, darf das Ergebnis gleich bleiben.
 
 Erhalten bleiben insbesondere:
 
@@ -710,7 +736,7 @@ Weitere offene FOOD-Datenfragen werden separat im FOOD-Fachregel-Track geklärt 
 
 - Phasenmodell und Mahlzeitenslots;
 - PHASE-TRANSITION: Readiness ist read-only; `recommended` setzt `currentPatternAccepted`, `additionalMealCue` und `routineCompatible` gemeinsam voraus; Alter, Grammwerte, Loganzahl, Phasendauer und Textur verändern die Empfehlung nicht und lösen niemals einen Phasenwechsel aus; fehlende qualitative Signale bleiben explizit `unknown`;
-- gewöhnliche Nicht-Allergene werden nicht automatisch als tägliche Lernaufgabe eingeschoben;
+- geeignete neue Nicht-Allergene dürfen höchstens eine freie Lernaufgabe des Tages belegen;
 - ein offenes gewöhnliches FOOD bleibt über manuelle Planung oder passende Rezepte erstmals anbietbar;
 - erfolgreiche gewöhnliche FOODs erzeugen keine Pflicht-Wiederholung; echte Ablehnung bleibt als gezieltes Follow-up erhalten;
 - ein erfolgreich `Probiert`-FOOD blockiert keine geeignete offene Neueinführung; echte Ablehnung bleibt gezielter Wiederholungspfad;

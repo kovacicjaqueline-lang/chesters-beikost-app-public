@@ -63,7 +63,7 @@ function withPlannerRuntime({ foods, outcomes = {}, overrides = {}, ranks = {} }
   }
 }
 
-test("Vorfilter blockiert gewöhnliche Nicht-Allergene vor dem ersten Producer-Aufruf", () => {
+test("Vorfilter lässt gewöhnliche Nicht-Allergene für die Tageskostprobe zu", () => {
   const foods = Array.from({ length: 120 }, (_, index) => ({
     id: `normal-${index}`,
     allergenGroup: "",
@@ -72,8 +72,8 @@ test("Vorfilter blockiert gewöhnliche Nicht-Allergene vor dem ersten Producer-A
 
   withPlannerRuntime({ foods }, (getProducerCalls) => {
     const result = global.introductionCandidate("lunch", "2026-09-23", {}, []);
-    assert.equal(result?.f?.id, "ei");
-    assert.equal(result?.type, "Allergen einführen");
+    assert.equal(result?.f?.id, "normal-0");
+    assert.equal(result?.type, "neu");
     assert.equal(getProducerCalls(), 1);
   });
 });

@@ -63,10 +63,17 @@ test("Speichern eines Protokolleintrags bleibt in der aktuellen Ansicht", () => 
   assert.ok(saveStart >= 0, "saveLog muss vorhanden sein");
   const saveSource = logSource.slice(saveStart);
 
-  assert.match(saveSource, /save\(\); closeLog\(\); renderAll\(\);/);
+  assert.match(saveSource, /save\(\{ logMutation: \{ upserts: \[newLog\] \} \}\); closeLog\(\); renderAll\(\);/);
   assert.doesNotMatch(saveSource, /showView\(["']more["']\)/);
   assert.doesNotMatch(saveSource, /getElementById\(["']logDetails["']\)/);
   assert.doesNotMatch(saveSource, /scrollIntoView\(/);
+});
+
+test("Undo-Snapshot kopiert Protokolle nicht erneut vollständig", () => {
+  assert.match(logSource, /function snapshotStateForLogUndo\(source = state\)/);
+  assert.match(logSource, /clone\(\{ \.\.\.source, logs: \[\] \}\)/);
+  assert.match(logSource, /if \(!isEdit\) logsBefore\.length = logCountBefore/);
+  assert.match(logSource, /stateBefore\.logs = logsBefore/);
 });
 
 test("Log-Selector bleibt mobil einspaltig und blendet inaktive Panels aus", () => {

@@ -92,7 +92,10 @@ function loadPlanning(settings = {}) {
         ...settings,
       },
     },
-    dateObj: (value) => new Date(`${value}T00:00:00Z`),
+    dateObj: (value) => {
+      const [year, month, day] = value.split('-').map(Number);
+      return new Date(year, month - 1, day);
+    },
   };
   vm.createContext(context);
   vm.runInContext(`${source('js/planning.js')}\nthis.__isSeason=isSeason;this.__effectivePriority=effectivePriority;`, context);

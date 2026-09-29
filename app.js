@@ -829,8 +829,8 @@ function startBeikostApp() {
 
   window.__beikostTest = {
     getState: () => clone(state),
-    setState: (next) => { state = migrateState(next); if (!state.settings.planFrom) state.settings.planFrom = today(); pruneIneligibleAutomaticPlanState(state); save(); renderAll(); return clone(state); },
-    reset: () => { state = migrateState(clone(DEFAULT)); state.backupMeta.chesterContextSeeded = true; state.settings.planFrom = today(); save(); renderAll(); return clone(state); },
+    setState: (next) => { state = migrateState(next); if (!state.settings.planFrom) state.settings.planFrom = today(); pruneIneligibleAutomaticPlanState(state); save({ replaceLogs: true }); renderAll(); return clone(state); },
+    reset: () => { state = migrateState(clone(DEFAULT)); state.backupMeta.chesterContextSeeded = true; state.settings.planFrom = today(); save({ replaceLogs: true }); renderAll(); return clone(state); },
     buildDays: (from = today(), count = 7) => clone(buildDays(from, count)),
     scheduleFollowUp: (...args) => { let result = scheduleFollowUp(...args); save(); renderAll(); return clone(result); },
     followUpEntries: () => clone(followUpEntries()),

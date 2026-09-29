@@ -147,6 +147,23 @@ try {
   assert.equal(logImmediate.logCount, logsBefore + 1, "Protokoll muss vor dem Voll-Render persistiert sein");
   assert.equal(logImmediate.homeVisible, true, "Ausgangsansicht muss nach dem Speichern aktiv bleiben");
   assert.equal(logImmediate.moreVisible, false, "Speichern darf nicht automatisch in die Protokollansicht wechseln");
+  const persistedLogShape = await page.evaluate(async () => {
+    await saveQueue;
+    const db = await new Promise((resolve, reject) => {
+      const request = indexedDB.open("chester-beikost-db", 2);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    return await new Promise((resolve, reject) => {
+      const transaction = db.transaction(["app", "logs"], "readonly");
+      const stateRequest = transaction.objectStore("app").get("state");
+      const logsRequest = transaction.objectStore("logs").getAll();
+      transaction.oncomplete = () => resolve({ state: stateRequest.result, logs: logsRequest.result });
+      transaction.onerror = () => reject(transaction.error);
+    });
+  });
+  assert.equal(Object.hasOwn(persistedLogShape.state, "logs"), false, "App-Datensatz darf keine vollständige Log-Historie enthalten");
+  assert.equal(persistedLogShape.logs.length, logsBefore + 1, "IndexedDB soll getrennte Protokolldatensätze enthalten");
   await waitForDeferredRender(page, logImmediate.before);
   assert.equal(
     await page.evaluate(() => document.getElementById("home").classList.contains("active")),
@@ -182,12 +199,12 @@ try {
       const sorted = [...values].sort((a, b) => a - b);
       return sorted[Math.floor(sorted.length / 2)];
     };
-    const measure = (label) => {
+    const measure = (label, save = () => window.save()) => {
       const saveMs = [];
       const renderMs = [];
       for (let i = 0; i < 7; i++) {
         const start = performance.now();
-        window.save();
+        save();
         saveMs.push(performance.now() - start);
       }
       for (let i = 0; i < 5; i++) {
@@ -234,13 +251,26 @@ try {
     }));
     window.__beikostTest.setState(historyState);
     const yearHistory = measure("365-log-history");
+    const appendedLog = {
+      ...cloneJson(template),
+      id: "latency-profile-appended",
+      createdAt: new Date(Date.UTC(2026, 0, 2, 12, 0, 0)).toISOString(),
+      updatedAt: new Date(Date.UTC(2026, 0, 2, 12, 0, 0)).toISOString(),
+    };
+    const appendState = cloneJson(historyState);
+    appendState.logs.push(appendedLog);
+    window.__beikostTest.setState(appendState);
+    const yearHistoryAppend = measure("365-log-history-append", () => window.save({
+      logMutation: { upserts: [appendedLog] },
+    }));
     window.__beikostTest.setState(original);
-    return { baseline, yearHistory };
+    return { baseline, yearHistory, yearHistoryAppend };
   });
 
   assert.ok(Number.isFinite(profile.baseline.saveMedianMs));
   assert.ok(Number.isFinite(profile.baseline.renderMedianMs));
   assert.ok(profile.yearHistory.stateBytes > profile.baseline.stateBytes, "Profilzustand mit Jahresverlauf muss größer sein");
+  assert.ok(Number.isFinite(profile.yearHistoryAppend.saveMedianMs));
   console.log(`[save-ui-profile] ${JSON.stringify(profile)}`);
 } finally {
   await closeBrowserApp({ context, browser, server });

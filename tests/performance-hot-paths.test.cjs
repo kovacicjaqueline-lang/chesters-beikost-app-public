@@ -345,8 +345,9 @@ test("IndexedDB-Verbindung wird zwischen Reads und Writes wiederverwendet", asyn
     navigator: {},
     today: () => "2026-09-18",
     DB_NAME: "test",
-    DB_VERSION: 1,
+    DB_VERSION: 2,
     DB_STORE: "app",
+    DB_LOGS_STORE: "logs",
     KEY: "test-state",
   };
   vm.createContext(context);

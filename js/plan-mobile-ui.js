@@ -217,8 +217,9 @@
     nav.querySelectorAll(".plan-week-step").forEach((button) => {
       button.onclick = () => {
         const delta = Number(button.dataset.weekStep) || 0;
-        const days = planDisplayDays(from, 7);
-        const selectedIndex = Math.max(0, days.findIndex((day) => day.date === selectedDate));
+        const selectedIndex = Math.max(0, Math.min(6, Math.round(
+          (parsePlanDate(selectedDate).getTime() - parsePlanDate(from).getTime()) / 86400000,
+        )));
         const nextFrom = addDays(from, delta);
         globalThis.__mobilePlanSelectedDate = addDays(nextFrom, selectedIndex);
         state.settings.planFrom = nextFrom;
@@ -397,7 +398,9 @@
     if (!toolbar || !block) return;
 
     const from = visiblePlanStart();
-    const days = planDisplayDays(from, 7);
+    const days = typeof viewRenderPlanDays === "function"
+      ? viewRenderPlanDays(from, 7)
+      : planDisplayDays(from, 7);
     const selectedDate = mobilePlanSelectedDate(
       days,
       globalThis.__mobilePlanSelectedDate || "",

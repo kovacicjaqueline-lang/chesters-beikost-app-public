@@ -80,7 +80,7 @@ test("Planner-aware prepDemand verwendet denselben sichtbaren Wochen-Snapshot", 
   const start = source.indexOf("prepDemand = function plannerAwarePrepDemand()");
   assert.notEqual(start, -1);
   const body = source.slice(start, source.indexOf("\n  };", start));
-  assert.match(body, /mergeCarriedIntoDays\(planDisplayDays\(from, 7\)\)/);
+  assert.match(body, /mergeCarriedIntoDays\([\s\S]*viewRenderPlanDays\(from, 7\)/);
   assert.doesNotMatch(body, /mergeCarriedIntoDays\(buildDays\(from, 7\)\)/);
 });
 

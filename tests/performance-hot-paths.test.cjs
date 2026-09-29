@@ -245,28 +245,36 @@ test("ein View-Renderzyklus teilt identische Planner-, Rezept- und Prep-Berechnu
   let buildCalls = 0;
   let recipeCalls = 0;
   let prepCalls = 0;
+  let planDisplayCalls = 0;
   const context = {
     console,
     buildDays: (...args) => { buildCalls += 1; return args; },
+    planDisplayDays: (...args) => { planDisplayCalls += 1; return args; },
     recipeStates: () => { recipeCalls += 1; return []; },
     prepDemand: () => { prepCalls += 1; return []; },
   };
   vm.createContext(context);
   vm.runInContext(read("js/ui.js"), context);
+  context.planDisplayDays = (...args) => { planDisplayCalls += 1; return args; };
 
   context.withViewRenderCycle("prep", () => {
     assert.strictEqual(context.viewRenderBuildDays("2026-02-01", 7), context.viewRenderBuildDays("2026-02-01", 7));
+    assert.strictEqual(context.viewRenderPlanDays("2026-02-01", 7), context.viewRenderPlanDays("2026-02-01", 7));
     assert.strictEqual(context.viewRenderRecipeStates(), context.viewRenderRecipeStates());
     assert.strictEqual(context.viewRenderPrepDemand(), context.viewRenderPrepDemand());
   });
 
   assert.equal(buildCalls, 1);
+  assert.equal(planDisplayCalls, 1);
   assert.equal(recipeCalls, 1);
   assert.equal(prepCalls, 1);
   context.viewRenderBuildDays("2026-02-01", 7);
   context.viewRenderRecipeStates();
   context.viewRenderPrepDemand();
   assert.equal(buildCalls, 2, "der Cache darf nicht über den Renderzyklus hinaus leben");
+  context.viewRenderPlanDays("2026-02-01", 7);
+  context.viewRenderPlanDays("2026-02-01", 7);
+  assert.equal(planDisplayCalls, 3, "sichtbare Pläne werden nach dem Renderzyklus wieder frisch aufgelöst");
   assert.equal(recipeCalls, 2, "Rezeptstatus muss nach dem Renderzyklus wieder frisch berechnet werden");
   assert.equal(prepCalls, 2, "Prep-Bedarf muss nach dem Renderzyklus wieder frisch berechnet werden");
 });

@@ -332,6 +332,7 @@ try {
         maintenance.GROUP_LEVEL_MAINTENANCE_TARGETS,
         maintenance.targetForFood,
       ),
+      runtimeMaintenance: window.__planCheckMaintenanceDebug,
       goals: api.planCheckReport().items
         .filter((item) => item.code === "ALLERGEN_INTRODUCTION_CONTINUE")
         .map((item) => item.details?.representativeFoodId || ""),

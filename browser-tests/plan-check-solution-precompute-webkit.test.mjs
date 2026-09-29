@@ -296,55 +296,31 @@ try {
     snapshot.planLocks = {};
     snapshot.overrides = {};
     api.setState(snapshot);
-    const maintenance = window.PlannerAllergenMaintenance;
     const current = api.getState();
-    const hafer = current.foods.find((food) => food.id === "hafer");
+    const maintenance = window.PlannerAllergenMaintenance;
     const wheat = current.foods.find((food) => food.id === "weizengriess");
-    const target = maintenance.targetForFood(hafer);
-    const groupIds = current.foods
-      .filter((food) => maintenance.targetForFood(food)?.key === target?.key)
-      .map((food) => food.id);
-    const exposures = new Set();
-    for (const log of current.logs) {
-      for (const id of log.foodIds || []) {
-        const result = log.foodOutcomes?.[id] || log.outcome;
-        if (groupIds.includes(id) && result === "eaten") {
-          exposures.add(`${log.date}|${log.meal || log.id}`);
-        }
-      }
-    }
     const established = maintenance.establishedTargets(
       current.foods,
       (food) => api.displayStatus(food.id) === "Bekannt" ? 2 : 0,
     );
-    const core = window.PlannerPlanCheckSolutions;
+    const items = api.planCheckReport().items
+      .filter((item) => item.code === "ALLERGEN_INTRODUCTION_CONTINUE");
     return {
-      directCovered: core.foodSpecificIntroductionCoveredByEstablishedMaintenance(
+      goals: items.map((item) => item.details?.representativeFoodId || ""),
+      goalDetails: items.map((item) => item.details),
+      directCovered: window.PlannerPlanCheckSolutions.foodSpecificIntroductionCoveredByEstablishedMaintenance(
         wheat,
         established,
         maintenance.GROUP_LEVEL_MAINTENANCE_TARGETS,
         maintenance.targetForFood,
       ),
-      directNeedsContinuation: core.allergenIntroductionNeedsContinuation(
+      directNeedsContinuation: window.PlannerPlanCheckSolutions.allergenIntroductionNeedsContinuation(
         wheat,
         1,
         established,
         maintenance.GROUP_LEVEL_MAINTENANCE_TARGETS,
         maintenance.targetForFood,
       ),
-      runtimeMaintenance: window.__planCheckMaintenanceDebug,
-      runtimeIntroduction: window.__planCheckIntroductionDebug,
-      goals: api.planCheckReport().items
-        .filter((item) => item.code === "ALLERGEN_INTRODUCTION_CONTINUE"),
-      goalDetails: api.planCheckReport().items
-        .filter((item) => item.code === "ALLERGEN_INTRODUCTION_CONTINUE")
-        .map((item) => item.details)
-        .map((item) => item.details?.representativeFoodId || ""),
-      haferStatus: api.displayStatus("hafer"),
-      target,
-      wheatTarget: maintenance.targetForFood(wheat),
-      groupIds,
-      eatenExposureCount: exposures.size,
       establishedKeys: established.map((item) => item.key),
     };
   });

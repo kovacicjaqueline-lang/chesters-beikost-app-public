@@ -10,6 +10,7 @@ const handling = require("../js/handling-readiness.js");
 const root = path.resolve(__dirname, "..");
 const handlingSource = fs.readFileSync(path.join(root, "js", "handling-readiness.js"), "utf8");
 const utilsSource = fs.readFileSync(path.join(root, "js", "utils.js"), "utf8");
+const deferredRenderSource = fs.readFileSync(path.join(root, "js", "deferred-render.js"), "utf8");
 const uiSource = fs.readFileSync(path.join(root, "js", "ui.js"), "utf8");
 const indexSource = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const swSource = fs.readFileSync(path.join(root, "sw.js"), "utf8");
@@ -107,6 +108,7 @@ test("Planner-Readiness blockiert nur plannerabhängige Ansichten und öffnet be
   assert.match(uiSource, /function renderView\(id\)[\s\S]*!plannerViewReady\(\)[\s\S]*renderPlannerReadinessPlaceholder\(id\)/);
   assert.match(uiSource, /function renderAll\(\)[\s\S]*if \(plannerViewReady\(\)\)[\s\S]*renderFoods\(\)[\s\S]*renderSettings\(\)/);
   assert.match(uiSource, /if \(viewId === "plan"\)[\s\S]*toolbar\.inert = !plannerViewReady\(\)/);
+  assert.match(deferredRenderSource, /if \(typeof plannerViewReady === "function" && !plannerViewReady\(\)\)[\s\S]*readiness\.whenReady\(\)\.then[\s\S]*updateFoodPlannedUsage\(foodItem, baseBuildDays, request\)/);
   assert.match(indexSource, /html:not\(\.app-ready\) #appResumeScreen/);
 });
 

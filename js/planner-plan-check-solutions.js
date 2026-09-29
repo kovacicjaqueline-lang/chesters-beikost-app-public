@@ -321,15 +321,6 @@
         groupLevelTargets,
         targetForFoodFn,
       );
-      if (record.id === "weizengriess") {
-        globalScope.__planCheckIntroductionDebug = {
-          count,
-          needsContinuation,
-          establishedTargets: establishedTargets.map((target) => target.key),
-          groupLevelTargets,
-          target: targetForFoodFn?.(record),
-        };
-      }
       if (!needsContinuation) continue;
       const target = CORE.allergenIntroductionTarget(record);
       const key = target?.key || "";

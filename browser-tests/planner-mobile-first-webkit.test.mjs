@@ -73,6 +73,15 @@ try {
   assert.equal(await visibleDayCards.count(), 1, "Nur der ausgewählte Tag wird vollständig dargestellt");
   assert.equal(await visibleDayCards.first().getAttribute("data-plan-date"), today);
 
+  await page.evaluate(() => {
+    window.__plannerBuildCalls = 0;
+    window.__plannerOriginalBuildDays = window.buildDays;
+    window.buildDays = function plannerBuildProbe(...args) {
+      window.__plannerBuildCalls += 1;
+      return window.__plannerOriginalBuildDays.apply(this, args);
+    };
+  });
+
   const secondary = page.locator("#plan .plan-secondary-actions");
   const secondaryToggle = secondary.locator(":scope > .plan-secondary-toggle");
   assert.equal(await secondary.getAttribute("open"), null, "Sekundäre Planaktionen sind standardmäßig geschlossen");
@@ -107,6 +116,7 @@ try {
   assert.equal(await days.nth(1).getAttribute("aria-pressed"), "true");
   assert.equal(await visibleDayCards.count(), 1);
   assert.equal(await visibleDayCards.first().getAttribute("data-plan-date"), secondDate, "Direkte Tagesauswahl wechselt das Tagesdetail");
+  assert.equal(await page.evaluate(() => window.__plannerBuildCalls), 0, "Tageskachel-Auswahl löst keine erneute Planberechnung aus");
 
   await page.locator("#planToday").click();
   await page.waitForFunction((date) =>
@@ -183,11 +193,14 @@ try {
     };
   });
   const fromBefore = await page.evaluate(() => window.__beikostTest.getState().settings.planFrom);
+  const expected = await page.evaluate((date) => window.__beikostTest.addDays(date, 7), fromBefore);
+  await page.evaluate((date) => window.planDisplayDays(date, 7), expected);
+  await page.evaluate(() => { window.__plannerBuildCalls = 0; });
   await page.locator("#plan .plan-week-step[data-week-step='7']").click();
   await page.waitForFunction((previous) => window.__beikostTest.getState().settings.planFrom !== previous, fromBefore);
   const fromAfter = await page.evaluate(() => window.__beikostTest.getState().settings.planFrom);
-  const expected = await page.evaluate((date) => window.__beikostTest.addDays(date, 7), fromBefore);
   assert.equal(fromAfter, expected, "Nächste Woche verschiebt den sichtbaren Plan um sieben Tage");
+  assert.equal(await page.evaluate(() => window.__plannerBuildCalls), 0, "Wochenwechsel nutzt den vorgewärmten sichtbaren Snapshot statt einer zweiten Berechnung");
   assert.equal(await page.locator("#planWeekOverview .plan-week-day").count(), 7);
   assert.equal(
     await page.evaluate(() => window.__mobilePlanRenderAllCalls),
@@ -195,6 +208,9 @@ try {
     "Wochenwechsel rendert nur den Plan statt alle versteckten App-Bereiche",
   );
   await page.evaluate(() => {
+    window.buildDays = window.__plannerOriginalBuildDays;
+    delete window.__plannerOriginalBuildDays;
+    delete window.__plannerBuildCalls;
     window.renderAll = window.__mobilePlanOriginalRenderAll;
     delete window.__mobilePlanOriginalRenderAll;
     delete window.__mobilePlanRenderAllCalls;

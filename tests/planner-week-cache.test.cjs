@@ -7,7 +7,8 @@ const source = require("fs").readFileSync("js/planner-week-cache.js", "utf8");
 test("Planner-Wochen-Cache bleibt abgeleitet und versioniert", () => {
   assert.match(source, /const CACHE_VERSION = 2/);
   assert.match(source, /preservePlanCache/);
-  assert.match(source, /buildDays\(start, 7, false\)/);
+  assert.match(source, /when Workers are unavailable, the requested week is built on demand/i);
+  assert.doesNotMatch(source, /function runMainThreadWarmup/);
   assert.match(source, /invalidate\("save"\)/);
   assert.doesNotMatch(source, /state\.planLocks\s*\[/);
 });
@@ -20,7 +21,10 @@ test("Wochenwechsel erhält den Cache, fachliche Saves invalidieren ihn", () => 
 
 test("Service Worker nimmt den Planner-Cache in den Offline-Precache auf", () => {
   const sw = require("fs").readFileSync("sw.js", "utf8");
+  const html = require("fs").readFileSync("index.html", "utf8");
   assert.match(sw, /const UI_PRECACHE = \[[\s\S]*\.\/js\/planner-week-cache\.js\?v=10\.1\.26/);
+  assert.ok(sw.includes("./js/planner-week-cache.js?v=10.1.26&planner-cache=4"));
+  assert.ok(html.includes("js/planner-week-cache.js?v=10.1.26&planner-cache=4"));
 assert.ok(sw.includes("./js/planner-week-worker.js?v=10.1.26"));
 });
 
@@ -30,7 +34,7 @@ test("Worker-Warmup bleibt revisionssicher und optional", () => {
   assert.ok(source.includes("planner-week-worker.js"));
 });
 
-test("gültige Wochen werden wiederverwendet und fachliche Saves verwerfen den Cache", () => {
+test("gültige Wochen werden wiederverwendet und Warmup blockiert ohne Worker nicht den Hauptthread", () => {
   let buildCalls = 0;
   let saveCalls = 0;
   let idleCallback = null;
@@ -59,7 +63,7 @@ test("gültige Wochen werden wiederverwendet und fachliche Saves verwerfen den C
   assert.notStrictEqual(second, first);
 
   idleCallback?.({ didTimeout: true });
-  assert.equal(buildCalls, 3, "zwei weitere Wochen werden im Warmup vorbereitet");
+  assert.equal(buildCalls, 1, "ohne Worker wird keine Zukunftswoche synchron im UI-Thread berechnet");
 
   const revisionBeforeNavigationSave = context.__plannerWeekCache.revision;
   context.save({ preservePlanCache: true });
@@ -69,6 +73,15 @@ test("gültige Wochen werden wiederverwendet und fachliche Saves verwerfen den C
   context.save();
   assert.equal(context.__plannerWeekCache.revision, revisionBeforeNavigationSave + 1);
   assert.equal(context.__plannerWeekCache.size, 0);
+});
+
+test("Planner-aware prepDemand verwendet denselben sichtbaren Wochen-Snapshot", () => {
+  const source = require("fs").readFileSync("js/planner-log-rollover.js", "utf8");
+  const start = source.indexOf("prepDemand = function plannerAwarePrepDemand()");
+  assert.notEqual(start, -1);
+  const body = source.slice(start, source.indexOf("\n  };", start));
+  assert.match(body, /mergeCarriedIntoDays\(planDisplayDays\(from, 7\)\)/);
+  assert.doesNotMatch(body, /mergeCarriedIntoDays\(buildDays\(from, 7\)\)/);
 });
 
 

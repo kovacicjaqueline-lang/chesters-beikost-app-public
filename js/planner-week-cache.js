@@ -83,19 +83,6 @@
     workerStats.lastError = String(error || "Planner-Worker fehlgeschlagen");
   }
 
-  function runMainThreadWarmup(from) {
-    const starts = [
-      globalScope.addDays(from, 7),
-      globalScope.addDays(from, 14),
-    ];
-    for (const start of starts) {
-      const key = cacheKey(start, 7);
-      if (cache.has(key)) continue;
-      // Future weeks do not need today's tracking-lock synchronization.
-      put(key, globalScope.buildDays(start, 7, false));
-    }
-  }
-
   function disablePlannerWorker(error) {
     plannerWorkerDisabled = true;
     workerStats.supported = false;
@@ -132,8 +119,7 @@
         warmupPending = false;
 
         if (data.type === "error") {
-          recordWorkerFallback(data.message);
-          runMainThreadWarmup(globalScope.visiblePlanStart());
+          disablePlannerWorker(data.message);
           return;
         }
         if (data.type !== "result" || data.inputRevision !== revision) return;
@@ -145,11 +131,9 @@
         workerStats.completed += 1;
       };
       plannerWorker.onerror = (event) => {
-        const pending = plannerWorkerPending;
         plannerWorkerPending = null;
         warmupPending = false;
         disablePlannerWorker(event?.message || "Planner-Worker konnte nicht geladen werden");
-        if (pending) runMainThreadWarmup(globalScope.visiblePlanStart());
       };
       return plannerWorker;
     } catch (error) {
@@ -204,9 +188,9 @@
       }
 
       try {
-        const from = globalScope.visiblePlanStart();
-        if (dispatchPlannerWorkerWarmup(from)) return;
-        runMainThreadWarmup(from);
+        // Future-week planning can be expensive. Keep it off the UI thread;
+        // when Workers are unavailable, the requested week is built on demand.
+        dispatchPlannerWorkerWarmup(globalScope.visiblePlanStart());
       } finally {
         if (!plannerWorkerPending) warmupPending = false;
       }

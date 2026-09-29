@@ -276,7 +276,7 @@
       }
     }
 
-    return maintenance.establishedTargets(
+    const established = maintenance.establishedTargets(
       foods,
       (record) => {
         const target = maintenance.targetForFood?.(record);
@@ -287,6 +287,11 @@
         return Math.max(recordRank, groupExposureCount >= 2 ? 2 : 0);
       },
     );
+    globalScope.__planCheckMaintenanceDebug = {
+      exposures: [...exposuresByTarget].map(([key, values]) => [key, values.size]),
+      established: established.map((target) => target.key),
+    };
+    return established;
   }
 
   function visibleOpenMeals(days = []) {

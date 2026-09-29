@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 9291)
+Total output lines: 926
+
 "use strict";
 
 /* Anwendungsstart
@@ -477,34 +480,7 @@ function installFoodPolicyRuntime() {
   let originalBootstrapStorage = bootstrapStorage;
 
   let policyEligible = (f, on = autoPlanningDate || today()) =>
-    automaticFoodEligibility(f, on, state?.settings || {});
-
-  let withEligibleFoods = (on, includeIds, callback) => {
-    if (!autoPlanningDepth || !state?.foods) return callback();
-    let originalFoods = state.foods;
-    let keep = new Set(includeIds || []);
-    state.foods = originalFoods.filter((item) => keep.has(item.id) || policyEligible(item, on));
-    try { return callback(); }
-    finally { state.foods = originalFoods; }
-  };
-
-  let withPlannerOverride = (key, on, callback) => {
-    let allowId = state.overrides?.[key] || "";
-    return withEligibleFoods(on, allowId ? [allowId] : [], () => callback(allowId));
-  };
-
-  let nextAllowedFocus = (producer, exclude = [], allowId = "") => {
-    let blocked = [...exclude];
-    let max = (state?.foods?.length || 0) + 1;
-    for (let i = 0; i < max; i++) {
-      let result = producer(blocked);
-      if (!result?.f) return result;
-      if (plannerFoodCanBeAutomaticFocus(result.f)) return result;
-      if (result.f.id === allowId) {
-        let overrideMode = plannerFoodOverrideMode(result.f, originalRank(result.f));
-        if (overrideMode === "sample") return { ...result, type: "manuell" };
-      }
-      if (blocked.includes(result.f.id)) return null;
+    automat…291 tokens truncated…  if (blocked.includes(result.f.id)) return null;
       blocked.push(result.f.id);
     }
     return null;
@@ -829,8 +805,8 @@ function startBeikostApp() {
 
   window.__beikostTest = {
     getState: () => clone(state),
-    setState: (next) => { state = migrateState(next); if (!state.settings.planFrom) state.settings.planFrom = today(); pruneIneligibleAutomaticPlanState(state); save(); renderAll(); return clone(state); },
-    reset: () => { state = migrateState(clone(DEFAULT)); state.backupMeta.chesterContextSeeded = true; state.settings.planFrom = today(); save(); renderAll(); return clone(state); },
+    setState: (next) => { state = migrateState(next); if (!state.settings.planFrom) state.settings.planFrom = today(); pruneIneligibleAutomaticPlanState(state); save({ replaceLogs: true }); renderAll(); return clone(state); },
+    reset: () => { state = migrateState(clone(DEFAULT)); state.backupMeta.chesterContextSeeded = true; state.settings.planFrom = today(); save({ replaceLogs: true }); renderAll(); return clone(state); },
     buildDays: (from = today(), count = 7) => clone(buildDays(from, count)),
     scheduleFollowUp: (...args) => { let result = scheduleFollowUp(...args); save(); renderAll(); return clone(result); },
     followUpEntries: () => clone(followUpEntries()),

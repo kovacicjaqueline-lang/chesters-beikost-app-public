@@ -45,7 +45,13 @@ test("Mobile-Integrationen verwenden gemeinsame Lifecycle-Hooks statt Render-/Vi
   assert.match(sw, /\.\/js\/mobile-ui-lifecycle\.js\?v=10\.1\.26/);
   assert.ok(index.indexOf("js/app-resume-screen.js") < index.indexOf("<header"), "Resume-Abdeckung muss vor dem App-Inhalt geladen werden");
   assert.match(sw, /\.\/js\/app-resume-screen\.js\?v=10\.1\.26/);
-  assert.match(ui, /renderPlanCore\(\);\s*globalThis\.MobileUiLifecycle\?\.afterRender\("plan"\)/);
+  const planRender = ui.slice(ui.indexOf("function renderPlan()"), ui.indexOf("function renderHome()"));
+  const planCoreIndex = planRender.indexOf("renderPlanCore();");
+  const planCleanupIndex = planRender.indexOf('document.querySelectorAll("#blockPlan .day-card .status-chips .pill")');
+  const planHookIndex = planRender.indexOf('globalThis.MobileUiLifecycle?.afterRender("plan");');
+  assert.ok(planCoreIndex >= 0 && planCoreIndex < planCleanupIndex, "Plan-Hook muss nach dem Core-Render und dessen Anpassungen laufen");
+  assert.ok(planCleanupIndex < planHookIndex, "Plan-Hook muss nach dem Entfernen doppelter Status-Pills laufen");
+  assert.match(planRender, /afterRender\("plan"\);\s*\}\);\s*\}\s*$/);
   assert.match(ui, /MobileUiLifecycle\?\.afterRender\("home"\)/);
   assert.match(ui, /MobileUiLifecycle\?\.afterViewChange\(id, previous\)/);
   assert.match(prep, /MobileUiLifecycle\?\.afterRender\("prep"\)/);

@@ -296,14 +296,43 @@ try {
     snapshot.planLocks = {};
     snapshot.overrides = {};
     api.setState(snapshot);
-    return api.planCheckReport().items
-      .filter((item) => item.code === "ALLERGEN_INTRODUCTION_CONTINUE")
-      .map((item) => item.details?.representativeFoodId || "");
+    const maintenance = window.PlannerAllergenMaintenance;
+    const current = api.getState();
+    const hafer = current.foods.find((food) => food.id === "hafer");
+    const wheat = current.foods.find((food) => food.id === "weizengriess");
+    const target = maintenance.targetForFood(hafer);
+    const groupIds = current.foods
+      .filter((food) => maintenance.targetForFood(food)?.key === target?.key)
+      .map((food) => food.id);
+    const exposures = new Set();
+    for (const log of current.logs) {
+      for (const id of log.foodIds || []) {
+        const result = log.foodOutcomes?.[id] || log.outcome;
+        if (groupIds.includes(id) && result === "eaten") {
+          exposures.add(`${log.date}|${log.meal || log.id}`);
+        }
+      }
+    }
+    const established = maintenance.establishedTargets(
+      current.foods,
+      (food) => api.displayStatus(food.id) === "Bekannt" ? 2 : 0,
+    );
+    return {
+      goals: api.planCheckReport().items
+        .filter((item) => item.code === "ALLERGEN_INTRODUCTION_CONTINUE")
+        .map((item) => item.details?.representativeFoodId || ""),
+      haferStatus: api.displayStatus("hafer"),
+      target,
+      wheatTarget: maintenance.targetForFood(wheat),
+      groupIds,
+      eatenExposureCount: exposures.size,
+      establishedKeys: established.map((item) => item.key),
+    };
   });
   assert.equal(
-    glutenReport.includes("weizengriess"),
+    glutenReport.goals.includes("weizengriess"),
     false,
-    `Ein einzelner Weizengrießkontakt darf bei bereits gepflegter Glutenquelle keine neue Fortsetzung auslösen: ${glutenReport.join(", ")}`,
+    `Gluten-Testdiagnose: ${JSON.stringify(glutenReport)}`,
   );
 
   assert.deepEqual(pageErrors, [], `Keine Page-Errors erwartet: ${pageErrors.join(" | ")}`);

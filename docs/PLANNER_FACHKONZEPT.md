@@ -189,7 +189,8 @@ Das Bestandsmodell leitet automatische Statuswerte aus protokollierten Gaben ab 
 Wichtig für den Planner:
 
 - ein bereits erfolgreich probiertes FOOD kann als bekannte Komponente kombinierbar sein;
-- ein bloß erfolgreich probiertes FOOD ist **keine Pflicht-Wiederholung** und blockiert keine geeignete neue Nicht-Allergen-Einführung;
+- ein FOOD mit ausschließlich historischen `tried`-Einträgen erhält nach der Migration keinen gezielten Wiederholungsvorrang; eine geeignete offene Nicht-Allergen-Einführung geht vor;
+- ein bereits erfolgreich gegessenes gewöhnliches FOOD ist **keine Pflicht-Wiederholung** und blockiert ebenfalls keine geeignete neue Nicht-Allergen-Einführung;
 - eine **Hauptbasis** benötigt die strengere bestehende Basis-Eignung;
 - `Pausiert` bleibt ein harter Ausschluss im automatischen Pfad.
 
@@ -231,10 +232,11 @@ Die bestehende strenge Editor-Validierung wird nicht gelockert. Der Planner muss
 
 Für gewöhnliche Nicht-Hauptallergene gilt:
 
-- der Planner darf ein geeignetes offenes FOOD als einzige neue Kostprobe des Tages in einem freien Hauptmahlzeitenslot vorschlagen;
+- der Planner darf an einem nach `newFoodEvery` fälligen Tag ein geeignetes offenes FOOD als einzige neue Kostprobe des Tages in einem freien Hauptmahlzeitenslot vorschlagen; die Einstellung bedeutet den Mindestabstand in Tagen zwischen solchen automatischen neuen Kostproben;
+- manuelle/feste Kostproben und ausdrücklich überschriebene Einführungen bleiben davon unberührt; fällige Allergenpflege und gezielte Wiederholungen behalten ihre jeweils getrennte Fälligkeit;
 - ein offenes FOOD darf weiterhin über eine manuelle Mahlzeit oder ein passendes Rezept erstmals angeboten werden;
-- ein erfolgreich probiertes FOOD wird danach normal kombinierbar und erzeugt keine Pflicht-Wiederholung;
-- „Probiert“ blockiert keine normale Rezept- oder FOOD-Planung und erzeugt keine Pflicht-Wiederholung;
+- ein erfolgreich gegessenes FOOD wird danach normal kombinierbar und erzeugt keine Pflicht-Wiederholung;
+- historische `tried`-Protokolle werden zu `eaten` migriert; neue Protokolle bieten nur „Gegessen“ als positives Ergebnis an;
 - eine echte Ablehnung (`not_accepted`) bleibt als gezieltes bewusstes Follow-up möglich;
 - explizite manuelle Mahlzeiten, Locks, Overrides und harte Eignungs-/Safety-Gates bleiben unverändert geschützt.
 
@@ -258,7 +260,7 @@ Eine neue Kostprobe bleibt als `sampleFoodId` erkennbar und wird nicht durch Rec
 
 ## 5.3 Keine automatische Wiederholungslogik für gewöhnliche Lebensmittel ✅ main
 
-Erfolgreich probierte gewöhnliche Lebensmittel lösen keine automatische Pflicht-Wiederholung aus. Das historische Setting `newFoodEvery` bleibt ausschließlich aus Daten-/Backup-Kompatibilitätsgründen im State erhalten und wird nicht als Mindestabstand oder Lernrhythmus verwendet.
+Erfolgreich probierte gewöhnliche Lebensmittel lösen keine automatische Pflicht-Wiederholung aus. Das Setting `newFoodEvery` bestimmt ausschließlich den Mindestabstand zwischen automatischen neuen Nicht-Allergen-Kostproben; es erzeugt keine Wiederholungen und steuert nicht die getrennte Allergenpflege.
 
 Allergen-Einführungen, echte gezielte Wiederholungen nach Ablehnung und langfristige Allergenpflege behalten ihre jeweils getrennte Logik.
 
@@ -739,7 +741,7 @@ Weitere offene FOOD-Datenfragen werden separat im FOOD-Fachregel-Track geklärt 
 - geeignete neue Nicht-Allergene dürfen höchstens eine freie Lernaufgabe des Tages belegen;
 - ein offenes gewöhnliches FOOD bleibt über manuelle Planung oder passende Rezepte erstmals anbietbar;
 - erfolgreiche gewöhnliche FOODs erzeugen keine Pflicht-Wiederholung; echte Ablehnung bleibt als gezieltes Follow-up erhalten;
-- ein erfolgreich `Probiert`-FOOD blockiert keine geeignete offene Neueinführung; echte Ablehnung bleibt gezielter Wiederholungspfad;
+- ein FOOD mit historischer `tried`-Exposition blockiert keine geeignete offene Neueinführung; echte Ablehnung bleibt gezielter Wiederholungspfad;
 - Allergen-Einführung oder gezielte Allergen-Wiederholung bleibt die einzige automatische Lernaufgabe des Tages;
 - langfristige Allergenpflege ist keine Lernaufgabe, kein `sample` und verbraucht keinen FOOD-Einführungsslot;
 - Maintenance-Fälligkeit wird pro Pflegeziel statt ausschließlich pro FOOD-ID bewertet; nur `eaten` erfüllt die historische Exposition;

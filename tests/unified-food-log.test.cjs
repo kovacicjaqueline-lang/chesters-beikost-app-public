@@ -126,6 +126,33 @@ test("legacy standalone sample reload removes invented texture instead of fallin
   assert.equal(core.logHasMealContext(migrated.logs[0]), false);
 });
 
+test("historical tried outcomes migrate to eaten for overall and per-food results", () => {
+  const source = defaultState();
+  source.foods = [customFood()];
+  source.logs = [{
+    id: "legacy-tried",
+    date: "2026-08-10",
+    meal: "lunch",
+    foodIds: ["karotte"],
+    focusId: "karotte",
+    sampleFoodIds: ["karotte"],
+    foodOutcomes: { karotte: "tried" },
+    outcome: "tried",
+  }];
+
+  const migrate = migrationContext().__migrateStateCore;
+  const migrated = clone(migrate(source));
+  assert.equal(migrated.logs[0].outcome, "eaten");
+  assert.deepEqual(migrated.logs[0].foodOutcomes, { karotte: "eaten" });
+  const migratedAgain = clone(migrate(migrated));
+  assert.equal(migratedAgain.logs[0].outcome, "eaten");
+  assert.deepEqual(migratedAgain.logs[0].foodOutcomes, { karotte: "eaten" });
+});
+
+test("log entry form no longer offers tried as an outcome", () => {
+  assert.doesNotMatch(logSource, /\[\s*["']tried["']\s*,\s*["']Probiert["']\s*\]/);
+});
+
 test("real historical meal texture survives reload", () => {
   const source = defaultState();
   source.foods = [customFood()];

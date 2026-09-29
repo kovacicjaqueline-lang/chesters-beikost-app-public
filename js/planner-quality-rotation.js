@@ -339,6 +339,17 @@ function installPlannerQualityRotationRuntime() {
   let activeQualityContext = null;
   let activeDueFood = null;
 
+  globalThis.plannerQualityWithActiveContext = function plannerQualityWithActiveContext(ctx, callback) {
+    if (typeof callback !== "function") return undefined;
+    let previous = activeQualityContext;
+    activeQualityContext = ctx || previous;
+    try {
+      return callback();
+    } finally {
+      activeQualityContext = previous;
+    }
+  };
+
   let relatedIdsFor = (item) => plannerQualityRelatedIds(
     item,
     state?.foods || [],

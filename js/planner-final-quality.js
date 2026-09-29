@@ -68,9 +68,13 @@ function plannerFinalShouldReleaseAutoLock(meal, storedLock, allowed) {
 
 function plannerFinalLearningOnly(meal) {
   let ids = plannerFinalCanonicalIds(meal?.foodIds || []);
-  if (ids.length !== 1) return false;
-  let samples = new Set(meal?.sampleFoodIds || []);
-  return samples.has(ids[0]) && PLANNER_FINAL_LEARNING_TYPES.has(String(meal?.type || ""));
+  let samples = plannerFinalCanonicalIds(meal?.sampleFoodIds || []);
+  return (
+    ids.length > 0 &&
+    samples.length === 1 &&
+    ids.includes(samples[0]) &&
+    PLANNER_FINAL_LEARNING_TYPES.has(String(meal?.type || ""))
+  );
 }
 
 function plannerFinalRecipeForMeal(meal) {
@@ -100,7 +104,7 @@ function plannerFinalMealAssessment(meal, foods = [], helpers = {}) {
     return { ...result, allowed: false, reason: "recipe-meal-mismatch" };
   }
 
-  let learningOnly = plannerFinalLearningOnly(meal);
+  let learningOnly = !recipe && plannerFinalLearningOnly(meal);
   let recipeBacked = !!recipe || (
     typeof helpers.recipeBackedPair === "function" &&
     helpers.recipeBackedPair(ids, meal.meal)
@@ -110,6 +114,7 @@ function plannerFinalMealAssessment(meal, foods = [], helpers = {}) {
       recipeBacked,
       learningOnly,
       sampleOnly: learningOnly,
+      sampleFoodIds: meal?.sampleFoodIds || [],
     });
     return {
       ...result,
@@ -319,6 +324,60 @@ function installPlannerFinalQualityRuntime(globalScope = typeof globalThis !== "
     meal.baseFoodIds = (meal.foodIds || []).filter((id) => id !== meal.focusId && !samples.has(id));
   }
 
+  function promoteExactReplacementRecipe(meal, date, ctx) {
+    if (
+      !meal ||
+      typeof plannerExactRecipeCandidates !== "function" ||
+      typeof plannerSelectExactRecipe !== "function" ||
+      typeof plannerPromoteMealToRecipe !== "function" ||
+      typeof recipeStates !== "function"
+    ) return meal;
+
+    let recipes = recipeStates();
+    let suitable = typeof plannerRecipeSuitableForMeal === "function"
+      ? plannerRecipeSuitableForMeal
+      : recipeSuitable;
+    let ingredientReady = (name) =>
+      typeof plannerCulinaryRecipeIngredientReady === "function"
+        ? plannerCulinaryRecipeIngredientReady(name, meal, date)
+        : typeof recipeIngredientReady === "function"
+          ? recipeIngredientReady(name)
+          : false;
+    let allowed = (recipe) =>
+      (typeof plannerRecipeMilkContextCompatible !== "function" ||
+        plannerRecipeMilkContextCompatible(meal, recipe)) &&
+      !(recipe?.milkMeal === "full" &&
+        typeof recipeContainsMeatOrFish === "function" &&
+        recipeContainsMeatOrFish(recipe));
+    let candidates = plannerExactRecipeCandidates(
+      meal.foodIds || [],
+      meal.meal,
+      recipes,
+      state?.foods || [],
+      suitable,
+      ingredientReady,
+      allowed,
+    );
+    let recipe = plannerSelectExactRecipe(
+      candidates,
+      ctx,
+      !!state?.settings?.preferInventoryInPlan,
+      typeof recipeInventoryPortions === "function" ? recipeInventoryPortions : null,
+      meal.meal,
+    );
+    if (!recipe) return meal;
+
+    return plannerPromoteMealToRecipe(
+      meal,
+      recipe,
+      date,
+      ctx,
+      !!state?.settings?.preferInventoryInPlan,
+      typeof reserveMealInventory === "function" ? reserveMealInventory : null,
+      typeof recipeInventoryPortions === "function" ? recipeInventoryPortions : null,
+    );
+  }
+
   function updateFocusContext(previousFocusId, nextFocusId, date, day, meal, ctx) {
     if (!previousFocusId || previousFocusId === nextFocusId) {
       if (nextFocusId && ctx?.lastFocus?.set) ctx.lastFocus.set(nextFocusId, date);
@@ -409,6 +468,7 @@ function installPlannerFinalQualityRuntime(globalScope = typeof globalThis !== "
     applyAutomaticRoles(meal, date);
     if (typeof applyPlannedMealAmounts === "function") applyPlannedMealAmounts(meal);
     reserveInventory(meal, ctx);
+    promoteExactReplacementRecipe(meal, date, ctx);
     updateFocusContext(previousFocusId, meal.focusId, date, day, meal, ctx);
     return meal;
   }
@@ -475,7 +535,9 @@ function installPlannerFinalQualityRuntime(globalScope = typeof globalThis !== "
       }
 
       if (!assessment.allowed) {
-        let replacement = replacementKnownPair(meal, date, ctx, day);
+        let replacement = typeof plannerQualityWithActiveContext === "function"
+          ? plannerQualityWithActiveContext(ctx, () => replacementKnownPair(meal, date, ctx, day))
+          : replacementKnownPair(meal, date, ctx, day);
         if (replacement) {
           applyReplacementPair(meal, replacement, date, ctx, day);
           assessment = assessmentFor(meal, staleAutoLock);
@@ -506,6 +568,7 @@ if (typeof window !== "undefined" && typeof document !== "undefined") {
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     PLANNER_FINAL_MAIN_MEALS,
+    plannerFinalLearningOnly,
     plannerFinalAutomaticRecipeSuitable,
     plannerFinalAutoLockNeedsRepair,
     plannerFinalShouldReleaseAutoLock,

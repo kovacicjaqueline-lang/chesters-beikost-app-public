@@ -69,12 +69,10 @@ function migratedFoodIds(id, name = "") {
   return mapped ? [mapped] : [];
 }
 function normalizeOutcome(value) {
-  return ({ not_eaten: "not_accepted", tasted_ok: "tried", eaten_ok: "eaten" }[value] || value || "tried");
+  return ({ not_eaten: "not_accepted", tasted_ok: "eaten", eaten_ok: "eaten", tried: "eaten" }[value] || value || "eaten");
 }
 function conservativeLegacyMilkOutcome(value) {
-  let normalized = normalizeOutcome(value);
-  if (normalized === "eaten") return "tried";
-  return normalized;
+  return normalizeOutcome(value);
 }
 function canonicalId(id, name = "") {
   if (!id && !name) return "";
@@ -259,7 +257,7 @@ function migrateStateCore(s) {
     }
     let note = l.note || "";
     if (legacyMilk) {
-      let migrationNote = "Aus V8.8 übernommen: Kuhmilch und Joghurt waren nicht getrennt; beide Kontakte wurden vorsichtig als ‚Probiert‘ markiert und müssen einzeln bestätigt werden.";
+      let migrationNote = "Aus V8.8 übernommen: Kuhmilch und Joghurt waren nicht getrennt; beide Kontakte wurden als gegessen übernommen und müssen einzeln bestätigt werden.";
       if (!note.includes(migrationNote)) note = [note, migrationNote].filter(Boolean).join(" · ");
     }
     let baseFoodIds = [...new Set((l.baseFoodIds || []).flatMap((id) => mapSourceIds(id)).filter(Boolean))];
@@ -388,8 +386,8 @@ function migrateStateCore(s) {
       meal: "lunch",
       foodIds: ["huhn"],
       focusId: "huhn",
-      outcome: "tried",
-      foodOutcomes: { huhn: "tried" },
+      outcome: "eaten",
+      foodOutcomes: { huhn: "eaten" },
       amount: "",
       textureStage: 1,
       note: "Am von der Nutzerin durchgehend festgehaltenen Hühnerknochen gesaugt; keine gegessene Menge.",

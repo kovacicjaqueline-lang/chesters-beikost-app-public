@@ -19,7 +19,7 @@ Zusätzlich existiert `Pausiert` als Sonderstatus.
 
 `Regelmäßig` entfällt vollständig. Frühere Werte `Vertragen`, `Verträgliche Basis` und `Regelmäßig` werden bei der Migration kompatibel als `Bekannt` übernommen.
 
-`Probiert` und `Gegessen` bleiben Log-Ereignisse und werden nicht zu zusätzlichen Statusstufen. Mehrfaches `Probiert` darf als Erfahrung gezählt und angezeigt werden, führt aber nicht automatisch zu `Bekannt`. Drei oder mehr `Gegessen`-Expositionen erzeugen keinen weiteren Status. Für den Status gibt es kein Datums- oder Recency-Kriterium.
+`Probiert` ist weiterhin ein abgeleiteter Lebensmittelstatus, aber kein Protokollausgang mehr. Historische `tried`-Ereignisse werden beim Laden zu `eaten` migriert. Drei oder mehr `Gegessen`-Expositionen erzeugen keinen weiteren Status. Für den Status gibt es kein Datums- oder Recency-Kriterium.
 
 ## Planner-Vertrag
 

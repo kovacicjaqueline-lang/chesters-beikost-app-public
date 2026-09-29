@@ -437,7 +437,6 @@ function installPlannerIntroductionPolicyRuntime() {
 
     let oldPlanLocks = state.planLocks;
     let oldOverrides = state.overrides;
-    let oldEvery = state.settings?.newFoodEvery;
     state.planLocks = { ...(state.planLocks || {}) };
     state.overrides = { ...(state.overrides || {}) };
 
@@ -451,8 +450,6 @@ function installPlannerIntroductionPolicyRuntime() {
     let targetKey = `${date}|${mealKey}`;
     delete state.planLocks[targetKey];
     state.overrides[targetKey] = candidate.f.id;
-    if (state.settings) state.settings.newFoodEvery = 1;
-
     let normalization = normalizePresetRecords(date);
     let tempContext = plannerIntroductionCloneContext(dayStartContext);
     let previousSupplemental = supplementalNonAllergenOnly;
@@ -468,7 +465,6 @@ function installPlannerIntroductionPolicyRuntime() {
       baselineBlocksAllergens = previousBlock;
       state.planLocks = oldPlanLocks;
       state.overrides = oldOverrides;
-      if (state.settings) state.settings.newFoodEvery = oldEvery;
     }
 
     let generated = generatedDay?.meals?.find((meal) => meal?.meal === mealKey);
@@ -528,11 +524,11 @@ function installPlannerIntroductionPolicyRuntime() {
 
   buildDay = function plannerDailyIntroductionBuildDay(date, index, ctx) {
     let dayStartContext = plannerIntroductionCloneContext(ctx);
-    let oldEvery = state?.settings?.newFoodEvery;
     let wasDeferred = !!state?.deferred?.[date];
+    let newFoodEvery = Math.max(1, Number(state?.settings?.newFoodEvery) || 2);
+    let ordinaryIntroductionDue = !wasDeferred && index % newFoodEvery === 0;
     let normalization = normalizePresetRecords(date);
     if (normalization.hasNonAllergenLearning) suppressDueAllergensInWorkingContext(ctx, date);
-    if (!wasDeferred && state?.settings) state.settings.newFoodEvery = 1;
 
     let previousBlock = baselineBlocksAllergens;
     let previousNonAllergenBlock = baselineBlocksNonAllergens;
@@ -545,7 +541,6 @@ function installPlannerIntroductionPolicyRuntime() {
       baselineBlocksAllergens = previousBlock;
       baselineBlocksNonAllergens = previousNonAllergenBlock;
       normalization.restore();
-      if (state?.settings) state.settings.newFoodEvery = oldEvery;
     }
     if (!day?.meals) return day;
 
@@ -580,7 +575,7 @@ function installPlannerIntroductionPolicyRuntime() {
       let currentIsLearning = plannerIntroductionMealIsLearning(meal);
       if (
         PLANNER_INTRODUCTION_AUTOPLAN_NON_ALLERGENS &&
-        !wasDeferred &&
+        ordinaryIntroductionDue &&
         !learningDay &&
         PLANNER_INTRODUCTION_MAIN_MEALS.includes(meal.meal) &&
         !protectedSlot &&
@@ -634,11 +629,6 @@ function installPlannerIntroductionPolicyRuntime() {
     }
     return originalManualMealRoleInfo(foodOrId, meal, on, context);
   };
-
-  let cadenceField = typeof document !== "undefined"
-    ? document.getElementById("newFoodEvery")?.closest?.(".field")
-    : null;
-  if (cadenceField) cadenceField.hidden = true;
 
   return true;
 }

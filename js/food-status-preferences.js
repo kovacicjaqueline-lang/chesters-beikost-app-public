@@ -277,12 +277,12 @@ function installFoodStatusPreferencePolicy() {
         );
       }
 
-      let settings = document.querySelector(".food-detail-settings");
-      if (settings && !document.getElementById("foodDetailsLiked")) {
+      let preference = document.querySelector(".food-detail-preference");
+      if (preference && !document.getElementById("foodDetailsLiked")) {
         let label = document.createElement("label");
         label.className = "toggleline";
         label.innerHTML = `<input class="ds-toggle-input" type="checkbox" id="foodDetailsLiked" ${foodStatusPreferenceLiked(foodRecord) ? "checked" : ""}><span class="toggle-copy"><b>❤️ Wird gern gegessen</b><span class="small">Optional. Nicht markiert bedeutet neutral.</span></span><span class="toggle-state" aria-hidden="true"></span>`;
-        settings.appendChild(label);
+        preference.appendChild(label);
         document.getElementById("foodDetailsLiked").onchange = (event) => {
           foodRecord.liked = event.target.checked === true;
           save();

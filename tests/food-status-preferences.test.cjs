@@ -95,6 +95,29 @@ test('FOOD-STATUS: kein Recency-Kriterium; weit getrennte Gegessen-Expositionen 
   assert.equal(model.rank({ id: 'karotte', manualStatus: 'auto' }), 2);
 });
 
+test('FOOD-STATUS: manuell Probiert wird durch protokollierte Gaben zu Bekannt hochgestuft', () => {
+  const food = { id: 'karotte', manualStatus: 'Probiert' };
+  const oneEaten = loadModel([log('e1', '2026-07-14', 'lunch', 'eaten')]);
+  assert.equal(oneEaten.status(food), 'Probiert', 'eine Gegessen-Exposition lässt den manuellen Probiert-Stand bestehen');
+  assert.equal(oneEaten.rank(food), 1);
+
+  const twoEaten = loadModel([
+    log('e1', '2026-07-14', 'lunch', 'eaten'),
+    log('e2', '2026-07-15', 'dinner', 'eaten'),
+  ]);
+  assert.equal(twoEaten.status(food), 'Bekannt', 'getrennte Gegessen-Expositionen dürfen den manuellen Probiert-Wert überholen');
+  assert.equal(twoEaten.rank(food), 2);
+  assert.equal(twoEaten.statusSource(food), 'automatisch aus 2 getrennten gegessenen Expositionen');
+});
+
+test('FOOD-STATUS: manuell Probiert verdeckt keine protokollierte Reaktion', () => {
+  const reaction = { id: 'r1', date: '2026-08-01', meal: 'lunch', foodIds: ['ei'], foodOutcomes: { ei: 'reaction' }, reactionFoodId: 'ei', createdAt: 'r1' };
+  const model = loadModel([reaction]);
+  const food = { id: 'ei', manualStatus: 'Probiert' };
+  assert.equal(model.status(food), 'Pausiert');
+  assert.equal(model.rank(food), -1);
+});
+
 test('FOOD-STATUS: Reaktion führt zum Sonderstatus Pausiert', () => {
   const reaction = { id: 'r1', date: '2026-08-01', meal: 'lunch', foodIds: ['ei'], foodOutcomes: { ei: 'reaction' }, reactionFoodId: 'ei', createdAt: 'r1' };
   assert.equal(loadModel([reaction]).autoStatus({ id: 'ei' }), 'Pausiert');

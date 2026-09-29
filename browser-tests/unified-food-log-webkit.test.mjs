@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 7257)
-Total output lines: 520
-
 import assert from "node:assert/strict";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -56,14 +53,13 @@ async function selectLogOption(page, selector, value) {
 }
 
 async function reset(page) {
-  await page.evaluate(async () => {
+  await page.evaluate(() => {
     const state = structuredClone(window.__beikostTestBaseline);
     state.logs = [];
     state.followUps = {};
     state.shoppingHints = {};
     state.backupMeta.chesterContextSeeded = true;
     window.__beikostTest.setState(state);
-    await window.save({ replaceLogs: true });
   });
 }
 
@@ -151,7 +147,297 @@ try {
       foodIds: ["karotte"],
       baseFoodIds: [],
       sampleFoodIds: ["karotte"],
-      …4257 tokens truncated… }) => !!window.__plannerLogRolloverCore.linkedCompletionLog(window.__beikostTest.getState(), planId, date, "lunch"), { planId: plannedMealId, date: plannedDate }),
+      foodRoles: { karotte: "sample" },
+      mode: "manual",
+      active: true,
+      type: "neu",
+    };
+    window.__beikostTest.setState(state);
+    window.openLog(null);
+  }, freeAssignedDate);
+  await selectFood(page, "Karotte");
+  await selectLogOption(page, "#logMeal", "lunch");
+  await selectLogOption(page, "#logTexture", "1");
+  await page.locator("#saveLog").click();
+  await page.waitForFunction(() => window.__beikostTest.getState().logs.length === 1);
+  const assignedFreeLog = await page.evaluate(() => window.__beikostTest.getState().logs[0]);
+  assert.equal(assignedFreeLog.meal, "lunch");
+  assert.equal(assignedFreeLog.plannedMealId, "free-assigned-lunch", "Eine eindeutige tatsächliche Mahlzeit übernimmt den offenen Plan-Slot");
+  assert.equal(
+    await page.evaluate((date) => window.__plannerLogRolloverCore.openPlanInstances(window.__beikostTest.getState(), (plan) => plan.date === date && plan.meal === "lunch").length, freeAssignedDate),
+    0,
+  );
+
+  // 2. Rezept kann an einem vergangenen Datum frei protokolliert werden.
+  await reset(page);
+  await page.evaluate(() => window.openLog(null));
+  assert.equal(await page.locator("#logRecipeSearch").count(), 1, "Freier Eintrag muss eine Rezeptauswahl anbieten");
+  const retrospectiveDate = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  await page.locator("#logDate").fill(retrospectiveDate);
+  await page.locator("#logDate").dispatchEvent("change");
+  await searchRecipe(page, "Birne-Hirse-Pancakes");
+  const recipeResult = page.locator(".selectLogRecipeResult").filter({ hasText: "Birne-Hirse-Pancakes" }).first();
+  await recipeResult.waitFor();
+  const recipeResultLayout = await recipeResult.evaluate((element) => {
+    const copy = element.querySelector(".log-result-copy");
+    const add = element.querySelector(".log-result-add");
+    const rect = element.getBoundingClientRect();
+    const copyRect = copy?.getBoundingClientRect();
+    const addRect = add?.getBoundingClientRect();
+    return {
+      width: rect.width,
+      copyWidth: copyRect?.width || 0,
+      addOffset: addRect ? addRect.left - rect.left : 0,
+    };
+  });
+  assert.ok(recipeResultLayout.copyWidth >= recipeResultLayout.width * 0.7, "Rezeptname muss den Großteil der Trefferbreite nutzen");
+  assert.ok(recipeResultLayout.addOffset >= recipeResultLayout.width * 0.75, "Plus-Aktion muss am rechten Rand des Rezepttreffers liegen");
+  await recipeResult.click();
+  assert.match(await page.locator("#logForm").innerText(), /Birne-Hirse-Pancakes/);
+  await selectLogOption(page, "#logTexture", "2");
+  await page.locator("#saveLog").click();
+  await page.waitForFunction(() => window.__beikostTest.getState().logs.length === 1);
+  const retrospectiveRecipe = await page.evaluate(() => window.__beikostTest.getState().logs[0]);
+  assert.equal(retrospectiveRecipe.date, retrospectiveDate);
+  assert.equal(retrospectiveRecipe.recipeName, "Birne-Hirse-Pancakes");
+  assert.equal(retrospectiveRecipe.entryType, "food");
+  assert.equal(retrospectiveRecipe.meal, "", "Nachträgliches Rezept darf keinen Mahlzeitenslot erfinden");
+  assert.deepEqual([...retrospectiveRecipe.foodIds].sort(), ["birne", "ei", "hirse"]);
+  assert.equal(retrospectiveRecipe.textureStage, 2);
+  assert.equal(await page.evaluate(() => successfulMealSlotCount(today())), 0);
+
+  // 3. Rezeptfamilien speichern nur die ausdrücklich bestätigten tatsächlichen Zutaten.
+  await reset(page);
+  await page.evaluate(() => window.openLog(null));
+  await searchRecipe(page, "Obst-Hafer-Pancakes");
+  const familyRecipeResult = page.locator(".selectLogRecipeResult").filter({ hasText: "Obst-Hafer-Pancakes" }).first();
+  await familyRecipeResult.waitFor();
+  await familyRecipeResult.click();
+  assert.equal(await page.locator("[data-log-recipe-oneof]").count(), 1);
+  assert.equal(await page.locator("[data-log-recipe-confirm]").count(), 0);
+  assert.equal(await page.locator("[data-log-recipe-required]").first().inputValue(), "");
+  assert.equal(await page.locator("#saveLog").isDisabled(), true);
+  await selectLogOption(page, "[data-log-recipe-oneof]", "mango");
+  await selectLogOption(page, "#logTexture", "2");
+  assert.equal(await page.locator("#saveLog").isDisabled(), false);
+  await page.locator("#saveLog").click();
+  await page.waitForFunction(() => window.__beikostTest.getState().logs.length === 1);
+  const familyRecipe = await page.evaluate(() => window.__beikostTest.getState().logs[0]);
+  assert.equal(familyRecipe.recipeName, "Obst-Hafer-Pancakes");
+  assert.equal(familyRecipe.meal, "");
+  assert.deepEqual([...familyRecipe.foodIds].sort(), ["ei", "hafer", "mango"]);
+  assert.equal(familyRecipe.foodIds.includes("banane"), false);
+  assert.equal(familyRecipe.foodIds.includes("apfel"), false);
+
+  // 4. Rezept, zusätzliche Lebensmittel, Varianten und Bearbeiten bleiben ein Eintrag.
+  await reset(page);
+  await page.evaluate(() => {
+    const state = window.__beikostTest.getState();
+    state.foods.find((food) => food.id === "rind").manualStatus = "Verträgliche Basis";
+    window.__beikostTest.setState(state);
+  });
+  await page.evaluate(() => window.openLog(null));
+  await searchRecipe(page, "Birne-Hirse-Pancakes");
+  await page.locator(".selectLogRecipeResult").filter({ hasText: "Birne-Hirse-Pancakes" }).first().click();
+  await selectFood(page, "Rind");
+  await selectFood(page, "Karotte");
+  assert.match(await page.locator("#logForm").innerText(), /Birne-Hirse-Pancakes/);
+  assert.match(await page.locator("#logForm").innerText(), /Rind/);
+  assert.match(await page.locator("#logForm").innerText(), /Karotte/);
+  assert.equal(await page.locator('[data-flow-log-selector="recipes"][aria-pressed="false"]').count(), 1);
+  await searchRecipe(page, "Obst-Hafer-Pancakes");
+  await page.locator(".selectLogRecipeResult").filter({ hasText: "Obst-Hafer-Pancakes" }).first().click();
+  assert.match(await page.locator("#logForm").innerText(), /Rind/, "Rezeptwechsel darf zusätzliche Lebensmittel nicht löschen");
+  assert.match(await page.locator("#logForm").innerText(), /Karotte/, "Rezeptwechsel darf zusätzliche Lebensmittel nicht löschen");
+  await selectLogOption(page, "[data-log-recipe-oneof]", "mango");
+  assert.match(await page.locator("#logForm").innerText(), /Rind/, "Variantenwechsel darf zusätzliche Lebensmittel nicht löschen");
+  assert.match(await page.locator("#logForm").innerText(), /Karotte/, "Variantenwechsel darf zusätzliche Lebensmittel nicht löschen");
+  await page.locator("#toggleIndividualRatings").click();
+  await selectLogOption(page, '[data-individual-result="rind"]', "eaten");
+  await selectLogOption(page, '[data-sample-result="karotte"]', "eaten");
+  await page.locator("#logAmount").fill("35");
+  await selectLogOption(page, "#logTexture", "2");
+  await page.locator("#saveLog").click();
+  await page.waitForFunction(() => window.__beikostTest.getState().logs.length === 1);
+  const combinedRecipe = await page.evaluate(() => window.__beikostTest.getState().logs[0]);
+  assert.equal(combinedRecipe.recipeName, "Obst-Hafer-Pancakes");
+  assert.deepEqual([...combinedRecipe.foodIds].sort(), ["ei", "hafer", "karotte", "mango", "rind"]);
+  assert.equal(combinedRecipe.amount, "35");
+  assert.equal(combinedRecipe.foodOutcomes.rind, "eaten");
+  assert.equal(combinedRecipe.foodOutcomes.karotte, "eaten");
+
+  await page.evaluate((id) => window.editLogEntry(id), combinedRecipe.id);
+  assert.match(await page.locator("#logForm").innerText(), /Obst-Hafer-Pancakes/);
+  assert.match(await page.locator("#logForm").innerText(), /Rind/);
+  assert.match(await page.locator("#logForm").innerText(), /Karotte/);
+  await page.locator("#logAmount").fill("40");
+  await page.locator("#saveLog").click();
+  await page.waitForFunction(() => document.getElementById("logModal") && !document.getElementById("logModal").classList.contains("open"));
+  const editedCombinedRecipe = await page.evaluate(() => window.__beikostTest.getState().logs[0]);
+  assert.equal(editedCombinedRecipe.recipeName, "Obst-Hafer-Pancakes");
+  assert.deepEqual([...editedCombinedRecipe.foodIds].sort(), ["ei", "hafer", "karotte", "mango", "rind"]);
+  assert.equal(editedCombinedRecipe.amount, "40");
+  assert.equal(editedCombinedRecipe.foodOutcomes.rind, "eaten");
+  assert.equal(editedCombinedRecipe.foodOutcomes.karotte, "eaten");
+
+  // 5. Legacy-Kostprobe: unbekannte historische Textur bleibt beim Bearbeiten unbekannt.
+  await reset(page);
+  await page.evaluate(() => {
+    const state = window.__beikostTest.getState();
+    state.logs = [{
+      id: "legacy-sample",
+      date: window.__beikostTest.today(),
+      meal: "lunch",
+      entryType: "sample",
+      foodIds: ["karotte"],
+      focusId: "karotte",
+      baseFoodIds: [],
+      sampleFoodIds: ["karotte"],
+      foodRoles: { karotte: "sample" },
+      foodOutcomes: { karotte: "tried" },
+      outcome: "tried",
+      textureStage: 4,
+    }];
+    window.__beikostTest.setState(state);
+  });
+  let migratedLegacy = await page.evaluate(() => window.__beikostTest.getState().logs[0]);
+  assert.equal(migratedLegacy.textureKnown, false);
+  assert.equal(Object.hasOwn(migratedLegacy, "textureStage"), false);
+  await page.evaluate(() => window.editLogEntry("legacy-sample"));
+  assert.equal(await page.locator("#logTexture").inputValue(), "");
+  await page.locator("#saveLog").click();
+  await page.waitForFunction(() => document.getElementById("logModal") && !document.getElementById("logModal").classList.contains("open"));
+  let savedLegacy = await page.evaluate(() => window.__beikostTest.getState().logs[0]);
+  assert.equal(savedLegacy.entryType, "sample");
+  assert.equal(savedLegacy.meal, "lunch");
+  assert.equal(savedLegacy.textureKnown, false);
+  assert.equal(Object.hasOwn(savedLegacy, "textureStage"), false);
+
+  // 6. Nicht angeboten: keine Konsistenzpflicht.
+  await reset(page);
+  await page.evaluate(() => window.openLog(null));
+  await selectFood(page, "Karotte");
+  await selectLogOption(page, '[data-sample-result="karotte"]', "not_offered");
+  await page.locator("#saveLog").click();
+  await page.waitForFunction(() => window.__beikostTest.getState().logs.length === 1);
+  let notOffered = await page.evaluate(() => window.__beikostTest.getState().logs[0]);
+  assert.equal(notOffered.foodOutcomes.karotte, "not_offered");
+  assert.equal(notOffered.textureKnown, false);
+  assert.equal(Object.hasOwn(notOffered, "textureStage"), false);
+
+  // Wird ein solcher Eintrag später tatsächlich zu „Probiert“, ist eine Konsistenz neu erforderlich.
+  await page.evaluate((id) => window.editLogEntry(id), notOffered.id);
+  await selectLogOption(page, '[data-sample-result="karotte"]', "tried");
+  await page.locator("#saveLog").click();
+  assert.equal(await page.locator("#logModal").evaluate((node) => node.classList.contains("open")), true);
+  assert.equal(await page.locator(".unified-texture-error").count(), 1);
+  let stillNotOffered = await page.evaluate(() => window.__beikostTest.getState().logs[0]);
+  assert.equal(stillNotOffered.foodOutcomes.karotte, "not_offered");
+  await selectLogOption(page, "#logTexture", "2");
+  await page.locator("#saveLog").click();
+  await page.waitForFunction(() => document.getElementById("logModal") && !document.getElementById("logModal").classList.contains("open"));
+  let changedToTried = await page.evaluate(() => window.__beikostTest.getState().logs[0]);
+  assert.equal(changedToTried.foodOutcomes.karotte, "tried");
+  assert.equal(changedToTried.textureKnown, true);
+  assert.equal(changedToTried.textureStage, 2);
+
+  // 7. Ablehnung und Reaktion: Konsistenz ist optional und zählt nicht als positive Texturerfahrung.
+  for (const outcome of ["not_accepted", "reaction"]) {
+    await reset(page);
+    await page.evaluate(() => window.openLog(null));
+    await selectFood(page, "Karotte");
+    await selectLogOption(page, '[data-sample-result="karotte"]', outcome);
+    await page.locator("#saveLog").click();
+    await page.waitForFunction(() => window.__beikostTest.getState().logs.length === 1);
+    const saved = await page.evaluate(() => window.__beikostTest.getState().logs[0]);
+    assert.equal(saved.foodOutcomes.karotte, outcome);
+    assert.equal(saved.textureKnown, false);
+    assert.equal(Object.hasOwn(saved, "textureStage"), false);
+  }
+
+  // 8. Geplanter Eintrag: kompakter tatsächlicher Kontext, echte Plan-Verknüpfung und sichere Korrektur.
+  await reset(page);
+  const plannedDate = await page.evaluate(() => window.__beikostTest.today());
+  const movedDate = new Date(`${plannedDate}T12:00:00`);
+  movedDate.setDate(movedDate.getDate() + 1);
+  const movedDateIso = movedDate.toISOString().slice(0, 10);
+  const plannedMealId = "unified-log-plan-link";
+  await page.evaluate(({ planId, date }) => {
+    const state = window.__beikostTest.getState();
+    state.planLocks[`${date}|lunch`] = {
+      planId,
+      date,
+      meal: "lunch",
+      focusId: "karotte",
+      foodIds: ["karotte", "brokkoli"],
+      baseFoodIds: ["karotte", "brokkoli"],
+      sampleFoodIds: [],
+      foodRoles: { karotte: "base", brokkoli: "base" },
+      mode: "manual",
+      active: true,
+      type: "bekannt",
+    };
+    window.__beikostTest.setState(state);
+    window.openLog({
+      planId,
+      plannedMealId: planId,
+      plannedDate: date,
+      plannedMeal: "lunch",
+      date,
+      meal: "lunch",
+      focusId: "karotte",
+      foodIds: ["karotte", "brokkoli"],
+      baseFoodIds: ["karotte", "brokkoli"],
+      sampleFoodIds: [],
+      foodRoles: { karotte: "base", brokkoli: "base" },
+      foodOutcomes: { karotte: "eaten", brokkoli: "eaten" },
+      entryType: "meal",
+    });
+  }, { planId: plannedMealId, date: plannedDate });
+  assert.equal(await page.locator("#logRecipeSearch").count(), 0, "Geplanter Slot darf keine freie Rezeptauswahl anzeigen");
+  assert.equal(await page.locator("#logSubtitle").isHidden(), true, "Der Log-Header braucht keine zusätzliche Unterzeile");
+  assert.equal(await page.locator("#logSubtitle").textContent(), "");
+  assert.equal(await page.locator("#logMeal").count(), 1, "Mahlzeitenkontext muss für Korrekturen vorhanden bleiben");
+  assert.equal(await page.locator("#logMeal").isVisible(), false, "Datum und Mahlzeit bleiben standardmäßig kompakt");
+  assert.equal(await page.locator("#logDate").isVisible(), false, "Datum bleibt im Plan-Kontext standardmäßig kompakt");
+  assert.match(await page.locator("#logForm").innerText(), /Mittag[\s\S]*aus dem Plan/);
+  assert.doesNotMatch(await page.locator("#logForm").innerText(), /Geplante Mahlzeit/);
+  assert.equal(await page.locator("#individualRatings").count(), 0, "Einzelbewertungen dürfen keinen zweiten Toggle benötigen");
+  assert.equal(await page.locator("#addCustomLogFood").textContent(), "+ Eigenes Lebensmittel");
+  assert.equal(await page.locator("#addCustomLogFood").evaluate((element) => element.classList.contains("btn")), false, "Eigenes Lebensmittel bleibt eine tertiäre Aktion");
+  assert.doesNotMatch(await page.locator("#logForm").innerText(), /Lebensmittelrollen und getrennte Bewertungen bleiben/);
+
+  await page.locator("#logAmount").evaluate((element) => { element.dataset.contextRenderSentinel = "stable"; });
+  await page.getByRole("button", { name: "Ändern", exact: true }).click();
+  assert.equal(await page.locator("#logAmount").getAttribute("data-context-render-sentinel"), "stable", "Kontext öffnen darf das Formular nicht vollständig neu rendern");
+  assert.equal(await page.locator("#logMeal").isVisible(), true);
+  assert.equal(await page.locator("#logDate").isVisible(), true);
+  assert.deepEqual(
+    await page.locator("#logMeal option").evaluateAll((options) => options.map((option) => option.value)),
+    ["breakfast", "lunch", "snack", "dinner"],
+    "Mahlzeitenkorrektur folgt der sichtbaren Tagesreihenfolge",
+  );
+  await page.getByRole("button", { name: "Fertig", exact: true }).click();
+
+  await page.getByRole("button", { name: "Zutaten einzeln bewerten ›", exact: true }).click();
+  assert.equal(await page.locator("[data-individual-result]").count(), 2);
+  await selectLogOption(page, '[data-individual-result="karotte"]', "eaten");
+  await selectLogOption(page, '[data-individual-result="brokkoli"]', "not_accepted");
+  await selectLogOption(page, "#logTexture", "1");
+  await page.locator("#saveLog").click();
+  await page.waitForFunction(() => window.__beikostTest.getState().logs.length === 1);
+  let planned = await page.evaluate(() => window.__beikostTest.getState().logs[0]);
+  assert.equal(planned.date, plannedDate);
+  assert.equal(planned.meal, "lunch");
+  assert.equal(planned.plannedMealId, plannedMealId, "Unveränderter tatsächlicher Kontext muss den konkreten Plan abschließen");
+  assert.equal(planned.entryType, "food");
+  assert.equal(planned.individualRatings, true);
+  assert.equal(planned.foodOutcomes.karotte, "eaten");
+  assert.equal(planned.foodOutcomes.brokkoli, "not_accepted");
+  assert.equal(planned.foodRoles.karotte, "base");
+  assert.equal(planned.foodRoles.brokkoli, "base");
+  assert.equal(
+    await page.evaluate(({ planId, date }) => !!window.__plannerLogRolloverCore.linkedCompletionLog(window.__beikostTest.getState(), planId, date, "lunch"), { planId: plannedMealId, date: plannedDate }),
     true,
     "Der konkrete Plan muss nach unverändertem Speichern verknüpft abgeschlossen sein",
   );

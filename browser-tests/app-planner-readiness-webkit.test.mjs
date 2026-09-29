@@ -93,7 +93,8 @@ try {
   assert.ok(await page.locator("#foodList .foodInfo").count(), "Der Lebensmittelkatalog muss vor Planner-Readiness benutzbar sein");
   await page.locator("#foodList .foodInfo").first().click();
   assert.ok(await page.locator("#genericBody .food-detail-hero-icon").count(), "Lebensmitteldetails müssen vor Planner-Readiness öffnen");
-  assert.match(await page.locator("[data-food-planner-preview]").textContent(), /Planungsregeln werden geladen/);
+  const foodPlannerPreview = page.locator(".history[data-food-planner-preview]");
+  assert.match(await foodPlannerPreview.textContent(), /Planungsregeln werden geladen/);
   await page.locator("#closeGeneric").click();
   await page.locator('nav button[data-view="plan"]').click();
   assert.ok(await page.locator("#plan .planner-readiness-message").count(), "Der Plan muss lokal warten, solange die Runtime-Regeln fehlen");
@@ -147,7 +148,7 @@ try {
     await page.evaluate(() => Object.values(window.__plannerBuildCalls).some((count) => count > 0)),
     "Planner-Berechnung darf nach erfolgreicher Regelinstallation wieder laufen",
   );
-  await page.waitForFunction(() => !document.querySelector("[data-food-planner-preview] .planner-readiness-message"));
+  await page.waitForFunction(() => !document.querySelector(".history[data-food-planner-preview] .planner-readiness-message"));
 } finally {
   releasePolicies.resolve();
   releaseApp.resolve();

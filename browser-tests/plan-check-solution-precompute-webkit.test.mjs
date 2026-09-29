@@ -236,6 +236,18 @@ try {
   const planQuality = page.locator("#planQuality");
   assert.match(await planQuality.textContent(), /keine passende Möglichkeit/i);
   assert.equal(await page.locator("#openPlanGoalSolution").count(), 0, "Ohne Lösung darf Lösung ansehen nicht gerendert werden");
+
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.waitForFunction(() => !!window.__beikostTest?.setState);
+  await page.waitForFunction(() => window.__planCheckSolutionPrecomputeInstalled === true);
+  await page.locator('nav button[data-view="plan"]').click();
+  await page.waitForFunction(() => window.__beikostTest.planCheckSolutionPrecompute()
+    .some((entry) => entry.status === "none"), null, { timeout: 3000 });
+  const resumedCopy = await page.locator("#planQuality").textContent();
+  assert.match(resumedCopy, /keine passende Möglichkeit/i);
+  assert.doesNotMatch(resumedCopy, /wird geprüft/i, "Ein gespeichertes Ergebnis darf beim App-Neustart nicht erneut auf pending springen");
+  assert.equal(await page.locator("#openPlanGoalSolution").count(), 0, "Ohne Lösung darf nach dem Neustart kein CTA erscheinen");
+
   await page.locator("#leavePlanGoalDirect").click();
   await page.waitForFunction(() => !document.getElementById("planQuality")?.offsetParent);
 

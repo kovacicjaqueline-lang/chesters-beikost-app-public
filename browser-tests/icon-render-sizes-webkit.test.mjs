@@ -101,6 +101,20 @@ try {
   assert.equal(recipeSize.assetWidth, 52, "mobiles Recipe-Asset muss tatsächlich 52px breit rendern");
   assert.equal(recipeSize.assetHeight, 52, "mobiles Recipe-Asset muss tatsächlich 52px hoch rendern");
 
+
+  await page.evaluate(() => window.showFoodInfo(window.food("karotte")));
+  const detailIcon = page.locator(".food-detail-hero-icon .illustration-icon__asset");
+  await detailIcon.waitFor({ state: "attached" });
+  const detailLoading = await detailIcon.evaluate((img) => ({
+    loading: img.loading,
+    fetchPriority: img.fetchPriority,
+  }));
+  assert.deepEqual(
+    detailLoading,
+    { loading: "eager", fetchPriority: "high" },
+    "FOOD-Detailicon muss beim Öffnen sofort und mit hoher Priorität geladen werden",
+  );
+
 } finally {
   await closeBrowserApp({ context: typeof context !== "undefined" ? context : null, browser, server });
 }

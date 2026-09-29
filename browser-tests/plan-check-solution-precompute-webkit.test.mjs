@@ -296,39 +296,14 @@ try {
     snapshot.planLocks = {};
     snapshot.overrides = {};
     api.setState(snapshot);
-    const current = api.getState();
-    const maintenance = window.PlannerAllergenMaintenance;
-    const wheat = current.foods.find((food) => food.id === "weizengriess");
-    const established = maintenance.establishedTargets(
-      current.foods,
-      (food) => api.displayStatus(food.id) === "Bekannt" ? 2 : 0,
-    );
-    const items = api.planCheckReport().items
-      .filter((item) => item.code === "ALLERGEN_INTRODUCTION_CONTINUE");
-    return {
-      goals: items.map((item) => item.details?.representativeFoodId || ""),
-      goalDetails: items.map((item) => item.details),
-      runtimeIntroduction: window.__planCheckIntroductionDebug,
-      directCovered: window.PlannerPlanCheckSolutions.foodSpecificIntroductionCoveredByEstablishedMaintenance(
-        wheat,
-        established,
-        maintenance.GROUP_LEVEL_MAINTENANCE_TARGETS,
-        maintenance.targetForFood,
-      ),
-      directNeedsContinuation: window.PlannerPlanCheckSolutions.allergenIntroductionNeedsContinuation(
-        wheat,
-        1,
-        established,
-        maintenance.GROUP_LEVEL_MAINTENANCE_TARGETS,
-        maintenance.targetForFood,
-      ),
-      establishedKeys: established.map((item) => item.key),
-    };
+    return api.planCheckReport().items
+      .filter((item) => item.code === "ALLERGEN_INTRODUCTION_CONTINUE")
+      .map((item) => item.details?.representativeFoodId || "");
   });
   assert.equal(
-    glutenReport.goals.includes("weizengriess"),
+    glutenReport.includes("weizengriess"),
     false,
-    `Gluten-Testdiagnose: ${JSON.stringify(glutenReport)}`,
+    `Bei etablierter Glutenpflege darf keine Weizengrieß-Einführung fortgesetzt werden: ${glutenReport.join(", ")}`,
   );
 
   assert.deepEqual(pageErrors, [], `Keine Page-Errors erwartet: ${pageErrors.join(" | ")}`);

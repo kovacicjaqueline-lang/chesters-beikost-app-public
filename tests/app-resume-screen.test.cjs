@@ -54,6 +54,7 @@ function createHarness({ standalone = false } = {}) {
 test("Resume-Abdeckung bleibt beim Wechsel in den Hintergrund stehen und verschwindet nach zwei sichtbaren Frames", () => {
   const harness = createHarness();
   assert.equal(harness.classes.has("app-resume-cover"), false, "initial sichtbar soll keinen Loader einblenden");
+  harness.window.AppReadiness.markReady();
 
   harness.document.visibilityState = "hidden";
   harness.listeners.get("visibilitychange")[0]();
@@ -70,10 +71,14 @@ test("Resume-Abdeckung bleibt beim Wechsel in den Hintergrund stehen und verschw
   assert.equal(harness.attributes.get("aria-hidden"), "true");
 });
 
-test("Standalone-Kaltstart zeigt den Ladebildschirm bis zum Abschluss des App-Boots", () => {
-  const harness = createHarness({ standalone: true });
+test("App-Readiness hält den Kaltstart bis zum Abschluss des Daten-Boots abgedeckt", async () => {
+  const harness = createHarness();
   assert.equal(harness.classes.has("app-ready"), false);
-  harness.window.AppResumeScreen.markReady();
+  assert.equal(harness.window.AppReadiness.ready, false);
+  let readiness = harness.window.AppReadiness.whenReady();
+  harness.window.AppReadiness.markReady();
   assert.equal(harness.classes.has("app-ready"), true);
   assert.equal(harness.attributes.get("aria-hidden"), "true");
+  assert.equal(harness.window.AppReadiness.ready, true);
+  assert.equal((await readiness).state, "ready");
 });

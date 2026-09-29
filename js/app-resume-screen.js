@@ -6,8 +6,13 @@
   const screen = doc.getElementById("appResumeScreen");
   if (!screen) return;
 
-  let appReady = !doc.documentElement.classList.contains("app-standalone");
+  let appReady = doc.documentElement.classList.contains("app-ready");
   let wasBackgrounded = false;
+  let resolveAppReady;
+  const appReadyPromise = new Promise((resolve) => {
+    resolveAppReady = resolve;
+  });
+  if (appReady) resolveAppReady({ state: "ready" });
 
   function setVisible(visible) {
     doc.documentElement.classList.toggle("app-resume-cover", visible);
@@ -46,15 +51,23 @@
   root.addEventListener("pageshow", resume);
   root.addEventListener("focus", resume);
 
-  root.AppResumeScreen = Object.freeze({
-    markReady() {
+  function markAppReady() {
+    if (!appReady) {
       appReady = true;
-      if (!wasBackgrounded) {
-        doc.documentElement.classList.add("app-ready");
-        setVisible(false);
-        return;
-      }
-      hideAfterPaint();
-    },
+      resolveAppReady({ state: "ready" });
+    }
+    if (!wasBackgrounded) {
+      doc.documentElement.classList.add("app-ready");
+      setVisible(false);
+      return;
+    }
+    hideAfterPaint();
+  }
+
+  root.AppReadiness = Object.freeze({
+    get ready() { return appReady; },
+    whenReady() { return appReadyPromise; },
+    markReady: markAppReady,
   });
+  root.AppResumeScreen = Object.freeze({ markReady: markAppReady });
 })(typeof window !== "undefined" ? window : null, typeof document !== "undefined" ? document : null);

@@ -8,6 +8,11 @@
 function logMealSortRank(meal) {
   return ({ dinner: 4, lunch: 3, snack: 2, breakfast: 1 })[meal] || 0;
 }
+function snapshotStateForLogUndo(source = state) {
+  // Logs are attached to the compact undo snapshot separately, avoiding a full
+  // history clone in the synchronous save path.
+  return clone({ ...source, logs: [] });
+}
 function logOutcomeGridHtml(log) {
   let items = (log.foodIds || []).map((id) => {
     let name = food(id)?.name || id;
@@ -100,7 +105,8 @@ function renderLogsCore() {
       let id = b.closest("[data-log]").dataset.log;
       let removed = state.logs.find((log) => log.id === id);
       if (!removed) return;
-      let stateBefore = clone(state);
+      let stateBefore = snapshotStateForLogUndo();
+      let logsBefore = state.logs;
       for (let foodId of removed.foodIds || []) {
         let item = food(foodId);
         if (outcomeForFood(removed, foodId) === "reaction" && item?.manualStatus === "Pausiert" && !item.reactionPauseSourceLogId) {
@@ -111,9 +117,10 @@ function renderLogsCore() {
       state.logs = state.logs.filter((log) => log.id !== id);
       if (typeof invalidateLogsForCache === "function") invalidateLogsForCache();
       for (let foodId of new Set(removed.foodIds || [])) rebuildFoodConsequences(foodId);
-      save(); renderAll();
+      save({ logMutation: { deleteIds: [id] } }); renderAll();
       showToast("Eintrag gelöscht.", () => {
-        state = stateBefore; save(); renderAll();
+        stateBefore.logs = logsBefore;
+        state = stateBefore; save({ replaceLogs: true }); renderAll();
         showToast("Gelöschter Eintrag wiederhergestellt.");
       });
     },
@@ -851,7 +858,9 @@ function saveLog() {
     if (oldLog.outcome === "not_accepted" && overall !== "not_accepted") delete newLog.rejectionStrength;
     if (oldLog.outcome === "not_offered" && overall !== "not_offered") delete newLog.notOfferedReason;
   }
-  let stateBefore = clone(state);
+  let stateBefore = snapshotStateForLogUndo();
+  let logsBefore = state.logs;
+  let logCountBefore = logsBefore.length;
   let consumedNames = [];
 
   if (oldLog) {
@@ -883,10 +892,12 @@ function saveLog() {
   let affectedFoodIds = new Set([...(oldLog?.foodIds || []), ...ids]);
   for (let foodId of affectedFoodIds) rebuildFoodConsequences(foodId);
 
-  save(); closeLog(); renderAll();
+  save({ logMutation: { upserts: [newLog] } }); closeLog(); renderAll();
   let inventoryMessage = consumedNames.length ? ` · ${consumedNames.length} Vorratsportion${consumedNames.length === 1 ? "" : "en"} abgezogen` : "";
   showToast(`${isEdit ? "Eintrag geändert" : "Eintrag gespeichert"}${inventoryMessage}.`, () => {
-    state = stateBefore; save(); renderAll();
+    if (!isEdit) logsBefore.length = logCountBefore;
+    stateBefore.logs = logsBefore;
+    state = stateBefore; save({ replaceLogs: true }); renderAll();
     showToast("Eintrag und Folgeänderungen rückgängig gemacht.");
   });
 }

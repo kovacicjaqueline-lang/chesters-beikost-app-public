@@ -14,6 +14,7 @@ function openDb() {
     request.onupgradeneeded = () => {
       let db = request.result;
       if (!db.objectStoreNames.contains(DB_STORE)) db.createObjectStore(DB_STORE);
+      if (!db.objectStoreNames.contains(DB_LOGS_STORE)) db.createObjectStore(DB_LOGS_STORE, { keyPath: "id" });
     };
     request.onsuccess = () => {
       let db = request.result;
@@ -51,6 +52,86 @@ async function idbPut(key, value) {
     tx.oncomplete = () => resolve(true);
     tx.onerror = () => reject(tx.error);
   });
+}
+async function idbGetLogs() {
+  let db = await openDb();
+  return new Promise((resolve, reject) => {
+    let tx = db.transaction(DB_LOGS_STORE, "readonly");
+    let req = tx.objectStore(DB_LOGS_STORE).getAll();
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function idbSaveStateAndLogs(snapshot, logChanges = null, allLogs = null) {
+  let db = await openDb();
+  return new Promise((resolve, reject) => {
+    let tx = db.transaction([DB_STORE, DB_LOGS_STORE], "readwrite");
+    tx.objectStore(DB_STORE).put(snapshot, STATE_RECORD);
+    let logs = tx.objectStore(DB_LOGS_STORE);
+    if (Array.isArray(allLogs)) {
+      logs.clear();
+      allLogs.forEach((entry) => logs.put(entry));
+    } else {
+      for (let id of logChanges?.deleteIds || []) logs.delete(id);
+      for (let entry of logChanges?.upserts || []) logs.put(entry);
+    }
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error || new Error("IndexedDB-Transaktion abgebrochen"));
+  });
+}
+const LOCAL_LOG_PREFIX = `${KEY}-log-`;
+function localLogKey(id) {
+  return `${LOCAL_LOG_PREFIX}${encodeURIComponent(String(id))}`;
+}
+function localLogEntries() {
+  let entries = [];
+  try {
+    for (let index = 0; index < localStorage.length; index++) {
+      let key = localStorage.key(index);
+      if (!key?.startsWith(LOCAL_LOG_PREFIX)) continue;
+      let entry = JSON.parse(localStorage.getItem(key));
+      if (entry?.log && entry.log.id !== undefined && entry.log.id !== null) entries.push(entry);
+    }
+  } catch (_) {}
+  return entries.sort((a, b) => a.order - b.order || a.log.id.localeCompare(b.log.id));
+}
+function localLogRecord(id) {
+  try {
+    let entry = JSON.parse(localStorage.getItem(localLogKey(id)) || "null");
+    return String(entry?.log?.id) === String(id) ? entry : null;
+  } catch (_) { return null; }
+}
+function localLogEntry(log, order) {
+  return { id: log.id, order, log };
+}
+function writeLocalStateAndLogs(snapshot, logChanges = null, allLogs = null) {
+  try {
+    if (Array.isArray(allLogs)) {
+      let retainedKeys = new Set(allLogs.map((entry) => localLogKey(entry.id)));
+      allLogs.forEach((entry) => localStorage.setItem(localLogKey(entry.id), JSON.stringify(entry)));
+      for (let index = localStorage.length - 1; index >= 0; index--) {
+        let key = localStorage.key(index);
+        if (key?.startsWith(LOCAL_LOG_PREFIX) && !retainedKeys.has(key)) localStorage.removeItem(key);
+      }
+    } else {
+      for (let entry of logChanges?.upserts || []) localStorage.setItem(localLogKey(entry.id), JSON.stringify(entry));
+      for (let id of logChanges?.deleteIds || []) localStorage.removeItem(localLogKey(id));
+    }
+    localStorage.setItem(KEY, JSON.stringify(snapshot));
+    return true;
+  } catch (_) { return false; }
+}
+function persistedStateSnapshot(source = state) {
+  let sourceWithoutLogs = { ...source };
+  delete sourceWithoutLogs.logs;
+  let snapshot = clone(sourceWithoutLogs);
+  snapshot.schemaVersion = SCHEMA_VERSION;
+  snapshot.appVersion = APP_VERSION;
+  return snapshot;
+}
+function orderLogs(entries = []) {
+  return entries.slice().sort((a, b) => a.order - b.order || String(a.id).localeCompare(String(b.id))).map((entry) => entry.log);
 }
 const BACKUP_FOOD_PERSONAL_FIELDS = [
   "priority",
@@ -183,7 +264,13 @@ function pendingIdbRecoveryState() {
   try {
     if (localStorage.getItem(IDB_RECOVERY_PENDING_KEY) !== "1") return null;
     let raw = localStorage.getItem(KEY);
-    return raw ? migrateState(JSON.parse(raw)) : null;
+    if (!raw) return null;
+    let recovered = migrateState(JSON.parse(raw));
+    if (!Array.isArray(recovered.logs) || recovered.logs.length === 0) {
+      let splitLogs = localLogEntries();
+      if (splitLogs.length) recovered.logs = orderLogs(splitLogs);
+    }
+    return recovered;
   } catch (_) {
     return null;
   }
@@ -191,19 +278,28 @@ function pendingIdbRecoveryState() {
 function save(options = {}) {
   storageStateRevision++;
   if (typeof invalidateFoodLookupCache === "function") invalidateFoodLookupCache();
-  let snapshot = clone(state);
-  snapshot.schemaVersion = SCHEMA_VERSION;
-  snapshot.appVersion = APP_VERSION;
-  // Mirror for migration and emergency recovery; IndexedDB remains the primary store when available.
-  let localBackupWritten = false;
-  try {
-    localStorage.setItem(KEY, JSON.stringify(snapshot));
-    localBackupWritten = true;
-  } catch (_) {}
+  let snapshot = persistedStateSnapshot(state);
+  let allLogs = null;
+  let logChanges = null;
+  if (options.replaceLogs) {
+    allLogs = (state.logs || []).map((log, index) => localLogEntry(log, index));
+  } else if (options.logMutation) {
+    let upserts = (options.logMutation.upserts || []).map((log) => {
+      let stored = localLogRecord(log.id);
+      let createdAt = Date.parse(log.createdAt || "");
+      let order = stored?.order ?? (Number.isFinite(createdAt) ? createdAt : Date.now());
+      return localLogEntry(log, order);
+    });
+    logChanges = { upserts, deleteIds: options.logMutation.deleteIds || [] };
+  }
+  // The emergency mirror stores app data and log records separately, so adding a
+  // log writes only that record instead of serializing the complete history.
+  let localBackupWritten = writeLocalStateAndLogs(snapshot, logChanges, allLogs);
   if (indexedDbUnavailable || !globalThis.indexedDB) return Promise.resolve();
   saveQueue = saveQueue.then(async () => {
     if (options.snapshotReason) await createSnapshot(options.snapshotReason);
-    await idbPut(STATE_RECORD, snapshot);
+    if (Array.isArray(allLogs) || logChanges) await idbSaveStateAndLogs(snapshot, logChanges, allLogs);
+    else await idbPut(STATE_RECORD, snapshot);
   }).catch((error) => {
     indexedDbUnavailable = true;
     if (localBackupWritten) {
@@ -223,7 +319,12 @@ function load() {
     for (let key of [KEY, ...LEGACY_KEYS]) {
       let raw = localStorage.getItem(key);
       if (!raw) continue;
-      return migrateState(JSON.parse(raw));
+      let loaded = migrateState(JSON.parse(raw));
+      if (!Array.isArray(loaded.logs) || loaded.logs.length === 0) {
+        let splitLogs = localLogEntries();
+        if (splitLogs.length) loaded.logs = orderLogs(splitLogs);
+      }
+      return loaded;
     }
     return clone(DEFAULT);
   } catch (e) {
@@ -278,17 +379,34 @@ async function bootstrapStorage() {
   let idbState = await idbGet(STATE_RECORD).catch(() => null);
   if (storageStateRevision === revisionAtStart) {
     if (idbState && !recoveryState) {
-      state = migrateState(idbState);
+      if (Array.isArray(idbState.logs)) {
+        state = migrateState(idbState);
+        let entries = state.logs.map((log, index) => localLogEntry(log, index));
+        let migrated = await idbSaveStateAndLogs(persistedStateSnapshot(state), null, entries).then(() => true).catch(() => false);
+        if (!migrated) {
+          indexedDbUnavailable = true;
+          try { localStorage.setItem(IDB_RECOVERY_PENDING_KEY, "1"); } catch (_) {}
+        }
+        writeLocalStateAndLogs(persistedStateSnapshot(state), null, entries);
+      } else {
+        let entries = await idbGetLogs().catch(() => []);
+        state = migrateState({ ...idbState, logs: orderLogs(entries) });
+        writeLocalStateAndLogs(persistedStateSnapshot(state), null, entries);
+      }
     } else {
       state = recoveryState || migrateState(state);
       state.backupMeta.migratedAt = new Date().toISOString();
-      let wroteState = await idbPut(STATE_RECORD, clone(state)).then(() => true).catch(() => false);
+      let entries = (state.logs || []).map((log, index) => localLogEntry(log, index));
+      writeLocalStateAndLogs(persistedStateSnapshot(state), null, entries);
+      let wroteState = await idbSaveStateAndLogs(persistedStateSnapshot(state), null, entries).then(() => true).catch(() => false);
       let check = wroteState ? await idbGet(STATE_RECORD).catch(() => null) : null;
       if (check) {
-        try {
-          localStorage.setItem(KEY, JSON.stringify(state));
-          if (recoveryState) localStorage.removeItem(IDB_RECOVERY_PENDING_KEY);
-        } catch (_) {}
+        if (recoveryState) {
+          try { localStorage.removeItem(IDB_RECOVERY_PENDING_KEY); } catch (_) {}
+        }
+      } else {
+        indexedDbUnavailable = true;
+        try { localStorage.setItem(IDB_RECOVERY_PENDING_KEY, "1"); } catch (_) {}
       }
     }
   }
@@ -379,7 +497,7 @@ async function handleBackupImport(file) {
     let pack=await validateBackup(await file.text());
     openGeneric("Backup prüfen",backupPreviewHtml(pack));
     document.getElementById("cancelBackupRestore").onclick=closeGeneric;
-    document.getElementById("confirmBackupRestore").onclick=async()=>{ await createSnapshot("vor Wiederherstellung"); state=migrateState(backupPayloadToState(pack.payload)); await save(); closeGeneric(); renderCurrentView(); renderStorageStatus(); showToast("Backup wiederhergestellt."); };
+    document.getElementById("confirmBackupRestore").onclick=async()=>{ await createSnapshot("vor Wiederherstellung"); state=migrateState(backupPayloadToState(pack.payload)); await save({ replaceLogs: true }); closeGeneric(); renderCurrentView(); renderStorageStatus(); showToast("Backup wiederhergestellt."); };
   } catch(error) {
     showStorageError(error.message || "Datei konnte nicht importiert werden.");
     document.getElementById("storageError")?.scrollIntoView({ block: "nearest", behavior: "smooth" });
@@ -393,7 +511,7 @@ async function openSnapshots() {
     if(!snap)return;
     openGeneric("Zwischenstand wiederherstellen?", `<div class="notice warn"><b>Der aktuelle Stand wird ersetzt.</b><br>Davor wird automatisch ein neuer Zwischenstand angelegt.</div><p class="small">Ausgewählt: ${new Date(snap.createdAt).toLocaleString("de-AT")} · ${esc(snap.reason)}</p><div class="sticky-form-actions ds-actionbar"><button class="btn secondary" id="cancelSnapshotRestore" type="button">Abbrechen</button><button class="btn danger" id="confirmSnapshotRestore" type="button">Wiederherstellen</button></div>`);
     document.getElementById("cancelSnapshotRestore").onclick=()=>{ closeGeneric(); openSnapshots(); };
-    document.getElementById("confirmSnapshotRestore").onclick=async()=>{ await createSnapshot("vor Zwischenstand-Wiederherstellung"); state=migrateState(backupPayloadToState(snap.state)); await save(); closeGeneric(); renderCurrentView(); showToast("Zwischenstand wiederhergestellt."); };
+    document.getElementById("confirmSnapshotRestore").onclick=async()=>{ await createSnapshot("vor Zwischenstand-Wiederherstellung"); state=migrateState(backupPayloadToState(snap.state)); await save({ replaceLogs: true }); closeGeneric(); renderCurrentView(); showToast("Zwischenstand wiederhergestellt."); };
   });
 }
 

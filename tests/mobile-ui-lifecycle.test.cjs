@@ -43,6 +43,8 @@ test("Mobile-Integrationen verwenden gemeinsame Lifecycle-Hooks statt Render-/Vi
 
   assert.ok(index.indexOf("js/mobile-ui-lifecycle.js") < index.indexOf("js/deferred-render.js"));
   assert.match(sw, /\.\/js\/mobile-ui-lifecycle\.js\?v=10\.1\.26/);
+  assert.ok(index.indexOf("js/app-resume-screen.js") < index.indexOf("<header"), "Resume-Abdeckung muss vor dem App-Inhalt geladen werden");
+  assert.match(sw, /\.\/js\/app-resume-screen\.js\?v=10\.1\.26/);
   assert.match(ui, /renderPlanCore\(\);\s*globalThis\.MobileUiLifecycle\?\.afterRender\("plan"\)/);
   assert.match(ui, /MobileUiLifecycle\?\.afterRender\("home"\)/);
   assert.match(ui, /MobileUiLifecycle\?\.afterViewChange\(id, previous\)/);

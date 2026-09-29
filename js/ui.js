@@ -1155,7 +1155,6 @@ function renderMeal(day, meal) {
 function renderPlan() {
   return withViewRenderCycle("plan", () => {
     renderPlanCore();
-    globalThis.MobileUiLifecycle?.afterRender("plan");
     let summary = document.getElementById("planLockSummary");
     let amountLabel = AMOUNT_LEVELS[currentAmountLevel()]?.label || "";
     let compactAmount = compactPlanAmountLabel(amountLabel);
@@ -1175,6 +1174,7 @@ function renderPlan() {
     document.querySelectorAll("#blockPlan .day-card .status-chips .pill").forEach((pill) => {
       if ([phaseText(), amountLabel, textureText()].includes((pill.textContent || "").trim())) pill.remove();
     });
+    globalThis.MobileUiLifecycle?.afterRender("plan");
   });
 }
 

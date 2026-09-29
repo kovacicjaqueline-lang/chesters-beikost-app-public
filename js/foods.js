@@ -276,6 +276,7 @@ function showFoodInfoCore(f) {
       </div>
       <div class="catalog-detail-hero-icon food-detail-hero-icon" aria-hidden="true" style="--icon-food:96px;width:96px;height:96px">${foodIconSvg(f, { loading: "eager", fetchPriority: "high" })}</div>
     </div>
+    <div class="food-detail-preference"></div>
     <div class="food-detail-dynamic"></div>
     <div class="catalog-detail-primary-actions"><button class="btn full" id="foodCatalogLog" type="button">Protokollieren</button></div>
     <details class="accordion food-detail-settings">

@@ -92,7 +92,7 @@ try {
   await page.waitForFunction(() => (document.getElementById("foodList")?.childElementCount || 0) > 0);
   assert.ok(await page.locator("#foodList .foodInfo").count(), "Der Lebensmittelkatalog muss vor Planner-Readiness benutzbar sein");
   await page.locator("#foodList .foodInfo").first().click();
-  assert.ok(await page.locator("#genericBody .food-detail-hero").count(), "Lebensmitteldetails müssen vor Planner-Readiness öffnen");
+  assert.ok(await page.locator("#genericBody .food-detail-hero-icon").count(), "Lebensmitteldetails müssen vor Planner-Readiness öffnen");
   assert.match(await page.locator("[data-food-planner-preview]").textContent(), /Planungsregeln werden geladen/);
   await page.locator("#closeGeneric").click();
   await page.locator('nav button[data-view="plan"]').click();

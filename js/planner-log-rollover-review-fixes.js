@@ -161,7 +161,7 @@
       let saved = state.logs?.find((log) => log.id === freeEditId);
       if (saved?.plannedMealId === FREE_EDIT_SENTINEL) {
         delete saved.plannedMealId;
-        save();
+        save({ logChanges: [saved] });
         renderAll();
       }
     }

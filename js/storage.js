@@ -278,7 +278,8 @@ function pendingIdbRecoveryState() {
 function save(options = {}) {
   storageStateRevision++;
   if (typeof invalidateFoodLookupCache === "function") invalidateFoodLookupCache();
-  let snapshot = stateWithoutLogs(state);
+  let useIndexedDb = !indexedDbUnavailable && !!globalThis.indexedDB;
+  let snapshot = useIndexedDb ? stateWithoutLogs(state) : null;
   let emergencySnapshot = null;
   let writeEmergencyCopy = () => {
     if (!emergencySnapshot) {
@@ -297,7 +298,7 @@ function save(options = {}) {
   // Keep the synchronous emergency copy for fallback and error recovery only. Normal writes use
   // IndexedDB records so adding a log does not stringify the complete history on the UI thread.
   let localBackupWritten = false;
-  if (indexedDbUnavailable || !globalThis.indexedDB) {
+  if (!useIndexedDb) {
     writeEmergencyCopy();
     return Promise.resolve();
   }

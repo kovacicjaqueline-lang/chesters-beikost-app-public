@@ -333,8 +333,12 @@ try {
         maintenance.targetForFood,
       ),
       runtimeMaintenance: window.__planCheckMaintenanceDebug,
+      runtimeIntroduction: window.__planCheckIntroductionDebug,
       goals: api.planCheckReport().items
+        .filter((item) => item.code === "ALLERGEN_INTRODUCTION_CONTINUE"),
+      goalDetails: api.planCheckReport().items
         .filter((item) => item.code === "ALLERGEN_INTRODUCTION_CONTINUE")
+        .map((item) => item.details)
         .map((item) => item.details?.representativeFoodId || ""),
       haferStatus: api.displayStatus("hafer"),
       target,

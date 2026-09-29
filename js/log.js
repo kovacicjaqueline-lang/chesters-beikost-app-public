@@ -384,7 +384,7 @@ function conditionalQuestionsHtml(focusOutcome) {
 function updateConditionalQuestions() {
   let focusId = pendingLog.focusId && selectedLogFoods.has(pendingLog.focusId) ? pendingLog.focusId : [...selectedLogFoods][0];
   let focusSelect = document.querySelector(`[data-sample-result="${focusId}"]`) || document.querySelector(`[data-individual-result="${focusId}"]`) || document.getElementById("mainOutcome");
-  let value = focusSelect?.value || "tried";
+  let value = focusSelect?.value || "eaten";
   let box = document.getElementById("conditionalLogQuestions");
   if (!box) return;
   box.style.display = ["not_accepted", "not_offered"].includes(value) ? "block" : "none";
@@ -456,7 +456,7 @@ function addLogFoodFromResult(id) {
   if (learning) {
     p.sampleFoodIds = [...new Set([...(p.sampleFoodIds || []), id])];
     p.baseFoodIds = (p.baseFoodIds || []).filter((foodId) => foodId !== id);
-    p.foodOutcomes[id] = item && rank(item) >= 1 ? "eaten" : "tried";
+    p.foodOutcomes[id] = "eaten";
   } else {
     p.baseFoodIds = [...new Set([...(p.baseFoodIds || []), id])];
     p.sampleFoodIds = (p.sampleFoodIds || []).filter((foodId) => foodId !== id);
@@ -490,7 +490,7 @@ function applyLogRecipeChoice(recipe, choice) {
   p.sampleFoodIds = [...samples];
   p.baseFoodIds = [...bases];
   p.foodRoles = foodRolesFor(ids, bases, samples);
-  p.foodOutcomes = Object.fromEntries(ids.map((id) => [id, previousOutcomes[id] || (rank(food(id)) >= 1 ? "eaten" : "tried")]));
+  p.foodOutcomes = Object.fromEntries(ids.map((id) => [id, previousOutcomes[id] || "eaten"]));
   p.focusId = samples.includes(p.focusId) || bases.includes(p.focusId) ? p.focusId : (samples[0] || bases[0] || ids[0] || "");
   p.__recipeChoice = choice;
   selectedLogFoods = new Set(ids);
@@ -637,12 +637,12 @@ function renderLogForm() {
   let stockedSelected = selected.filter((f) => inventoryPortions(f.id) > 0);
   selectedInventoryFoods = new Set([...selectedInventoryFoods].filter((id) => stockedSelected.some((f) => f.id === id)));
   let recipeItem = selectedRecipeInventoryId ? state.inventory.find((item) => item.id === selectedRecipeInventoryId) : null;
-  let outcomeOptions = [["eaten", "Gegessen"], ["tried", "Probiert"], ["not_accepted", "Abgelehnt"], ["reaction", "Reaktion"], ["not_offered", "Nicht angeboten"]];
+  let outcomeOptions = [["eaten", "Gegessen"], ["not_accepted", "Abgelehnt"], ["reaction", "Reaktion"], ["not_offered", "Nicht angeboten"]];
   let mainDefault = mainIds.map((id) => p.foodOutcomes[id]).find(Boolean) || "eaten";
-  let focusOutcome = p.foodOutcomes[p.focusId] || sampleIds.map((id) => p.foodOutcomes[id]).find(Boolean) || mainDefault || "tried";
+  let focusOutcome = p.foodOutcomes[p.focusId] || sampleIds.map((id) => p.foodOutcomes[id]).find(Boolean) || mainDefault || "eaten";
   let individualRows = mainIds.map((id) => `<div class="food-outcome-row"><div class="food-outcome-name"><b>${esc(food(id)?.name || id)}</b><span>Bestandteil</span></div><select data-individual-result="${id}">${outcomeOptions.map(([value, title]) => `<option value="${value}" ${(p.foodOutcomes[id] || mainDefault) === value ? "selected" : ""}>${title}</option>`).join("")}</select><span></span></div>`).join("");
   let mainBlock = mainIds.length ? `<div class="field"><label>${mainIds.length === 1 ? "Lebensmittel bewerten" : "Mahlzeit bewerten"}</label>${selected.length > 1 && p.individualRatings ? `<div class="sample-outcome-list">${individualRows}</div><div class="individual-rating"><button class="text-button" id="toggleIndividualRatings" type="button">Gemeinsam bewerten</button></div>` : `<div class="grouped-outcome"><div><b>${mainIds.map((id) => esc(food(id)?.name || id)).join(" + ")}</b><span>${mainIds.length === 1 ? "Ergebnis" : "gemeinsam bewertet"}</span></div><select id="mainOutcome">${outcomeOptions.map(([value, title]) => `<option value="${value}" ${mainDefault === value ? "selected" : ""}>${title}</option>`).join("")}</select></div>${selected.length > 1 ? `<div class="individual-rating"><button class="text-button" id="toggleIndividualRatings" type="button">Zutaten einzeln bewerten ›</button></div>` : ""}`}</div>` : "";
-  let sampleBlock = sampleIds.length ? `<div class="field"><label>Einführung und Wiederholung</label><div class="sample-outcome-list">${sampleIds.map((id) => `<div class="food-outcome-row"><div class="food-outcome-name"><b>${esc(food(id)?.name || id)}</b><span>${esc(logLearningLabel(id))}</span></div><select data-sample-result="${id}">${outcomeOptions.map(([value, title]) => `<option value="${value}" ${(p.foodOutcomes[id] || "tried") === value ? "selected" : ""}>${title}</option>`).join("")}</select><button class="iconbtn" data-remove-log-food="${id}" aria-label="${esc(food(id)?.name || id)} entfernen">×</button></div>`).join("")}</div></div>` : "";
+  let sampleBlock = sampleIds.length ? `<div class="field"><label>Einführung und Wiederholung</label><div class="sample-outcome-list">${sampleIds.map((id) => `<div class="food-outcome-row"><div class="food-outcome-name"><b>${esc(food(id)?.name || id)}</b><span>${esc(logLearningLabel(id))}</span></div><select data-sample-result="${id}">${outcomeOptions.map(([value, title]) => `<option value="${value}" ${(p.foodOutcomes[id] || "eaten") === value ? "selected" : ""}>${title}</option>`).join("")}</select><button class="iconbtn" data-remove-log-food="${id}" aria-label="${esc(food(id)?.name || id)} entfernen">×</button></div>`).join("")}</div></div>` : "";
   let mealOptions = ["breakfast", "lunch", "snack", "dinner"].map((meal) => `<option value="${meal}" ${p.meal === meal ? "selected" : ""}>${esc(mealName(meal))}</option>`).join("");
   let contextHint = p.__fromPlan && !logContextHasChanged(p);
   let logContext = p.__mealContext
@@ -696,7 +696,7 @@ function renderLogForm() {
       returnToLog: true,
       onSaved: (item) => {
         selectedLogFoods.add(item.id);
-        pendingLog.foodOutcomes[item.id] = "tried";
+        pendingLog.foodOutcomes[item.id] = "eaten";
         pendingLog.sampleFoodIds = [...new Set([...(pendingLog.sampleFoodIds || []), item.id])];
         pendingLog.baseFoodIds = (pendingLog.baseFoodIds || []).filter((id) => id !== item.id);
         if (!pendingLog.focusId) pendingLog.focusId = item.id;
@@ -795,13 +795,13 @@ function saveLog() {
   let individual = !!pendingLog.individualRatings;
   let foodOutcomes = {};
   for (let id of mainIds) foodOutcomes[id] = individual ? (document.querySelector(`[data-individual-result="${id}"]`)?.value || mainOutcome) : mainOutcome;
-  for (let id of sampleIds) foodOutcomes[id] = document.querySelector(`[data-sample-result="${id}"]`)?.value || pendingLog.foodOutcomes?.[id] || "tried";
+  for (let id of sampleIds) foodOutcomes[id] = document.querySelector(`[data-sample-result="${id}"]`)?.value || pendingLog.foodOutcomes?.[id] || "eaten";
   let focus = pendingLog.focusId && ids.includes(pendingLog.focusId) ? pendingLog.focusId : (sampleIds[0] || mainIds[0] || ids[0]);
   let reactionFoodId = ids.find((id) => foodOutcomes[id] === "reaction") || "";
-  let overall = foodOutcomes[focus] || Object.values(foodOutcomes)[0] || "tried";
+  let overall = foodOutcomes[focus] || Object.values(foodOutcomes)[0] || "eaten";
   let outcomes = Object.values(foodOutcomes);
   let offered = outcomes.some((outcome) => outcome !== "not_offered");
-  let positiveTextureOutcome = outcomes.some((outcome) => ["eaten", "tried"].includes(outcome));
+  let positiveTextureOutcome = outcomes.includes("eaten");
   let textureValue = document.getElementById("logTexture")?.value || "";
   let textureRequired = logTextureSelectionRequired({
     positiveOutcome: positiveTextureOutcome,

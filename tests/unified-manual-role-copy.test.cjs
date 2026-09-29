@@ -30,7 +30,7 @@ test("Unified manual roles: visible validation copy covers introduction and repe
 });
 
 test("Unified help: texture rules distinguish positive from non-positive outcomes", () => {
-  assert.match(indexSource, /Bei „Probiert“ oder „Gegessen“ wird die tatsächlich angebotene Konsistenz dokumentiert/);
+  assert.match(indexSource, /Bei „Gegessen“ wird die tatsächlich angebotene Konsistenz dokumentiert/);
   assert.match(indexSource, /Bei Ablehnung, Reaktion oder „Nicht angeboten“ ist sie optional/);
   assert.doesNotMatch(indexSource, /Sobald tatsächlich Essen angeboten wurde, wird die Konsistenz dokumentiert/);
 });

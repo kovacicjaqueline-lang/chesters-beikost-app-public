@@ -294,6 +294,81 @@ test("Runtime rotiert Begleiter für Frühstück und Mittag über mehrere Tage",
   }
 });
 
+test("später Ersatz nutzt den aktiven Planungskontext für die Begleiter-Rotation", () => {
+  const names = [
+    "buildDay", "freshPlanContext", "introductionCandidate", "knownCandidate", "companionFor",
+    "planQualityIssues", "manualMealFor", "lockedMeal", "dueAllergen", "knownBase", "food",
+    "isTrustedBase", "diffDays", "lastDate", "activeMeal", "rank", "state",
+    "relatedFamilyFoodIds", "plannerAutomaticPairPreferencePenalty", "usageCount", "effectivePriority",
+  ];
+  const previous = Object.fromEntries(names.map((name) => [name, global[name]]));
+  const previousFlag = global.__plannerQualityRotationRuntimeInstalled;
+
+  try {
+    delete global.__plannerQualityRotationRuntimeInstalled;
+    const foods = [
+      { id: "polenta", name: "Polenta", allergenGroup: "", meals: ["lunch"], priority: 1 },
+      { id: "zucchini", name: "Zucchini", allergenGroup: "", meals: ["lunch"], priority: 2 },
+      { id: "karotte", name: "Karotte", allergenGroup: "", meals: ["lunch"], priority: 3 },
+    ];
+    global.state = { foods, settings: {}, deferred: {}, planLocks: {}, overrides: {} };
+    global.food = (id) => global.state.foods.find((item) => item.id === id);
+    global.isTrustedBase = () => false;
+    global.dueAllergen = () => false;
+    global.knownBase = () => global.food("polenta");
+    global.lastDate = () => "";
+    global.diffDays = (a, b) => Math.round((Date.parse(`${a}T00:00:00Z`) - Date.parse(`${b}T00:00:00Z`)) / 86400000);
+    global.activeMeal = (meal) => meal === "lunch";
+    global.rank = () => 2;
+    global.relatedFamilyFoodIds = (item) => [item.id];
+    global.plannerAutomaticPairPreferencePenalty = () => 0;
+    global.usageCount = () => 0;
+    global.effectivePriority = () => 0;
+    global.manualMealFor = () => null;
+    global.lockedMeal = () => null;
+    global.freshPlanContext = () => ({
+      reserved: new Set(), introduced: [], plannedUse: new Map(), lastFocus: new Map(),
+      inventoryReserved: new Map(), recipeReserved: new Map(), recipePlannedUse: new Map(), fullMilkDates: new Set(),
+    });
+    global.introductionCandidate = () => null;
+    global.knownCandidate = (_meal, _date, _ctx, exclude = []) => exclude.includes("polenta")
+      ? null
+      : ({ f: global.food("polenta"), type: "bekannt" });
+    global.companionFor = (focus) => global.state.foods.find((item) => item.id !== focus?.id) || null;
+    global.planQualityIssues = () => [];
+    global.buildDay = () => ({ meals: [] });
+
+    assert.equal(quality.installPlannerQualityRotationRuntime(), true);
+    const context = global.freshPlanContext();
+    quality.plannerQualityRecordMeal(
+      { active: true, foodIds: ["polenta", "zucchini"] },
+      "2026-08-20",
+      context,
+    );
+
+    const replacement = global.plannerQualityWithActiveContext(context, () => {
+      const candidate = global.knownCandidate("lunch", "2026-08-21", context, []);
+      const companion = global.companionFor(candidate.f, "lunch", "2026-08-21", candidate.type);
+      return { candidate, companion };
+    });
+
+    assert.equal(replacement.candidate.f.id, "polenta");
+    assert.equal(replacement.companion.id, "karotte", "der bereits verwendete Zucchini-Partner soll bei verfügbarer Alternative rotieren");
+    assert.equal(
+      global.companionFor(global.food("polenta"), "lunch", "2026-08-21", "bekannt").id,
+      "zucchini",
+      "außerhalb des späten Ersatzpfads bleibt die unveränderte Basis-Auswahl aktiv",
+    );
+  } finally {
+    for (const [name, value] of Object.entries(previous)) {
+      if (value === undefined) delete global[name];
+      else global[name] = value;
+    }
+    if (previousFlag === undefined) delete global.__plannerQualityRotationRuntimeInstalled;
+    else global.__plannerQualityRotationRuntimeInstalled = previousFlag;
+  }
+});
+
 test("Runtime rotiert eine per Nicht verschieben quittierte Vortagsplanung am Folgetag", () => {
   const names = [
     "buildDay", "freshPlanContext", "introductionCandidate", "knownCandidate", "companionFor",

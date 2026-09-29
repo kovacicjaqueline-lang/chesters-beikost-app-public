@@ -1219,13 +1219,13 @@ function renderAuditCore() {
   if (!document.getElementById("auditList")) return;
   let ids = [...document.querySelectorAll("[id]")].map((element) => element.id);
   let duplicateIds = ids.filter((id, index) => ids.indexOf(id) !== index);
-  let outcomes = [["eaten", "Gegessen"], ["tried", "Probiert"], ["not_accepted", "Nicht angenommen"], ["reaction", "Reaktion"], ["not_offered", "Nicht angeboten"]];
+  let outcomes = [["eaten", "Gegessen"], ["not_accepted", "Nicht angenommen"], ["reaction", "Reaktion"], ["not_offered", "Nicht angeboten"]];
   let recipeNames = RECIPES.map((recipe) => recipe.name);
   let checks = [
     ["Mindestens 100 Lebensmittel", uniqueEligibleCount() >= 100],
     ["Lebensmittel-Standardfilter Offen", foodFilter === "open"],
     ["Alle 11 Allergengruppen vorhanden", new Set(state.foods.filter((f) => f.allergenGroup).map((f) => f.allergenGroup)).size === 11],
-    ["Nur die fünf bestätigten Ergebnisbegriffe", outcomes.length === 5 && new Set(outcomes.map(([, label]) => label)).size === 5],
+    ["Nur die vier bestätigten Ergebnisbegriffe", outcomes.length === 4 && new Set(outcomes.map(([, label]) => label)).size === 4],
     ["Keine doppelten aktiven HTML-IDs", duplicateIds.length === 0],
     ["IndexedDB-Schnittstelle verfügbar", !!window.indexedDB],
     ["V8.8-Rohbackup wird erkannt", typeof validateBackup === "function"],

@@ -548,8 +548,9 @@ function introductionCandidate(meal, on, ctx, exclude = [], baseExclude = exclud
       !exclude.includes(f.id) &&
       !ctx.reserved.has(f.id),
   );
-  let retries = pool.filter(
-    (f) => rank(f) === 1 || lastOutcome(f.id) === "not_accepted",
+  let retries = pool.filter((f) =>
+    lastOutcome(f.id) === "not_accepted" ||
+    (!!f.allergenGroup && rank(f) === 1),
   );
   retries.sort((a, b) => effectivePriority(a, on) - effectivePriority(b, on));
   if (retries.length) {
@@ -1310,7 +1311,7 @@ function mealName(m) {
   return { breakfast: "Frühstück", snack: "Snack", lunch: "Mittag", dinner: "Abendessen" }[m] || "Mahlzeit";
 }
 function outcomeLabel(o) {
-  return ({ not_offered: "Nicht angeboten", not_accepted: "Nicht angenommen", tried: "Probiert", eaten: "Gegessen", reaction: "Reaktion" }[o] || o);
+  return ({ not_offered: "Nicht angeboten", not_accepted: "Nicht angenommen", tried: "Gegessen", eaten: "Gegessen", reaction: "Reaktion" }[o] || o);
 }
 function phaseText() {
   return PHASES[currentPhase()].label;

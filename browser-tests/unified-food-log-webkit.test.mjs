@@ -325,9 +325,9 @@ try {
   assert.equal(notOffered.textureKnown, false);
   assert.equal(Object.hasOwn(notOffered, "textureStage"), false);
 
-  // Wird ein solcher Eintrag später tatsächlich zu „Probiert“, ist eine Konsistenz neu erforderlich.
+  // Wird ein solcher Eintrag später tatsächlich als „Gegessen“ dokumentiert, ist eine Konsistenz neu erforderlich.
   await page.evaluate((id) => window.editLogEntry(id), notOffered.id);
-  await selectLogOption(page, '[data-sample-result="karotte"]', "tried");
+  await selectLogOption(page, '[data-sample-result="karotte"]', "eaten");
   await page.locator("#saveLog").click();
   assert.equal(await page.locator("#logModal").evaluate((node) => node.classList.contains("open")), true);
   assert.equal(await page.locator(".unified-texture-error").count(), 1);
@@ -336,10 +336,10 @@ try {
   await selectLogOption(page, "#logTexture", "2");
   await page.locator("#saveLog").click();
   await page.waitForFunction(() => document.getElementById("logModal") && !document.getElementById("logModal").classList.contains("open"));
-  let changedToTried = await page.evaluate(() => window.__beikostTest.getState().logs[0]);
-  assert.equal(changedToTried.foodOutcomes.karotte, "tried");
-  assert.equal(changedToTried.textureKnown, true);
-  assert.equal(changedToTried.textureStage, 2);
+  let changedToEaten = await page.evaluate(() => window.__beikostTest.getState().logs[0]);
+  assert.equal(changedToEaten.foodOutcomes.karotte, "eaten");
+  assert.equal(changedToEaten.textureKnown, true);
+  assert.equal(changedToEaten.textureStage, 2);
 
   // 7. Ablehnung und Reaktion: Konsistenz ist optional und zählt nicht als positive Texturerfahrung.
   for (const outcome of ["not_accepted", "reaction"]) {

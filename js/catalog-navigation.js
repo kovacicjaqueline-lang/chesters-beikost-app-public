@@ -18,7 +18,7 @@
     if (!item || typeof openLog !== "function") return;
     let itemRank = typeof rank === "function" ? rank(item) : 0;
     let learning = itemRank < 2;
-    let outcome = learning ? (itemRank >= 1 ? "eaten" : "tried") : "eaten";
+    let outcome = "eaten";
     openLog({
       date: today(),
       meal: "",

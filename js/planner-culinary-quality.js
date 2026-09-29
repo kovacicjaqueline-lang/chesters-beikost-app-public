@@ -132,12 +132,25 @@ function plannerCulinaryAssessment(ids, foods = [], meal = "lunch", options = {}
     return assessment;
   }
 
+  const sampleFoodIds = plannerCulinaryCanonicalIds(options.sampleFoodIds || []);
   const isLearningOnly = !!options.learningOnly || !!options.sampleOnly;
-  if (items.length === 1 && isLearningOnly) {
+  if (isLearningOnly && items.length === 1 && sampleFoodIds.length === 0) {
     assessment.learningOnly = true;
     assessment.score = 0;
     assessment.issues.push("bewusste Einzelzutat");
     return assessment;
+  }
+  if (isLearningOnly && sampleFoodIds.length === 1 && items.some((item) => item.id === sampleFoodIds[0])) {
+    const companions = items.filter((item) => item.id !== sampleFoodIds[0]);
+    const companionRoles = companions.map(plannerCulinaryRole);
+    const isSampleWithKnownBase = companions.length === 1 &&
+      ["base", "creamy"].includes(companionRoles[0]);
+    if (companions.length === 0 || isSampleWithKnownBase) {
+      assessment.learningOnly = true;
+      assessment.score = 0;
+      assessment.issues.push(companions.length ? "bewusste Kostprobe mit Basis" : "bewusste Einzelzutat");
+      return assessment;
+    }
   }
 
   if (substantive.length === 0) {

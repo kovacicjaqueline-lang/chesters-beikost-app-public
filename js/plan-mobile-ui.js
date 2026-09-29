@@ -294,15 +294,39 @@
       <div class="plan-week-legend" aria-label="Status der Woche">${legendHtml(statuses)}</div>
     `;
 
-    overview.querySelectorAll(".plan-week-day").forEach((button) => {
+    const dayNodes = [...block.children].filter(
+      (node) => node.classList.contains("day-card") || node.classList.contains("completed-day"),
+    );
+    const dayNodesByDate = new Map(days.map((day, index) => [day.date, dayNodes[index]]));
+    const dayButtons = [...overview.querySelectorAll(".plan-week-day")];
+    const dayButtonsByDate = new Map(dayButtons.map((button) => [button.dataset.planDate, button]));
+    let activeDate = selectedDate;
+
+    dayButtons.forEach((button) => {
       button.onclick = () => {
-        globalThis.__mobilePlanSelectedDate = button.dataset.planDate;
-        applySelectedDay(block, days, button.dataset.planDate, statuses);
-        overview.querySelectorAll(".plan-week-day").forEach((item) => {
-          const active = item.dataset.planDate === button.dataset.planDate;
-          item.classList.toggle("selected", active);
-          item.setAttribute("aria-pressed", active ? "true" : "false");
-        });
+        const nextDate = button.dataset.planDate;
+        if (!nextDate || nextDate === activeDate) return;
+
+        const previousNode = dayNodesByDate.get(activeDate);
+        const nextNode = dayNodesByDate.get(nextDate);
+        if (!nextNode) return;
+
+        if (previousNode && previousNode !== nextNode) {
+          previousNode.hidden = true;
+          previousNode.classList.remove("plan-selected-day");
+        }
+        nextNode.hidden = false;
+        nextNode.classList.add("plan-selected-day");
+        if (nextNode.matches("details.completed-day")) nextNode.open = true;
+
+        const previousButton = dayButtonsByDate.get(activeDate);
+        previousButton?.classList.remove("selected");
+        previousButton?.setAttribute("aria-pressed", "false");
+        button.classList.add("selected");
+        button.setAttribute("aria-pressed", "true");
+
+        activeDate = nextDate;
+        globalThis.__mobilePlanSelectedDate = nextDate;
       };
     });
   }

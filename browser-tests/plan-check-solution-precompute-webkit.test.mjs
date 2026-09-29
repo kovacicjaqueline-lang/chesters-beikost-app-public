@@ -308,6 +308,7 @@ try {
     return {
       goals: items.map((item) => item.details?.representativeFoodId || ""),
       goalDetails: items.map((item) => item.details),
+      runtimeIntroduction: window.__planCheckIntroductionDebug,
       directCovered: window.PlannerPlanCheckSolutions.foodSpecificIntroductionCoveredByEstablishedMaintenance(
         wheat,
         established,

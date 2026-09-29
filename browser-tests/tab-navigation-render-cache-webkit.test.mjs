@@ -41,16 +41,6 @@ try {
   await waitForStorageBootstrap(page);
 
   await page.evaluate(() => {
-    const filler = document.createElement("div");
-    filler.style.height = "1800px";
-    document.querySelector("#home").append(filler);
-    document.querySelector("main").scrollTop = 600;
-  });
-  assert.ok(await page.locator("main").evaluate((main) => main.scrollTop > 0), "Der aktive Tab muss vor dem Wechsel heruntergescrollt sein");
-  await activateView(page, "foods");
-  assert.equal(await page.locator("main").evaluate((main) => main.scrollTop), 0, "Ein Tabwechsel muss die Scrollposition des Inhaltsbereichs auf 0 setzen");
-
-  await page.evaluate(() => {
     window.__tabRenderCounts = { foods: 0 };
     const baseRenderFoods = window.renderFoods;
     window.renderFoods = function countedRenderFoods(...args) {
@@ -79,6 +69,17 @@ try {
     afterFirstOpen,
     "Auch ein erneuter Tap auf den bereits aktiven Tab darf keinen unnötigen Voll-Render auslösen",
   );
+
+  await page.evaluate(() => {
+    const filler = document.createElement("div");
+    filler.id = "tabScrollTestFiller";
+    filler.style.height = "1800px";
+    document.querySelector("#foods").append(filler);
+    document.querySelector("main").scrollTop = 600;
+  });
+  assert.ok(await page.locator("main").evaluate((main) => main.scrollTop > 0), "Der aktive Tab muss vor dem Wechsel heruntergescrollt sein");
+  await activateView(page, "more");
+  assert.equal(await page.locator("main").evaluate((main) => main.scrollTop), 0, "Ein Tabwechsel muss die Scrollposition des Inhaltsbereichs auf 0 setzen");
 
   await page.evaluate(async () => {
     state.settings.seasonal = !state.settings.seasonal;

@@ -9,6 +9,8 @@ const handling = require("../js/handling-readiness.js");
 const root = path.resolve(__dirname, "..");
 const handlingSource = fs.readFileSync(path.join(root, "js", "handling-readiness.js"), "utf8");
 const utilsSource = fs.readFileSync(path.join(root, "js", "utils.js"), "utf8");
+const appSource = fs.readFileSync(path.join(root, "app.js"), "utf8");
+const indexSource = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const swSource = fs.readFileSync(path.join(root, "sw.js"), "utf8");
 
 test("Planner-Boot: nur im aktuellen unvollständigen Seiten-Boot erzeugte normale Auto-Locks werden verworfen", () => {
@@ -60,8 +62,11 @@ test("Planner-Boot: historische Locks bleiben unverändert, wenn kein sicherer S
   assert.ok(state.planLocks.existing);
 });
 
-test("Planner-Boot: Final-Quality und Allergenpflege werden nach Introduction und vor Handling/finalem Render installiert", () => {
+test("Planner-Boot: erster Render wartet auf Policies und Storage, ohne den gesamten Body zu verbergen", () => {
   assert.match(utilsSource, /window\.__plannerPoliciesReady\s*=\s*false/);
+  assert.match(utilsSource, /window\.__plannerPoliciesReadyPromise\s*=\s*new Promise/);
+  assert.match(utilsSource, /resolvePlannerPoliciesReady\(true\)/);
+  assert.doesNotMatch(utilsSource, /body\.style\.visibility\s*=\s*["']hidden/);
   assert.match(
     utilsSource,
     /installPlannerIntroductionPolicyRuntime\(\);[\s\S]*loadFinalQualityPolicy\(\)/,
@@ -90,8 +95,13 @@ test("Planner-Boot: Final-Quality und Allergenpflege werden nach Introduction un
     utilsSource,
     /installHandlingReadinessRuntime\(\);[\s\S]*window\.__handlingReadinessReady\s*=\s*true;[\s\S]*completePlannerPolicies\(\)/,
   );
+  assert.match(appSource, /const plannerPoliciesReady = window\.__plannerPoliciesReadyPromise/);
   assert.match(
-    utilsSource,
-    /window\.__plannerPoliciesReady\s*=\s*true;[\s\S]*renderAll\(\)/,
+    appSource,
+    /Promise\.resolve\(plannerPoliciesReady\)[\s\S]*\.then\(\(ready\) => \{[\s\S]*bootstrapStorage\(\)[\s\S]*\.finally\(\(\) => \{[\s\S]*window\.__plannerPoliciesReady = plannerPoliciesInstalled;[\s\S]*renderCurrentView\(\)/,
   );
+  assert.match(indexSource, /id="appBootStatus" role="status"/);
+  assert.match(indexSource, /<main id="appMain" inert>/);
+  assert.match(indexSource, /<nav inert>/);
+  assert.match(indexSource, /html\.app-boot-pending main>\.view\{display:none!important\}/);
 });

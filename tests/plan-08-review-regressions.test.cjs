@@ -139,12 +139,11 @@ test("PLAN-08 review: genau ein freigeschaltetes exaktes Rezept darf ein sonst s
   assert.equal(context.companionFor(banana, "lunch", "2026-08-18", "bekannt")?.id, "karotte");
 });
 
-test("PLAN-08 review: erster sichtbarer Render erfolgt erst nach vollständiger Browser-Policy-Kette", () => {
+test("PLAN-08 review: Browser-Policy-Kette meldet Bereitschaft ohne vorzeitiges Rendern", async () => {
   let domReady = null;
   let renders = 0;
   let fullRenders = 0;
   const appended = [];
-  const body = { style: { visibility: "" } };
   const context = {
     console: { error: () => {} },
     renderAll: () => { fullRenders += 1; },
@@ -157,7 +156,6 @@ test("PLAN-08 review: erster sichtbarer Render erfolgt erst nach vollständiger 
   };
 
   const document = {
-    body,
     querySelector: () => null,
     createElement: () => ({
       src: "",
@@ -195,7 +193,7 @@ test("PLAN-08 review: erster sichtbarer Render erfolgt erst nach vollständiger 
 
   vm.createContext(context);
   vm.runInContext(utilsSource, context);
-  assert.equal(body.style.visibility, "hidden");
+  assert.equal(typeof context.__plannerPoliciesReadyPromise?.then, "function");
   assert.equal(renders, 0);
   assert.equal(fullRenders, 0);
   assert.equal(context.__plannerPoliciesReady, false);
@@ -220,8 +218,8 @@ test("PLAN-08 review: erster sichtbarer Render erfolgt erst nach vollständiger 
     `js/handling-readiness.js?v=${appVersion}`,
   ]);
   assert.equal(context.__handlingReadinessReady, true);
-  assert.equal(context.__plannerPoliciesReady, true);
-  assert.equal(renders, 1);
+  assert.equal(context.__plannerPoliciesReady, false);
+  assert.equal(await context.__plannerPoliciesReadyPromise, true);
+  assert.equal(renders, 0);
   assert.equal(fullRenders, 0);
-  assert.equal(body.style.visibility, "");
 });

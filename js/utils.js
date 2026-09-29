@@ -146,23 +146,22 @@ function food(id) {
 }
 
 // Planner-Mahlzeiteneignung wird als eigene Policy-Schicht nach app.js geladen.
-// Die App bleibt während der Policy-Kette verborgen; sichtbar wird sie erst nach
-// Installation der vollständigen Planner-Regeln und einem erneuten Render der
-// aktuell sichtbaren Ansicht.
+// Der App-Start wartet auf diese Kette, bevor Storage geladen und erstmals
+// gerendert wird. So kann kein unvollständiger Planner-Zustand sichtbar werden.
 if (typeof window !== "undefined" && typeof document !== "undefined") {
-  let plannerPolicyBody = document.body;
-  if (plannerPolicyBody) plannerPolicyBody.style.visibility = "hidden";
   window.__plannerPoliciesReady = false;
   window.__handlingReadinessReady = false;
+  let resolvePlannerPoliciesReady;
+  window.__plannerPoliciesReadyPromise = new Promise((resolve) => {
+    resolvePlannerPoliciesReady = resolve;
+  });
   let plannerPoliciesFinished = false;
   let handlingReadinessLoading = false;
 
   let completePlannerPolicies = () => {
     if (plannerPoliciesFinished) return;
     plannerPoliciesFinished = true;
-    window.__plannerPoliciesReady = true;
-    if (typeof renderCurrentView === "function") renderCurrentView();
-    if (plannerPolicyBody) plannerPolicyBody.style.visibility = "";
+    resolvePlannerPoliciesReady(true);
   };
 
   let finishPlannerPolicies = () => {
@@ -228,8 +227,7 @@ if (typeof window !== "undefined" && typeof document !== "undefined") {
     plannerPoliciesFinished = true;
     window.__plannerPoliciesReady = false;
     console.error("Planner-Policy konnte nicht vollständig geladen werden.", event?.error || event || "");
-    if (typeof renderAll === "function") renderAll();
-    if (plannerPolicyBody) plannerPolicyBody.style.visibility = "";
+    resolvePlannerPoliciesReady(false);
   };
 
   let attachPlannerLoadError = (script) => {

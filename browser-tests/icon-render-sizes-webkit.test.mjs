@@ -103,6 +103,20 @@ try {
 
 
   await page.evaluate(() => window.showFoodInfo(window.food("karotte")));
+  const foodPreference = page.locator(".food-detail-preference .toggleline");
+  await foodPreference.waitFor({ state: "visible" });
+  assert.equal(
+    await foodPreference.locator("#foodDetailsLiked").count(),
+    1,
+    "❤️-Schalter muss direkt in der sichtbaren Lebensmittel-Detailansicht liegen",
+  );
+  assert.match(await foodPreference.textContent(), /Wird gern gegessen/);
+  assert.equal(
+    await page.locator(".food-detail-settings #foodDetailsLiked").count(),
+    0,
+    "❤️-Schalter darf nicht im eingeklappten Bereich Status und Planung verborgen sein",
+  );
+
   const detailIcon = page.locator(".food-detail-hero-icon .illustration-icon__asset");
   await detailIcon.waitFor({ state: "attached" });
   const detailLoading = await detailIcon.evaluate((img) => ({

@@ -58,7 +58,10 @@ function loadPlanningDataHelpers(settings = {}) {
         ...settings,
       },
     },
-    dateObj: (value) => new Date(`${value}T00:00:00Z`),
+    dateObj: (value) => {
+      const [year, month, day] = value.split('-').map(Number);
+      return new Date(year, month - 1, day);
+    },
     rank: () => 2,
     lastDate: () => '2026-08-10',
     diffDays: (later, earlier) => Math.round((new Date(`${later}T00:00:00Z`) - new Date(`${earlier}T00:00:00Z`)) / 86400000),

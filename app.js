@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 9291)
-Total output lines: 926
-
 "use strict";
 
 /* Anwendungsstart
@@ -480,7 +477,34 @@ function installFoodPolicyRuntime() {
   let originalBootstrapStorage = bootstrapStorage;
 
   let policyEligible = (f, on = autoPlanningDate || today()) =>
-    automat…291 tokens truncated…  if (blocked.includes(result.f.id)) return null;
+    automaticFoodEligibility(f, on, state?.settings || {});
+
+  let withEligibleFoods = (on, includeIds, callback) => {
+    if (!autoPlanningDepth || !state?.foods) return callback();
+    let originalFoods = state.foods;
+    let keep = new Set(includeIds || []);
+    state.foods = originalFoods.filter((item) => keep.has(item.id) || policyEligible(item, on));
+    try { return callback(); }
+    finally { state.foods = originalFoods; }
+  };
+
+  let withPlannerOverride = (key, on, callback) => {
+    let allowId = state.overrides?.[key] || "";
+    return withEligibleFoods(on, allowId ? [allowId] : [], () => callback(allowId));
+  };
+
+  let nextAllowedFocus = (producer, exclude = [], allowId = "") => {
+    let blocked = [...exclude];
+    let max = (state?.foods?.length || 0) + 1;
+    for (let i = 0; i < max; i++) {
+      let result = producer(blocked);
+      if (!result?.f) return result;
+      if (plannerFoodCanBeAutomaticFocus(result.f)) return result;
+      if (result.f.id === allowId) {
+        let overrideMode = plannerFoodOverrideMode(result.f, originalRank(result.f));
+        if (overrideMode === "sample") return { ...result, type: "manuell" };
+      }
+      if (blocked.includes(result.f.id)) return null;
       blocked.push(result.f.id);
     }
     return null;

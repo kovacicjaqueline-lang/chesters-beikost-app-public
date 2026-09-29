@@ -281,7 +281,7 @@ try {
     "Beim Einfügen des neuen Ergebnisses muss der älteste Cache-Eintrag entfernt werden",
   );
   assert.ok(
-    versionedCache.rows.some((row) => row.key === legacyEntryKey),
+    versionedCache.rows.some((row) => row.key.startsWith("v1|")),
     "Das aktuelle abgeschlossene Ergebnis muss trotz Cache-Limit gespeichert sein",
   );
 

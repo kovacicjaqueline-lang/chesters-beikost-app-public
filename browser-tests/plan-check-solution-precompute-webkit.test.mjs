@@ -251,6 +251,61 @@ try {
   await page.locator("#leavePlanGoalDirect").click();
   await page.waitForFunction(() => !document.getElementById("planQuality")?.offsetParent);
 
+  const glutenReport = await page.evaluate(() => {
+    const api = window.__beikostTest;
+    api.reset();
+    const snapshot = api.getState();
+    snapshot.settings.planFrom = api.today();
+    snapshot.logs = [
+      ...[
+        "2026-07-17", "2026-07-19", "2026-07-20", "2026-07-22",
+        "2026-07-27", "2026-08-01", "2026-08-14", "2026-08-27",
+        "2026-09-16",
+      ].map((date, index) => ({
+        id: `known-oat-${index}`,
+        date,
+        meal: index % 2 ? "lunch" : "breakfast",
+        entryType: "meal",
+        foodIds: ["hafer"],
+        outcome: "eaten",
+        foodOutcomes: { hafer: "eaten" },
+        createdAt: `${date}T12:00:00.000Z`,
+      })),
+      {
+        id: "known-bread",
+        date: "2026-08-16",
+        meal: "breakfast",
+        entryType: "food",
+        foodIds: ["brot"],
+        outcome: "eaten",
+        foodOutcomes: { brot: "eaten" },
+        createdAt: "2026-08-16T12:00:00.000Z",
+      },
+      {
+        id: "single-wheat-semolina",
+        date: "2026-09-18",
+        meal: "breakfast",
+        entryType: "food",
+        foodIds: ["weizengriess"],
+        outcome: "eaten",
+        foodOutcomes: { weizengriess: "eaten" },
+        createdAt: "2026-09-18T12:00:00.000Z",
+      },
+    ];
+    snapshot.manualMeals = {};
+    snapshot.planLocks = {};
+    snapshot.overrides = {};
+    api.setState(snapshot);
+    return api.planCheckReport().items
+      .filter((item) => item.code === "ALLERGEN_INTRODUCTION_CONTINUE")
+      .map((item) => item.details?.representativeFoodId || "");
+  });
+  assert.equal(
+    glutenReport.includes("weizengriess"),
+    false,
+    `Ein einzelner Weizengrießkontakt darf bei bereits gepflegter Glutenquelle keine neue Fortsetzung auslösen: ${glutenReport.join(", ")}`,
+  );
+
   assert.deepEqual(pageErrors, [], `Keine Page-Errors erwartet: ${pageErrors.join(" | ")}`);
 } finally {
   await closeBrowserApp({ context: typeof context !== "undefined" ? context : null, browser, server });

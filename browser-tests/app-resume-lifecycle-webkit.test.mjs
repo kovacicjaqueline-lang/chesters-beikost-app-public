@@ -184,17 +184,21 @@ try {
         const startedAt = performance.now();
         document.dispatchEvent(new Event("visibilitychange"));
         const dispatchReturnedAt = performance.now();
+        const coverAfterDispatch = document.documentElement.classList.contains("app-resume-cover");
         await new Promise((resolve) => requestAnimationFrame(() => resolve()));
         const firstFrameAt = performance.now();
         await new Promise((resolve) => requestAnimationFrame(() => resolve()));
         const secondFrameAt = performance.now();
+        const coverAfterSecondFrame = document.documentElement.classList.contains("app-resume-cover");
         await new Promise((resolve) => setTimeout(resolve, 0));
         const eventLoopReadyAt = performance.now();
         delete document.visibilityState;
         return {
           dispatchMs: dispatchReturnedAt - startedAt,
+          coverAfterDispatch,
           firstFrameMs: firstFrameAt - startedAt,
           secondFrameMs: secondFrameAt - startedAt,
+          coverAfterSecondFrame,
           eventLoopReadyMs: eventLoopReadyAt - startedAt,
         };
       },
@@ -268,6 +272,12 @@ try {
     sameDay.htmlBackground !== "rgba(0, 0, 0, 0)" || sameDay.bodyBackground !== "rgba(0, 0, 0, 0)",
     "The rendered app canvas needs an opaque root or body background after CSS has loaded",
   );
+
+  const backgroundScreen = await page.evaluate(() => window.__resumeProbe.syntheticVisibility("hidden"));
+  assert.equal(backgroundScreen.coverAfterDispatch, true, "The loading screen must cover the app as soon as iOS backgrounds it");
+  const resumedScreen = await page.evaluate(() => window.__resumeProbe.syntheticVisibility("visible"));
+  assert.equal(resumedScreen.coverAfterDispatch, true, "The loading screen must remain visible while the app paints after resume");
+  assert.equal(resumedScreen.coverAfterSecondFrame, false, "The loading screen must clear after the resumed app has painted");
 
   await setPlanFrom(yesterday);
   await resetProbe();

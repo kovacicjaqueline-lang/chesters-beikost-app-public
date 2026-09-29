@@ -120,6 +120,29 @@ test("echter Tagesplan rotiert einen bekannten Begleiter zwischen Mittag- und Ab
   );
 });
 
+test("bloß probiertes Nicht-Allergen blockiert kein offenes FOOD; echte Ablehnung bleibt gezieltes Follow-up", () => {
+  const { context, state } = loadPlanner();
+  state.foods = state.foods.filter((food) => ["hirse", "birne"].includes(food.id));
+  state.logs = [{
+    id: "hirse-tried",
+    date: "2026-09-21",
+    meal: "lunch",
+    foodIds: ["hirse"],
+    foodOutcomes: { hirse: "tried" },
+    entryType: "sample",
+  }];
+
+  const candidate = context.introductionCandidate("lunch", "2026-09-22", context.freshPlanContext());
+  assert.equal(candidate.f.id, "birne");
+  assert.equal(candidate.type, "neu");
+
+  state.logs[0].outcome = "not_accepted";
+  state.logs[0].foodOutcomes.hirse = "not_accepted";
+  const followUp = context.introductionCandidate("lunch", "2026-09-22", context.freshPlanContext());
+  assert.equal(followUp.f.id, "hirse");
+  assert.equal(followUp.type, "gezielt wiederholen");
+});
+
 test("reiner Tracking-Snapshot blockiert die Rotation der übrigen Tagesslots nicht", () => {
   const { context, state } = loadPlanner();
   state.foods = state.foods.filter((item) =>

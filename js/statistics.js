@@ -77,12 +77,13 @@ function statisticsSnapshot(range = statisticsRange) {
   let positiveIdentities = new Set();
   let introducedIdentities = new Set();
   let firstPositiveDates = statisticsFirstPositiveDateByIdentity();
-  let outcomeCounts = { eaten: 0, tried: 0, not_accepted: 0, not_offered: 0, reaction: 0 };
+  let outcomeCounts = { eaten: 0, not_accepted: 0, not_offered: 0, reaction: 0 };
 
   for (let log of logs) {
     for (let id of new Set(log.foodIds || [])) {
       let outcome = outcomeForFood(log, id);
-      if (Object.prototype.hasOwnProperty.call(outcomeCounts, outcome)) outcomeCounts[outcome] += 1;
+      let countedOutcome = outcome === "tried" ? "eaten" : outcome;
+      if (Object.prototype.hasOwnProperty.call(outcomeCounts, countedOutcome)) outcomeCounts[countedOutcome] += 1;
       if (!statisticsPositiveOutcome(outcome)) continue;
       for (let identity of statisticsCountableIdentityIds(id)) {
         positiveIdentities.add(identity);
@@ -168,7 +169,7 @@ function renderStatistics() {
     <div class="grid2 statistics-metrics">
       ${statisticsMetric(snapshot.days, "Tage mit Eintrag")}
       ${statisticsMetric(snapshot.entryCount, "Einträge")}
-      ${statisticsMetric(snapshot.varietyCount, "Verschiedene Lebensmittel", "gegessen oder probiert")}
+      ${statisticsMetric(snapshot.varietyCount, "Verschiedene Lebensmittel", "gegessen")}
       ${statisticsMetric(snapshot.introducedCount, "Neu kennengelernt", statisticsRange === "all" ? "seit Beikoststart" : "in diesem Zeitraum")}
     </div>
     <div class="statistics-section">
@@ -176,7 +177,6 @@ function renderStatistics() {
       <div class="small statistics-section-copy">Jedes enthaltene Lebensmittel zählt mit seinem protokollierten Ergebnis einmal.</div>
       <div class="statistics-bars">
         ${statisticsOutcomeRow("eaten", "Gegessen", snapshot.outcomeCounts.eaten, outcomesTotal)}
-        ${statisticsOutcomeRow("tried", "Probiert", snapshot.outcomeCounts.tried, outcomesTotal)}
         ${statisticsOutcomeRow("not_accepted", "Nicht angenommen", snapshot.outcomeCounts.not_accepted, outcomesTotal)}
         ${statisticsOutcomeRow("not_offered", "Nicht angeboten", snapshot.outcomeCounts.not_offered, outcomesTotal)}
         ${statisticsOutcomeRow("reaction", "Reaktion", snapshot.outcomeCounts.reaction, outcomesTotal)}

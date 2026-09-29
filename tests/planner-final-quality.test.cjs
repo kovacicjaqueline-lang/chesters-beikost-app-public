@@ -10,6 +10,7 @@ const {
   plannerFinalShouldReleaseAutoLock,
   plannerFinalMealAssessment,
 } = require("../js/planner-final-quality.js");
+const { plannerCulinaryAssessment } = require("../js/planner-culinary-quality.js");
 
 test("automatic lunch blocks breakfast-style porridge, not savory porridge", () => {
   const breakfastPorridge = {
@@ -94,6 +95,32 @@ test("normal automatic singleton is invalid but an explicit single sample remain
 
   assert.equal(plannerFinalMealAssessment(normal, foods).allowed, false);
   assert.equal(plannerFinalMealAssessment(sample, foods).allowed, true);
+});
+
+test("eine Kostprobe mit genau einer vertrauten Basis bleibt ein Lernangebot statt ein volles Gericht", () => {
+  const foods = [
+    { id: "kartoffel", category: "Wurzel/Knolle" },
+    { id: "mangold", category: "Blattgemüse" },
+    { id: "fenchel", category: "Gemüse" },
+  ];
+  const assess = (sampleFoodIds) => plannerFinalMealAssessment({
+    active: true,
+    meal: "lunch",
+    focusId: sampleFoodIds[0],
+    foodIds: ["kartoffel", ...sampleFoodIds],
+    baseFoodIds: ["kartoffel"],
+    sampleFoodIds,
+    type: "neu",
+  }, foods, {
+    culinaryAssessment: (ids, items, meal, options) => plannerCulinaryAssessment(ids, items, meal, options),
+  });
+
+  const singleSample = assess(["mangold"]);
+  assert.equal(singleSample.allowed, true);
+  assert.equal(singleSample.learningOnly, true);
+
+  const multipleSamples = assess(["mangold", "fenchel"]);
+  assert.equal(multipleSamples.learningOnly, false, "mehrere Kostproben werden nicht als einzelnes Lernangebot eingestuft");
 });
 
 test("manual meals are not rewritten by the automatic quality gate", () => {
@@ -228,6 +255,73 @@ test("an unsuitable automatic singleton lock is released by the final runtime ga
   const followUpDay = vm.runInContext(`buildDay("${date}", 0, {})`, context);
   assert.equal(followUpDay.meals[0].empty, undefined);
   assert.equal(state.planLocks[`${date}|lunch`], followUpLock);
+});
+
+test("finaler bekannter Ersatz übernimmt ein exakt passendes geeignetes Rezept", () => {
+  const finalQualitySource = fs.readFileSync(path.join(__dirname, "..", "js", "planner-final-quality.js"), "utf8");
+  const recipeFirstSource = fs.readFileSync(path.join(__dirname, "..", "js", "planner-recipe-first.js"), "utf8");
+  const state = {
+    foods: [
+      { id: "brot", name: "Brot", category: "Getreide/Stärke", active: true },
+      { id: "polenta", name: "Polenta", category: "Getreide/Stärke", active: true },
+      { id: "zucchini", name: "Zucchini", category: "Gemüse", active: true },
+    ],
+    settings: { preferInventoryInPlan: false },
+  };
+  const recipe = {
+    name: "Polenta-Zucchini-Sticks",
+    category: "balls",
+    requires: ["Polenta", "Zucchini"],
+    requirementMissing: [],
+    ingredientMissing: [],
+  };
+  let activeQualityContext = null;
+  const context = {
+    state,
+    food: (id) => state.foods.find((item) => item.id === id) || null,
+    recipeStates: () => [recipe],
+    recipeByName: (name) => name === recipe.name ? recipe : null,
+    recipeSuitableForMeal: () => true,
+    plannerCulinaryRecipeIngredientReady: () => true,
+    plannerCulinaryAssessment: (ids) => ({ allowed: ids.length > 1, issues: [] }),
+    plannerQualityWithActiveContext: (ctx, callback) => {
+      const previous = activeQualityContext;
+      activeQualityContext = ctx;
+      try {
+        return callback();
+      } finally {
+        activeQualityContext = previous;
+      }
+    },
+    isFoodUnavailable: () => false,
+    buildDay: (date) => ({
+      date,
+      meals: [{
+        active: true,
+        meal: "lunch",
+        focusId: "brot",
+        foodIds: ["brot"],
+        sampleFoodIds: [],
+        type: "bekannt",
+      }],
+    }),
+    companionFor: (focus) => focus.id === "polenta" && state.foods.some((item) => item.id === "zucchini")
+      ? state.foods.find((item) => item.id === "zucchini")
+      : null,
+    knownCandidate: (_meal, _date, _ctx, exclude = []) => exclude.includes("polenta")
+      ? null
+      : activeQualityContext
+        ? ({ f: state.foods.find((item) => item.id === "polenta"), type: "bekannt" })
+        : null,
+  };
+
+  vm.createContext(context);
+  vm.runInContext(`${recipeFirstSource}\n${finalQualitySource}\ninstallPlannerFinalQualityRuntime(globalThis);`, context);
+  const day = vm.runInContext('buildDay("2026-10-02", 0, {})', context);
+
+  assert.deepEqual(JSON.parse(JSON.stringify(day.meals[0].foodIds)), ["polenta", "zucchini"]);
+  assert.equal(day.meals[0].recipeName, "Polenta-Zucchini-Sticks");
+  assert.equal(day.meals[0].type, "Rezept");
 });
 
 test("availability repair still reopens an automatic lock with an unavailable ingredient", () => {

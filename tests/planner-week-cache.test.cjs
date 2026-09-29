@@ -84,6 +84,58 @@ test("Planner-aware prepDemand verwendet denselben sichtbaren Wochen-Snapshot", 
   assert.doesNotMatch(body, /mergeCarriedIntoDays\(buildDays\(from, 7\)\)/);
 });
 
+test("Worker-Warmup setzt nach Navigation mit der aktuell sichtbaren Woche fort", () => {
+  let visibleFrom = "2026-09-20";
+  let idleCallback = null;
+  let worker = null;
+  const requests = [];
+  const addDays = (date, offset) => {
+    const value = new Date(`${date}T12:00:00Z`);
+    value.setUTCDate(value.getUTCDate() + offset);
+    return value.toISOString().slice(0, 10);
+  };
+  const context = {
+    URL,
+    document: { baseURI: "https://app.example/" },
+    state: { settings: { phaseSelected: "kennenlernen" } },
+    visiblePlanStart: () => visibleFrom,
+    addDays,
+    buildDays: (from) => [{ date: from, meals: [] }],
+    planDisplayDays: (from, count) => context.buildDays(from, count),
+    requestIdleCallback: (callback) => { idleCallback = callback; return 1; },
+    cancelIdleCallback: () => {},
+    clone: (value) => JSON.parse(JSON.stringify(value)),
+    Worker: class {
+      constructor() { worker = this; }
+      postMessage(message) { requests.push(message); }
+    },
+  };
+  vm.createContext(context);
+  vm.runInContext(source, context);
+
+  context.planDisplayDays(visibleFrom, 7);
+  idleCallback?.({ didTimeout: true });
+  assert.deepEqual([...requests[0].starts], ["2026-09-27", "2026-10-04"]);
+
+  // The user navigates while the first background request is still running.
+  visibleFrom = "2026-09-27";
+  worker.onmessage({ data: {
+    type: "result",
+    requestId: requests[0].requestId,
+    inputRevision: requests[0].inputRevision,
+    weeks: requests[0].starts.map((from) => ({
+      from,
+      count: 7,
+      days: [{ date: from, meals: [] }],
+    })),
+  } });
+
+  assert.equal(typeof idleCallback, "function", "nach dem Worker-Ergebnis wird der nächste Warmup-Zyklus geplant");
+  idleCallback?.({ didTimeout: true });
+  assert.equal(requests.length, 2);
+  assert.deepEqual([...requests[1].starts], ["2026-10-11"], "bereits vorbereitete Wochen werden nicht erneut angefordert");
+});
+
 
 test("ein Phasenwechsel kann keinen Wochenplan aus der vorherigen Phase zurückgeben", () => {
   let buildCalls = 0;

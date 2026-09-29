@@ -83,6 +83,13 @@
     workerStats.lastError = String(error || "Planner-Worker fehlgeschlagen");
   }
 
+  function missingWarmupWeeks(from) {
+    return [
+      globalScope.addDays(from, 7),
+      globalScope.addDays(from, 14),
+    ].filter((start) => !cache.has(cacheKey(start, 7)));
+  }
+
   function disablePlannerWorker(error) {
     plannerWorkerDisabled = true;
     workerStats.supported = false;
@@ -129,6 +136,10 @@
           put(cacheKey(week.from, week.count || 7), week.days);
         }
         workerStats.completed += 1;
+        // The user may have moved while this request was running. Continue
+        // warming from the currently visible week so that navigation does
+        // not fall back to a synchronous plan build on the main thread.
+        scheduleWarmup();
       };
       plannerWorker.onerror = (event) => {
         plannerWorkerPending = null;
@@ -142,7 +153,7 @@
     }
   }
 
-  function dispatchPlannerWorkerWarmup(from) {
+  function dispatchPlannerWorkerWarmup(starts) {
     const worker = ensurePlannerWorker();
     if (!worker) return false;
     if (plannerWorkerPending) return true;
@@ -155,10 +166,7 @@
         type: "build",
         requestId,
         inputRevision: revision,
-        starts: [
-          globalScope.addDays(from, 7),
-          globalScope.addDays(from, 14),
-        ],
+        starts,
         state: currentState(),
       });
       return true;
@@ -190,7 +198,10 @@
       try {
         // Future-week planning can be expensive. Keep it off the UI thread;
         // when Workers are unavailable, the requested week is built on demand.
-        dispatchPlannerWorkerWarmup(globalScope.visiblePlanStart());
+        const from = globalScope.visiblePlanStart();
+        const starts = missingWarmupWeeks(from);
+        if (!starts.length) return;
+        dispatchPlannerWorkerWarmup(starts);
       } finally {
         if (!plannerWorkerPending) warmupPending = false;
       }

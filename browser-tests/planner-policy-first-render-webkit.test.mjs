@@ -37,6 +37,7 @@ try {
     bootPending: document.documentElement.classList.contains("app-boot-pending"),
     bootStatusDisplay: getComputedStyle(document.getElementById("appBootStatus")).display,
     bootStatusIsInert: !!document.getElementById("appBootStatus").closest("[inert]"),
+    appBootComplete: window.__plannerAppBootComplete,
     mainInert: document.getElementById("appMain").inert,
     navInert: document.querySelector("nav").inert,
     plannerReady: window.__plannerPoliciesReady,
@@ -51,6 +52,7 @@ try {
   assert.equal(whilePolicyIsBlocked.mainInert, true);
   assert.equal(whilePolicyIsBlocked.navInert, true);
   assert.equal(whilePolicyIsBlocked.plannerReady, false);
+  assert.equal(whilePolicyIsBlocked.appBootComplete, false);
   assert.equal(whilePolicyIsBlocked.testApiAvailable, false);
   assert.equal(whilePolicyIsBlocked.homeRendered, false);
 
@@ -62,6 +64,7 @@ try {
     bootStatusDisplay: getComputedStyle(document.getElementById("appBootStatus")).display,
     mainInert: document.getElementById("appMain").inert,
     navInert: document.querySelector("nav").inert,
+    appBootComplete: window.__plannerAppBootComplete,
     testApiAvailable: !!window.__beikostTest?.getState,
     homeRendered: document.getElementById("todayCard").textContent.trim().length > 0,
   }));
@@ -70,6 +73,7 @@ try {
   assert.equal(afterPolicyReady.bootStatusDisplay, "none");
   assert.equal(afterPolicyReady.mainInert, false);
   assert.equal(afterPolicyReady.navInert, false);
+  assert.equal(afterPolicyReady.appBootComplete, true);
   assert.equal(afterPolicyReady.testApiAvailable, true);
   assert.equal(afterPolicyReady.homeRendered, true);
 } finally {

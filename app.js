@@ -821,13 +821,16 @@ function pruneIneligibleAutomaticPlanState(currentState, recipes = typeof RECIPE
   return changed;
 }
 function startBeikostApp() {
+  window.__plannerAppBootComplete = false;
   installFoodPolicyRuntime();
 
   state = load();
   if (!state.settings.planFrom) state.settings.planFrom = today();
   if (pruneIneligibleAutomaticPlanState(state)) save();
 
-  const beikostTest = {
+  const beikostTest = {};
+  window.__beikostTest = beikostTest;
+  const beikostTestApi = {
     getState: () => clone(state),
     setState: (next) => { state = migrateState(next); if (!state.settings.planFrom) state.settings.planFrom = today(); pruneIneligibleAutomaticPlanState(state); save({ replaceLogs: true }); renderAll(); return clone(state); },
     reset: () => { state = migrateState(clone(DEFAULT)); state.backupMeta.chesterContextSeeded = true; state.settings.planFrom = today(); save({ replaceLogs: true }); renderAll(); return clone(state); },
@@ -905,8 +908,9 @@ function startBeikostApp() {
     .finally(() => {
       try {
         window.__plannerPoliciesReady = plannerPoliciesInstalled;
+        Object.assign(beikostTest, beikostTestApi);
+        window.__plannerAppBootComplete = true;
         renderCurrentView();
-        window.__beikostTest = beikostTest;
       } finally {
         document.documentElement.classList.remove("app-boot-pending");
         document.getElementById("appMain")?.removeAttribute("inert");

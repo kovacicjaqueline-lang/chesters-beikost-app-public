@@ -814,7 +814,7 @@
   renderPlanCore = function plannerAwareRenderPlanCore() {
     let from = visiblePlanStart();
     document.getElementById("planFrom").value = from;
-    let days = mergeCarriedIntoDays(planDisplayDays(from, 7));
+    let days = mergeCarriedIntoDays(viewRenderPlanDays(from, 7));
     let allVisiblePlans = days.flatMap((day) => (day.meals || []).filter((meal) => meal?.active && meal?.focusId).map((meal) => ({ ...meal, date: day.date })));
     let autoCount = 0, manualCount = 0;
     for (let plan of allVisiblePlans) {
@@ -869,7 +869,15 @@
   prepDemand = function plannerAwarePrepDemand() {
     let from = state.settings.planFrom || today();
     if (from < today()) from = today();
-    let days = mergeCarriedIntoDays(buildDays(from, 7));
+    // Reuse the visible planner snapshot. renderPlanCore() has already asked
+    // for these days during the same render, and planDisplayDays also shares
+    // the week cache across navigation. Rebuilding here made every week change
+    // calculate the same seven days a second time on the main thread.
+    let days = mergeCarriedIntoDays(
+      typeof viewRenderPlanDays === "function"
+        ? viewRenderPlanDays(from, 7)
+        : buildDays(from, 7),
+    );
     let map = new Map();
     days.forEach((day) => (day.meals || []).forEach((meal) => {
       if (!meal.active || meal.empty || !meal.focusId) return;

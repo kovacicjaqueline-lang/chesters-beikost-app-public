@@ -58,6 +58,12 @@ function viewRenderBuildDays(from, n = 7, applyAutoLocks = true) {
   }
   return activeViewRenderCycle.days.get(key);
 }
+function viewRenderPlanDays(from, n = 7) {
+  return memoizeViewRenderValue(
+    `planDisplayDays|${String(from)}|${Number(n)}`,
+    () => planDisplayDays(from, n),
+  );
+}
 function viewRenderRecipeStates() {
   if (!activeViewRenderCycle) return recipeStates();
   if (!activeViewRenderCycle.recipeStatesReady) {

@@ -208,6 +208,41 @@ test("CR-002: Ein neuer Protokolleintrag wird als einzelner Datensatz ergänzt",
   assert.equal(localStorage.getItem(`${KEY}-log-log-3`), null);
 });
 
+test("CR-003: einzelner Log-Eintrag wird nach einem IndexedDB-Fehler aus der Notfallkopie wiederhergestellt", async () => {
+  const initial = {
+    ...stateWithRevision("before-failure"),
+    logs: [{ id: "existing-log", createdAt: "2026-08-21T10:00:00.000Z" }],
+  };
+  const localStorage = createLocalStorage({ [KEY]: JSON.stringify(initial) });
+  const idb = { state: clone(initial), logs: [] };
+  const firstRun = createStorageRuntime({ localStorage, idb, initialState: initial });
+  await firstRun.bootstrapStorage();
+
+  const added = { id: "pending-log", createdAt: "2026-08-22T10:00:00.000Z" };
+  const next = firstRun.getState();
+  next.logs.push(added);
+  next.revision = "after-failure";
+  firstRun.setState(next);
+  idb.failNextWrite = true;
+  await firstRun.save({ logMutation: { upserts: [added] } });
+
+  assert.equal(localStorage.getItem(RECOVERY_KEY), "1");
+  assert.equal(idb.logs.some((entry) => entry.id === "pending-log"), false);
+  assert.equal(JSON.parse(localStorage.getItem(`${KEY}-log-pending-log`)).log.id, "pending-log");
+
+  const secondRun = createStorageRuntime({
+    localStorage,
+    idb,
+    initialState: JSON.parse(localStorage.getItem(KEY)),
+  });
+  await secondRun.bootstrapStorage();
+
+  assert.equal(secondRun.getState().revision, "after-failure");
+  assert.deepEqual(secondRun.getState().logs.map((log) => log.id), ["existing-log", "pending-log"]);
+  assert.deepEqual(idb.logs.map((entry) => entry.id).sort(), ["existing-log", "pending-log"]);
+  assert.equal(localStorage.getItem(RECOVERY_KEY), null);
+});
+
 
 test("CR-001: Zwischenstände bleiben bei einem IndexedDB-Fehler lokal verfügbar", async () => {
   const state = stateWithRevision("snapshot-v1");

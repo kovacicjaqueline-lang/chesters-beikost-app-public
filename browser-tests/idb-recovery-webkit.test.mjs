@@ -18,28 +18,32 @@ try {
   await page.evaluate(async () => {
     const next = window.__beikostTest.getState();
     next.settings.appFocusMode = "everyday-recipes";
-    next.logs = [...next.logs, {
+    window.__beikostTest.setState(next);
+
+    const addedLog = {
       id: "idb-recovery-browser-log",
       date: "2026-09-23",
       meal: "lunch",
       foodIds: ["karotte"],
       outcome: "eaten",
-    }];
-    window.__beikostTest.setState(next);
+    };
+    state.logs = [...state.logs, addedLog];
 
-    window.idbPut = async () => {
+    window.idbSaveStateAndLogs = async () => {
       throw new Error("deterministic IndexedDB write failure");
     };
-    await window.save();
+    await window.save({ logMutation: { upserts: [addedLog] } });
   });
 
   const failedWriteState = await page.evaluate(() => ({
     pending: localStorage.getItem(IDB_RECOVERY_PENDING_KEY),
     local: JSON.parse(localStorage.getItem(KEY)),
+    log: JSON.parse(localStorage.getItem(`${KEY}-log-idb-recovery-browser-log`)),
   }));
   assert.equal(failedWriteState.pending, "1");
   assert.equal(failedWriteState.local.settings.appFocusMode, "everyday-recipes");
-  assert.ok(failedWriteState.local.logs.some((entry) => entry.id === "idb-recovery-browser-log"));
+  assert.equal(Object.hasOwn(failedWriteState.local, "logs"), false);
+  assert.equal(failedWriteState.log.log.id, "idb-recovery-browser-log");
 
   await page.reload({ waitUntil: "load" });
   await page.waitForFunction(() => !!window.__beikostTest?.getState);
@@ -48,6 +52,7 @@ try {
   const healed = await page.evaluate(async () => ({
     state: window.__beikostTest.getState(),
     idb: await window.idbGet(STATE_RECORD),
+    logs: await idbGetLogs(),
     pending: localStorage.getItem(IDB_RECOVERY_PENDING_KEY),
   }));
 
@@ -55,7 +60,8 @@ try {
   assert.equal(healed.state.settings.appFocusMode, "everyday-recipes");
   assert.ok(healed.state.logs.some((entry) => entry.id === "idb-recovery-browser-log"));
   assert.equal(healed.idb.settings.appFocusMode, "everyday-recipes");
-  assert.ok(healed.idb.logs.some((entry) => entry.id === "idb-recovery-browser-log"));
+  assert.equal(Object.hasOwn(healed.idb, "logs"), false);
+  assert.ok(healed.logs.some((entry) => entry.log.id === "idb-recovery-browser-log"));
 } finally {
   await closeBrowserApp({ context: typeof context !== "undefined" ? context : null, browser, server });
 }

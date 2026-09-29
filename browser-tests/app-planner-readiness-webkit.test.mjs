@@ -50,6 +50,11 @@ try {
 
   await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "commit" });
   await Promise.all([appRequest.promise, policyRequest.promise]);
+  releaseApp.resolve();
+
+  await page.waitForFunction(() => !!window.__beikostTest?.getState);
+  await page.waitForFunction(() => window.AppReadiness?.ready === true);
+  await page.waitForFunction(() => window.PlannerReadiness?.state === "loading");
   await page.evaluate(() => {
     const calls = { buildDay: 0, buildDays: 0, planDisplayDays: 0 };
     for (const name of Object.keys(calls)) {
@@ -61,11 +66,6 @@ try {
     }
     window.__plannerBuildCalls = calls;
   });
-  releaseApp.resolve();
-
-  await page.waitForFunction(() => !!window.__beikostTest?.getState);
-  await page.waitForFunction(() => window.AppReadiness?.ready === true);
-  await page.waitForFunction(() => window.PlannerReadiness?.state === "loading");
 
   const coldStart = await page.evaluate(() => ({
     appReady: window.AppReadiness.ready,

@@ -317,7 +317,21 @@ try {
       current.foods,
       (food) => api.displayStatus(food.id) === "Bekannt" ? 2 : 0,
     );
+    const core = window.PlannerPlanCheckSolutions;
     return {
+      directCovered: core.foodSpecificIntroductionCoveredByEstablishedMaintenance(
+        wheat,
+        established,
+        maintenance.GROUP_LEVEL_MAINTENANCE_TARGETS,
+        maintenance.targetForFood,
+      ),
+      directNeedsContinuation: core.allergenIntroductionNeedsContinuation(
+        wheat,
+        1,
+        established,
+        maintenance.GROUP_LEVEL_MAINTENANCE_TARGETS,
+        maintenance.targetForFood,
+      ),
       goals: api.planCheckReport().items
         .filter((item) => item.code === "ALLERGEN_INTRODUCTION_CONTINUE")
         .map((item) => item.details?.representativeFoodId || ""),

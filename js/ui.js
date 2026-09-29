@@ -1266,13 +1266,16 @@ function showView(id) {
   document
     .querySelectorAll("nav button")
     .forEach((b) => b.classList.toggle("active", b.dataset.view === id));
+  if (previous !== id) {
+    let main = document.querySelector("main");
+    if (main) main.scrollTop = 0;
+  }
   globalThis.MobileUiLifecycle?.afterViewChange(id, previous);
   let finishViewChange = () => {
     let view = document.getElementById(id);
     if (!view?.classList.contains("active")) return;
     try {
       renderView(id);
-      window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
       view.removeAttribute("aria-busy");
     }

@@ -318,13 +318,24 @@
       if (!record?.active || !record.allergenGroup) continue;
       if (typeof status === "function" && status(record) === "Pausiert") continue;
       const count = successfulFamilyExposureCount(record);
-      if (!CORE.allergenIntroductionNeedsContinuation(
+      const needsContinuation = CORE.allergenIntroductionNeedsContinuation(
         record,
         count,
         establishedTargets,
         groupLevelTargets,
         targetForFoodFn,
-      )) continue;
+      );
+      if (record.id === "weizengriess") {
+        globalScope.__planCheckIntroductionDebug = {
+          count,
+          needsContinuation,
+          groupLevelTargets,
+          establishedTargets: establishedTargets.map((target) => target.key),
+          target: targetForFoodFn?.(record),
+          introductionTarget: CORE.allergenIntroductionTarget(record),
+        };
+      }
+      if (!needsContinuation) continue;
       const target = CORE.allergenIntroductionTarget(record);
       const key = target?.key || "";
       if (!key || groups.has(key)) continue;

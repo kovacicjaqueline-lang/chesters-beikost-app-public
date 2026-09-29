@@ -85,6 +85,7 @@ try {
   }, "Cold Start muss die App-Shell nach Daten-Readiness zeigen und Planner-Aufrufe bis zur Regel-Readiness sperren");
 
   await page.locator('nav button[data-view="more"]').click();
+  await page.locator("#more .settings-card > details").evaluate((details) => { details.open = true; });
   await page.waitForFunction(() => document.getElementById("newFoodEvery")?.value !== "");
   assert.ok(await page.locator("#newFoodEvery:visible").count(), "Einstellungen müssen vor Planner-Readiness benutzbar sein");
   await page.locator('nav button[data-view="foods"]').click();

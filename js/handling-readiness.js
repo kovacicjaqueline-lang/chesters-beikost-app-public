@@ -599,7 +599,7 @@ function installPresentationModeRuntime() {
       let saveSucceeded = editId ? !!savedLog && savedLog !== previousEdited : !!savedLog;
       if (saveSucceeded && savedLog.presentationMode !== presentationMode) {
         savedLog.presentationMode = presentationMode;
-        if (typeof save === "function") save();
+        if (typeof save === "function") save({ logChanges: [savedLog] });
       }
       return result;
     };

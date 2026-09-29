@@ -683,7 +683,7 @@
       changed = true;
     }
     if (changed) {
-      save();
+      save({ logChanges: [saved] });
       renderAll();
     }
     return result;

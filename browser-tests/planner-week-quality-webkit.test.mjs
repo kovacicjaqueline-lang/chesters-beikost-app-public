@@ -281,9 +281,17 @@ try {
   }, setup.snapshot);
 
   await page.locator('nav button[data-view="plan"]').click();
+  const visibleMealTitlesBeforeReplan = await page.locator("#blockPlan .dish-title").allTextContents();
+  assert.ok(visibleMealTitlesBeforeReplan.length > 0, "Testzustand muss sichtbare Mahlzeiten in der Woche rendern");
   await page.locator("#plan .plan-secondary-toggle").click();
   await page.locator("#planRecalculate").click();
   await page.locator("#confirmPlanRebuild").click();
+  const visibleMealTitlesAfterReplan = await page.locator("#blockPlan .dish-title").allTextContents();
+  assert.notDeepEqual(
+    visibleMealTitlesAfterReplan,
+    visibleMealTitlesBeforeReplan,
+    "Woche neu planen muss bei vorhandenen geeigneten Alternativen mindestens eine sichtbare Mahlzeit ändern",
+  );
   const replanCalls = await page.evaluate(() => {
     return {
       generation: window.__beikostTest.getState().settings.planRebuildGeneration,

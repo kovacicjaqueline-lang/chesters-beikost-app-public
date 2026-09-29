@@ -52,6 +52,93 @@ async function idbPut(key, value) {
     tx.onerror = () => reject(tx.error);
   });
 }
+const LOG_RECORD_PREFIX = "log:";
+const LOG_SEQUENCE_RECORD = "logs-sequence";
+const STORAGE_LAYOUT_VERSION = 2;
+async function idbGetLogs() {
+  let db = await openDb();
+  return new Promise((resolve, reject) => {
+    let tx = db.transaction(DB_STORE, "readonly");
+    let request = tx.objectStore(DB_STORE).openCursor();
+    let logs = [];
+    request.onsuccess = () => {
+      let cursor = request.result;
+      if (!cursor) {
+        logs.sort((a, b) => (a.__storageOrder ?? 0) - (b.__storageOrder ?? 0));
+        return resolve(logs.map(({ __storageOrder, ...log }) => log));
+      }
+      if (String(cursor.key).startsWith(LOG_RECORD_PREFIX)) logs.push(cursor.value);
+      cursor.continue();
+    };
+    request.onerror = () => reject(request.error);
+  });
+}
+async function idbSaveStateAndLogs(snapshot, options = {}) {
+  let db = await openDb();
+  return new Promise((resolve, reject) => {
+    let tx = db.transaction(DB_STORE, "readwrite");
+    let store = tx.objectStore(DB_STORE);
+    let fail = () => reject(tx.error || new Error("IndexedDB-Transaktion fehlgeschlagen"));
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = fail;
+    tx.onabort = fail;
+    store.put(snapshot, STATE_RECORD);
+    if (options.fullSyncLogs) {
+      let request = store.openCursor();
+      request.onsuccess = () => {
+        let cursor = request.result;
+        if (!cursor) {
+          let logs = (options.logs || []).filter((log) => log?.id);
+          logs.forEach((log, index) => store.put({ ...log, __storageOrder: index }, `${LOG_RECORD_PREFIX}${log.id}`));
+          store.put(logs.length, LOG_SEQUENCE_RECORD);
+          return;
+        }
+        if (String(cursor.key).startsWith(LOG_RECORD_PREFIX)) cursor.delete();
+        cursor.continue();
+      };
+      request.onerror = fail;
+      return;
+    }
+    let logsToSave = (options.logChanges || []).filter((log) => log?.id);
+    let nextLogIndex = 0;
+    let sequence = null;
+    let saveNextLog = () => {
+      if (nextLogIndex >= logsToSave.length) return;
+      let log = logsToSave[nextLogIndex++];
+      let key = `${LOG_RECORD_PREFIX}${log.id}`;
+      let existing = store.get(key);
+      existing.onsuccess = () => {
+        if (existing.result && Number.isFinite(existing.result.__storageOrder)) {
+          store.put({ ...log, __storageOrder: existing.result.__storageOrder }, key);
+          return saveNextLog();
+        }
+        let saveWithNextSequence = () => {
+          let order = sequence++;
+          store.put(sequence, LOG_SEQUENCE_RECORD);
+          store.put({ ...log, __storageOrder: order }, key);
+          saveNextLog();
+        };
+        if (sequence !== null) return saveWithNextSequence();
+        let sequenceRequest = store.get(LOG_SEQUENCE_RECORD);
+        sequenceRequest.onsuccess = () => {
+          sequence = Number(sequenceRequest.result) || 0;
+          saveWithNextSequence();
+        };
+        sequenceRequest.onerror = fail;
+      };
+      existing.onerror = fail;
+    };
+    saveNextLog();
+    for (let id of options.removedLogIds || []) store.delete(`${LOG_RECORD_PREFIX}${id}`);
+  });
+}
+function stateWithoutLogs(source) {
+  let snapshot = clone({ ...source, logs: [] });
+  snapshot.schemaVersion = SCHEMA_VERSION;
+  snapshot.appVersion = APP_VERSION;
+  snapshot.storageLayoutVersion = STORAGE_LAYOUT_VERSION;
+  return snapshot;
+}
 const BACKUP_FOOD_PERSONAL_FIELDS = [
   "priority",
   "active",
@@ -191,24 +278,42 @@ function pendingIdbRecoveryState() {
 function save(options = {}) {
   storageStateRevision++;
   if (typeof invalidateFoodLookupCache === "function") invalidateFoodLookupCache();
-  let snapshot = clone(state);
-  snapshot.schemaVersion = SCHEMA_VERSION;
-  snapshot.appVersion = APP_VERSION;
-  // Mirror for migration and emergency recovery; IndexedDB remains the primary store when available.
+  let snapshot = stateWithoutLogs(state);
+  let emergencySnapshot = null;
+  let writeEmergencyCopy = () => {
+    if (!emergencySnapshot) {
+      emergencySnapshot = clone(state);
+      emergencySnapshot.schemaVersion = SCHEMA_VERSION;
+      emergencySnapshot.appVersion = APP_VERSION;
+    }
+    try {
+      localStorage.setItem(KEY, JSON.stringify(emergencySnapshot));
+      localBackupWritten = true;
+    } catch (_) {}
+  };
+  let logChanges = (options.logChanges || []).filter((log) => log?.id).map(clone);
+  let removedLogIds = [...(options.removedLogIds || [])];
+  let fullSyncLogs = options.fullSyncLogs ? (state.logs || []).map(clone) : null;
+  // Keep the synchronous emergency copy for fallback and error recovery only. Normal writes use
+  // IndexedDB records so adding a log does not stringify the complete history on the UI thread.
   let localBackupWritten = false;
-  try {
-    localStorage.setItem(KEY, JSON.stringify(snapshot));
-    localBackupWritten = true;
-  } catch (_) {}
-  if (indexedDbUnavailable || !globalThis.indexedDB) return Promise.resolve();
+  if (indexedDbUnavailable || !globalThis.indexedDB) {
+    writeEmergencyCopy();
+    return Promise.resolve();
+  }
   saveQueue = saveQueue.then(async () => {
     if (options.snapshotReason) await createSnapshot(options.snapshotReason);
-    await idbPut(STATE_RECORD, snapshot);
+    await idbSaveStateAndLogs(snapshot, {
+      fullSyncLogs: !!options.fullSyncLogs,
+      logs: fullSyncLogs,
+      logChanges,
+      removedLogIds,
+    });
+    if (options.emergencyMirror) writeEmergencyCopy();
   }).catch((error) => {
     indexedDbUnavailable = true;
-    if (localBackupWritten) {
-      try { localStorage.setItem(IDB_RECOVERY_PENDING_KEY, "1"); } catch (_) {}
-    }
+    writeEmergencyCopy();
+    if (localBackupWritten) try { localStorage.setItem(IDB_RECOVERY_PENDING_KEY, "1"); } catch (_) {}
     state.backupMeta.storagePersisted = "unavailable";
     if (!/denied|not available|nicht verfügbar|SecurityError/i.test(String(error))) {
       console.error("Speichern in IndexedDB fehlgeschlagen", error);
@@ -276,20 +381,16 @@ async function bootstrapStorage() {
   const revisionAtStart = storageStateRevision;
   let recoveryState = pendingIdbRecoveryState();
   let idbState = await idbGet(STATE_RECORD).catch(() => null);
+  let needsLogMigration = !!recoveryState || !idbState || idbState.storageLayoutVersion !== STORAGE_LAYOUT_VERSION;
   if (storageStateRevision === revisionAtStart) {
     if (idbState && !recoveryState) {
       state = migrateState(idbState);
+      if (idbState.storageLayoutVersion === STORAGE_LAYOUT_VERSION) {
+        state.logs = await idbGetLogs().catch(() => []);
+      }
     } else {
       state = recoveryState || migrateState(state);
       state.backupMeta.migratedAt = new Date().toISOString();
-      let wroteState = await idbPut(STATE_RECORD, clone(state)).then(() => true).catch(() => false);
-      let check = wroteState ? await idbGet(STATE_RECORD).catch(() => null) : null;
-      if (check) {
-        try {
-          localStorage.setItem(KEY, JSON.stringify(state));
-          if (recoveryState) localStorage.removeItem(IDB_RECOVERY_PENDING_KEY);
-        } catch (_) {}
-      }
     }
   }
   if (navigator.storage?.persist) {
@@ -299,7 +400,10 @@ async function bootstrapStorage() {
     } catch (_) { state.backupMeta.storagePersisted = "unavailable"; }
   } else state.backupMeta.storagePersisted = "unavailable";
   syncPlanFromToToday();
-  await save();
+  await save({ fullSyncLogs: needsLogMigration, emergencyMirror: needsLogMigration || !!recoveryState });
+  if (recoveryState && !indexedDbUnavailable) {
+    try { localStorage.removeItem(IDB_RECOVERY_PENDING_KEY); } catch (_) {}
+  }
   globalThis.installRecipeV2ComponentRuntime?.();
   renderCurrentView();
 }
@@ -379,7 +483,7 @@ async function handleBackupImport(file) {
     let pack=await validateBackup(await file.text());
     openGeneric("Backup prüfen",backupPreviewHtml(pack));
     document.getElementById("cancelBackupRestore").onclick=closeGeneric;
-    document.getElementById("confirmBackupRestore").onclick=async()=>{ await createSnapshot("vor Wiederherstellung"); state=migrateState(backupPayloadToState(pack.payload)); await save(); closeGeneric(); renderCurrentView(); renderStorageStatus(); showToast("Backup wiederhergestellt."); };
+    document.getElementById("confirmBackupRestore").onclick=async()=>{ await createSnapshot("vor Wiederherstellung"); state=migrateState(backupPayloadToState(pack.payload)); await save({ fullSyncLogs: true }); closeGeneric(); renderCurrentView(); renderStorageStatus(); showToast("Backup wiederhergestellt."); };
   } catch(error) {
     showStorageError(error.message || "Datei konnte nicht importiert werden.");
     document.getElementById("storageError")?.scrollIntoView({ block: "nearest", behavior: "smooth" });
@@ -393,7 +497,7 @@ async function openSnapshots() {
     if(!snap)return;
     openGeneric("Zwischenstand wiederherstellen?", `<div class="notice warn"><b>Der aktuelle Stand wird ersetzt.</b><br>Davor wird automatisch ein neuer Zwischenstand angelegt.</div><p class="small">Ausgewählt: ${new Date(snap.createdAt).toLocaleString("de-AT")} · ${esc(snap.reason)}</p><div class="sticky-form-actions ds-actionbar"><button class="btn secondary" id="cancelSnapshotRestore" type="button">Abbrechen</button><button class="btn danger" id="confirmSnapshotRestore" type="button">Wiederherstellen</button></div>`);
     document.getElementById("cancelSnapshotRestore").onclick=()=>{ closeGeneric(); openSnapshots(); };
-    document.getElementById("confirmSnapshotRestore").onclick=async()=>{ await createSnapshot("vor Zwischenstand-Wiederherstellung"); state=migrateState(backupPayloadToState(snap.state)); await save(); closeGeneric(); renderCurrentView(); showToast("Zwischenstand wiederhergestellt."); };
+    document.getElementById("confirmSnapshotRestore").onclick=async()=>{ await createSnapshot("vor Zwischenstand-Wiederherstellung"); state=migrateState(backupPayloadToState(snap.state)); await save({ fullSyncLogs: true }); closeGeneric(); renderCurrentView(); showToast("Zwischenstand wiederhergestellt."); };
   });
 }
 

@@ -74,22 +74,54 @@ function createStorageRuntime({ localStorage, idb, initialState }) {
     setState: (next) => { state = clone(next); },
     setIdbGet: (fn) => { idbGet = fn; },
     setIdbPut: (fn) => { idbPut = fn; },
+    setIdbGetLogs: (fn) => { idbGetLogs = fn; },
+    setIdbSaveStateAndLogs: (fn) => { idbSaveStateAndLogs = fn; },
     createSnapshot,
   };`, context);
 
   const runtime = context.__storageTest;
   runtime.setIdbGet(async (key) => key === STATE_RECORD ? clone(idb.state) : []);
-  runtime.setIdbPut(async (key, value) => {
-    if (key === SNAPSHOT_RECORD && idb.failNextSnapshot) {
-      idb.failNextSnapshot = false;
-      throw new Error("transient IndexedDB snapshot failure");
+  runtime.setIdbGetLogs(async () => [...(idb.logs?.values() || [])]
+    .sort((a, b) => (a.__storageOrder ?? 0) - (b.__storageOrder ?? 0))
+    .map(({ __storageOrder, ...log }) => clone(log)));
+  runtime.setIdbSaveStateAndLogs(async (snapshot, options = {}) => {
+    if (!idb.puts) idb.puts = [];
+    let nextLogs = new Map(idb.logs || []);
+    let sequence = Number(idb.sequence) || 0;
+    if (options.fullSyncLogs) {
+      idb.puts.push("full-log-sync");
+      const logs = (options.logs || []).filter((log) => log?.id);
+      nextLogs = new Map(logs.map((log, index) => [`log:${log.id}`, { ...clone(log), __storageOrder: index }]));
+      sequence = logs.length;
+    } else {
+      for (const log of options.logChanges || []) {
+        idb.puts.push(`log:${log.id}`);
+        const existing = nextLogs.get(`log:${log.id}`);
+        const order = Number.isFinite(existing?.__storageOrder) ? existing.__storageOrder : sequence++;
+        nextLogs.set(`log:${log.id}`, { ...clone(log), __storageOrder: order });
+      }
+      for (const id of options.removedLogIds || []) {
+        idb.puts.push(`log:${id}`);
+        nextLogs.delete(`log:${id}`);
+      }
     }
-    if (key !== STATE_RECORD) return true;
+    idb.puts.push(STATE_RECORD);
     if (idb.failNextWrite) {
       idb.failNextWrite = false;
       throw new Error("transient IndexedDB write failure");
     }
-    idb.state = clone(value);
+    idb.logs = nextLogs;
+    idb.sequence = sequence;
+    idb.state = clone(snapshot);
+    return true;
+  });
+  runtime.setIdbPut(async (key, value) => {
+    if (!idb.puts) idb.puts = [];
+    idb.puts.push(key);
+    if (key === SNAPSHOT_RECORD && idb.failNextSnapshot) {
+      idb.failNextSnapshot = false;
+      throw new Error("transient IndexedDB snapshot failure");
+    }
     return true;
   });
   return runtime;
@@ -146,4 +178,70 @@ test("CR-001: Zwischenstände bleiben bei einem IndexedDB-Fehler lokal verfügba
   const second = await runtime.createSnapshot("zweiter Zwischenstand");
   assert.equal(second.length, 2);
   assert.equal(second[0].state.revision, "snapshot-v1");
+});
+
+test("Protokollspeicherung schreibt den neuen Eintrag einzeln und hält Logs aus dem Zustandsdatensatz heraus", async () => {
+  const oldLog = { id: "old-log", outcome: "eaten" };
+  const nextLog = { id: "new-log", outcome: "tried" };
+  const localStorage = createLocalStorage();
+  const idb = {
+    state: { ...stateWithRevision("v1"), storageLayoutVersion: 2, logs: [] },
+    logs: new Map([["log:old-log", oldLog]]),
+  };
+  const runtime = createStorageRuntime({ localStorage, idb, initialState: { ...stateWithRevision("v1"), logs: [oldLog, nextLog] } });
+
+  await runtime.save({ logChanges: [nextLog] });
+
+  assert.deepEqual(idb.puts, ["log:new-log", STATE_RECORD]);
+  assert.equal(idb.logs.get("log:old-log").outcome, oldLog.outcome, "vorhandene Log-Datensätze werden beim Hinzufügen nicht ersetzt");
+  assert.equal(idb.logs.get("log:new-log").outcome, nextLog.outcome);
+  assert.deepEqual(idb.state.logs, []);
+  assert.equal(localStorage.getItem(KEY), null, "erfolgreiche normale Speicherungen schreiben keine vollständige JSON-Kopie synchron");
+});
+
+test("ein fehlgeschlagener Log-Schreibvorgang bleibt als eine unvollständige IndexedDB-Änderung aus", async () => {
+  const oldLog = { id: "old-log", outcome: "eaten" };
+  const nextLog = { id: "new-log", outcome: "tried" };
+  const localStorage = createLocalStorage();
+  const idb = {
+    state: { ...stateWithRevision("v1"), storageLayoutVersion: 2, logs: [] },
+    logs: new Map([["log:old-log", oldLog]]),
+    failNextWrite: true,
+  };
+  const runtime = createStorageRuntime({ localStorage, idb, initialState: { ...stateWithRevision("v2"), logs: [oldLog, nextLog] } });
+
+  await runtime.save({ logChanges: [nextLog] });
+
+  assert.equal(idb.state.revision, "v1", "der Zustandsdatensatz bleibt unverändert");
+  assert.equal(idb.logs.has("log:new-log"), false, "der neue Log-Datensatz wird nicht halb gespeichert");
+  assert.equal(JSON.parse(localStorage.getItem(KEY)).revision, "v2", "die Notfallkopie enthält den vollständigen neuen Stand");
+  assert.equal(localStorage.getItem(RECOVERY_KEY), "1");
+});
+
+test("bestehender IndexedDB-Zustand wird einmalig in einzelne Log-Datensätze migriert", async () => {
+  const oldLogs = [{ id: "z-legacy-log", outcome: "eaten" }, { id: "a-legacy-log", outcome: "tried" }];
+  const idb = { state: { ...stateWithRevision("legacy"), logs: oldLogs } };
+  const localStorage = createLocalStorage();
+  const runtime = createStorageRuntime({ localStorage, idb, initialState: idb.state });
+
+  await runtime.bootstrapStorage();
+
+  assert.deepEqual(runtime.getState().logs, oldLogs, "Migration bewahrt die bisherige Log-Reihenfolge unabhängig von IDs");
+  assert.equal(idb.state.storageLayoutVersion, 2);
+  assert.deepEqual(idb.state.logs, []);
+  assert.equal(idb.logs.get("log:z-legacy-log").outcome, oldLogs[0].outcome);
+  assert.equal(idb.sequence, 2);
+  assert.equal(JSON.parse(localStorage.getItem(KEY)).logs[0].id, "z-legacy-log", "Migration hinterlässt eine vollständige Notfallkopie");
+});
+
+test("Löschen entfernt genau den ausgewählten Log-Datensatz", async () => {
+  const keep = { id: "keep-log", outcome: "eaten" };
+  const remove = { id: "remove-log", outcome: "tried" };
+  const idb = { state: { ...stateWithRevision("v1"), storageLayoutVersion: 2, logs: [] }, logs: new Map([["log:keep-log", keep], ["log:remove-log", remove]]) };
+  const runtime = createStorageRuntime({ localStorage: createLocalStorage(), idb, initialState: { ...stateWithRevision("v1"), logs: [keep] } });
+
+  await runtime.save({ removedLogIds: ["remove-log"] });
+
+  assert.deepEqual([...idb.logs.keys()], ["log:keep-log"]);
+  assert.deepEqual(idb.puts, ["log:remove-log", STATE_RECORD]);
 });

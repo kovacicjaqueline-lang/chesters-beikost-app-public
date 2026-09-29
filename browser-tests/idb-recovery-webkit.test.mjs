@@ -27,10 +27,10 @@ try {
     }];
     window.__beikostTest.setState(next);
 
-    window.idbPut = async () => {
+    window.idbSaveStateAndLogs = async () => {
       throw new Error("deterministic IndexedDB write failure");
     };
-    await window.save();
+    await window.save({ logChanges: [next.logs.at(-1)] });
   });
 
   const failedWriteState = await page.evaluate(() => ({
@@ -55,7 +55,8 @@ try {
   assert.equal(healed.state.settings.appFocusMode, "everyday-recipes");
   assert.ok(healed.state.logs.some((entry) => entry.id === "idb-recovery-browser-log"));
   assert.equal(healed.idb.settings.appFocusMode, "everyday-recipes");
-  assert.ok(healed.idb.logs.some((entry) => entry.id === "idb-recovery-browser-log"));
+  assert.equal(healed.idb.logs.length, 0, "Protokolle liegen getrennt vom übrigen Zustand");
+  assert.equal(await page.evaluate(() => window.idbGet(`${LOG_RECORD_PREFIX}idb-recovery-browser-log`)).then((log) => log.id), "idb-recovery-browser-log");
 } finally {
   await closeBrowserApp({ context: typeof context !== "undefined" ? context : null, browser, server });
 }

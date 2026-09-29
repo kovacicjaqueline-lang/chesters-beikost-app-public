@@ -58,12 +58,12 @@ test("ausgewählte Log-Lebensmittel bleiben im Selector sichtbar und sind abwäh
   assert.match(logSource, /if \(selectedLogFoods\.has\(id\)\) \{\s*removeLogFoodSelection\(id\);/s);
 });
 
-test("Speichern eines Protokolleintrags bleibt in der aktuellen Ansicht", () => {
+test("Speichern eines Protokolleintrags bleibt in der aktuellen Ansicht und übergibt den Datensatz inkrementell", () => {
   const saveStart = logSource.indexOf("function saveLog()");
   assert.ok(saveStart >= 0, "saveLog muss vorhanden sein");
   const saveSource = logSource.slice(saveStart);
 
-  assert.match(saveSource, /save\(\); closeLog\(\); renderAll\(\);/);
+  assert.match(saveSource, /save\(\{\s*logChanges: \[newLog\]\s*\}\); closeLog\(\); renderAll\(\);/);
   assert.doesNotMatch(saveSource, /showView\(["']more["']\)/);
   assert.doesNotMatch(saveSource, /getElementById\(["']logDetails["']\)/);
   assert.doesNotMatch(saveSource, /scrollIntoView\(/);

@@ -549,7 +549,7 @@ function installManualMealFlowRuntime() {
       );
       if (Object.keys(preparationKeys).length) {
         savedLog.foodPreparationKeys = manualMealFlowClone(preparationKeys);
-        if (typeof save === "function") save();
+        if (typeof save === "function") save({ logChanges: [savedLog] });
       }
       return result;
     };

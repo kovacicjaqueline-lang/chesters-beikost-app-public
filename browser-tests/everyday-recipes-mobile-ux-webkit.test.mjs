@@ -160,6 +160,7 @@ try {
 
   await pancakeMeal.locator(".planned-recipe-title").click();
   await page.locator("#genericModal.open").waitFor();
+  await page.locator("#genericBody").getByText("Bananen-Ei-Pancakes").first().waitFor();
   assert.equal(await page.locator("#genericTitle").innerText(), "Rezept");
   assert.match(await page.locator("#genericBody").innerText(), /Bananen-Ei-Pancakes/);
   await page.locator("#closeGeneric").click();

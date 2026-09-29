@@ -821,13 +821,16 @@ function pruneIneligibleAutomaticPlanState(currentState, recipes = typeof RECIPE
   return changed;
 }
 function startBeikostApp() {
+  window.__plannerAppBootComplete = false;
   installFoodPolicyRuntime();
 
   state = load();
   if (!state.settings.planFrom) state.settings.planFrom = today();
   if (pruneIneligibleAutomaticPlanState(state)) save();
 
-  window.__beikostTest = {
+  const beikostTest = {};
+  window.__beikostTest = beikostTest;
+  const beikostTestApi = {
     getState: () => clone(state),
     setState: (next) => { state = migrateState(next); if (!state.settings.planFrom) state.settings.planFrom = today(); pruneIneligibleAutomaticPlanState(state); save({ replaceLogs: true }); renderAll(); return clone(state); },
     reset: () => { state = migrateState(clone(DEFAULT)); state.backupMeta.chesterContextSeeded = true; state.settings.planFrom = today(); save({ replaceLogs: true }); renderAll(); return clone(state); },
@@ -884,11 +887,37 @@ function startBeikostApp() {
   if (versionNode) versionNode.textContent = APP_VERSION;
 
   bind();
-  renderCurrentView();
-  Promise.resolve(bootstrapStorage()).then(
-    () => window.AppResumeScreen?.markReady(),
-    () => window.AppResumeScreen?.markReady(),
-  );
+  const plannerPoliciesReady = window.__plannerPoliciesReadyPromise || Promise.resolve(true);
+  let plannerPoliciesInstalled = false;
+  Promise.resolve(plannerPoliciesReady)
+    .catch((error) => {
+      console.error("Planner-Policy konnte nicht vollständig geladen werden.", error);
+      return false;
+    })
+    .then((ready) => {
+      plannerPoliciesInstalled = ready !== false;
+      try {
+        return Promise.resolve(bootstrapStorage()).catch((error) => {
+          console.error("App-Daten konnten nicht vollständig geladen werden.", error);
+        });
+      } catch (error) {
+        console.error("App-Daten konnten nicht vollständig geladen werden.", error);
+        return undefined;
+      }
+    })
+    .finally(() => {
+      try {
+        window.__plannerPoliciesReady = plannerPoliciesInstalled;
+        Object.assign(beikostTest, beikostTestApi);
+        window.__plannerAppBootComplete = true;
+        renderCurrentView();
+      } finally {
+        document.documentElement.classList.remove("app-boot-pending");
+        document.getElementById("appMain")?.removeAttribute("inert");
+        document.querySelector("nav")?.removeAttribute("inert");
+        window.AppResumeScreen?.markReady();
+      }
+    });
   if (navigator.serviceWorker && location.protocol.startsWith("http"))
     window.addEventListener("load", () =>
       navigator.serviceWorker.register("./sw.js").then((r) => r.update()).catch(() => {}),

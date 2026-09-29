@@ -107,6 +107,7 @@ function renderView(id) {
   }
 }
 function renderCurrentView() {
+  if (typeof window !== "undefined" && window.__plannerAppBootComplete === false) return;
   renderView(document.querySelector(".view.active")?.id || "home");
 }
 function textureSuccessCount(stage = Number(state.settings.textureStage)) {

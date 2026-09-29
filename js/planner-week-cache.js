@@ -83,11 +83,14 @@
     workerStats.lastError = String(error || "Planner-Worker fehlgeschlagen");
   }
 
-  function runMainThreadWarmup(from) {
-    const starts = [
+  function missingWarmupWeeks(from) {
+    return [
       globalScope.addDays(from, 7),
       globalScope.addDays(from, 14),
-    ];
+    ].filter((start) => !cache.has(cacheKey(start, 7)));
+  }
+
+  function runMainThreadWarmup(starts) {
     for (const start of starts) {
       const key = cacheKey(start, 7);
       if (cache.has(key)) continue;
@@ -133,7 +136,7 @@
 
         if (data.type === "error") {
           recordWorkerFallback(data.message);
-          runMainThreadWarmup(globalScope.visiblePlanStart());
+          runMainThreadWarmup(missingWarmupWeeks(globalScope.visiblePlanStart()));
           return;
         }
         if (data.type !== "result" || data.inputRevision !== revision) return;
@@ -143,13 +146,17 @@
           put(cacheKey(week.from, week.count || 7), week.days);
         }
         workerStats.completed += 1;
+        // The user may have moved while this request was running. Continue
+        // warming from the currently visible week so that navigation does
+        // not fall back to a synchronous plan build on the main thread.
+        scheduleWarmup();
       };
       plannerWorker.onerror = (event) => {
         const pending = plannerWorkerPending;
         plannerWorkerPending = null;
         warmupPending = false;
         disablePlannerWorker(event?.message || "Planner-Worker konnte nicht geladen werden");
-        if (pending) runMainThreadWarmup(globalScope.visiblePlanStart());
+        if (pending) runMainThreadWarmup(missingWarmupWeeks(globalScope.visiblePlanStart()));
       };
       return plannerWorker;
     } catch (error) {
@@ -158,7 +165,7 @@
     }
   }
 
-  function dispatchPlannerWorkerWarmup(from) {
+  function dispatchPlannerWorkerWarmup(starts) {
     const worker = ensurePlannerWorker();
     if (!worker) return false;
     if (plannerWorkerPending) return true;
@@ -171,10 +178,7 @@
         type: "build",
         requestId,
         inputRevision: revision,
-        starts: [
-          globalScope.addDays(from, 7),
-          globalScope.addDays(from, 14),
-        ],
+        starts,
         state: currentState(),
       });
       return true;
@@ -205,8 +209,10 @@
 
       try {
         const from = globalScope.visiblePlanStart();
-        if (dispatchPlannerWorkerWarmup(from)) return;
-        runMainThreadWarmup(from);
+        const starts = missingWarmupWeeks(from);
+        if (!starts.length) return;
+        if (dispatchPlannerWorkerWarmup(starts)) return;
+        runMainThreadWarmup(starts);
       } finally {
         if (!plannerWorkerPending) warmupPending = false;
       }

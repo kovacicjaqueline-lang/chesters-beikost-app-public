@@ -28,7 +28,7 @@
 
     const cache = new Map();
     const batches = new Map();
-    const PERSISTED_NONE_KEY = "beikost-plan-check-none-v1";
+    const PERSISTED_NONE_KEY = `beikost-plan-check-none-v2-f${solutions.FEATURE_VERSION}`;
     const PERSISTED_NONE_LIMIT = 32;
     const PERSISTED_NONE_TTL_MS = 14 * 24 * 60 * 60 * 1000;
     let activeEvaluationKey = "";

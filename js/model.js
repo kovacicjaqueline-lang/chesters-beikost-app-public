@@ -219,16 +219,28 @@ function autoStatus(f) {
   return autoStatusSnapshot(f).status;
 }
 function status(f) {
+  if (f.manualStatus === "Probiert") {
+    let loggedStatus = autoStatus(f);
+    // Manuell "Probiert" erfasst den bisherigen Kenntnisstand als Untergrenze.
+    // Spätere Protokolle dürfen das Lebensmittel regulär zu Bekannt hochstufen;
+    // eine dokumentierte Reaktion bleibt dabei weiterhin ein Pausiergrund.
+    if (loggedStatus === "Bekannt" || loggedStatus === "Pausiert") return loggedStatus;
+    return "Probiert";
+  }
   return f.manualStatus && f.manualStatus !== "auto"
     ? f.manualStatus
     : autoStatus(f);
 }
 function rank(f) {
+  if (f.manualStatus === "Probiert") return STATUS_ORDER[status(f)] ?? 0;
   if (f.manualStatus && f.manualStatus !== "auto") return STATUS_ORDER[f.manualStatus] ?? 0;
   return autoStatusSnapshot(f).rank;
 }
 function statusSource(f) {
-  if (f.manualStatus && f.manualStatus !== "auto") return "manuell gesetzt";
+  if (f.manualStatus && f.manualStatus !== "auto" && !(f.manualStatus === "Probiert" && status(f) !== "Probiert")) {
+    return "manuell gesetzt";
+  }
+  if (status(f) === "Pausiert") return "automatisch pausiert nach dokumentierter Reaktion";
   let index = logIndexFor();
   let success = index.eatenExposureCountByFoodId.get(f.id)?.size || 0;
   let positive = index.positiveExposureCountByFoodId.get(f.id)?.size || 0;

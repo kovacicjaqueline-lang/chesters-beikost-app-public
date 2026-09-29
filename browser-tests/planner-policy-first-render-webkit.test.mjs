@@ -28,7 +28,9 @@ try {
 
   await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "domcontentloaded" });
   await policyRequestStarted;
-  await page.waitForFunction(() => !!window.__beikostTest?.getState);
+  await page.waitForFunction(() =>
+    !!window.__plannerPoliciesReadyPromise?.then && document.getElementById("appMain")?.inert,
+  );
 
   const whilePolicyIsBlocked = await page.evaluate(() => ({
     bodyVisibility: document.body.style.visibility,
@@ -38,6 +40,7 @@ try {
     mainInert: document.getElementById("appMain").inert,
     navInert: document.querySelector("nav").inert,
     plannerReady: window.__plannerPoliciesReady,
+    testApiAvailable: !!window.__beikostTest?.getState,
     homeRendered: document.getElementById("todayCard").textContent.trim().length > 0,
   }));
 
@@ -48,6 +51,7 @@ try {
   assert.equal(whilePolicyIsBlocked.mainInert, true);
   assert.equal(whilePolicyIsBlocked.navInert, true);
   assert.equal(whilePolicyIsBlocked.plannerReady, false);
+  assert.equal(whilePolicyIsBlocked.testApiAvailable, false);
   assert.equal(whilePolicyIsBlocked.homeRendered, false);
 
   releasePolicyRequest();
@@ -58,6 +62,7 @@ try {
     bootStatusDisplay: getComputedStyle(document.getElementById("appBootStatus")).display,
     mainInert: document.getElementById("appMain").inert,
     navInert: document.querySelector("nav").inert,
+    testApiAvailable: !!window.__beikostTest?.getState,
     homeRendered: document.getElementById("todayCard").textContent.trim().length > 0,
   }));
 
@@ -65,6 +70,7 @@ try {
   assert.equal(afterPolicyReady.bootStatusDisplay, "none");
   assert.equal(afterPolicyReady.mainInert, false);
   assert.equal(afterPolicyReady.navInert, false);
+  assert.equal(afterPolicyReady.testApiAvailable, true);
   assert.equal(afterPolicyReady.homeRendered, true);
 } finally {
   releasePolicyRequest?.();

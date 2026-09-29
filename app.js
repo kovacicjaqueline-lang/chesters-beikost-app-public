@@ -827,7 +827,7 @@ function startBeikostApp() {
   if (!state.settings.planFrom) state.settings.planFrom = today();
   if (pruneIneligibleAutomaticPlanState(state)) save();
 
-  window.__beikostTest = {
+  const beikostTest = {
     getState: () => clone(state),
     setState: (next) => { state = migrateState(next); if (!state.settings.planFrom) state.settings.planFrom = today(); pruneIneligibleAutomaticPlanState(state); save({ replaceLogs: true }); renderAll(); return clone(state); },
     reset: () => { state = migrateState(clone(DEFAULT)); state.backupMeta.chesterContextSeeded = true; state.settings.planFrom = today(); save({ replaceLogs: true }); renderAll(); return clone(state); },
@@ -906,6 +906,7 @@ function startBeikostApp() {
       try {
         window.__plannerPoliciesReady = plannerPoliciesInstalled;
         renderCurrentView();
+        window.__beikostTest = beikostTest;
       } finally {
         document.documentElement.classList.remove("app-boot-pending");
         document.getElementById("appMain")?.removeAttribute("inert");

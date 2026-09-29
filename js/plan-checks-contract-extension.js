@@ -84,11 +84,26 @@
     if (!state?.foods || !state?.logs) return [];
     const meals = visibleOpenMeals(days);
     const groups = new Map();
+    const maintenance = globalScope.PlannerAllergenMaintenance;
+    const establishedTargets = maintenance?.establishedTargets?.(
+      state.foods,
+      (record) => typeof rank === "function" ? rank(record) : 0,
+    ) || [];
+    const groupLevelTargets = maintenance?.GROUP_LEVEL_MAINTENANCE_TARGETS || [];
+    const targetForFoodFn = typeof maintenance?.targetForFood === "function"
+      ? maintenance.targetForFood
+      : null;
 
     for (const record of state.foods) {
       if (!record?.active || !familyKey(record)) continue;
       if (typeof status === "function" && status(record) === "Pausiert") continue;
       if (successfulFamilyExposureCount(record) !== 1) continue;
+      if (baseSolutions.foodSpecificIntroductionCoveredByEstablishedMaintenance(
+        record,
+        establishedTargets,
+        groupLevelTargets,
+        targetForFoodFn,
+      )) continue;
 
       const key = familyKey(record);
       if (!key || groups.has(key)) continue;

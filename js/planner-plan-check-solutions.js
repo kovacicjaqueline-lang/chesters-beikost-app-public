@@ -287,10 +287,6 @@
         return Math.max(recordRank, groupExposureCount >= 2 ? 2 : 0);
       },
     );
-    globalScope.__planCheckMaintenanceDebug = {
-      exposures: [...exposuresByTarget].map(([key, values]) => [key, values.size]),
-      established: established.map((target) => target.key),
-    };
     return established;
   }
 
@@ -325,16 +321,6 @@
         groupLevelTargets,
         targetForFoodFn,
       );
-      if (record.id === "weizengriess") {
-        globalScope.__planCheckIntroductionDebug = {
-          count,
-          needsContinuation,
-          groupLevelTargets,
-          establishedTargets: establishedTargets.map((target) => target.key),
-          target: targetForFoodFn?.(record),
-          introductionTarget: CORE.allergenIntroductionTarget(record),
-        };
-      }
       if (!needsContinuation) continue;
       const target = CORE.allergenIntroductionTarget(record);
       const key = target?.key || "";

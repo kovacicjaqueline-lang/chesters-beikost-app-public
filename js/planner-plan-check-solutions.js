@@ -251,10 +251,43 @@
   function establishedMaintenanceTargets() {
     const maintenance = globalScope.PlannerAllergenMaintenance;
     if (!maintenance || typeof maintenance.establishedTargets !== "function") return [];
-    return maintenance.establishedTargets(
-      state.foods || [],
-      (record) => typeof rank === "function" ? rank(record) : 0,
+    const foods = state.foods || [];
+    const groupTargets = new Set(maintenance.GROUP_LEVEL_MAINTENANCE_TARGETS || []);
+    const groupFoodTargets = new Map();
+    for (const record of foods) {
+      const target = maintenance.targetForFood?.(record);
+      if (!target?.key || !groupTargets.has(target.allergenGroup)) continue;
+      groupFoodTargets.set(record.id, target.key);
+    }
+
+    // A shared maintenance group becomes established from its combined eaten
+    // history. Per-food status alone misses this when the familiar source is
+    // Hafer and the introduction goal is a different gluten grain.
+    const exposuresByTarget = new Map();
+    for (const log of state.logs || []) {
+      for (const id of log.foodIds || []) {
+        const key = groupFoodTargets.get(id);
+        if (!key || outcomeForFood(log, id) !== "eaten") continue;
+        if (!exposuresByTarget.has(key)) exposuresByTarget.set(key, new Set());
+        const exposureKey = typeof plannerLogExposureKey === "function"
+          ? plannerLogExposureKey(log)
+          : `${log.date || ""}|${log.meal || log.id || "entry"}`;
+        exposuresByTarget.get(key).add(exposureKey);
+      }
+    }
+
+    const established = maintenance.establishedTargets(
+      foods,
+      (record) => {
+        const target = maintenance.targetForFood?.(record);
+        const groupExposureCount = target?.key
+          ? exposuresByTarget.get(target.key)?.size || 0
+          : 0;
+        const recordRank = typeof rank === "function" ? rank(record) : 0;
+        return Math.max(recordRank, groupExposureCount >= 2 ? 2 : 0);
+      },
     );
+    return established;
   }
 
   function visibleOpenMeals(days = []) {
@@ -281,13 +314,14 @@
       if (!record?.active || !record.allergenGroup) continue;
       if (typeof status === "function" && status(record) === "Pausiert") continue;
       const count = successfulFamilyExposureCount(record);
-      if (!CORE.allergenIntroductionNeedsContinuation(
+      const needsContinuation = CORE.allergenIntroductionNeedsContinuation(
         record,
         count,
         establishedTargets,
         groupLevelTargets,
         targetForFoodFn,
-      )) continue;
+      );
+      if (!needsContinuation) continue;
       const target = CORE.allergenIntroductionTarget(record);
       const key = target?.key || "";
       if (!key || groups.has(key)) continue;

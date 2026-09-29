@@ -174,6 +174,36 @@ try {
     }, 50);
 
     api.setState(linked);
+    const openEggGoal = api.planCheckOpenGoals().find((item) => item.code === "ALLERGEN_INTRODUCTION_CONTINUE");
+    if (!openEggGoal) throw new Error("Das offene Ei-Einführungsziel fehlt für die Cache-Migration");
+    const currentDays = typeof planDisplayDays === "function"
+      ? planDisplayDays(visiblePlanStart(), 7)
+      : buildDays(visiblePlanStart(), 7);
+    const legacyGoalSnapshot = {
+      code: openEggGoal.code || "",
+      refs: openEggGoal.refs || {},
+      details: openEggGoal.details || {},
+    };
+    const legacyEvaluationKey = window.PlannerPlanCheckSolutions.evaluationKey(currentDays);
+    const legacyEntryKey = `v1|${legacyEvaluationKey}|${window.PlannerPlanCheckSolutions.goalKey(openEggGoal)}|${window.PlannerPlanCheckSolutions.hashText(window.PlannerPlanCheckSolutions.stableStringify(legacyGoalSnapshot))}`;
+    const currentCacheKey = `beikost-plan-check-none-v2-f${window.PlannerPlanCheckSolutions.FEATURE_VERSION}`;
+    const now = Date.now();
+    localStorage.setItem("beikost-plan-check-none-v1", JSON.stringify([{
+      key: legacyEntryKey,
+      savedAt: now,
+    }]));
+    // Ein passender, aber abgelaufener Treffer darf nicht sofort "none" vortäuschen.
+    // 32 frische, nicht passende Treffer prüfen zugleich das Limit nach dem neuen Ergebnis.
+    localStorage.setItem(currentCacheKey, JSON.stringify([
+      ...Array.from({ length: 32 }, (_, index) => ({
+        key: `seeded-none-${index}`,
+        savedAt: now,
+      })),
+      {
+        key: legacyEntryKey,
+        savedAt: now - 15 * 24 * 60 * 60 * 1000,
+      },
+    ]));
     renderAll();
     const completedSlots = plannedSlots.map((slot) => ({
       date: slot.date,
@@ -236,8 +266,129 @@ try {
   const planQuality = page.locator("#planQuality");
   assert.match(await planQuality.textContent(), /keine passende Möglichkeit/i);
   assert.equal(await page.locator("#openPlanGoalSolution").count(), 0, "Ohne Lösung darf Lösung ansehen nicht gerendert werden");
+  const versionedCache = await page.evaluate(() => {
+    const key = `beikost-plan-check-none-v2-f${window.PlannerPlanCheckSolutions.FEATURE_VERSION}`;
+    return { key, rows: JSON.parse(localStorage.getItem(key) || "[]") };
+  });
+  assert.equal(
+    versionedCache.rows.length,
+    32,
+    `Der persistierte None-Cache muss auf 32 Einträge begrenzt bleiben (${versionedCache.key})`,
+  );
+  assert.equal(
+    versionedCache.rows.some((row) => row.key === "seeded-none-0"),
+    false,
+    "Beim Einfügen des neuen Ergebnisses muss der älteste Cache-Eintrag entfernt werden",
+  );
+  assert.ok(
+    versionedCache.rows.some((row) => row.key.startsWith("v1|")),
+    "Das aktuelle abgeschlossene Ergebnis muss trotz Cache-Limit gespeichert sein",
+  );
+
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.waitForFunction(() => !!window.__beikostTest?.setState);
+  await page.waitForFunction(() => window.__planCheckSolutionPrecomputeInstalled === true);
+  await page.locator('nav button[data-view="plan"]').click();
+  await page.waitForFunction(() => window.__beikostTest.planCheckSolutionPrecompute()
+    .some((entry) => entry.status === "none"), null, { timeout: 3000 });
+  const resumedCopy = await page.locator("#planQuality").textContent();
+  assert.match(resumedCopy, /keine passende Möglichkeit/i);
+  assert.doesNotMatch(resumedCopy, /wird geprüft/i, "Ein gespeichertes Ergebnis darf beim App-Neustart nicht erneut auf pending springen");
+  assert.equal(await page.locator("#openPlanGoalSolution").count(), 0, "Ohne Lösung darf nach dem Neustart kein CTA erscheinen");
+
+  // Browser Storage kann abgewiesen werden (z.B. Privacy-Modus). Der eigentliche
+  // Plan-Check muss dann weiterhin bis zum fachlichen Ergebnis durchlaufen.
+  await page.addInitScript(() => {
+    const isNoneCacheKey = (key) => /^beikost-plan-check-none-/.test(String(key));
+    const originalGetItem = Storage.prototype.getItem;
+    const originalSetItem = Storage.prototype.setItem;
+    Storage.prototype.getItem = function (key) {
+      if (isNoneCacheKey(key)) throw new DOMException("Storage denied", "SecurityError");
+      return originalGetItem.call(this, key);
+    };
+    Storage.prototype.setItem = function (key, value) {
+      if (isNoneCacheKey(key)) throw new DOMException("Storage denied", "SecurityError");
+      return originalSetItem.call(this, key, value);
+    };
+  });
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.waitForFunction(() => !!window.__beikostTest?.setState);
+  await page.waitForFunction(() => window.__planCheckSolutionPrecomputeInstalled === true);
+  await page.locator('nav button[data-view="plan"]').click();
+  await page.waitForFunction(() => window.__beikostTest.planCheckSolutionPrecompute()
+    .some((entry) => entry.status === "none"), null, { timeout: 30000 });
+  const storageFallback = await page.evaluate(() => {
+    const key = `beikost-plan-check-none-v2-f${window.PlannerPlanCheckSolutions.FEATURE_VERSION}`;
+    let readBlocked = false;
+    let writeBlocked = false;
+    try { localStorage.getItem(key); } catch { readBlocked = true; }
+    try { localStorage.setItem(key, "[]"); } catch { writeBlocked = true; }
+    return { readBlocked, writeBlocked, copy: document.getElementById("planQuality")?.textContent || "" };
+  });
+  assert.deepEqual(
+    { readBlocked: storageFallback.readBlocked, writeBlocked: storageFallback.writeBlocked },
+    { readBlocked: true, writeBlocked: true },
+    "Der Test muss sowohl abgewiesene Cache-Lese- als auch Schreibzugriffe simulieren",
+  );
+  assert.match(storageFallback.copy, /keine passende Möglichkeit/i, "Ohne Storage muss der Plan-Check fachlich weiterarbeiten");
+
   await page.locator("#leavePlanGoalDirect").click();
   await page.waitForFunction(() => !document.getElementById("planQuality")?.offsetParent);
+
+  const glutenReport = await page.evaluate(() => {
+    const api = window.__beikostTest;
+    api.reset();
+    const snapshot = api.getState();
+    snapshot.settings.planFrom = api.today();
+    snapshot.logs = [
+      ...[
+        "2026-07-17", "2026-07-19", "2026-07-20", "2026-07-22",
+        "2026-07-27", "2026-08-01", "2026-08-14", "2026-08-27",
+        "2026-09-16",
+      ].map((date, index) => ({
+        id: `known-oat-${index}`,
+        date,
+        meal: index % 2 ? "lunch" : "breakfast",
+        entryType: "meal",
+        foodIds: ["hafer"],
+        outcome: "eaten",
+        foodOutcomes: { hafer: "eaten" },
+        createdAt: `${date}T12:00:00.000Z`,
+      })),
+      {
+        id: "known-bread",
+        date: "2026-08-16",
+        meal: "breakfast",
+        entryType: "food",
+        foodIds: ["brot"],
+        outcome: "eaten",
+        foodOutcomes: { brot: "eaten" },
+        createdAt: "2026-08-16T12:00:00.000Z",
+      },
+      {
+        id: "single-wheat-semolina",
+        date: "2026-09-18",
+        meal: "breakfast",
+        entryType: "food",
+        foodIds: ["weizengriess"],
+        outcome: "eaten",
+        foodOutcomes: { weizengriess: "eaten" },
+        createdAt: "2026-09-18T12:00:00.000Z",
+      },
+    ];
+    snapshot.manualMeals = {};
+    snapshot.planLocks = {};
+    snapshot.overrides = {};
+    api.setState(snapshot);
+    return api.planCheckReport().items
+      .filter((item) => item.code === "ALLERGEN_INTRODUCTION_CONTINUE")
+      .map((item) => item.details?.representativeFoodId || "");
+  });
+  assert.equal(
+    glutenReport.includes("weizengriess"),
+    false,
+    `Bei etablierter Glutenpflege darf keine Weizengrieß-Einführung fortgesetzt werden: ${glutenReport.join(", ")}`,
+  );
 
   assert.deepEqual(pageErrors, [], `Keine Page-Errors erwartet: ${pageErrors.join(" | ")}`);
 } finally {

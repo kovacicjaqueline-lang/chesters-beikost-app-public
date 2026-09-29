@@ -89,6 +89,17 @@ test("Vorberechnete Ergebnisse sind an den Evaluation-Key gebunden und alte Cach
   assert.match(precompute, /shouldContinue: \(\) => evaluationStillCurrent\(evaluationKey\)/);
 });
 
+test("abgeschlossene Ergebnisse ohne Lösung bleiben über einen App-Neustart erhalten", () => {
+  assert.match(precompute, /PERSISTED_NONE_KEY/);
+  assert.match(precompute, /const PERSISTED_NONE_KEY = `beikost-plan-check-none-v2-f\$\{solutions\.FEATURE_VERSION\}`;/);
+  assert.match(precompute, /localStorage\?\.getItem\(PERSISTED_NONE_KEY/);
+  assert.match(precompute, /localStorage\?\.setItem\([\s\S]*PERSISTED_NONE_KEY/);
+  assert.match(precompute, /persistNoneResult\(persistedNoneKey\(evaluationKey, item\)\)/);
+  assert.match(precompute, /hasPersistedNoneResult\(persistedNoneKey\(evaluationKey, item\)\)/);
+  assert.match(precompute, /PERSISTED_NONE_TTL_MS/);
+  assert.match(precompute, /PERSISTED_NONE_LIMIT/);
+});
+
 test("Lösung ansehen erscheint erst nach einer gefundenen Lösung", () => {
   const renderer = precompute.slice(
     precompute.indexOf("function renderGoalState"),

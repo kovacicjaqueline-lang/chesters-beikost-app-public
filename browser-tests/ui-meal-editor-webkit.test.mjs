@@ -239,7 +239,7 @@ try {
   await openManualCard(manualCard);
   assert.match(await manualCard.locator(".manual-meal-title").innerText(), /Banane.*Pfirsich.*Einführung/, "Kartentitel muss Hauptbasis und Einführung repräsentieren");
   assert.equal(await manualCard.locator("summary").evaluate((element) => getComputedStyle(element).listStyleType), "none", "nativer Details-Marker darf nicht einrücken");
-  assert.equal(await manualCard.locator(".manual-meal-actions").evaluate((element) => getComputedStyle(element).gap), "12px", "Aktionsbuttons müssen den 12px-Gruppenabstand des Designsystems verwenden");
+  assert.equal(await manualCard.locator(".manual-meal-actions").evaluate((element) => getComputedStyle(element).rowGap), "12px", "Aktionsbuttons müssen den vertikalen 12px-Gruppenabstand des Designsystems verwenden");
 
   savedState = await page.evaluate(() => window.__beikostTest.getState());
   assert.equal(savedState.manualMeals[`${dates.future}|breakfast`].foodPreparationKeys.banane, preparationKey);

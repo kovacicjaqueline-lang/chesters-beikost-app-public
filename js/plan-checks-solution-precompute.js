@@ -28,6 +28,9 @@
 
     const cache = new Map();
     const batches = new Map();
+    const PERSISTED_NONE_KEY = `beikost-plan-check-none-v2-f${solutions.FEATURE_VERSION}`;
+    const PERSISTED_NONE_LIMIT = 32;
+    const PERSISTED_NONE_TTL_MS = 14 * 24 * 60 * 60 * 1000;
     let activeEvaluationKey = "";
     let activeGoalFlow = null;
 
@@ -76,6 +79,48 @@
       return `${evaluationKey}|${solutions.goalKey(item)}`;
     }
 
+    function persistedNoneKey(evaluationKey, item) {
+      const goalSnapshot = {
+        code: item?.code || "",
+        refs: item?.refs || {},
+        details: item?.details || {},
+      };
+      return `v1|${cacheKey(evaluationKey, item)}|${solutions.hashText(solutions.stableStringify(goalSnapshot))}`;
+    }
+
+    function readPersistedNoneResults() {
+      try {
+        const rows = JSON.parse(globalScope.localStorage?.getItem(PERSISTED_NONE_KEY) || "[]");
+        if (!Array.isArray(rows)) return [];
+        const now = Date.now();
+        return rows.filter((entry) =>
+          entry &&
+          typeof entry.key === "string" &&
+          Number.isFinite(entry.savedAt) &&
+          now - entry.savedAt <= PERSISTED_NONE_TTL_MS
+        ).slice(-PERSISTED_NONE_LIMIT);
+      } catch (_) {
+        return [];
+      }
+    }
+
+    function hasPersistedNoneResult(key) {
+      return readPersistedNoneResults().some((entry) => entry.key === key);
+    }
+
+    function persistNoneResult(key) {
+      try {
+        const rows = readPersistedNoneResults().filter((entry) => entry.key !== key);
+        rows.push({ key, savedAt: Date.now() });
+        globalScope.localStorage?.setItem(
+          PERSISTED_NONE_KEY,
+          JSON.stringify(rows.slice(-PERSISTED_NONE_LIMIT)),
+        );
+      } catch (_) {
+        // Der Plan-Check bleibt funktionsfähig, wenn Web Storage nicht verfügbar ist.
+      }
+    }
+
     function activateEvaluation(evaluationKey) {
       if (activeEvaluationKey === evaluationKey) return;
       activeEvaluationKey = evaluationKey;
@@ -115,7 +160,15 @@
       if (!goals.length) return;
       const evaluationKey = solutions.evaluationKey(days);
       activateEvaluation(evaluationKey);
-      const missing = goals.filter((item) => !cache.has(cacheKey(evaluationKey, item)));
+      const missing = goals.filter((item) => {
+        const key = cacheKey(evaluationKey, item);
+        if (cache.has(key)) return false;
+        if (hasPersistedNoneResult(persistedNoneKey(evaluationKey, item))) {
+          cache.set(key, { status: "none", solution: null });
+          return false;
+        }
+        return true;
+      });
       if (!missing.length) return;
 
       for (const item of missing) {
@@ -138,6 +191,7 @@
             : solutions.findSolution(item, snapshot);
           if (!evaluationStillCurrent(evaluationKey)) return { stale: true };
           cache.set(key, { status: solution ? "ready" : "none", solution: solution || null });
+          if (!solution) persistNoneResult(persistedNoneKey(evaluationKey, item));
           result = { stale: false, goalKey: solutions.goalKey(item), found: !!solution };
         } catch (error) {
           if (evaluationStillCurrent(evaluationKey)) cache.set(key, { status: "error", solution: null });
@@ -156,7 +210,11 @@
     function goalState(days, item) {
       const evaluationKey = solutions.evaluationKey(days);
       activateEvaluation(evaluationKey);
-      return cache.get(cacheKey(evaluationKey, item)) || null;
+      const key = cacheKey(evaluationKey, item);
+      if (!cache.has(key) && hasPersistedNoneResult(persistedNoneKey(evaluationKey, item))) {
+        cache.set(key, { status: "none", solution: null });
+      }
+      return cache.get(key) || null;
     }
 
     function goalTitleMarkup(item, maintenanceItems = []) {

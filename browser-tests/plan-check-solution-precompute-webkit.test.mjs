@@ -174,6 +174,22 @@ try {
     }, 50);
 
     api.setState(linked);
+    const openEggGoal = api.planCheckOpenGoals().find((item) => item.code === "ALLERGEN_INTRODUCTION_CONTINUE");
+    if (!openEggGoal) throw new Error("Das offene Ei-Einführungsziel fehlt für die Cache-Migration");
+    const currentDays = typeof planDisplayDays === "function"
+      ? planDisplayDays(visiblePlanStart(), 7)
+      : buildDays(visiblePlanStart(), 7);
+    const legacyGoalSnapshot = {
+      code: openEggGoal.code || "",
+      refs: openEggGoal.refs || {},
+      details: openEggGoal.details || {},
+    };
+    const legacyEvaluationKey = window.PlannerPlanCheckSolutions.evaluationKey(currentDays);
+    const legacyEntryKey = `v1|${legacyEvaluationKey}|${window.PlannerPlanCheckSolutions.goalKey(openEggGoal)}|${window.PlannerPlanCheckSolutions.hashText(window.PlannerPlanCheckSolutions.stableStringify(legacyGoalSnapshot))}`;
+    localStorage.setItem("beikost-plan-check-none-v1", JSON.stringify([{
+      key: legacyEntryKey,
+      savedAt: Date.now(),
+    }]));
     renderAll();
     const completedSlots = plannedSlots.map((slot) => ({
       date: slot.date,
@@ -236,6 +252,14 @@ try {
   const planQuality = page.locator("#planQuality");
   assert.match(await planQuality.textContent(), /keine passende Möglichkeit/i);
   assert.equal(await page.locator("#openPlanGoalSolution").count(), 0, "Ohne Lösung darf Lösung ansehen nicht gerendert werden");
+  const versionedCache = await page.evaluate(() => {
+    const key = `beikost-plan-check-none-v2-f${window.PlannerPlanCheckSolutions.FEATURE_VERSION}`;
+    return { key, rows: JSON.parse(localStorage.getItem(key) || "[]") };
+  });
+  assert.ok(
+    versionedCache.rows.length > 0,
+    `Abgeschlossene None-Ergebnisse müssen im Feature-versionierten Cache liegen (${versionedCache.key})`,
+  );
 
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => !!window.__beikostTest?.setState);

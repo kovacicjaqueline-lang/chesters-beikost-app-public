@@ -160,42 +160,11 @@ try {
       createdAt: `${exposureDate}T12:00:00.000Z`,
     }];
     api.setState(trusted);
-    const stageTrace = [];
-    const stageNames = [
-      "breakfastBaseIntroductionCandidate",
-      "introductionCandidate",
-      "knownRecipeCandidate",
-      "knownCandidate",
-      "plannerFinalMealAssessment",
-    ];
-    const originalStages = new Map();
-    for (const name of stageNames) {
-      const original = window[name];
-      if (typeof original !== "function") continue;
-      originalStages.set(name, original);
-      window[name] = function tracedTrustedPlanStage(...args) {
-        const result = original.apply(this, args);
-        const meal = typeof args[0] === "string" ? args[0] : args[0]?.meal;
-        const date = typeof args[1] === "string" ? args[1] : args[0]?.date;
-        stageTrace.push({
-          stage: name,
-          date: date || "",
-          meal: meal || "",
-          result: name === "plannerFinalMealAssessment"
-            ? { allowed: result?.allowed, reason: result?.reason }
-            : result?.f ? { focusId: result.f.id, type: result.type || "" }
-              : result?.recipe ? { recipeName: result.recipe.name }
-                : result ? String(result) : null,
-        });
-        return result;
-      };
-    }
-    let trustedDays;
-    try {
-      trustedDays = api.buildDays(on, 7);
-    } finally {
-      for (const [name, original] of originalStages) window[name] = original;
-    }
+    // setState() calls renderAll(), which may create today's tracking snapshots.
+    // Remove those render side effects so this assertion exercises a fresh week.
+    state.planLocks = {};
+    state.autoLockExcluded = {};
+    const trustedDays = api.buildDays(on, 7);
     const trustedTrace = culinaryTrace.splice(0);
     if (typeof baseCulinaryAssessment === "function") {
       window.plannerCulinaryAssessment = baseCulinaryAssessment;
@@ -225,14 +194,12 @@ try {
       everydayTrace,
       trusted: compact(trustedDays),
       trustedTrace,
-      trustedStages: stageTrace,
     };
   });
 
   console.log(`[planner-final-quality-real-state] ${JSON.stringify({
     everyday: diagnostics.everyday,
     trusted: diagnostics.trusted,
-    trustedStages: diagnostics.trustedStages,
     culinaryIssueCounts: {
       everyday: diagnostics.everydayTrace.length,
       trusted: diagnostics.trustedTrace.length,

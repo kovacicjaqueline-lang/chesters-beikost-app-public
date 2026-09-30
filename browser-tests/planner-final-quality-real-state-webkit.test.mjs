@@ -232,6 +232,7 @@ try {
   console.log(`[planner-final-quality-real-state] ${JSON.stringify({
     everyday: diagnostics.everyday,
     trusted: diagnostics.trusted,
+    trustedStages: diagnostics.trustedStages,
     culinaryIssueCounts: {
       everyday: diagnostics.everydayTrace.length,
       trusted: diagnostics.trustedTrace.length,

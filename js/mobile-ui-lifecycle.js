@@ -73,6 +73,10 @@
       .replaceAll("'", "&#39;");
   }
 
+  function inventoryFoods() {
+    return typeof state !== "undefined" && Array.isArray(state?.foods) ? state.foods : [];
+  }
+
   function foodSearchRank(item, query) {
     const name = normalize(item?.name);
     const alias = normalize(item?.alias);
@@ -94,8 +98,8 @@
     }
     const selectedLabel = body.querySelector(".selected-target b")?.textContent || "";
     const name = selectedLabel.replace(/^Ausgewählt:\s*/i, "").trim();
-    if (!name || !Array.isArray(root.state?.foods)) return "";
-    return root.state.foods.find((item) => item?.name === name)?.id || "";
+    if (!name) return "";
+    return inventoryFoods().find((item) => item?.name === name)?.id || "";
   }
 
   function foodResultHtml(item, selectedId) {
@@ -106,8 +110,8 @@
   }
 
   function rankFoodResults(container, query, selectedId) {
-    if (!query || !Array.isArray(root.state?.foods)) return;
-    const matches = root.state.foods
+    if (!query) return;
+    const matches = inventoryFoods()
       .filter((item) => {
         const searchable = normalize(`${item?.name || ""} ${item?.alias || ""} ${item?.category || ""}`);
         return searchable.includes(query);

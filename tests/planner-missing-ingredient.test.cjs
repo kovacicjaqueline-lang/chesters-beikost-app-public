@@ -232,3 +232,18 @@ test('MISSING-INGREDIENT-06: Plan-Hinweis entfernt alte Log-Provenienz und konse
     meal: 'breakfast',
   });
 });
+
+test('MISSING-INGREDIENT-07: Fehlend-Markierung rendert gezielt und bestätigt erst nach dem Plan-Render', () => {
+  const source = fs.readFileSync(path.join(root, 'js', 'planner-missing-ingredient.js'), 'utf8');
+  const renderHelper = source.match(/function renderMissingIngredientView\(\) \{[\s\S]*?\n  \}/)?.[0] || '';
+  const markUnavailable = source.match(/function markFoodUnavailable\([\s\S]*?(?=\n  function markPlanMissingFoodAvailable)/)?.[0] || '';
+
+  assert.match(renderHelper, /renderCurrentView\(\)/);
+  assert.match(renderHelper, /requestFullRender\(\)/, 'Vollrender bleibt nur als Kompatibilitäts-Fallback');
+  assert.match(markUnavailable, /renderMissingIngredientView\(\)/);
+  assert.doesNotMatch(markUnavailable, /requestFullRender\(\)/);
+  assert.ok(
+    markUnavailable.indexOf('renderMissingIngredientView();') < markUnavailable.indexOf('showToast('),
+    'Erfolgshinweis darf erst nach dem sichtbaren Plan-Render erscheinen',
+  );
+});

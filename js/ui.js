@@ -64,6 +64,12 @@ function viewRenderPlanDays(from, n = 7) {
     () => planDisplayDays(from, n),
   );
 }
+function viewRenderPrepPlanDays(from, n = 7) {
+  return memoizeViewRenderValue(
+    `prepPlanDays|${String(from)}|${Number(n)}`,
+    () => globalThis.__plannerWeekCache?.readOnly?.(from, n) || planDisplayDays(from, n),
+  );
+}
 function viewRenderRecipeStates() {
   if (!activeViewRenderCycle) return recipeStates();
   if (!activeViewRenderCycle.recipeStatesReady) {
@@ -1322,7 +1328,10 @@ function showView(id) {
   if (previous === "foods" && id !== "foods" && foodReorderMode) {
     foodReorderMode = false;
   }
-  document.querySelectorAll('.view[aria-busy="true"]').forEach((view) => view.removeAttribute("aria-busy"));
+  document.querySelectorAll('.view[aria-busy="true"]').forEach((view) => {
+    view.removeAttribute("aria-busy");
+    view.querySelector(":scope > .prep-render-loading")?.remove();
+  });
   document
     .querySelectorAll(".view")
     .forEach((v) => v.classList.toggle("active", v.id === id));
@@ -1334,13 +1343,43 @@ function showView(id) {
     if (main) main.scrollTop = 0;
   }
   globalThis.MobileUiLifecycle?.afterViewChange(id, previous);
+  let ensurePrepLoading = (view, text) => {
+    let loading = view.querySelector(":scope > .prep-render-loading");
+    if (!loading) {
+      loading = document.createElement("div");
+      loading.className = "notice olive prep-render-loading";
+      loading.setAttribute("role", "status");
+      view.prepend(loading);
+    }
+    loading.textContent = text;
+    return loading;
+  };
   let finishViewChange = () => {
     let view = document.getElementById(id);
     if (!view?.classList.contains("active")) return;
     try {
       renderView(id);
     } finally {
-      view.removeAttribute("aria-busy");
+      let readiness = globalThis.PlannerReadiness;
+      if (id === "prep" && typeof plannerViewReady === "function" && !plannerViewReady() && typeof readiness?.whenReady === "function") {
+        view.setAttribute("aria-busy", "true");
+        ensurePrepLoading(view, "Planungsregeln werden geladen …");
+        readiness.whenReady().then((result) => {
+          let currentView = document.getElementById("prep");
+          if (!currentView?.classList.contains("active")) return;
+          let currentLoading = currentView.querySelector(":scope > .prep-render-loading");
+          if (result?.state === "ready") {
+            currentView.removeAttribute("aria-busy");
+            currentLoading?.remove();
+          } else if (result?.state === "failed") {
+            currentView.setAttribute("aria-busy", "true");
+            if (currentLoading) currentLoading.textContent = "Die Planungsregeln konnten nicht geladen werden. Bitte lade die App erneut.";
+          }
+        });
+      } else {
+        view.removeAttribute("aria-busy");
+        view.querySelector(":scope > .prep-render-loading")?.remove();
+      }
     }
   };
   if (previous === id || typeof renderViewAfterNextPaint !== "function") {
@@ -1348,7 +1387,11 @@ function showView(id) {
     finishViewChange();
     return;
   }
-  document.getElementById(id)?.setAttribute("aria-busy", "true");
+  let targetView = document.getElementById(id);
+  targetView?.setAttribute("aria-busy", "true");
+  if (id === "prep" && targetView) {
+    ensurePrepLoading(targetView, "Vorbereitung wird geladen …");
+  }
   renderViewAfterNextPaint(id, finishViewChange);
 }
 function existingFoodWithName(name) {

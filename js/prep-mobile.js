@@ -242,7 +242,16 @@
 
   function recipeReservations() {
     const reservations = new Map();
-    const days = (typeof viewRenderBuildDays === "function" ? viewRenderBuildDays : buildDays)(
+    const buildPrepDisplayDays = typeof viewRenderPrepPlanDays === "function"
+      ? viewRenderPrepPlanDays
+      : typeof viewRenderPlanDays === "function"
+        ? viewRenderPlanDays
+        : typeof planDisplayDays === "function"
+          ? planDisplayDays
+          : typeof viewRenderBuildDays === "function"
+            ? viewRenderBuildDays
+            : buildDays;
+    const days = buildPrepDisplayDays(
       state.settings.planFrom && state.settings.planFrom >= today() ? state.settings.planFrom : today(),
       7,
     );

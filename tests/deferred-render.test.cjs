@@ -81,10 +81,37 @@ function createHarness({ withAnimationFrame = true } = {}) {
   h.sandbox.renderViewAfterNextPaint("plan", (id) => renderedViews.push(id));
   h.sandbox.renderViewAfterNextPaint("prep", (id) => renderedViews.push(id));
 
-  assert.equal(h.raf.length, 1, "Schnelle Tabwechsel müssen in einer Paint-Gelegenheit gebündelt werden");
+  assert.equal(h.raf.length, 1, "Schnelle Tabwechsel müssen in einer Render-Gelegenheit gebündelt werden");
   h.raf.shift()();
+  assert.deepEqual(renderedViews, [], "Der Prep-Render darf den ersten Paint nicht im Animationsframe blockieren");
+  assert.equal(h.timers.length, 1, "Der vollständige Prep-Render folgt nach der sichtbaren Ladeansicht");
   h.timers.shift()();
-  assert.deepEqual(renderedViews, ["prep"], "Nur der zuletzt angeforderte Tab darf gerendert werden");
+  assert.deepEqual(renderedViews, ["prep"]);
+}
+
+{
+  const h = createHarness();
+  const renderedViews = [];
+  h.sandbox.renderViewAfterNextPaint("plan", (id) => renderedViews.push(id));
+
+  h.raf.shift()();
+  assert.deepEqual(renderedViews, [], "Andere Tabs behalten die sichtbare Paint-Gelegenheit vor der teuren Renderarbeit");
+  assert.equal(h.timers.length, 1);
+  h.timers.shift()();
+  assert.deepEqual(renderedViews, ["plan"]);
+}
+
+{
+  const h = createHarness();
+  const renderedViews = [];
+  h.sandbox.renderViewAfterNextPaint("prep", (id) => renderedViews.push(id));
+
+  h.raf.shift()();
+  assert.deepEqual(renderedViews, [], "Bei schneller Weiternavigation darf Prep den finalen Zieltab nicht vorziehen");
+  assert.equal(h.timers.length, 1);
+  h.sandbox.renderViewAfterNextPaint("foods", (id) => renderedViews.push(id));
+  h.timers.shift()();
+  assert.deepEqual(renderedViews, ["foods"], "Nur der zuletzt angeforderte Tab darf gerendert werden");
 }
 
 {
@@ -95,6 +122,17 @@ function createHarness({ withAnimationFrame = true } = {}) {
   h.raf.shift()();
   h.timers.shift()();
   assert.deepEqual(renderedViews, [], "Ein synchron übernommener Render muss den geplanten View-Render verwerfen");
+}
+
+{
+  const h = createHarness();
+  const renderedViews = [];
+  h.sandbox.renderViewAfterNextPaint("prep", (id) => renderedViews.push(id));
+  h.raf.shift()();
+  assert.equal(h.timers.length, 1, "Nach der ersten Paint-Gelegenheit wartet der Prep-Render auf den Task");
+  h.sandbox.cancelDeferredViewRender();
+  h.timers.shift()();
+  assert.deepEqual(renderedViews, [], "Abbruch nach dem Frame muss auch den bereits geplanten Prep-Render verwerfen");
 }
 
 console.log("Deferred full-render scheduling regression passed.");

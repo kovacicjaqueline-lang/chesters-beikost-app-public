@@ -232,13 +232,17 @@ test("Planner-Log-Index beschleunigt Completion- und Tageslogzugriff ohne Auswah
   }
 });
 
-test("Prep berechnet den vollständigen Rezeptstatus nur einmal pro Render", () => {
+test("Prep aktualisiert Empfehlungen, überlässt den vollständigen Rezeptkatalog aber seinem Renderer", () => {
   const source = read("js/prep.js");
   const start = source.indexOf("function renderPrepCore()");
   const end = source.indexOf("\nfunction recipeIngredientReady", start);
   const body = source.slice(start, end);
   assert.equal((body.match(/recipeStates\(\)/g) || []).length, 1);
   assert.match(body, /viewRenderRecipeStates\(\)/);
+  assert.match(body, /cookNow/);
+  assert.match(body, /freezerRecipes/);
+  assert.doesNotMatch(body, /recipeList|recipeFilter|recipeSearch|renderRecipeCard/);
+  assert.match(read("js/catalog-performance.js"), /renderOptimizedRecipeCatalog/);
 });
 
 test("ein View-Renderzyklus teilt identische Planner-, Rezept- und Prep-Berechnungen", () => {

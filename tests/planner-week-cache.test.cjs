@@ -34,6 +34,11 @@ test("Worker-Warmup bleibt revisionssicher und optional", () => {
   assert.ok(source.includes("planner-week-worker.js"));
 });
 
+test("sichtbare Auto-Snapshots bewahren den soeben berechneten Wochen-Cache", () => {
+  const source = require("fs").readFileSync("js/planner-log-rollover-review-fixes.js", "utf8");
+  assert.match(source, /if \(result\.changed\) \{\s*if \(storageReady\) save\(\{ preservePlanCache: true \}\)/);
+});
+
 test("gültige Wochen werden wiederverwendet und Warmup blockiert ohne Worker nicht den Hauptthread", () => {
   let buildCalls = 0;
   let saveCalls = 0;
@@ -74,6 +79,39 @@ test("gültige Wochen werden wiederverwendet und Warmup blockiert ohne Worker ni
   context.save();
   assert.equal(context.__plannerWeekCache.revision, revisionBeforeNavigationSave + 1);
   assert.equal(context.__plannerWeekCache.size, 0);
+});
+
+test("Prep kann den Wochen-Cache read-only ohne Deep Clone verwenden", () => {
+  let cloneCalls = 0;
+  const context = {
+    state: { settings: {} },
+    visiblePlanStart: () => "2026-09-20",
+    addDays: (date, offset) => `${date}+${offset}`,
+    buildDays: (from) => [{ date: from, meals: [{ meal: "lunch", foodIds: ["karotte"] }] }],
+    planDisplayDays: (from, count) => context.buildDays(from, count),
+    clone: (value) => {
+      cloneCalls += 1;
+      return JSON.parse(JSON.stringify(value));
+    },
+    requestIdleCallback: () => 1,
+    cancelIdleCallback: () => {},
+  };
+  vm.createContext(context);
+  vm.runInContext(source, context);
+
+  const first = context.planDisplayDays("2026-09-20", 7);
+  const readOnly = context.__plannerWeekCache.readOnly("2026-09-20", 7);
+  const readOnlyAgain = context.__plannerWeekCache.readOnly("2026-09-20", 7);
+  const second = context.planDisplayDays("2026-09-20", 7);
+  second[0].meals[0].foodIds.push("brokkoli");
+  const afterPublicMutation = context.__plannerWeekCache.readOnly("2026-09-20", 7);
+
+  assert.deepEqual([...afterPublicMutation[0].meals[0].foodIds], ["karotte"]);
+  assert.equal(cloneCalls, 3, "Read-only Prep-Lookup benötigt keinen weiteren Deep Clone");
+  assert.strictEqual(readOnly, readOnlyAgain, "read-only Lookups geben denselben internen Snapshot zurück");
+  assert.strictEqual(readOnly, afterPublicMutation, "normale geklonte Rückgaben können den Cache nicht verändern");
+  assert.notStrictEqual(first, second);
+  assert.notStrictEqual(second, readOnly);
 });
 
 test("Planner-aware prepDemand verwendet denselben sichtbaren Wochen-Snapshot", () => {

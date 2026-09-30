@@ -169,9 +169,13 @@ function prepDemand() {
 function computePrepDemand() {
   let from = state.settings.planFrom || today();
   if (from < today()) from = today();
-  let days = typeof viewRenderBuildDays === "function"
-    ? viewRenderBuildDays(from, 7)
-    : buildDays(from, 7);
+  let days = typeof viewRenderPrepPlanDays === "function"
+    ? viewRenderPrepPlanDays(from, 7)
+    : typeof viewRenderPlanDays === "function"
+      ? viewRenderPlanDays(from, 7)
+    : typeof planDisplayDays === "function"
+      ? planDisplayDays(from, 7)
+      : buildDays(from, 7);
   let map = new Map();
   days.forEach((day) =>
     day.meals.forEach((meal) => {
@@ -249,20 +253,25 @@ function prepAdvice(f, demand) {
   return {mode:missingGrams?"Nach Bedarf":"Vorrat reicht",covered:missingGrams===0,headline:missingGrams?(f.prep||"Eine normale Kochmenge vorbereiten"):"Durch Vorrat gedeckt",recommendation:f.safeForm||"Altersgerecht weich zubereiten.",form:"Überschuss flexibel portionieren.",details:`${formatPrepNumber(requiredGrams)} g geplant, ${formatPrepNumber(availableGrams)} g vorhanden, ${formatPrepNumber(missingGrams)} g fehlen.`,available,missing,availableGrams,requiredGrams,missingGrams,inventorySize:standardPrepPortionSizeForFood(f),inventoryNote:"",inventoryPortions:4};
 }
 function prepItems() {
-  let demands = typeof viewRenderPrepDemand === "function" ? viewRenderPrepDemand() : prepDemand();
-  return demands
-    .map((demand) => {
-      let f = food(demand.foodId);
-      return f ? { f, demand, advice: prepAdvice(f, demand) } : null;
-    })
-    .filter(Boolean)
-    .sort((a, b) => {
-      let score = (x) =>
-        (x.advice.covered ? 3 : 0) +
-        (x.advice.mode === "Frisch" ? 2 : 0) +
-        (x.advice.mode.includes("Trocken") || x.advice.mode === "Je nach Form" ? 1 : 0);
-      return score(a) - score(b) || a.demand.firstDate.localeCompare(b.demand.firstDate);
-    });
+  let compute = () => {
+    let demands = typeof viewRenderPrepDemand === "function" ? viewRenderPrepDemand() : prepDemand();
+    return demands
+      .map((demand) => {
+        let f = food(demand.foodId);
+        return f ? { f, demand, advice: prepAdvice(f, demand) } : null;
+      })
+      .filter(Boolean)
+      .sort((a, b) => {
+        let score = (x) =>
+          (x.advice.covered ? 3 : 0) +
+          (x.advice.mode === "Frisch" ? 2 : 0) +
+          (x.advice.mode.includes("Trocken") || x.advice.mode === "Je nach Form" ? 1 : 0);
+        return score(a) - score(b) || a.demand.firstDate.localeCompare(b.demand.firstDate);
+      });
+  };
+  return typeof memoizeViewRenderValue === "function"
+    ? memoizeViewRenderValue("prepItems", compute)
+    : compute();
 }
 function shoppingQuantity(f) {
   let n=normalizeName(f.name);
@@ -432,7 +441,16 @@ function renderPrepCore() {
       freshAtMealFood(x.f) &&
       x.demand.requiredGrams > x.demand.reservedGrams,
   );
-  let days = (typeof viewRenderBuildDays === "function" ? viewRenderBuildDays : buildDays)(
+  let buildPrepDisplayDays = typeof viewRenderPrepPlanDays === "function"
+    ? viewRenderPrepPlanDays
+    : typeof viewRenderPlanDays === "function"
+      ? viewRenderPlanDays
+      : typeof planDisplayDays === "function"
+        ? planDisplayDays
+        : typeof viewRenderBuildDays === "function"
+          ? viewRenderBuildDays
+          : buildDays;
+  let days = buildPrepDisplayDays(
     state.settings.planFrom && state.settings.planFrom >= today()
       ? state.settings.planFrom
       : today(),
@@ -681,81 +699,9 @@ function renderPrepCore() {
       }),
   );
 
-  let filterBar = document.getElementById("recipeFilter");
-  let search = document.getElementById("recipeSearch");
-  if (filterBar) {
-    filterBar.querySelectorAll("[data-recipe-filter]").forEach((button) =>
-      button.classList.toggle("active", button.dataset.recipeFilter === recipeFilter),
-    );
-  }
-  if (search) search.value = recipeQuery;
-  let q = normalizeName(recipeQuery);
-  let rs = allRecipeStates.filter((r) => {
-    let categoryMatch =
-      recipeFilter === "available"
-        ? r.unlocked
-        : recipeFilter === "almost"
-          ? r.almost
-          : recipeFilter === "all"
-            ? true
-            : recipeFilter === "pantry"
-              ? (r.requires || []).every((name) => {
-                  let f = state.foods.find((x) => x.name === name);
-                  return f && (inventoryPortions(f.id) > 0 || state.pantry[f.id]);
-                })
-              : recipeFilter === "freezer"
-                ? !!r.freezable
-                : recipeFilter === "philippines"
-                  ? r.ph || r.category === "philippines"
-                  : recipeFilter === "snack"
-                    ? (r.tags || []).some((tag) => normalizeName(tag) === "snack")
-                    : r.category === recipeFilter;
-    if (!categoryMatch) return false;
-    if (!q) return true;
-    return normalizeName(recipeSearchText(r)).includes(q);
-  });
-  let countBox = document.getElementById("recipeCount");
-  if (countBox) {
-    let context = recipeFilter === "almost"
-      ? "es fehlen höchstens zwei Schritte"
-      : recipeFilter === "snack"
-        ? "Snack"
-        : "passend zu Filter und Suche";
-    countBox.textContent = `${rs.length} Rezept${rs.length === 1 ? "" : "e"} · ${context}`;
-  }
-  let recipeEmptyMode = q || recipeFilter !== "available"
-    ? "reset"
-    : allRecipeStates.some((item) => item.almost)
-      ? "almost"
-      : "all";
-  let recipeEmptyLabel = recipeEmptyMode === "reset"
-    ? "Filter zurücksetzen"
-    : recipeEmptyMode === "almost"
-      ? "Fast passende Rezepte anzeigen"
-      : "Alle Rezepte anzeigen";
-  document.getElementById("recipeList").innerHTML = rs.length
-    ? rs.map(renderRecipeCard).join("")
-    : `<div class="empty ds-empty"><div>Keine Rezepte für diesen Filter gefunden.</div><button class="btn" id="recipeEmptyAction" type="button">${recipeEmptyLabel}</button></div>`;
-  document.getElementById("recipeEmptyAction")?.addEventListener("click", () => {
-    recipeQuery = "";
-    if (recipeEmptyMode === "almost") recipeFilter = "almost";
-    else if (recipeEmptyMode === "all") recipeFilter = "all";
-    else recipeFilter = "available";
-    renderPrep();
-  });
-  if (filterBar) {
-    filterBar.querySelectorAll("[data-recipe-filter]").forEach((button) => {
-      button.onclick = () => {
-        recipeFilter = button.dataset.recipeFilter;
-        renderPrep();
-      };
-    });
-  }
-  if (search)
-    search.oninput = (e) => {
-      recipeQuery = e.target.value;
-      renderPrep();
-    };
+  // Recipe catalog rendering belongs to catalog-performance.js. Rebuilding
+  // every recipe card here made opening Prep pay for an unrelated full view.
+  // Keep Prep's own recommendations above; the catalog renders when opened.
   bindRecipeStockButtons();
 }
 function recipeIngredientReady(name) {

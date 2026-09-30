@@ -270,6 +270,14 @@
     has(from, count = 7) {
       return cache.has(cacheKey(from, count));
     },
+    readOnly(from, count = 7) {
+      const key = cacheKey(from, count);
+      if (!cache.has(key)) return null;
+      scheduleWarmup();
+      // Prep only reads this internal snapshot. Avoid a costly deep clone on
+      // its first render; callers must treat the returned days as immutable.
+      return cache.get(key);
+    },
     clear: invalidate,
     warmup: warmupNow,
   };

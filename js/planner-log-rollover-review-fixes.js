@@ -193,7 +193,7 @@
       new Date().toISOString(),
     );
     if (result.changed) {
-      if (storageReady) save();
+      if (storageReady) save({ preservePlanCache: true });
       else snapshotSavePending = true;
     }
     return days;

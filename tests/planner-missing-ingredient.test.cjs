@@ -233,17 +233,71 @@ test('MISSING-INGREDIENT-06: Plan-Hinweis entfernt alte Log-Provenienz und konse
   });
 });
 
-test('MISSING-INGREDIENT-07: Fehlend-Markierung rendert gezielt und bestätigt erst nach dem Plan-Render', () => {
-  const source = fs.readFileSync(path.join(root, 'js', 'planner-missing-ingredient.js'), 'utf8');
-  const renderHelper = source.match(/function renderMissingIngredientView\(\) \{[\s\S]*?\n  \}/)?.[0] || '';
-  const markUnavailable = source.match(/function markFoodUnavailable\([\s\S]*?(?=\n  function markPlanMissingFoodAvailable)/)?.[0] || '';
+test('MISSING-INGREDIENT-07: Fehlend-Markierung berechnet vor dem Toast eine verfügbare Alternative im aktiven Render', () => {
+  const vm = require('node:vm');
+  const events = [];
+  const sandbox = {
+    module: { exports: {} },
+    window: {},
+    document: {
+      createElement: () => ({}),
+      head: { appendChild() {} },
+      addEventListener() {},
+      querySelectorAll: () => [],
+    },
+    events,
+    state: {
+      foods: [
+        { id: 'banane', name: 'Banane', active: true },
+        { id: 'apfel', name: 'Apfel', active: true },
+      ],
+      shoppingHints: {},
+      followUps: {},
+      pantry: {},
+      planLocks: {},
+      manualMeals: {},
+      overrides: {},
+      autoLockExcluded: {},
+      backupMeta: {},
+    },
+    displayedPlan: [],
+    toastText: '',
+  };
 
-  assert.match(renderHelper, /renderCurrentView\(\)/);
-  assert.match(renderHelper, /requestFullRender\(\)/, 'Vollrender bleibt nur als Kompatibilitäts-Fallback');
-  assert.match(markUnavailable, /renderMissingIngredientView\(\)/);
-  assert.doesNotMatch(markUnavailable, /requestFullRender\(\)/);
-  assert.ok(
-    markUnavailable.indexOf('renderMissingIngredientView();') < markUnavailable.indexOf('showToast('),
-    'Erfolgshinweis darf erst nach dem sichtbaren Plan-Render erscheinen',
+  vm.runInNewContext(`
+    function food(id) { return state.foods.find((item) => item.id === id) || null; }
+    function today() { return '2026-09-30'; }
+    function plannerLogMealKeys() { return ['breakfast', 'snack', 'lunch', 'dinner']; }
+    function isFoodUnavailable(id) { return state.shoppingHints[id]?.status === 'needed'; }
+    function plannerProactiveRuntimeFoodEligible(item) { return item.active !== false; }
+    function save() { events.push('save'); }
+    function invalidateDayPlanRuntimeCache() { events.push('invalidate'); }
+    function renderAllAfterNextPaint() { events.push('deferred-full-render'); }
+    function renderAll() { events.push('full-render'); }
+    function renderCurrentView() {
+      events.push('render');
+      displayedPlan = state.foods
+        .filter((item) => plannerProactiveRuntimeFoodEligible(item))
+        .map((item) => item.id);
+    }
+    function showToast(message) { events.push('toast'); toastText = message; }
+  `, sandbox);
+
+  const source = fs.readFileSync(path.join(root, 'js', 'planner-missing-ingredient.js'), 'utf8');
+  vm.runInNewContext(source, sandbox, { filename: 'planner-missing-ingredient.js' });
+
+  const result = sandbox.__plannerMissingIngredient.markFoodUnavailable('banane', {
+    date: '2026-09-30',
+    meal: 'lunch',
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(sandbox.events.join(','), 'save,invalidate,render,toast');
+  assert.equal(sandbox.displayedPlan.join(','), 'apfel', 'die neu gerenderte Planung muss die fehlende Zutat ausschließen und eine Alternative zeigen');
+  assert.equal(
+    sandbox.toastText,
+    'Banane fehlt und steht auf der Einkaufsliste. Der Plan wurde angepasst.',
   );
+  assert.equal(sandbox.events.includes('deferred-full-render'), false);
+  assert.equal(sandbox.events.includes('full-render'), false);
 });

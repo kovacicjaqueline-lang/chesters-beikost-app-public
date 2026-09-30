@@ -8,6 +8,7 @@ const test = require("node:test");
 const root = path.resolve(__dirname, "..");
 const {
   copiedPlanMealPayload,
+  planMealCopyTargetState,
   applyPlanMealCopy,
 } = require("../js/plan-meal-copy.js");
 
@@ -42,6 +43,31 @@ test("Plan-Kopie behält den Mahlzeiteninhalt, setzt aber Zieltag und manuellen 
   assert.equal(copied.createdAt, "2026-09-30T16:00:00.000Z");
 });
 
+test("protokollierte Ziel-Slots werden nie als ersetzbar behandelt", () => {
+  const payload = { meal: "breakfast" };
+  assert.equal(
+    planMealCopyTargetState(payload, "2026-10-02", {
+      completed: () => true,
+      exists: () => true,
+    }),
+    "completed",
+  );
+  assert.equal(
+    planMealCopyTargetState(payload, "2026-10-02", {
+      completed: () => false,
+      exists: () => true,
+    }),
+    "occupied",
+  );
+  assert.equal(
+    planMealCopyTargetState(payload, "2026-10-02", {
+      completed: () => false,
+      exists: () => false,
+    }),
+    "free",
+  );
+});
+
 test("Plan-Kopie ersetzt nur den Ziel-Slot und lässt Quelle, Quell-Lock und Quell-Override unangetastet", () => {
   const sourceKey = "2026-09-30|breakfast";
   const targetKey = "2026-10-02|breakfast";
@@ -67,15 +93,25 @@ test("Plan-Kopie ersetzt nur den Ziel-Slot und lässt Quelle, Quell-Lock und Que
       [sourceKey]: sourceOverride,
       [targetKey]: "birne",
     },
+    autoLockExcluded: {
+      [sourceKey]: true,
+      [targetKey]: true,
+    },
   };
   let snapshotCall = null;
 
   const result = applyPlanMealCopy(state, sourceMeal, "2026-10-02", {
     keyFor: (date, meal) => `${date}|${meal}`,
     createdAt: "2026-09-30T16:00:00.000Z",
+    preparationKeys: { ei: "soft-scramble" },
     snapshot: (date, meal, item, mode) => {
       snapshotCall = { date, meal, item: clone(item), mode };
-      return { mode, focusId: item.focusId, foodIds: [...item.foodIds] };
+      return {
+        mode,
+        focusId: item.focusId,
+        foodIds: [...item.foodIds],
+        foodPreparationKeys: clone(item.foodPreparationKeys || {}),
+      };
     },
   });
 
@@ -83,20 +119,25 @@ test("Plan-Kopie ersetzt nur den Ziel-Slot und lässt Quelle, Quell-Lock und Que
   assert.deepEqual(state.manualMeals[sourceKey], sourceMeal);
   assert.deepEqual(state.planLocks[sourceKey], sourceLock);
   assert.equal(state.overrides[sourceKey], sourceOverride);
+  assert.equal(state.autoLockExcluded[sourceKey], true);
   assert.equal(state.overrides[targetKey], undefined);
+  assert.equal(state.autoLockExcluded[targetKey], undefined);
   assert.equal(state.manualMeals[targetKey].date, "2026-10-02");
   assert.equal(state.manualMeals[targetKey].manualAdded, true);
   assert.deepEqual(state.manualMeals[targetKey].foodIds, ["polenta", "ei"]);
+  assert.deepEqual(state.manualMeals[targetKey].foodPreparationKeys, { ei: "soft-scramble" });
   assert.deepEqual(state.planLocks[targetKey], {
     mode: "manual",
     focusId: "ei",
     foodIds: ["polenta", "ei"],
+    foodPreparationKeys: { ei: "soft-scramble" },
   });
   assert.deepEqual(snapshotCall, {
     date: "2026-10-02",
     meal: "breakfast",
     item: {
       ...sourceMeal,
+      foodPreparationKeys: { ei: "soft-scramble" },
       date: "2026-10-02",
       manualAdded: true,
       createdAt: "2026-09-30T16:00:00.000Z",
@@ -121,6 +162,8 @@ test("Plan-UI lädt die Kopieraktion versioniert, offline und ausschließlich an
   assert.match(moduleSource, /\.moveMeal\[data-move-payload\]/);
   assert.match(moduleSource, /Mahlzeit kopieren/);
   assert.match(moduleSource, /type=\"date\" min=\"\$\{firstTarget\}\"/);
-  assert.match(moduleSource, /visibleMealExists\(targetDate, payload\.meal\)/);
-  assert.match(moduleSource, /nextFreeMealDate\(targetDate, payload\.meal\)/);
+  assert.match(moduleSource, /planMealCopyTargetState\(payload, targetDate/);
+  assert.match(moduleSource, /Protokollierte Mahlzeiten werden beim Kopieren nicht überschrieben/);
+  assert.match(moduleSource, /manualMealFlowPreparationMapFor/);
+  assert.match(moduleSource, /nextFreeMealDate\(fromDate, payload\.meal\)/);
 });

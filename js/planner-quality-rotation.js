@@ -58,6 +58,8 @@ function plannerQualityEnsureContext(ctx) {
   if (!ctx) return ctx;
   ctx.plannedUse ||= new Map();
   ctx.lastFocus ||= new Map();
+  ctx.recipePlannedUse ||= new Map();
+  ctx.recipeLastUse ||= new Map();
   ctx.qualityFoodUse ||= new Map();
   ctx.qualityLastFoodUse ||= new Map();
   ctx.qualityPairUse ||= new Map();
@@ -113,6 +115,13 @@ function plannerQualitySeedKeptPlans(ctx, date, stateValue) {
     if (plan.focusId) {
       ctx.plannedUse.set(plan.focusId, (ctx.plannedUse.get(plan.focusId) || 0) + 1);
       ctx.lastFocus.set(plan.focusId, plan.date);
+    }
+    if (plan.recipeName) {
+      ctx.recipePlannedUse.set(
+        plan.recipeName,
+        (ctx.recipePlannedUse.get(plan.recipeName) || 0) + 1,
+      );
+      ctx.recipeLastUse.set(plan.recipeName, plan.date);
     }
     plannerQualityRecordMeal(
       { ...plan, active: true, foodIds: ids },

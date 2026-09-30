@@ -175,6 +175,11 @@ try {
   );
   assert.equal(await page.evaluate(() => window.__prepRenderCalls), 1, "Prep wird nach der Ladeansicht genau einmal gerendert");
   const prepRenderDurationMs = await page.evaluate(() => window.__prepRenderDurationMs);
+  assert.equal(
+    await page.evaluate(() => window.__prepWeekCacheHitBefore),
+    true,
+    "Der sichtbare Planner-Snapshot muss nach dem Persistieren der Auto-Locks für Prep wiederverwendbar sein",
+  );
   assert.ok(
     prepRenderDurationMs < 100,
     `Der synchrone Prep-Render soll keinen langen Main-Thread-Block verursachen (gemessen: ${prepRenderDurationMs.toFixed(1)} ms; Phasen: ${JSON.stringify(await page.evaluate(() => window.__prepStageProfile))})`,

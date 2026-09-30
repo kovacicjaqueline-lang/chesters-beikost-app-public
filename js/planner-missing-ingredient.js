@@ -555,6 +555,10 @@
       renderCurrentView();
       return;
     }
+    if (typeof renderAll === "function") {
+      renderAll();
+      return;
+    }
     requestFullRender();
   }
 

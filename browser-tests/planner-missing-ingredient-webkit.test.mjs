@@ -173,9 +173,12 @@ try {
     return { current, future, currentKey, futureKey, carriedPlanId, initialLogCount: state.logs.length };
   });
 
-  const actions = page.locator("#todayCard details.meal-plan-actions").filter({
-    has: page.locator(`.missingIngredient[data-missing-date="${setup.current}"][data-missing-meal="breakfast"]`),
+  await page.locator('nav button[data-view="plan"]').click();
+  const planMissingButton = page.locator(`#blockPlan .missingIngredient[data-missing-date="${setup.current}"][data-missing-meal="breakfast"]`);
+  const actions = page.locator("#blockPlan details.meal-plan-actions").filter({
+    has: planMissingButton,
   }).first();
+  await actions.waitFor({ state: "visible" });
   await actions.locator(":scope > summary").click();
   const missingButton = actions.locator(".missingIngredient");
   await missingButton.waitFor();
@@ -195,9 +198,12 @@ try {
       if (message.includes("Der Plan wurde angepasst")) {
         const state = window.__beikostTest.getState();
         const meal = state.manualMeals?.[currentKey] || state.planLocks?.[currentKey] || null;
+        const missingButton = [...document.querySelectorAll("#blockPlan .missingIngredient")].find((button) =>
+          button.dataset.missingDate === currentKey.split("|")[0] && button.dataset.missingMeal === "breakfast",
+        );
         window.__missingIngredientAtToast = {
           activeView: document.querySelector(".view.active")?.id || "",
-          visibleMealText: document.querySelector("#todayCard .mealbox")?.innerText || "",
+          visibleMealText: missingButton?.closest(".mealbox")?.innerText || "",
           foodIds: [...(meal?.foodIds || [])],
           foodNames: Object.fromEntries(state.foods.map((item) => [item.id, item.name])),
         };
@@ -247,12 +253,12 @@ try {
   assert.equal(after.currentMeal.foodIds.includes("banane"), false);
   assert.ok(after.currentMeal.foodIds.some((id) => ["apfel", "birne"].includes(id)), "fehlendes Obst wird innerhalb der Recipe-V2-Auswahl ersetzt");
   const visibleAtToast = await page.evaluate(() => window.__missingIngredientAtToast);
-  assert.equal(visibleAtToast?.activeView, "home", "der echte Auslöser sitzt in der Heute-Ansicht");
+  assert.equal(visibleAtToast?.activeView, "plan", "der echte Auslöser sitzt in der Plan-Ansicht");
   assert.ok(visibleAtToast?.foodIds.includes("apfel") || visibleAtToast?.foodIds.includes("birne"), "der aktuelle Plan-State enthält vor dem Toast eine verfügbare Rezeptalternative");
   assert.ok(
     visibleAtToast.visibleMealText.includes(visibleAtToast.foodNames.apfel) ||
     visibleAtToast.visibleMealText.includes(visibleAtToast.foodNames.birne),
-    "die alternative Zutat muss im echten Heute-DOM sichtbar sein, bevor der Erfolgshinweis erscheint",
+    "die alternative Zutat muss im echten Plan-DOM sichtbar sein, bevor der Erfolgshinweis erscheint",
   );
   assert.equal(after.futureManual, null, "zukünftiger offener manueller Banane-Slot wird freigegeben");
   assert.equal(after.futureLock, null, "freigegebener Zukunftsslot bleibt ohne pauschalen Auto-Lock");

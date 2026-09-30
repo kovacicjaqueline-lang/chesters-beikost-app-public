@@ -23,6 +23,7 @@
     `plan-checks-cooperative-search.js${version}`,
     `plan-checks-solution-precompute.js${version}`,
     `plan-checks-ui-core.js${version}`,
+    `plan-meal-copy.js${version}`,
     `plan-mobile-ui.js${version}`,
   ];
 

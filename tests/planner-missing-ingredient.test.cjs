@@ -300,4 +300,14 @@ test('MISSING-INGREDIENT-07: Fehlend-Markierung berechnet vor dem Toast eine ver
   );
   assert.equal(sandbox.events.includes('deferred-full-render'), false);
   assert.equal(sandbox.events.includes('full-render'), false);
+
+  sandbox.renderCurrentView = null;
+  sandbox.events.length = 0;
+  const fallbackResult = sandbox.__plannerMissingIngredient.markFoodUnavailable('apfel', {
+    date: '2026-09-30',
+    meal: 'lunch',
+  });
+  assert.equal(fallbackResult.ok, true);
+  assert.equal(sandbox.events.join(','), 'save,invalidate,full-render,toast');
+  assert.equal(sandbox.events.includes('deferred-full-render'), false, 'der Fallback darf den verzögerten requestFullRender-Pfad nicht verwenden');
 });

@@ -73,6 +73,7 @@ try {
       today: window.__beikostTest.today(),
     };
   });
+  console.log(`[targeted-plan-date-profile] ${JSON.stringify(planProfile)}`);
   assert.equal(planProfile.probe.full, 0, "Plan-Datumswechsel und Heute dürfen keinen Voll-Render auslösen");
   assert.ok(planProfile.probe.plan >= 2, "Plan-Datumswechsel und Heute müssen gezielt den Plan rendern");
   assert.notEqual(planProfile.afterDateChange, planProfile.today, "Plan-Datumswechsel muss den gewählten Folgetag speichern");

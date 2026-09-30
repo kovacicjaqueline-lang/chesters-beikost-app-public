@@ -115,7 +115,25 @@
     if (typeof installHandlingReadinessRuntime === "function") {
       installHandlingReadinessRuntime();
     }
-    return buildDays(start, 7, false);
+    const current = typeof today === "function" ? today() : start;
+    let days = [];
+    let firstFutureIndex = -1;
+    for (let index = 0; index < 7; index++) {
+      const date = addDays(start, index);
+      if (date < current && typeof historicalPlanDay === "function") {
+        days.push(historicalPlanDay(date, index));
+      } else {
+        firstFutureIndex = index;
+        break;
+      }
+    }
+    if (firstFutureIndex >= 0) {
+      const futureFrom = addDays(start, firstFutureIndex);
+      const futureDays = buildDays(futureFrom, 7 - firstFutureIndex, false);
+      futureDays.forEach((day, offset) => { day.index = firstFutureIndex + offset; });
+      days.push(...futureDays);
+    }
+    return days;
   }
 
   globalScope.onmessage = (event) => {

@@ -16,7 +16,7 @@
     typeof globalScope.buildDays !== "function"
   ) return;
 
-  const CACHE_VERSION = 2;
+  const CACHE_VERSION = 3;
   const cache = new Map();
   let revision = 0;
   let warmupPending = false;
@@ -85,6 +85,7 @@
 
   function missingWarmupWeeks(from) {
     return [
+      from,
       globalScope.addDays(from, 7),
       globalScope.addDays(from, 14),
     ].filter((start) => !cache.has(cacheKey(start, 7)));
@@ -196,8 +197,10 @@
       }
 
       try {
-        // Future-week planning can be expensive. Keep it off the UI thread;
-        // when Workers are unavailable, the requested week is built on demand.
+        // Warm the currently visible week first: the Plan tab is otherwise
+        // empty on startup and its first render would synchronously build this
+        // week after the tab has already become visible. Keep this work in the
+        // Worker; when Workers are unavailable, the week is built on demand.
         const from = globalScope.visiblePlanStart();
         const starts = missingWarmupWeeks(from);
         if (!starts.length) return;
@@ -243,18 +246,16 @@
           globalScope.invalidateDayPlanRuntimeCache();
         }
       }
-      return baseSave.apply(this, arguments);
+      const result = baseSave.apply(this, arguments);
+      if (!preserveForNavigation(options)) scheduleWarmup();
+      return result;
     };
   }
 
   globalScope.invalidatePlannerWeekCache = invalidate;
   globalScope.__plannerWeekCacheInstalled = true;
   function warmupNow() {
-    // Explicit diagnostics are intentionally synchronous and independent of
-    // page initialization; actual idle work still uses the real Worker path.
-    workerStats.supported = true;
-    workerStats.requests += 1;
-    workerStats.completed += 1;
+    scheduleWarmup();
   }
 
   globalScope.__plannerWeekCache = {
@@ -266,9 +267,22 @@
     workerStats() {
       return { ...workerStats };
     },
+    has(from, count = 7) {
+      return cache.has(cacheKey(from, count));
+    },
     clear: invalidate,
     warmup: warmupNow,
   };
+
+  // App state is installed before planner policies finish loading. Once the
+  // complete policy chain is ready, proactively build the current visible
+  // week so a later tab tap can reuse it without a main-thread planner pass.
+  const plannerReady = globalScope.PlannerReadiness?.whenReady?.();
+  if (plannerReady && typeof plannerReady.then === "function") {
+    plannerReady.then((result) => {
+      if (!result || result.state === "ready") scheduleWarmup();
+    });
+  }
 
   if (typeof module !== "undefined" && module.exports) {
     module.exports = {

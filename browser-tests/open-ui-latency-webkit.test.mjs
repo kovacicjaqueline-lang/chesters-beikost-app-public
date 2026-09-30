@@ -14,6 +14,43 @@ async function waitForApp(page) {
   );
 }
 
+async function measurePlanTabOpen(page) {
+  await page.locator('nav button[data-view="more"]').click();
+  assert.equal(await page.locator("#blockPlan .day-card").count(), 0, "Plan muss vor dem ersten Öffnen noch ungerendert sein");
+  await page.evaluate(() => {
+    const probe = { tap: null, firstCardVisible: null, sevenDayBuilds: 0 };
+    const baseBuildDays = window.buildDays;
+    window.buildDays = function measuredPlanBuild(...args) {
+      if (Number(args[1]) === 7) probe.sevenDayBuilds += 1;
+      return baseBuildDays.apply(this, args);
+    };
+    const observer = new MutationObserver(() => {
+      const card = document.querySelector("#blockPlan .day-card");
+      if (!card || probe.firstCardVisible !== null) return;
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        const rect = card.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0 && getComputedStyle(card).visibility !== "hidden") {
+          probe.firstCardVisible = performance.now() - probe.tap;
+        }
+      }));
+    });
+    observer.observe(document.getElementById("blockPlan"), { childList: true, subtree: true });
+    document.addEventListener("pointerdown", (event) => {
+      if (event.target?.closest?.('nav button[data-view="plan"]')) probe.tap = performance.now();
+    }, true);
+    window.__planTabRenderProbe = { probe, baseBuildDays, observer };
+  });
+  await page.locator('nav button[data-view="plan"]').click();
+  await page.waitForFunction(() => window.__planTabRenderProbe?.probe.firstCardVisible !== null, null, { timeout: 10000 });
+  const measurement = await page.evaluate(() => ({ ...window.__planTabRenderProbe.probe }));
+  await page.evaluate(() => {
+    const { baseBuildDays, observer } = window.__planTabRenderProbe;
+    observer.disconnect();
+    window.buildDays = baseBuildDays;
+  });
+  return measurement;
+}
+
 async function seedCopyLog(page) {
   await page.evaluate(() => {
     const state = window.__beikostTest.reset();
@@ -100,11 +137,37 @@ const context = await browser.newContext({
   isMobile: true,
   hasTouch: true,
 });
-const page = await context.newPage();
+let page = await context.newPage();
+await page.addInitScript(() => { window.Worker = undefined; });
 
 try {
   await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "domcontentloaded" });
   await waitForApp(page);
+
+  // Cold-cache reproduction records the old synchronous miss path. A fresh
+  // second page verifies that background preparation removes it from the tap.
+  const coldFrom = await page.evaluate(() => window.visiblePlanStart());
+  assert.equal(await page.evaluate((from) => window.__plannerWeekCache.has(from, 7), coldFrom), false, "kalter Start darf die sichtbare Woche nicht vorab berechnen");
+  const coldPlanTab = await measurePlanTabOpen(page);
+  assert.ok(coldPlanTab.sevenDayBuilds > 0, "Cache-Miss muss den bislang synchronen Wochenaufbau reproduzieren");
+
+  await page.close();
+  page = await context.newPage();
+  await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "domcontentloaded" });
+  await waitForApp(page);
+  const planFrom = await page.evaluate(() => window.visiblePlanStart());
+  await page.waitForFunction(
+    (from) => window.__plannerWeekCache?.has(from, 7) === true,
+    planFrom,
+    { timeout: 60000 },
+  );
+  const planTabLatency = await measurePlanTabOpen(page);
+  console.log(`Plan-Tab WebKit: kalter Cache ${coldPlanTab.firstCardVisible.toFixed(1)} ms; vorgewärmter Cache ${planTabLatency.firstCardVisible.toFixed(1)} ms`);
+  assert.ok(
+    planTabLatency.firstCardVisible <= 750,
+    `Erste sichtbare Plan-Tageskarte dauerte ${planTabLatency.firstCardVisible.toFixed(1)} ms ab Tap (Grenze: 750 ms)`,
+  );
+  assert.equal(planTabLatency.sevenDayBuilds, 0, "Tab-Wechsel darf die aktuelle Woche nicht synchron auf dem UI-Thread neu berechnen");
 
   // Protokoll kopieren: nur ein Formular-Render im Klicktask; 7-Tage-Vorschläge erst nach Paint.
   await seedCopyLog(page);

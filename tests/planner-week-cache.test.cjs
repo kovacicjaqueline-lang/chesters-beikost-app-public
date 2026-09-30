@@ -5,9 +5,9 @@ const vm = require("node:vm");
 const source = require("fs").readFileSync("js/planner-week-cache.js", "utf8");
 
 test("Planner-Wochen-Cache bleibt abgeleitet und versioniert", () => {
-  assert.match(source, /const CACHE_VERSION = 2/);
+  assert.match(source, /const CACHE_VERSION = 3/);
   assert.match(source, /preservePlanCache/);
-  assert.match(source, /when Workers are unavailable, the requested week is built on demand/i);
+  assert.match(source, /when Workers are unavailable, the week is built on demand/i);
   assert.doesNotMatch(source, /function runMainThreadWarmup/);
   assert.match(source, /invalidate\("save"\)/);
   assert.doesNotMatch(source, /state\.planLocks\s*\[/);
@@ -23,8 +23,8 @@ test("Service Worker nimmt den Planner-Cache in den Offline-Precache auf", () =>
   const sw = require("fs").readFileSync("sw.js", "utf8");
   const html = require("fs").readFileSync("index.html", "utf8");
   assert.match(sw, /const UI_PRECACHE = \[[\s\S]*\.\/js\/planner-week-cache\.js\?v=10\.1\.26/);
-  assert.ok(sw.includes("./js/planner-week-cache.js?v=10.1.26&planner-cache=4"));
-  assert.ok(html.includes("js/planner-week-cache.js?v=10.1.26&planner-cache=4"));
+  assert.ok(sw.includes("./js/planner-week-cache.js?v=10.1.26&planner-cache=5"));
+  assert.ok(html.includes("js/planner-week-cache.js?v=10.1.26&planner-cache=5"));
 assert.ok(sw.includes("./js/planner-week-worker.js?v=10.1.26"));
 });
 
@@ -62,6 +62,7 @@ test("gültige Wochen werden wiederverwendet und Warmup blockiert ohne Worker ni
   assert.deepEqual(second, first);
   assert.notStrictEqual(second, first);
 
+  context.__plannerWeekCache.warmup();
   idleCallback?.({ didTimeout: true });
   assert.equal(buildCalls, 1, "ohne Worker wird keine Zukunftswoche synchron im UI-Thread berechnet");
 
@@ -84,7 +85,7 @@ test("Planner-aware prepDemand verwendet denselben sichtbaren Wochen-Snapshot", 
   assert.doesNotMatch(body, /mergeCarriedIntoDays\(buildDays\(from, 7\)\)/);
 });
 
-test("Worker-Warmup setzt nach Navigation mit der aktuell sichtbaren Woche fort", () => {
+test("Worker-Warmup umfasst die sichtbare Woche und setzt nach Navigation fort", () => {
   let visibleFrom = "2026-09-20";
   let idleCallback = null;
   let worker = null;
@@ -113,9 +114,9 @@ test("Worker-Warmup setzt nach Navigation mit der aktuell sichtbaren Woche fort"
   vm.createContext(context);
   vm.runInContext(source, context);
 
-  context.planDisplayDays(visibleFrom, 7);
+  context.__plannerWeekCache.warmup();
   idleCallback?.({ didTimeout: true });
-  assert.deepEqual([...requests[0].starts], ["2026-09-27", "2026-10-04"]);
+  assert.deepEqual([...requests[0].starts], ["2026-09-20", "2026-09-27", "2026-10-04"]);
 
   // The user navigates while the first background request is still running.
   visibleFrom = "2026-09-27";
@@ -134,6 +135,53 @@ test("Worker-Warmup setzt nach Navigation mit der aktuell sichtbaren Woche fort"
   idleCallback?.({ didTimeout: true });
   assert.equal(requests.length, 2);
   assert.deepEqual([...requests[1].starts], ["2026-10-11"], "bereits vorbereitete Wochen werden nicht erneut angefordert");
+});
+
+test("aktuelle sichtbare Woche startet nach Planner-Readiness automatisch im Worker-Warmup", async () => {
+  let resolveReadiness;
+  let idleCallback = null;
+  let worker = null;
+  const requests = [];
+  const addDays = (date, offset) => {
+    const value = new Date(`${date}T12:00:00Z`);
+    value.setUTCDate(value.getUTCDate() + offset);
+    return value.toISOString().slice(0, 10);
+  };
+  const context = {
+    URL,
+    document: { baseURI: "https://app.example/" },
+    state: { settings: { phaseSelected: "kennenlernen" } },
+    visiblePlanStart: () => "2026-09-30",
+    addDays,
+    buildDays: (from) => [{ date: from, meals: [] }],
+    planDisplayDays: (from, count) => context.buildDays(from, count),
+    requestIdleCallback: (callback) => { idleCallback = callback; return 1; },
+    cancelIdleCallback: () => {},
+    clone: (value) => JSON.parse(JSON.stringify(value)),
+    PlannerReadiness: {
+      whenReady: () => new Promise((resolve) => { resolveReadiness = resolve; }),
+    },
+    Worker: class {
+      constructor() { worker = this; }
+      postMessage(message) { requests.push(message); }
+    },
+  };
+  vm.createContext(context);
+  vm.runInContext(source, context);
+
+  resolveReadiness({ state: "ready" });
+  await Promise.resolve();
+  assert.equal(typeof idleCallback, "function", "Readiness muss das Hintergrund-Warmup anstoßen");
+  idleCallback({ didTimeout: true });
+  assert.deepEqual([...requests[0].starts], ["2026-09-30", "2026-10-07", "2026-10-14"]);
+
+  worker.onmessage({ data: {
+    type: "result",
+    requestId: requests[0].requestId,
+    inputRevision: requests[0].inputRevision,
+    weeks: requests[0].starts.map((from) => ({ from, count: 7, days: [{ date: from, meals: [] }] })),
+  } });
+  assert.equal(context.__plannerWeekCache.has("2026-09-30", 7), true, "erste sichtbare Woche muss danach direkt aus dem Cache kommen");
 });
 
 

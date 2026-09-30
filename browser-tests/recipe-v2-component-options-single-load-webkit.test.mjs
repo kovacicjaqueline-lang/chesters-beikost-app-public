@@ -17,6 +17,7 @@ try {
   await page.waitForFunction(() => !!window.__beikostTest?.reset);
   await page.waitForFunction(() => window.__plannerPoliciesReady === true);
   await page.waitForFunction(() => window.__mealEditorRecipeVariantsInstalled === true);
+  await page.waitForFunction(() => recipeByName("Obst-Reisbrei")?.oneOf?.includes("Brombeere") === true);
 
   const runtime = await page.evaluate(() => {
     const scripts = [...document.scripts].filter((script) => {

@@ -550,6 +550,18 @@
     if (typeof renderAll === "function") renderAll();
   }
 
+  function renderMissingIngredientView() {
+    if (typeof renderCurrentView === "function") {
+      renderCurrentView();
+      return;
+    }
+    if (typeof renderAll === "function") {
+      renderAll();
+      return;
+    }
+    requestFullRender();
+  }
+
   function markFoodUnavailable(foodId, context = {}) {
     const item = typeof food === "function" ? food(foodId) : null;
     if (!item) return { ok: false, reason: "food" };
@@ -599,10 +611,10 @@
     if (typeof globalScope.invalidateDayPlanRuntimeCache === "function") {
       globalScope.invalidateDayPlanRuntimeCache();
     }
+    renderMissingIngredientView();
     if (typeof showToast === "function") {
       showToast(`${item.name} fehlt und steht auf der Einkaufsliste. Der Plan wurde angepasst.`);
     }
-    requestFullRender();
     return { ok: true, foodId, ...cleanup };
   }
 

@@ -141,6 +141,16 @@ try {
 
   assert.equal(await todayCard.getAttribute("data-today-date"), today);
   const nextDate = await page.evaluate((date) => window.__beikostTest.addDays(date, 1), today);
+  await page.evaluate(() => {
+    window.__todaySwipeOriginalBuildDays = window.buildDays;
+    window.__todaySwipeBuildCalls = [];
+    window.buildDays = function todaySwipeBuildProbe(...args) {
+      window.__todaySwipeBuildCalls.push([args[0], args[1]]);
+      return window.__todaySwipeOriginalBuildDays.apply(this, args);
+    };
+    window.invalidatePlannerWeekCache?.("today-swipe-browser-test");
+    window.invalidateDayPlanRuntimeCache?.();
+  });
   await todayCard.evaluate((node) => {
     node.dispatchEvent(new PointerEvent("pointerdown", {
       bubbles: true,
@@ -161,6 +171,33 @@ try {
   });
   await page.waitForFunction((date) => document.getElementById("todayCard")?.dataset.todayDate === date, nextDate);
   assert.equal(await todayCard.getAttribute("data-today-date"), nextDate, "Wisch nach links zeigt den nächsten Tag");
+  const swipeBuildCalls = await page.evaluate(() => window.__todaySwipeBuildCalls);
+  assert.ok(
+    swipeBuildCalls.some(([from, count]) => from === today && count === 7),
+    "Der morgige Swipe löst den zusammenhängenden 7-Tage-Plan ab heute auf",
+  );
+  assert.equal(
+    swipeBuildCalls.some(([from, count]) => from === nextDate && count === 1),
+    false,
+    "Der morgige Swipe darf morgen nicht als isolierten 1-Tages-Plan neu berechnen",
+  );
+  const renderedTomorrowPlan = JSON.parse(decodeURIComponent(
+    await todayCard.locator(".today-focus-meal .logMeal[data-plan]").first().getAttribute("data-plan"),
+  ));
+  const expectedTomorrowFocus = await page.evaluate(({ today, nextDate }) => {
+    const day = window.planDisplayDays(today, 7).find((item) => item.date === nextDate);
+    return day?.meals.find((meal) => meal.active && meal.focusId)?.focusId || "";
+  }, { today, nextDate });
+  assert.equal(
+    renderedTomorrowPlan.focusId,
+    expectedTomorrowFocus,
+    "Die Swipe-Karte zeigt dieselbe morgige Fokusmahlzeit wie der zusammenhängende Wochenplan",
+  );
+  await page.evaluate(() => {
+    window.buildDays = window.__todaySwipeOriginalBuildDays;
+    delete window.__todaySwipeOriginalBuildDays;
+    delete window.__todaySwipeBuildCalls;
+  });
 
   await todayCard.evaluate((node) => {
     node.dispatchEvent(new PointerEvent("pointerdown", {

@@ -14,11 +14,24 @@ function copiedPlanMealPayload(payload, targetDate, createdAt = new Date().toISO
   };
 }
 
+function planMealCopyTargetState(payload, targetDate, helpers = {}) {
+  if (!payload?.meal || !targetDate) return "invalid";
+  if (helpers.completed?.(targetDate, payload.meal)) return "completed";
+  if (helpers.exists?.(targetDate, payload.meal)) return "occupied";
+  return "free";
+}
+
 function applyPlanMealCopy(appState, payload, targetDate, helpers = {}) {
   if (!appState || !payload?.meal || !targetDate) return null;
   const keyFor = helpers.keyFor || ((date, meal) => `${date}|${meal}`);
   const snapshot = helpers.snapshot || ((date, meal, item, mode) => ({ ...item, date, meal, mode }));
   const targetKey = keyFor(targetDate, payload.meal);
+  const preparationKeys = helpers.preparationKeys && Object.keys(helpers.preparationKeys).length
+    ? { ...helpers.preparationKeys }
+    : null;
+  const sourcePayload = preparationKeys
+    ? { ...payload, foodPreparationKeys: preparationKeys }
+    : payload;
 
   appState.manualMeals ||= {};
   appState.planLocks ||= {};
@@ -26,8 +39,9 @@ function applyPlanMealCopy(appState, payload, targetDate, helpers = {}) {
   delete appState.manualMeals[targetKey];
   delete appState.planLocks[targetKey];
   delete appState.overrides[targetKey];
+  delete appState.autoLockExcluded?.[targetKey];
 
-  const copied = copiedPlanMealPayload(payload, targetDate, helpers.createdAt);
+  const copied = copiedPlanMealPayload(sourcePayload, targetDate, helpers.createdAt);
   appState.manualMeals[targetKey] = copied;
   appState.planLocks[targetKey] = snapshot(
     targetDate,
@@ -42,10 +56,16 @@ function applyPlanMealCopy(appState, payload, targetDate, helpers = {}) {
   if (typeof document === "undefined" || root.__planMealCopyInstalled) return;
   root.__planMealCopyInstalled = true;
 
+  function sourcePreparationKeys(payload) {
+    if (typeof manualMealFlowPreparationMapFor !== "function") return {};
+    return manualMealFlowPreparationMapFor(payload?.date, payload?.meal) || {};
+  }
+
   function placeCopiedMeal(payload, targetDate) {
     const result = applyPlanMealCopy(state, payload, targetDate, {
       keyFor: planLockKey,
       snapshot: mealSnapshot,
+      preparationKeys: sourcePreparationKeys(payload),
     });
     if (!result) return;
     save();
@@ -54,6 +74,19 @@ function applyPlanMealCopy(appState, payload, targetDate, helpers = {}) {
     showToast(
       `${mealName(payload.meal)} auf ${shortDate(targetDate)} kopiert und vor automatischen Änderungen geschützt.`,
     );
+  }
+
+  function useNextFreeCopyDate(payload, fromDate, errorId = "copyMealError") {
+    const free = nextFreeMealDate(fromDate, payload.meal);
+    if (!free) {
+      const error = document.getElementById(errorId);
+      if (error) {
+        error.textContent = "In den nächsten Wochen wurde kein freier Platz gefunden.";
+        error.style.display = "block";
+      }
+      return;
+    }
+    placeCopiedMeal(payload, free);
   }
 
   function openCopyConflict(payload, targetDate) {
@@ -69,35 +102,52 @@ function applyPlanMealCopy(appState, payload, targetDate, helpers = {}) {
     );
     document.getElementById("copyMealReplace").onclick = () =>
       placeCopiedMeal(payload, targetDate);
-    document.getElementById("copyMealNextFree").onclick = () => {
-      const free = nextFreeMealDate(targetDate, payload.meal);
-      if (!free) {
-        const error = document.getElementById("copyMealError");
-        if (error) {
-          error.textContent = "In den nächsten Wochen wurde kein freier Platz gefunden.";
-          error.style.display = "block";
-        }
-        return;
-      }
-      placeCopiedMeal(payload, free);
-    };
+    document.getElementById("copyMealNextFree").onclick = () =>
+      useNextFreeCopyDate(payload, targetDate);
+    document.getElementById("copyMealCancel").onclick = closeGeneric;
+  }
+
+  function openCompletedCopyConflict(payload, targetDate) {
+    openGeneric(
+      `${mealName(payload.meal)} kopieren`,
+      `<p>Am ${esc(nice(targetDate, true))} ist dieses ${esc(mealName(payload.meal).toLowerCase())} bereits protokolliert. Protokollierte Mahlzeiten werden beim Kopieren nicht überschrieben.</p>
+       <div class="notice warn" id="copyMealError" style="display:none"></div>
+       <div class="date-choice-grid">
+        <button class="btn secondary" id="copyMealNextFree" type="button">Nächsten freien Tag verwenden</button>
+        <button class="btn secondary" id="copyMealChooseOther" type="button">Anderes Datum wählen</button>
+        <button class="btn secondary" id="copyMealCancel" type="button">Abbrechen</button>
+       </div>`,
+    );
+    document.getElementById("copyMealNextFree").onclick = () =>
+      useNextFreeCopyDate(payload, targetDate);
+    document.getElementById("copyMealChooseOther").onclick = () =>
+      chooseCopyTarget(payload, targetDate);
     document.getElementById("copyMealCancel").onclick = closeGeneric;
   }
 
   function copyMealToDate(payload, targetDate) {
-    if (visibleMealExists(targetDate, payload.meal)) {
+    const targetState = planMealCopyTargetState(payload, targetDate, {
+      completed: (date, meal) => typeof completedLog === "function" && !!completedLog(date, meal),
+      exists: (date, meal) => visibleMealExists(date, meal),
+    });
+    if (targetState === "completed") {
+      openCompletedCopyConflict(payload, targetDate);
+      return;
+    }
+    if (targetState === "occupied") {
       openCopyConflict(payload, targetDate);
       return;
     }
-    placeCopiedMeal(payload, targetDate);
+    if (targetState === "free") placeCopiedMeal(payload, targetDate);
   }
 
-  function chooseCopyTarget(payload) {
+  function chooseCopyTarget(payload, preferredDate = "") {
     const firstTarget = addDays(payload.date, 1);
+    const selectedDate = preferredDate && preferredDate >= firstTarget ? preferredDate : firstTarget;
     openGeneric(
       `${mealName(payload.meal)} kopieren`,
       `<p>Die bestehende Mahlzeit bleibt erhalten. Wähle den Tag für die zusätzliche Kopie.</p>
-       <label class="field"><span>Tag</span><input id="copyMealDate" type="date" min="${firstTarget}" value="${firstTarget}"></label>
+       <label class="field"><span>Tag</span><input id="copyMealDate" type="date" min="${firstTarget}" value="${selectedDate}"></label>
        <div class="sticky-form-actions ds-actionbar">
         <button class="btn secondary" id="copyMealTargetCancel" type="button">Abbrechen</button>
         <button class="btn" id="copyMealTargetConfirm" type="button">Mahlzeit kopieren</button>
@@ -151,6 +201,7 @@ function applyPlanMealCopy(appState, payload, targetDate, helpers = {}) {
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     copiedPlanMealPayload,
+    planMealCopyTargetState,
     applyPlanMealCopy,
   };
 }

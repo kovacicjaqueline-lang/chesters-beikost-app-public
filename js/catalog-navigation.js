@@ -840,6 +840,27 @@ body.mobile-foundation #genericModal .sheet {
     card.dataset.mobileTodaySwipeBound = "true";
   }
 
+  function mobileTodayPlanDay(on) {
+    const current = today();
+    const buildOne = () =>
+      (typeof viewRenderBuildDays === "function" ? viewRenderBuildDays : buildDays)(on, 1)[0];
+
+    if (on === current) return buildOne();
+
+    const displayDays = typeof viewRenderPlanDays === "function"
+      ? viewRenderPlanDays
+      : typeof planDisplayDays === "function"
+        ? planDisplayDays
+        : null;
+    if (!displayDays) return buildOne();
+    if (on < current) return displayDays(on, 1)[0] || buildOne();
+
+    let weekFrom = current;
+    while (on >= addDays(weekFrom, 7)) weekFrom = addDays(weekFrom, 7);
+    const week = displayDays(weekFrom, 7);
+    return week.find((day) => day.date === on) || buildOne();
+  }
+
   function renderTodayFocus() {
     const card = document.getElementById("todayCard");
     if (!card) return { focusMeal: null, active: [] };
@@ -849,7 +870,7 @@ body.mobile-foundation #genericModal .sheet {
     const dateLabel = viewingToday ? "Heute" : nice(on, true);
     const resetButton = todayResetButtonHtml(viewingToday);
     const age = monthsOld(on);
-    const day = (typeof viewRenderBuildDays === "function" ? viewRenderBuildDays : buildDays)(on, 1)[0];
+    const day = mobileTodayPlanDay(on);
     card.dataset.todayDate = on;
     const active = day.meals.filter((meal) => meal.active && meal.focusId);
     const openMeals = active.filter((meal) => !mealIsCompleted(on, meal.meal));

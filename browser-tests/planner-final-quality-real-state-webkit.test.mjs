@@ -160,6 +160,10 @@ try {
       createdAt: `${exposureDate}T12:00:00.000Z`,
     }];
     api.setState(trusted);
+    // setState() calls renderAll(), which may create today's tracking snapshots.
+    // Remove those render side effects so this assertion exercises a fresh week.
+    state.planLocks = {};
+    state.autoLockExcluded = {};
     const trustedDays = api.buildDays(on, 7);
     const trustedTrace = culinaryTrace.splice(0);
     if (typeof baseCulinaryAssessment === "function") {

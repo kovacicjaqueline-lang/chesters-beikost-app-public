@@ -29,25 +29,34 @@ try {
   });
 
   await search.pressSequentially("R");
-  await page.waitForFunction(() => {
-    const firstName = document.querySelector(".chooseInventoryTarget b")?.textContent || "";
-    return /^r/i.test(firstName);
+  const afterR = await page.evaluate(() => {
+    const names = [...document.querySelectorAll(".chooseInventoryTarget b")]
+      .slice(0, 6)
+      .map((node) => node.textContent?.trim() || "");
+    const foods = window.__beikostTest?.getState?.().foods || [];
+    return {
+      names,
+      inputValue: document.getElementById("inventoryLiveSearch")?.value || "",
+      inputStable: document.getElementById("inventoryLiveSearch") === window.__inventorySearchNode,
+      focused: document.activeElement === document.getElementById("inventoryLiveSearch"),
+      rFoods: foods.filter((item) => /^r/i.test(item?.name || "")).slice(0, 6).map((item) => item.name),
+    };
   });
+  console.log(`Inventory search after R: ${JSON.stringify(afterR)}`);
 
+  assert.equal(afterR.inputValue, "R", "Die Vorratssuche muss den eingegebenen Buchstaben behalten");
+  assert.match(afterR.names[0] || "", /^r/i, "Namensanfänge mit R müssen vor bloßen Teiltreffern wie Amaranth stehen");
   assert.equal(
-    await page.evaluate(() => document.getElementById("inventoryLiveSearch") === window.__inventorySearchNode),
+    afterR.inputStable,
     true,
     "Beim Tippen darf das aktive Suchfeld nicht ersetzt werden",
   );
   assert.equal(
-    await page.evaluate(() => document.activeElement === document.getElementById("inventoryLiveSearch")),
+    afterR.focused,
     true,
     "Die Vorratssuche muss während der Eingabe fokussiert bleiben",
   );
-
-  const firstName = (await page.locator(".chooseInventoryTarget b").first().textContent())?.trim() || "";
-  assert.match(firstName, /^r/i, "Namensanfänge mit R müssen vor bloßen Teiltreffern wie Amaranth stehen");
-  assert.notEqual(firstName, "Amaranth");
+  assert.notEqual(afterR.names[0] || "", "Amaranth");
 
   await search.pressSequentially("e");
   assert.equal(

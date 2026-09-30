@@ -133,6 +133,7 @@ const PLAN_CHECK_PRECACHE = [
   "./js/plan-checks-contract-extension.js?v=10.1.26",
   "./js/plan-checks-solution-precompute.js?v=10.1.26",
   "./js/plan-checks-ui-core.js?v=10.1.26",
+  "./js/plan-meal-copy.js?v=10.1.26",
   "./js/plan-mobile-ui.js?v=10.1.26",
 ];
 

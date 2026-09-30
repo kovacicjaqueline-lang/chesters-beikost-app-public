@@ -176,7 +176,7 @@ try {
   await page.locator('nav button[data-view="plan"]').click();
   const planMissingButton = page.locator(`#blockPlan .missingIngredient[data-missing-date="${setup.current}"][data-missing-meal="breakfast"]`);
   const actions = page.locator("#blockPlan details.meal-plan-actions").filter({
-    has: planMissingButton,
+    has: page.locator(`.missingIngredient[data-missing-date="${setup.current}"][data-missing-meal="breakfast"]`),
   }).first();
   await actions.waitFor({ state: "visible" });
   await actions.locator(":scope > summary").click();

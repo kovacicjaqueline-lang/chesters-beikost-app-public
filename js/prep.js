@@ -413,6 +413,10 @@ function bindRecipeStockButtons() {
   );
 }
 function renderPrepCore() {
+  if (typeof plannerViewReady === "function" && !plannerViewReady()) {
+    renderPlannerReadinessPlaceholder("prep");
+    return;
+  }
   populateBatchCalculator();
   let items = prepItems();
   let actionable = items.filter(
@@ -760,6 +764,9 @@ function recipeIngredientReady(name) {
 }
 
 function renderPrep() {
+  if (typeof plannerViewReady === "function" && !plannerViewReady()) {
+    return renderPlannerReadinessPlaceholder("prep");
+  }
   let render = () => {
     renderPrepCore();
     let shoppingBox = document.getElementById("shoppingList");

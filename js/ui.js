@@ -80,27 +80,73 @@ function viewRenderPrepDemand() {
   }
   return activeViewRenderCycle.prepDemand;
 }
+function plannerReadinessState() {
+  return globalThis.PlannerReadiness?.state ||
+    (typeof window !== "undefined" && window.__plannerPoliciesReady === false ? "loading" : "ready");
+}
+function plannerViewReady() {
+  return plannerReadinessState() === "ready";
+}
+function renderPlannerReadinessPlaceholder(viewId) {
+  let targets = { home: "todayCard", plan: "blockPlan", prep: "prepNow", allergen: "allergenModule" };
+  let target = document.getElementById(targets[viewId] || "");
+  if (!target) return false;
+  let failed = plannerReadinessState() === "failed";
+  target.innerHTML = `<div class="notice ${failed ? "warn" : "olive"} planner-readiness-message" role="status">${failed
+    ? "Die Planungsregeln konnten nicht geladen werden. Bitte lade die App erneut."
+    : "Planungsregeln werden geladen …"}</div>`;
+  let view = target.closest(".view");
+  if (view) {
+    if (failed) view.removeAttribute("aria-busy");
+    else view.setAttribute("aria-busy", "true");
+  }
+  if (viewId === "plan") {
+    let toolbar = document.querySelector("#plan .plan-toolbar");
+    if (toolbar) toolbar.inert = !plannerViewReady();
+  }
+  return true;
+}
 function renderAll() {
-  renderHome();
-  renderPlan();
+  if (plannerViewReady()) {
+    renderHome();
+    renderPlan();
+    renderPrep();
+    renderAllergenModule();
+  } else {
+    renderPlannerReadinessPlaceholder("home");
+    renderPlannerReadinessPlaceholder("plan");
+    renderPlannerReadinessPlaceholder("prep");
+    renderPlannerReadinessPlaceholder("allergen");
+  }
   renderLogs();
   renderStatistics();
   renderFoods();
-  renderPrep();
-  renderAllergenModule();
   renderSettings();
   if (document.getElementById("auditList")) renderAudit();
   renderStorageStatus();
 }
 function renderView(id) {
-  if (id === "home") renderHome();
-  else if (id === "plan") renderPlan();
-  else if (id === "prep") renderPrep();
+  if (["home", "plan", "prep"].includes(id) && !plannerViewReady()) {
+    renderPlannerReadinessPlaceholder(id);
+  }
+  else if (id === "home") {
+    document.getElementById(id)?.removeAttribute("aria-busy");
+    renderHome();
+  }
+  else if (id === "plan") {
+    document.getElementById(id)?.removeAttribute("aria-busy");
+    renderPlan();
+  }
+  else if (id === "prep") {
+    document.getElementById(id)?.removeAttribute("aria-busy");
+    renderPrep();
+  }
   else if (id === "foods") renderFoods();
   else if (id === "more") {
     renderLogs();
     renderStatistics();
-    renderAllergenModule();
+    if (plannerViewReady()) renderAllergenModule();
+    else renderPlannerReadinessPlaceholder("allergen");
     renderSettings();
     if (document.getElementById("auditList")) renderAudit();
     renderStorageStatus();
@@ -240,6 +286,10 @@ function mealStatusText(m) {
   return text === "Heute geplant" ? "" : text;
 }
 function renderHomeCore() {
+  if (!plannerViewReady()) {
+    renderPlannerReadinessPlaceholder("home");
+    return;
+  }
   let learned = learnedFoods(),
     tried = typeof learnedCountIdentities === "function" ? learnedCountIdentities().length : learned.length,
     target = Number(state.settings.targetFoods) || 100,
@@ -525,6 +575,10 @@ function compactPlanAmountLabel(label = "") {
 }
 /* PLAN-TOOLBAR-SUMMARY END */
 function renderPlanCore() {
+  if (!plannerViewReady()) {
+    renderPlannerReadinessPlaceholder("plan");
+    return;
+  }
   let from = visiblePlanStart();
   document.getElementById("planFrom").value = from;
   let days = planDisplayDays(from, 7);
@@ -1153,6 +1207,8 @@ function renderMeal(day, meal) {
 }
 
 function renderPlan() {
+  if (!plannerViewReady()) return renderPlannerReadinessPlaceholder("plan");
+  document.querySelector("#plan .plan-toolbar")?.removeAttribute("inert");
   return withViewRenderCycle("plan", () => {
     renderPlanCore();
     let summary = document.getElementById("planLockSummary");
@@ -1179,6 +1235,7 @@ function renderPlan() {
 }
 
 function renderHome() {
+  if (!plannerViewReady()) return renderPlannerReadinessPlaceholder("home");
   return withViewRenderCycle("home", () => {
     renderHomeCore();
     let button = document.getElementById("homeAddEntry");

@@ -16,16 +16,16 @@ html,body{min-height:100%;background:#f5f1e9}
 #appResumeScreen .resume-screen-content{display:grid;justify-items:center;gap:14px}
 #appResumeScreen .resume-screen-mark{width:48px;height:48px;display:grid;place-items:center;border-radius:17px;background:linear-gradient(145deg,#68764d,#8b916d);color:#fff;font-size:24px;font-weight:800;box-shadow:0 5px 14px rgba(83,96,60,.18)}
 #appResumeScreen .resume-screen-spinner{width:24px;height:24px;border:3px solid rgba(104,118,77,.22);border-top-color:#68764d;border-radius:50%;animation:resume-screen-spin .8s linear infinite}
-html.app-standalone:not(.app-ready) #appResumeScreen,html.app-resume-cover #appResumeScreen{display:grid}
+html:not(.app-ready) #appResumeScreen,html.app-resume-cover #appResumeScreen{display:grid}
 @keyframes resume-screen-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){#appResumeScreen .resume-screen-spinner{animation-duration:2s}}
 </style>
 <script>
 try{if(("standalone" in navigator&&navigator.standalone)||matchMedia("(display-mode: standalone)").matches)document.documentElement.classList.add("app-standalone")}catch(_){ }
 </script>
-<!-- Diese Dateien bilden den sichtbarkeitskritischen Planner-Boot. Der Loader
-     installiert sie weiterhin in seiner fachlich erforderlichen Reihenfolge;
-     Preload holt sie nur parallel, damit daraus kein Netzwerk-Wasserfall wird. -->
+<!-- Diese Dateien werden für den Planner-Boot parallel vorgeladen. Der Loader
+     installiert sie in ihrer fachlich erforderlichen Reihenfolge; nur
+     plannerabhängige Ansichten warten auf den Abschluss dieser Kette. -->
 <link rel="preload" as="script" href="js/planner-meal-eligibility.js?v=10.1.26">
 <link rel="preload" as="script" href="js/planner-milk-policy.js?v=10.1.26">
 <link rel="preload" as="script" href="js/planner-iron-preference.js?v=10.1.26">

@@ -879,6 +879,10 @@ function openAllergenSchedule(foodId) {
 }
 
 function renderAllergenModule() {
+  if (typeof plannerViewReady === "function" && !plannerViewReady()) {
+    renderPlannerReadinessPlaceholder("allergen");
+    return;
+  }
   let on=today();
   let allergenFoods=state.foods.filter((f)=>f.active&&f.allergenGroup).sort((a,b)=>a.allergenGroup.localeCompare(b.allergenGroup,"de")||a.priority-b.priority);
   let groups=[...new Set(allergenFoods.map((f)=>f.allergenGroup))];

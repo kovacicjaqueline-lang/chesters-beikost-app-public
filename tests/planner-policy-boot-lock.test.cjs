@@ -4,11 +4,15 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const vm = require("node:vm");
 
 const handling = require("../js/handling-readiness.js");
 const root = path.resolve(__dirname, "..");
 const handlingSource = fs.readFileSync(path.join(root, "js", "handling-readiness.js"), "utf8");
 const utilsSource = fs.readFileSync(path.join(root, "js", "utils.js"), "utf8");
+const deferredRenderSource = fs.readFileSync(path.join(root, "js", "deferred-render.js"), "utf8");
+const uiSource = fs.readFileSync(path.join(root, "js", "ui.js"), "utf8");
+const indexSource = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const swSource = fs.readFileSync(path.join(root, "sw.js"), "utf8");
 
 test("Planner-Boot: nur im aktuellen unvollständigen Seiten-Boot erzeugte normale Auto-Locks werden verworfen", () => {
@@ -92,6 +96,56 @@ test("Planner-Boot: Final-Quality und Allergenpflege werden nach Introduction un
   );
   assert.match(
     utilsSource,
-    /window\.__plannerPoliciesReady\s*=\s*true;[\s\S]*renderAll\(\)/,
+    /window\.__plannerPoliciesReady\s*=\s*true;[\s\S]*settlePlannerReadiness\("ready"\);[\s\S]*renderCurrentView\(\)/,
   );
+});
+
+test("Planner-Readiness blockiert nur plannerabhängige Ansichten und öffnet bei Fehler keinen Teilplan", () => {
+  assert.match(utilsSource, /window\.PlannerReadiness\s*=\s*Object\.freeze/);
+  assert.doesNotMatch(utilsSource, /plannerPolicyBody\.style\.visibility/);
+  assert.match(utilsSource, /settlePlannerReadiness\("failed"[\s\S]*renderCurrentView\(\)/);
+  assert.doesNotMatch(utilsSource, /failPlannerPolicies[\s\S]*renderAll\(\)/);
+  assert.match(uiSource, /function renderView\(id\)[\s\S]*!plannerViewReady\(\)[\s\S]*renderPlannerReadinessPlaceholder\(id\)/);
+  assert.match(uiSource, /function renderAll\(\)[\s\S]*if \(plannerViewReady\(\)\)[\s\S]*renderFoods\(\)[\s\S]*renderSettings\(\)/);
+  assert.match(uiSource, /if \(viewId === "plan"\)[\s\S]*toolbar\.inert = !plannerViewReady\(\)/);
+  assert.match(deferredRenderSource, /if \(typeof plannerViewReady === "function" && !plannerViewReady\(\)\)[\s\S]*readiness\.whenReady\(\)\.then[\s\S]*updateFoodPlannedUsage\(foodItem, baseBuildDays, request\)/);
+  assert.match(indexSource, /html:not\(\.app-ready\) #appResumeScreen/);
+});
+
+test("Planner-Boot-Fehler rendert keinen Teilplan und lässt die Planner-Readiness fehlgeschlagen", () => {
+  let domReady;
+  let renderCurrentViewCalls = 0;
+  let renderAllCalls = 0;
+  let firstScript;
+  const context = {
+    console: { error() {} },
+    renderCurrentView() { renderCurrentViewCalls += 1; },
+    renderAll() { renderAllCalls += 1; },
+    window: null,
+    document: {
+      body: { style: {} },
+      querySelector: () => null,
+      createElement: () => ({
+        dataset: {},
+        listeners: {},
+        addEventListener(type, callback) {
+          (this.listeners[type] ||= []).push(callback);
+        },
+      }),
+      head: { appendChild(script) { firstScript = script; } },
+    },
+  };
+  context.window = context;
+  context.addEventListener = (type, callback) => {
+    if (type === "DOMContentLoaded") domReady = callback;
+  };
+
+  vm.runInNewContext(utilsSource, context);
+  domReady();
+  firstScript.listeners.error[0]({ error: new Error("Planner-Policy fehlt") });
+
+  assert.equal(context.PlannerReadiness.state, "failed");
+  assert.equal(context.__plannerPoliciesReady, false);
+  assert.equal(renderCurrentViewCalls, 1);
+  assert.equal(renderAllCalls, 0);
 });

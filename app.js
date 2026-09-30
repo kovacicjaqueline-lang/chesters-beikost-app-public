@@ -886,8 +886,8 @@ function startBeikostApp() {
   bind();
   renderCurrentView();
   Promise.resolve(bootstrapStorage()).then(
-    () => window.AppResumeScreen?.markReady(),
-    () => window.AppResumeScreen?.markReady(),
+    () => window.AppReadiness?.markReady(),
+    () => window.AppReadiness?.markReady(),
   );
   if (navigator.serviceWorker && location.protocol.startsWith("http"))
     window.addEventListener("load", () =>

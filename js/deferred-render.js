@@ -495,6 +495,20 @@ function installOpenUiLatencyFlows() {
       } finally {
         buildDays = baseBuildDays;
       }
+      if (typeof plannerViewReady === "function" && !plannerViewReady()) {
+        let readiness = globalThis.PlannerReadiness;
+        if (!readiness?.whenReady) return;
+        readiness.whenReady().then((result) => {
+          if (result?.state === "ready") {
+            updateFoodPlannedUsage(foodItem, baseBuildDays, request);
+          } else if (result?.state === "failed" && request === deferredFoodDetailRequest) {
+            let current = foodPlannedUsageContainer();
+            let status = current?.querySelector(".small");
+            if (status) status.textContent = "Planungsregeln konnten nicht geladen werden.";
+          }
+        });
+        return;
+      }
       let container = foodPlannedUsageContainer();
       let detail = container?.querySelector(".small");
       if (detail) detail.textContent = "Planung wird geladen…";

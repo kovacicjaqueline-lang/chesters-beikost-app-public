@@ -188,6 +188,24 @@ try {
   assert.equal(await page.locator('.missingIngredientChoice[data-food="banane"]').count(), 1);
   assert.equal(await page.locator('.missingIngredientChoice[data-food="hafer"]').count(), 1);
 
+  await page.evaluate(({ currentKey }) => {
+    const original = window.showToast;
+    window.__missingIngredientAtToast = null;
+    window.showToast = function captureVisiblePlanAtToast(message, ...args) {
+      if (message.includes("Der Plan wurde angepasst")) {
+        const state = window.__beikostTest.getState();
+        const meal = state.manualMeals?.[currentKey] || state.planLocks?.[currentKey] || null;
+        window.__missingIngredientAtToast = {
+          activeView: document.querySelector(".view.active")?.id || "",
+          visibleMealText: document.querySelector("#todayCard .mealbox")?.innerText || "",
+          foodIds: [...(meal?.foodIds || [])],
+          foodNames: Object.fromEntries(state.foods.map((item) => [item.id, item.name])),
+        };
+      }
+      return original.call(this, message, ...args);
+    };
+  }, setup);
+
   const screenshotDir = path.join(root, "artifacts", "browser-tests", "plan-checks-ux-webkit");
   fs.mkdirSync(screenshotDir, { recursive: true });
   await page.screenshot({
@@ -228,6 +246,14 @@ try {
   assert.equal(after.currentMeal.recipeName, "Obst-Haferbrei");
   assert.equal(after.currentMeal.foodIds.includes("banane"), false);
   assert.ok(after.currentMeal.foodIds.some((id) => ["apfel", "birne"].includes(id)), "fehlendes Obst wird innerhalb der Recipe-V2-Auswahl ersetzt");
+  const visibleAtToast = await page.evaluate(() => window.__missingIngredientAtToast);
+  assert.equal(visibleAtToast?.activeView, "home", "der echte Auslöser sitzt in der Heute-Ansicht");
+  assert.ok(visibleAtToast?.foodIds.includes("apfel") || visibleAtToast?.foodIds.includes("birne"), "der aktuelle Plan-State enthält vor dem Toast eine verfügbare Rezeptalternative");
+  assert.ok(
+    visibleAtToast.visibleMealText.includes(visibleAtToast.foodNames.apfel) ||
+    visibleAtToast.visibleMealText.includes(visibleAtToast.foodNames.birne),
+    "die alternative Zutat muss im echten Heute-DOM sichtbar sein, bevor der Erfolgshinweis erscheint",
+  );
   assert.equal(after.futureManual, null, "zukünftiger offener manueller Banane-Slot wird freigegeben");
   assert.equal(after.futureLock, null, "freigegebener Zukunftsslot bleibt ohne pauschalen Auto-Lock");
   assert.ok(after.futurePlanned, "freigegebener Zukunftsslot darf dynamisch neu geplant werden");

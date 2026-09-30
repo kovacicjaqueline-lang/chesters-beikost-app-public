@@ -51,20 +51,20 @@
  * Auf iOS darf dabei aber das aktive Suchfeld nicht ersetzt werden: WebKit klappt
  * sonst die Tastatur kurz zu und wieder auf. Der Capture-Hook hält deshalb nur
  * dieses Feld DOM-stabil und übernimmt aus dem neu berechneten Dialog die
- * Suchergebnisse. Gleichzeitig werden Namensanfänge vor bloßen Teiltreffern aus
- * Name, Alias oder Kategorie einsortiert.
+ * Suchergebnisse. Die Lebensmittelsuche verwendet dabei dieselbe Relevanzlogik
+ * wie der Lebensmittelkatalog, sodass Namensanfänge vor bloßen Teiltreffern stehen.
  */
 (function installInventoryLiveSearchUi(root) {
   if (!root || typeof document === "undefined" || root.__inventoryLiveSearchUiInstalled) return;
   root.__inventoryLiveSearchUiInstalled = true;
 
   function normalize(value) {
-    if (typeof root.normalizeName === "function") return root.normalizeName(value || "");
+    if (typeof normalizeName === "function") return normalizeName(value || "");
     return String(value || "").trim().toLocaleLowerCase("de");
   }
 
   function escapeHtml(value) {
-    if (typeof root.esc === "function") return root.esc(value);
+    if (typeof esc === "function") return esc(value);
     return String(value ?? "")
       .replaceAll("&", "&amp;")
       .replaceAll("<", "&lt;")
@@ -77,18 +77,28 @@
     return typeof state !== "undefined" && Array.isArray(state?.foods) ? state.foods : [];
   }
 
-  function foodSearchRank(item, query) {
+  function fallbackFoodSearchRank(item, query) {
     const name = normalize(item?.name);
-    const alias = normalize(item?.alias);
+    const aliases = String(item?.alias || "")
+      .split(/[,;/|]+/)
+      .map(normalize)
+      .filter(Boolean);
     const category = normalize(item?.category);
     if (name === query) return 0;
-    if (name.startsWith(query)) return 1;
-    if (alias.split(/\s*[;,/|]\s*/).some((part) => part.startsWith(query))) return 2;
-    if (name.includes(query)) return 3;
-    if (alias.includes(query)) return 4;
-    if (category.startsWith(query)) return 5;
-    if (category.includes(query)) return 6;
-    return 99;
+    if (aliases.some((alias) => alias === query)) return 1;
+    if (name.startsWith(query)) return 2;
+    if (aliases.some((alias) => alias.startsWith(query))) return 3;
+    if (query.length < 3) return Number.POSITIVE_INFINITY;
+    if (name.includes(query)) return 8;
+    if (aliases.some((alias) => alias.includes(query))) return 9;
+    if (category.startsWith(query)) return 21;
+    if (category.includes(query)) return 22;
+    return Number.POSITIVE_INFINITY;
+  }
+
+  function inventoryFoodSearchScore(item, query) {
+    if (typeof foodSearchScore === "function") return foodSearchScore(item, query);
+    return fallbackFoodSearchRank(item, query);
   }
 
   function selectedFoodId(body) {
@@ -104,7 +114,7 @@
 
   function foodResultHtml(item, selectedId) {
     const selected = item?.id === selectedId;
-    const icon = typeof root.foodIconSvg === "function" ? root.foodIconSvg(item) : "";
+    const icon = typeof foodIconSvg === "function" ? foodIconSvg(item) : "";
     const meta = `${item?.category || ""}${item?.active ? "" : " · nicht im Plan aktiv"}`;
     return `<button class="live-result chooseInventoryTarget ${selected ? "selected" : ""}" data-key="${encodeURIComponent(item?.id || "")}">${icon}<span class="grow"><b>${escapeHtml(item?.name || "")}</b><span class="small" style="display:block">${escapeHtml(meta)}</span></span><span class="selector-check" aria-hidden="true">${selected ? "✓" : ""}</span></button>`;
   }
@@ -112,15 +122,14 @@
   function rankFoodResults(container, query, selectedId) {
     if (!query) return;
     const matches = inventoryFoods()
-      .filter((item) => {
-        const searchable = normalize(`${item?.name || ""} ${item?.alias || ""} ${item?.category || ""}`);
-        return searchable.includes(query);
-      })
+      .map((item) => ({ item, score: inventoryFoodSearchScore(item, query) }))
+      .filter(({ score }) => Number.isFinite(score))
       .sort((left, right) =>
-        foodSearchRank(left, query) - foodSearchRank(right, query) ||
-        String(left?.name || "").localeCompare(String(right?.name || ""), "de"),
+        left.score - right.score ||
+        String(left.item?.name || "").localeCompare(String(right.item?.name || ""), "de"),
       )
-      .slice(0, 20);
+      .slice(0, 20)
+      .map(({ item }) => item);
     const results = container.querySelector(".live-results");
     if (!results) return;
     results.innerHTML = matches.length
@@ -148,30 +157,38 @@
     }
 
     function stableInventoryOpenGeneric(title, body, onClose = null) {
-      const next = document.createElement("div");
-      next.innerHTML = body;
-      const nextInput = next.querySelector("#inventoryLiveSearch");
-      const currentInput = genericBody.querySelector("#inventoryLiveSearch");
-      const currentResults = genericBody.querySelector(".live-results");
-      const nextResults = next.querySelector(".live-results");
-      if (!nextInput || currentInput !== input || !currentResults || !nextResults) {
-        return originalOpenGeneric(title, body, onClose);
+      try {
+        const next = document.createElement("div");
+        next.innerHTML = body;
+        const nextInput = next.querySelector("#inventoryLiveSearch");
+        const currentInput = genericBody.querySelector("#inventoryLiveSearch");
+        const currentResults = genericBody.querySelector(".live-results");
+        const nextResults = next.querySelector(".live-results");
+        if (!nextInput || currentInput !== input || !currentResults || !nextResults) {
+          return originalOpenGeneric(title, body, onClose);
+        }
+
+        if (next.querySelector("#inventoryFoodTab.active")) rankFoodResults(next, query, selectedId);
+        currentResults.replaceWith(next.querySelector(".live-results"));
+
+        const currentStatus = currentInput.closest(".field")?.nextElementSibling;
+        const nextStatus = nextInput.closest(".field")?.nextElementSibling;
+        if (currentStatus && nextStatus) currentStatus.replaceWith(nextStatus);
+
+        const titleNode = document.getElementById("genericTitle");
+        if (titleNode && titleNode.textContent !== title) titleNode.textContent = title;
+        modal.classList.add("open");
+        return currentModalResult(genericBody);
+      } finally {
+        restoreOpenGeneric();
       }
+    }
 
-      if (next.querySelector("#inventoryFoodTab.active")) rankFoodResults(next, query, selectedId);
-      currentResults.replaceWith(next.querySelector(".live-results"));
-
-      const currentStatus = currentInput.closest(".field")?.nextElementSibling;
-      const nextStatus = nextInput.closest(".field")?.nextElementSibling;
-      if (currentStatus && nextStatus) currentStatus.replaceWith(nextStatus);
-
-      const titleNode = document.getElementById("genericTitle");
-      if (titleNode && titleNode.textContent !== title) titleNode.textContent = title;
-      modal.classList.add("open");
+    function currentModalResult(body) {
+      return body.closest("#genericModal") || body;
     }
 
     root.openGeneric = stableInventoryOpenGeneric;
-    if (typeof queueMicrotask === "function") queueMicrotask(restoreOpenGeneric);
-    else Promise.resolve().then(restoreOpenGeneric);
+    setTimeout(restoreOpenGeneric, 0);
   }, true);
 })(typeof globalThis !== "undefined" ? globalThis : window);

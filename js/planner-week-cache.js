@@ -99,6 +99,10 @@
             const reserved = context.recipeReserved.get(recipeName) || 0;
             if (reserved >= available) {
               meal.recipeInventoryId = "";
+              if (meal.compositionMode !== "recipe-plus-food") {
+                meal.inventoryFoodIds = [];
+                continue;
+              }
             } else if (!meal.recipeInventoryId && typeof globalScope.oldestRecipeBatch === "function") {
               meal.recipeInventoryId = globalScope.oldestRecipeBatch(recipeName)?.id || "";
             }

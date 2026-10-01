@@ -30,11 +30,7 @@
   }
 
   function familyFoodIds(record) {
-    const key = familyKey(record);
-    if (!key) return [];
-    return (state?.foods || [])
-      .filter((candidate) => familyKey(candidate) === key)
-      .map((candidate) => candidate.id);
+    return baseSolutions.allergenIntroductionFoodIds(record, state?.foods || []);
   }
 
   function exposureKey(log) {
@@ -44,18 +40,13 @@
 
   function successfulFamilyExposureCount(record) {
     if (!record) return 0;
-    if (typeof familySuccessfulExposureCount === "function") {
-      return Number(familySuccessfulExposureCount(record, state.foods, state.logs, outcomeForFood)) || 0;
-    }
-    const ids = new Set(familyFoodIds(record));
-    const exposures = new Set();
-    for (const log of state?.logs || []) {
-      for (const id of log?.foodIds || []) {
-        if (!ids.has(id) || outcomeForFood(log, id) !== "eaten") continue;
-        exposures.add(exposureKey(log));
-      }
-    }
-    return exposures.size;
+    return baseSolutions.allergenIntroductionExposureCount(
+      record,
+      state?.foods || [],
+      state?.logs || [],
+      outcomeForFood,
+      exposureKey,
+    );
   }
 
   function latestFamilyExposure(record) {
@@ -87,9 +78,15 @@
     const maintenance = globalScope.PlannerAllergenMaintenance;
     const establishedTargets = maintenance?.establishedTargets?.(
       state.foods,
-      (record) => typeof rank === "function" ? rank(record) : 0,
+      (record) => {
+        const target = maintenance.targetForFood?.(record);
+        const exposures = target?.key && typeof maintenance.successfulExposureCount === "function"
+          ? maintenance.successfulExposureCount(target, state.foods, state.logs, outcomeForFood,
+              typeof today === "function" ? today() : "", exposureKey)
+          : 0;
+        return Math.max(typeof rank === "function" ? rank(record) : 0, exposures >= 2 ? 2 : 0);
+      },
     ) || [];
-    const groupLevelTargets = maintenance?.GROUP_LEVEL_MAINTENANCE_TARGETS || [];
     const targetForFoodFn = typeof maintenance?.targetForFood === "function"
       ? maintenance.targetForFood
       : null;
@@ -97,11 +94,12 @@
     for (const record of state.foods) {
       if (!record?.active || !familyKey(record)) continue;
       if (typeof status === "function" && status(record) === "Pausiert") continue;
-      if (successfulFamilyExposureCount(record) !== 1) continue;
-      if (baseSolutions.foodSpecificIntroductionCoveredByEstablishedMaintenance(
+      const count = successfulFamilyExposureCount(record);
+      if (!baseSolutions.allergenIntroductionNeedsContinuation(
         record,
+        count,
         establishedTargets,
-        groupLevelTargets,
+        [],
         targetForFoodFn,
       )) continue;
 
@@ -120,8 +118,8 @@
           foodIds: ids,
           allergenTargets: [{
             key,
-            kind: text(record.allergenFamily) ? "family" : "food",
-            value: record.name || record.allergenGroup || record.id,
+            kind: text(record.allergenFamily) ? "family" : "group",
+            value: record.allergenGroup || record.name || record.id,
             allergenGroup: record.allergenGroup || "",
             representativeFoodId: record.id,
             lastEatenDate: lastExposureDate,

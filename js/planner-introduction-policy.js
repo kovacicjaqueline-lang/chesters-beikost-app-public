@@ -87,7 +87,7 @@ function plannerIntroductionCandidateShouldSkip(
     lastOutcomeFn(item.id) !== "not_accepted"
   ) return true;
   let concreteRank = Number(rankFn(item)) || 0;
-  return result.type === "bekannt kombinieren" &&
+  return !item.allergenGroup && result.type === "bekannt kombinieren" &&
     concreteRank === 1 &&
     lastOutcomeFn(item.id) !== "not_accepted";
 }
@@ -124,8 +124,14 @@ function plannerIntroductionNormalizeCandidate(
   on,
   dueFn = null,
   lastOutcomeFn = () => "",
+  rankFn = () => 0,
 ) {
   if (!result?.f) return result;
+  if (
+    result.f.allergenGroup &&
+    Number(rankFn(result.f)) === 1 &&
+    ["bekannt kombinieren", "gezielt wiederholen"].includes(result.type)
+  ) return { ...result, type: "Allergen wiederholen" };
   if (
     result.f.allergenGroup &&
     plannerIntroductionFoodAllowsAutomaticAllergenLearning(result.f) &&
@@ -248,6 +254,7 @@ function installPlannerIntroductionPolicyRuntime() {
         on,
         typeof dueAllergen === "function" ? dueAllergen : null,
         lastOutcome,
+        rank,
       );
       let id = result.f.id;
       if (blocked.includes(id)) return null;

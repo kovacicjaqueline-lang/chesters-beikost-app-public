@@ -191,6 +191,17 @@ test("gewöhnliche automatische Einführung wird übersprungen, echte Ablehnung 
   assert.equal(policy.plannerIntroductionCandidateShouldSkip({ f: { id: "neu", allergenGroup: "" }, type: "manuell" }, () => 0, () => "", true, false), false);
 });
 
+test("einmal gegessenes Nicht-Allergen bleibt ausgeschlossen, Allergen-Rank-1 darf fortgesetzt werden", () => {
+  const normal = { f: { id: "zucchini", allergenGroup: "" }, type: "bekannt kombinieren" };
+  const allergen = { f: { id: "bangus", allergenGroup: "Fisch" }, type: "bekannt kombinieren" };
+  assert.equal(policy.plannerIntroductionCandidateShouldSkip(normal, () => 1, () => "eaten"), true);
+  assert.equal(policy.plannerIntroductionCandidateShouldSkip(allergen, () => 1, () => "eaten"), false);
+  assert.equal(
+    policy.plannerIntroductionNormalizeCandidate(allergen, "2026-08-23", null, () => "eaten", () => 1).type,
+    "Allergen wiederholen",
+  );
+});
+
 test("fälliges Allergen wird auch aus altem 'bekannt kombinieren'-Ergebnis als Allergen-Wiederholung erkannt", () => {
   const result = policy.plannerIntroductionNormalizeCandidate(
     { f: { id: "hafer", allergenGroup: "Gluten" }, type: "bekannt kombinieren" },

@@ -92,10 +92,42 @@ test("Gluten-Einführungsidentitäten bleiben für Hafer und Couscous getrennt",
     allergenGroup: "Glutenhaltiges Getreide",
   };
   assert.equal(solutions.allergenIntroductionTarget(hafer).key, "family:hafer");
-  assert.equal(solutions.allergenIntroductionTarget(couscous).key, "food:couscous");
+  assert.equal(solutions.allergenIntroductionTarget(couscous).key, "group:Glutenhaltiges Getreide");
   assert.notEqual(
     solutions.allergenIntroductionTarget(hafer).key,
     solutions.allergenIntroductionTarget(couscous).key,
+  );
+});
+
+test("Fisch-Fortsetzung bündelt geeignete Quellen der Gruppe und wird nach zwei Expositionen geschlossen", () => {
+  const foods = [
+    { id: "bangus", name: "Bangus", allergenGroup: "Fisch" },
+    { id: "kabeljau", name: "Kabeljau", allergenGroup: "Fisch" },
+    { id: "brot", name: "Brot", allergenGroup: "Glutenhaltiges Getreide", plannerIntroductionMode: "none" },
+  ];
+  const logs = [
+    { date: "2026-08-01", meal: "lunch", foodIds: ["bangus"], outcome: "eaten" },
+    { date: "2026-08-03", meal: "lunch", foodIds: ["kabeljau"], outcome: "eaten" },
+  ];
+  const outcome = (log, id) => log.foodOutcomes?.[id] || log.outcome || "";
+  assert.equal(solutions.allergenIntroductionTarget(foods[0]).key, "group:Fisch");
+  assert.deepEqual(solutions.allergenIntroductionFoodIds(foods[0], foods), ["bangus", "kabeljau"]);
+  assert.equal(solutions.allergenIntroductionExposureCount(foods[0], foods, logs, outcome), 2);
+  assert.equal(solutions.allergenIntroductionNeedsContinuation(foods[0], 1), true);
+  assert.equal(solutions.allergenIntroductionNeedsContinuation(foods[0], 2), false);
+  assert.deepEqual(solutions.allergenIntroductionFoodIds(foods[2], foods), []);
+});
+
+test("Nicht selbst einführbare Glutenquellen können eine manuelle Gruppengabe mitzählen", () => {
+  const foods = [
+    { id: "weizen", name: "Weizen", allergenGroup: "Glutenhaltiges Getreide" },
+    { id: "brot", name: "Brot", allergenGroup: "Glutenhaltiges Getreide", plannerIntroductionMode: "none" },
+  ];
+  const logs = [{ date: "2026-08-01", meal: "lunch", foodIds: ["brot"], outcome: "eaten" }];
+  assert.deepEqual(solutions.allergenIntroductionFoodIds(foods[0], foods), ["weizen"]);
+  assert.equal(
+    solutions.allergenIntroductionExposureCount(foods[0], foods, logs, (log) => log.outcome),
+    1,
   );
 });
 
@@ -273,7 +305,7 @@ test("Bekannter Hafer deckt eine einzelne Weizengrieß-Exposition als Glutenpfle
   );
 
   assert.equal(solutions.allergenIntroductionTarget(hafer), null);
-  assert.equal(solutions.allergenIntroductionTarget(weizengriess).key, "food:weizengriess");
+  assert.equal(solutions.allergenIntroductionTarget(weizengriess).key, "group:Glutenhaltiges Getreide");
   assert.equal(
     solutions.allergenIntroductionNeedsContinuation(
       weizengriess,

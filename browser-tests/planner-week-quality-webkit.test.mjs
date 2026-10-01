@@ -39,6 +39,64 @@ try {
     { timeout: 60000 },
   );
 
+  const introductionCases = await page.evaluate(() => {
+    const api = window.__beikostTest;
+    const next = api.addDays;
+    const start = api.today();
+    let current = structuredClone(window.__beikostTestBaseline || api.reset());
+    current.settings.phaseSelected = "kennenlernen";
+    current.settings.startDate = next(start, -60);
+    current.settings.planFrom = start;
+    current.settings.newFoodEvery = 1;
+    current.settings.seasonal = false;
+    current.settings.phMode = "off";
+    current.logs = [];
+    current.manualMeals = {};
+    current.planLocks = {};
+    current.overrides = {};
+    current.autoLockExcluded = {};
+    const selectedIds = new Set(["karotte", "zucchini", "lachs", "bangus-milkfish", "kabeljau"]);
+    for (const item of current.foods) {
+      item.active = selectedIds.has(item.id);
+      item.manualStatus = item.id === "karotte" ? "Verträgliche Basis" : "auto";
+    }
+    api.setState(current);
+    const freshPlan = window.buildDays(start, 1, false)[0];
+    const freshLunch = freshPlan.meals.find((meal) => meal.meal === "lunch");
+
+    current = api.getState();
+    current.logs = [{
+      id: "single-fish-exposure",
+      date: next(start, -1),
+      meal: "lunch",
+      entryType: "meal",
+      focusId: "bangus-milkfish",
+      foodIds: ["bangus-milkfish", "zucchini"],
+      outcome: "eaten",
+      foodOutcomes: { "bangus-milkfish": "eaten", zucchini: "eaten" },
+    }];
+    current.foods.find((item) => item.id === "zucchini").active = true;
+    api.setState(current);
+    const continuingPlan = window.buildDays(start, 1, false)[0];
+    const continuingLunch = continuingPlan.meals.find((meal) => meal.meal === "lunch");
+    return {
+      fresh: { focusId: freshLunch?.focusId || "", type: freshLunch?.type || "", sampleFoodIds: freshLunch?.sampleFoodIds || [] },
+      continuing: {
+        focusId: continuingLunch?.focusId || "",
+        focusAllergenGroup: current.foods.find((item) => item.id === continuingLunch?.focusId)?.allergenGroup || "",
+        type: continuingLunch?.type || "",
+        sampleFoodIds: continuingLunch?.sampleFoodIds || [],
+      },
+      normalRepeated: (continuingLunch?.sampleFoodIds || []).includes("zucchini"),
+    };
+  });
+  assert.equal(introductionCases.fresh.focusId, "lachs", "neues Allergen erhält Vorrang vor gewöhnlicher Kostprobe");
+  assert.equal(introductionCases.fresh.type, "Allergen einführen");
+  assert.notEqual(introductionCases.continuing.focusId, "bangus-milkfish", "zweite Fisch-Exposition darf eine andere geeignete Quelle verwenden");
+  assert.equal(introductionCases.continuing.focusAllergenGroup, "Fisch");
+  assert.equal(introductionCases.continuing.type, "Allergen wiederholen");
+  assert.equal(introductionCases.normalRepeated, false, "einmal gegessenes gewöhnliches Lebensmittel bleibt ohne Pflichtwiederholung");
+
   const setup = await page.evaluate(() => {
     window.__beikostTest.reset();
     const start = window.__beikostTest.today();

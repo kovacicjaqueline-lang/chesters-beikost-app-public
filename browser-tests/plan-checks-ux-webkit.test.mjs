@@ -335,13 +335,24 @@ try {
   await showView(page, "plan");
   await page.locator("#openPlanGoalSolution").click();
   const firstSolutionText = (await page.locator("#genericBody .plan-solution-card").textContent()).trim();
+  const firstSolutionSlot = (await page.locator("#genericBody .plan-solution-card b").textContent()).trim();
   await page.locator("#otherPlanGoalSolution").click({ timeout: 30_000 });
   await page.waitForFunction((before) => {
     const card = document.querySelector("#genericBody .plan-solution-card");
     return card && card.textContent.trim() !== before;
   }, firstSolutionText);
   const secondSolutionText = (await page.locator("#genericBody .plan-solution-card").textContent()).trim();
+  const secondSolutionSlot = (await page.locator("#genericBody .plan-solution-card b").textContent()).trim();
   assert.notEqual(secondSolutionText, firstSolutionText);
+  assert.notEqual(secondSolutionSlot, firstSolutionSlot, "Andere Lösung muss einen anderen geeigneten Mahlzeiten-Slot verwenden");
+  await page.locator("#closeGeneric").click();
+
+  // Milch-Ziel zeigt die fachliche Gruppenbezeichnung, nie den internen Family-Key.
+  await seedAllergens(page, { targetIds: ["naturjoghurt"], exposureCount: 2, autoLockCount: 3 });
+  await showView(page, "plan");
+  await page.locator("#openPlanGoalSolution").click();
+  assert.equal((await page.locator("#genericTitle").textContent()).trim(), "Milch");
+  assert.doesNotMatch(await page.locator("#genericBody").textContent(), /\bmilch\b/);
   await page.locator("#closeGeneric").click();
 
   // 5. Dismissal verändert keine Expositionsdaten.

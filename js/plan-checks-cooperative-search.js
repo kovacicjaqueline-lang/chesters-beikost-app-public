@@ -174,6 +174,7 @@
 
   async function findSolutionAsync(item, days = [], options = {}) {
     const rejected = new Set(options.rejectedSolutionIds || []);
+    const rejectedSlots = new Set(options.rejectedSlotKeys || []);
     const shouldContinue = typeof options.shouldContinue === "function"
       ? options.shouldContinue
       : () => true;
@@ -184,6 +185,7 @@
 
     for (const slot of candidateSlots(days)) {
       if (!shouldContinue()) return null;
+      if (rejectedSlots.has(`${slot.date}|${slot.meal}`)) continue;
       if (!goalFoodCanUseSlot(item, slot)) continue;
       await yieldControl();
       if (!shouldContinue()) return null;

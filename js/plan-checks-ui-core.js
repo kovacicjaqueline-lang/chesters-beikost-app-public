@@ -36,8 +36,7 @@ function classifyPhaseReadinessReasons(reasons = [], missingPrerequisites = []) 
   function targetLabel(item) {
     const target = item?.refs?.allergenTargets?.[0];
     const representative = item?.details?.representativeFoodId || target?.representativeFoodId || item?.refs?.foodIds?.[0];
-    if ([solutions.INTRO_OPEN_CODE, solutions.INTRO_PROJECTED_CODE].includes(item?.code)) return foodName(representative);
-    return target?.value || target?.allergenGroup || foodName(representative) || "Allergen";
+    return target?.allergenGroup || target?.value || foodName(representative) || "Allergen";
   }
 
   function mealTitle(meal) {
@@ -216,8 +215,13 @@ function classifyPhaseReadinessReasons(reasons = [], missingPrerequisites = []) 
     }
     const key = solutions.goalKey(item);
     const rejected = activeGoalFlow.rejectedByGoal.get(key) || new Set();
+    const rejectedSlots = activeGoalFlow.rejectedSlotsByGoal.get(key) || new Set();
     activeGoalFlow.rejectedByGoal.set(key, rejected);
-    const solution = solutions.findSolution(item, days, { rejectedSolutionIds: [...rejected] });
+    activeGoalFlow.rejectedSlotsByGoal.set(key, rejectedSlots);
+    const solution = solutions.findSolution(item, days, {
+      rejectedSolutionIds: [...rejected],
+      rejectedSlotKeys: [...rejectedSlots],
+    });
 
     if (!solution) {
       openGeneric(
@@ -252,6 +256,7 @@ function classifyPhaseReadinessReasons(reasons = [], missingPrerequisites = []) 
     });
     document.getElementById("otherPlanGoalSolution")?.addEventListener("click", () => {
       rejected.add(solution.id);
+      rejectedSlots.add(`${solution.date}|${solution.meal}`);
       openGoalStep(key);
     });
     document.getElementById("leavePlanGoal")?.addEventListener("click", () => {
@@ -261,7 +266,7 @@ function classifyPhaseReadinessReasons(reasons = [], missingPrerequisites = []) 
   }
 
   function startGoalFlow(item) {
-    activeGoalFlow = { rejectedByGoal: new Map(), appliedAny: false };
+    activeGoalFlow = { rejectedByGoal: new Map(), rejectedSlotsByGoal: new Map(), appliedAny: false };
     openGoalStep(solutions.goalKey(item));
   }
 

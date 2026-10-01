@@ -190,6 +190,52 @@ test("Maintenance-Kennzeichnung bleibt über Lock-Snapshot, Hydration und erneut
   assert.deepEqual(Array.from(unlockedAgain.foodIds), ["zucchini", "frischkaese"]);
 });
 
+test("Maintenance wird nach zwei erfolgreichen Expositionen auf verschiedenen Quellen etabliert", () => {
+  const maintenanceFoods = [
+    { id: "joghurt", name: "Naturjoghurt", allergenGroup: "Milch", allergenFamily: "milch" },
+    { id: "kaese", name: "Käse", allergenGroup: "Milch", allergenFamily: "milch" },
+    { id: "weizen", name: "Weizen", allergenGroup: "Glutenhaltiges Getreide" },
+    { id: "dinkel", name: "Dinkel", allergenGroup: "Glutenhaltiges Getreide" },
+  ];
+  const logs = [
+    { date: "2026-08-01", meal: "lunch", foodIds: ["joghurt"], outcome: "eaten" },
+    { date: "2026-08-02", meal: "lunch", foodIds: ["kaese"], outcome: "eaten" },
+    { date: "2026-08-01", meal: "dinner", foodIds: ["weizen"], outcome: "eaten" },
+    { date: "2026-08-02", meal: "dinner", foodIds: ["dinkel"], outcome: "eaten" },
+  ];
+  const due = maintenance.dueTargets({
+    foods: maintenanceFoods,
+    logs,
+    on: "2026-08-20",
+    intervalDays: 7,
+    rankFn: () => 1,
+    outcomeForFoodFn: (log, id) => log.foodOutcomes?.[id] || log.outcome || "",
+  });
+  assert.deepEqual(new Set(due.map((target) => target.key)), new Set([
+    "family:milch",
+    "allergen:Glutenhaltiges Getreide",
+  ]));
+});
+
+test("Maintenance-Etablierung zählt keine nicht gegessenen Quellen", () => {
+  const milkFoods = [
+    { id: "joghurt", allergenGroup: "Milch", allergenFamily: "milch" },
+    { id: "kaese", allergenGroup: "Milch", allergenFamily: "milch" },
+  ];
+  const due = maintenance.dueTargets({
+    foods: milkFoods,
+    logs: [
+      { date: "2026-08-01", meal: "lunch", foodIds: ["joghurt"], outcome: "not_accepted" },
+      { date: "2026-08-02", meal: "lunch", foodIds: ["kaese"], outcome: "not_offered" },
+    ],
+    on: "2026-08-20",
+    intervalDays: 7,
+    rankFn: () => 1,
+    outcomeForFoodFn: (log, id) => log.foodOutcomes?.[id] || log.outcome || "",
+  });
+  assert.deepEqual(due, []);
+});
+
 test("Alternative bekannte Quelle kann ein fälliges Ziel bedienen", () => {
   const target = maintenance.targetForFood(foods.find((item) => item.id === "hafer"));
   const candidates = [

@@ -156,6 +156,28 @@
     return latest;
   }
 
+  function successfulExposureCount(
+    target,
+    foods = [],
+    logs = [],
+    outcomeForFoodFn = () => "",
+    on = "",
+    exposureKeyFn = null,
+  ) {
+    let ids = new Set(targetFoodIds(target, foods));
+    if (!ids.size) return 0;
+    let exposures = new Set();
+    for (let log of logs || []) {
+      let date = text(log?.date);
+      if (!date || (on && date > on)) continue;
+      if (!(log?.foodIds || []).some((id) => ids.has(id) && outcomeForFoodFn(log, id) === "eaten")) continue;
+      exposures.add(typeof exposureKeyFn === "function"
+        ? exposureKeyFn(log)
+        : `${date}|${log.meal || log.id || "entry"}`);
+    }
+    return exposures.size;
+  }
+
   function establishedTargets(foods = [], rankFn = () => 0) {
     let byKey = new Map();
     for (let foodRecord of foods || []) {
@@ -180,12 +202,30 @@
     rankFn = () => 0,
     outcomeForFoodFn = () => "",
     projectedTargetKeys = new Set(),
+    exposureKeyFn = null,
   } = {}) {
     let interval = Math.max(1, Number(intervalDays) || 7);
     let projected = projectedTargetKeys instanceof Set
       ? projectedTargetKeys
       : new Set(projectedTargetKeys || []);
-    return establishedTargets(foods, rankFn)
+    const groupExposureCounts = new Map();
+    for (const foodRecord of foods || []) {
+      const target = targetForFood(foodRecord);
+      if (!target?.key || groupExposureCounts.has(target.key)) continue;
+      groupExposureCounts.set(target.key, successfulExposureCount(
+        target,
+        foods,
+        logs,
+        outcomeForFoodFn,
+        on,
+        exposureKeyFn,
+      ));
+    }
+    return establishedTargets(foods, (foodRecord) => {
+      const target = targetForFood(foodRecord);
+      const groupedRank = target?.key && groupExposureCounts.get(target.key) >= 2 ? 2 : 0;
+      return Math.max(Number(rankFn(foodRecord)) || 0, groupedRank);
+    })
       .map((target) => ({
         ...target,
         lastEatenDate: latestSuccessfulExposureDate(
@@ -241,6 +281,7 @@
     markProjectedRecord,
     annotateMaintenanceFoodIds,
     latestSuccessfulExposureDate,
+    successfulExposureCount,
     establishedTargets,
     dueTargets,
     candidateForTarget,
@@ -276,6 +317,9 @@
       rankFn: (foodRecord) => rank(foodRecord),
       outcomeForFoodFn: (log, id) => outcomeForFood(log, id),
       projectedTargetKeys: CORE.ensureProjectedTargetSet(ctx),
+      exposureKeyFn: (log) => typeof plannerLogExposureKey === "function"
+        ? plannerLogExposureKey(log)
+        : `${log?.date || ""}|${log?.meal || log?.id || "entry"}`,
     });
   }
 
@@ -353,19 +397,7 @@
   function maintenanceFoodIsDue(foodRecord, on) {
     let target = CORE.targetForFood(foodRecord);
     if (!target) return false;
-    let established = (state.foods || []).filter((item) =>
-      CORE.targetMatchesFood(target, item) && Number(rank(item)) >= 2
-    );
-    if (!established.length || established[0].id !== foodRecord.id) return false;
-    let lastEatenDate = CORE.latestSuccessfulExposureDate(
-      target,
-      state.foods,
-      state.logs,
-      (log, id) => outcomeForFood(log, id),
-      on,
-    );
-    return !!lastEatenDate &&
-      CORE.dayDistance(on, lastEatenDate) >= Math.max(1, Number(state.settings.allergenDays) || 7);
+    return runtimeDueTargets(on, freshPlanContext()).some((due) => due.key === target.key);
   }
 
   dueAllergen = function maintenanceAwareDueAllergen(foodRecord, on) {

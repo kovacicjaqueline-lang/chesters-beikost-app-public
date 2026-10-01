@@ -442,6 +442,49 @@ function familySuccessfulExposureCount(foodRecord, foods, logs, outcomeForFoodFn
   ).size;
 }
 
+function allergenIntroductionTargetKey(foodRecord) {
+  if (!foodRecord?.allergenGroup) return "";
+  if (foodRecord.allergenFamily) return `family:${foodRecord.allergenFamily}`;
+  return `group:${foodRecord.allergenGroup}`;
+}
+
+function allergenIntroductionFoodIds(foodRecord, foods) {
+  let targetKey = allergenIntroductionTargetKey(foodRecord);
+  if (!targetKey || !Array.isArray(foods)) return [];
+  return foods
+    .filter((candidate) => candidate?.id && candidate.plannerIntroductionMode !== "none" && allergenIntroductionTargetKey(candidate) === targetKey)
+    .map((candidate) => candidate.id);
+}
+
+function allergenIntroductionSuccessfulExposureCount(foodRecord, foods, logs, outcomeForFoodFn) {
+  let targetKey = allergenIntroductionTargetKey(foodRecord);
+  let ids = new Set((foods || [])
+    .filter((candidate) => candidate?.id && allergenIntroductionTargetKey(candidate) === targetKey)
+    .map((candidate) => candidate.id));
+  if (!ids.size) return 0;
+  let exposures = new Set();
+  for (let log of logs || []) {
+    for (let id of log.foodIds || []) {
+      if (!ids.has(id) || outcomeForFoodFn(log, id) !== "eaten") continue;
+      exposures.add(typeof logExposureKey === "function"
+        ? logExposureKey(log)
+        : `${log.date || ""}|${log.meal || log.id || "entry"}`);
+    }
+  }
+  return exposures.size;
+}
+
+function foodSpecificSuccessfulExposureCount(foodId, logs, outcomeForFoodFn = outcomeForFood) {
+  let exposures = new Set();
+  for (let log of logs || []) {
+    if (!(log.foodIds || []).includes(foodId) || outcomeForFoodFn(log, foodId) !== "eaten") continue;
+    exposures.add(typeof logExposureKey === "function"
+      ? logExposureKey(log)
+      : `${log.date || ""}|${log.meal || log.id || "entry"}`);
+  }
+  return exposures.size;
+}
+
 function familyPlanningRank(foodRecord, foods, logs, outcomeForFoodFn, concreteRank) {
   let concrete = Number(concreteRank) || 0;
   let success = familySuccessfulExposureCount(foodRecord, foods, logs, outcomeForFoodFn);
@@ -514,6 +557,11 @@ function installFoodPolicyRuntime() {
     let concrete = originalRank(f);
     if (!autoPlanningDepth || !f) return concrete;
     let familyRank = familyPlanningRank(f, state.foods, state.logs, outcomeForFood, concrete);
+    if (f.allergenGroup && f.plannerIntroductionMode !== "none" && !f.allergenFamily) {
+      let groupExposures = allergenIntroductionSuccessfulExposureCount(f, state.foods, state.logs, outcomeForFood);
+      if (groupExposures >= 2) familyRank = Math.max(familyRank, 2);
+      else if (groupExposures >= 1) familyRank = Math.max(familyRank, 1);
+    }
     let explicitOverride = plannerExplicitOverrideForFood(
       state.overrides,
       autoPlanningDate,
@@ -837,6 +885,8 @@ function startBeikostApp() {
     displayStatus: (id) => displayStatus(food(id)),
     automaticFoodEligibility: (id, on = today()) => automaticFoodEligibility(food(id), on, state.settings),
     familySuccessfulExposureCount: (id) => familySuccessfulExposureCount(food(id), state.foods, state.logs, outcomeForFood),
+    allergenIntroductionSuccessfulExposureCount: (id) => allergenIntroductionSuccessfulExposureCount(food(id), state.foods, state.logs, outcomeForFood),
+    foodSpecificSuccessfulExposureCount: (id) => foodSpecificSuccessfulExposureCount(id, state.logs, outcomeForFood),
     recipeStates: () => clone(recipeStates()),
     recipeSuitableForMeal: (name, meal) => plannerRecipeSuitableForMeal(recipeByName(name), meal),
     plannerRole: (id) => plannerRole(food(id)),
@@ -920,6 +970,10 @@ if (typeof module !== "undefined" && module.exports) {
     applyFoodPolicyData,
     relatedFamilyFoodIds,
     familySuccessfulExposureCount,
+    allergenIntroductionTargetKey,
+    allergenIntroductionFoodIds,
+    allergenIntroductionSuccessfulExposureCount,
+    foodSpecificSuccessfulExposureCount,
     familyPlanningRank,
     pruneIneligibleAutomaticPlanState,
   };

@@ -191,6 +191,7 @@ try {
   );
   console.log(`[prep-render-profile] ${JSON.stringify({ totalMs: Number(prepRenderDurationMs.toFixed(1)), weekCacheHitBefore: await page.evaluate(() => window.__prepWeekCacheHitBefore), stages: await page.evaluate(() => window.__prepStageProfile) })}`);
   assert.equal(await page.locator("#prep > .prep-render-loading").count(), 0, "Nach dem Render darf der Ladehinweis nicht stehen bleiben");
+  const renderedPrepChildren = await page.locator("#prepNow > *").count();
   await page.evaluate(() => window.__restoreMeasuredRenderPrep?.());
   await page.evaluate(() => Object.entries(window.__prepStageOriginals || {}).forEach(([name, original]) => { window[name] = original; }));
 
@@ -210,20 +211,26 @@ try {
       renderPrep = originalRenderPrep;
       renderFoods = originalRenderFoods;
     };
+    const prepChildrenBefore = document.getElementById("prepNow")?.childElementCount || 0;
     document.querySelector('nav button[data-view="prep"]')?.click();
     document.querySelector('nav button[data-view="foods"]')?.click();
     return {
       active: document.getElementById("foods")?.classList.contains("active") || false,
+      prepChildrenBefore,
       prepChildren: document.getElementById("prepNow")?.childElementCount || 0,
       prepBusy: document.getElementById("prep")?.getAttribute("aria-busy"),
       prepLoadingCount: document.querySelectorAll("#prep > .prep-render-loading").length,
     };
   });
-  assert.deepEqual(
-    rapidTransition,
-    { active: true, prepChildren: 0, prepBusy: null, prepLoadingCount: 0 },
-    "Ein überholter Zwischentab darf weder sichtbar bleiben noch synchron gerendert werden",
+  assert.equal(rapidTransition.active, true, "Der letzte Zieltab muss sichtbar bleiben");
+  assert.equal(rapidTransition.prepChildrenBefore, renderedPrepChildren);
+  assert.equal(
+    rapidTransition.prepChildren,
+    rapidTransition.prepChildrenBefore,
+    "Ein überholter Zwischentab darf weder synchron gerendert noch geleert werden",
   );
+  assert.equal(rapidTransition.prepBusy, null);
+  assert.equal(rapidTransition.prepLoadingCount, 0);
   await page.waitForFunction(() =>
     (document.getElementById("foodList")?.childElementCount || 0) > 0 &&
     !document.getElementById("foods")?.hasAttribute("aria-busy"),
@@ -235,12 +242,12 @@ try {
   );
   await page.evaluate(() => window.__restoreRapidTabRenders?.());
   assert.ok(await page.locator("#foods.view.active").count(), "Lebensmittel muss nach Navigation aktiv sein");
-  assert.equal(await page.locator("#prepNow > *").count(), 0, "Lebensmittel-Navigation darf den versteckten Prep-Bereich nicht mitrendern");
+  assert.equal(await page.locator("#prepNow > *").count(), renderedPrepChildren, "Lebensmittel-Navigation darf den Prep-Inhalt nicht verändern");
 
   await page.locator('[data-catalog-mode="recipes"]').click();
   await page.waitForFunction(() => (document.getElementById("recipeList")?.childElementCount || 0) > 0);
   assert.ok(await page.locator("#recipesSection:not([hidden])").count(), "Der Rezeptkatalog muss nach dem Umschalten vollständig gerendert werden");
-  assert.equal(await page.locator("#prepNow > *").count(), 0, "Rezept-Navigation darf den versteckten Prep-Bereich nicht mitrendern");
+  assert.equal(await page.locator("#prepNow > *").count(), renderedPrepChildren, "Rezept-Navigation darf den Prep-Inhalt nicht verändern");
 
   await page.evaluate(() => {
     const list = document.getElementById("recipeList");
@@ -253,7 +260,7 @@ try {
   );
   assert.equal(
     await page.locator("#prepNow > *").count(),
-    0,
+    renderedPrepChildren,
     "Ein späterer Current-View-Render muss nur den sichtbaren Rezeptkatalog aktualisieren",
   );
 

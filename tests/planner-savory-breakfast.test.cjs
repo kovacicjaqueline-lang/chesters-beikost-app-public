@@ -9,7 +9,7 @@ const vm = require("node:vm");
 const root = path.resolve(__dirname, "..");
 const {
   PLANNER_SAVORY_BREAKFAST_FOOD_IDS,
-  plannerApplySavoryBreakfastMealAudit,
+  plannerEffectiveFoodMeals,
   plannerFoodMealEligible,
   plannerRecipeSuitableForMealCore,
 } = require("../js/planner-meal-eligibility.js");
@@ -35,7 +35,7 @@ function recipeHasBreakfastEligibleIngredients(recipe, foods) {
   return !choices.length || choices.some((name) => plannerFoodMealEligible(foodByName(foods, name), "breakfast"));
 }
 
-test("herzhafte Frühstücks-FOODs werden gezielt in FOOD.meals normalisiert", () => {
+test("herzhafte Frühstücks-FOODs werden gezielt für die FOOD.meals-Prüfung normalisiert", () => {
   const foods = loadGlobalConst("data/foods.js", "FOOD_DB");
   const expectedIds = ["tomate", "zucchini", "karotte", "kuerbis", "brokkoli"];
 
@@ -44,12 +44,13 @@ test("herzhafte Frühstücks-FOODs werden gezielt in FOOD.meals normalisiert", (
     [...expectedIds].sort(),
   );
 
-  plannerApplySavoryBreakfastMealAudit(foods);
-
   for (const id of expectedIds) {
     const item = foods.find((food) => food.id === id);
     assert.ok(item, `${id} muss im kanonischen FOOD-Bestand existieren`);
-    assert.ok(item.meals.includes("breakfast"), `${item.name} muss nach dem Audit frühstücksgeeignet sein`);
+    assert.ok(
+      plannerEffectiveFoodMeals(item).includes("breakfast"),
+      `${item.name} muss für die Mahlzeitenprüfung frühstücksgeeignet sein`,
+    );
     assert.equal(plannerFoodMealEligible(item, "breakfast"), true);
   }
 
@@ -62,12 +63,12 @@ test("herzhafte Frühstücks-FOODs werden gezielt in FOOD.meals normalisiert", (
   );
 });
 
-test("kuratierte Frühstücks-FOODs funktionieren auch aus einem unnormalisierten Snapshot", () => {
+test("kuratierte Frühstücks-FOODs funktionieren auch aus einem unnormalisierten Snapshot ohne State-Mutation", () => {
   const zucchini = { id: "zucchini", meals: ["lunch", "dinner"] };
   const karfiol = { id: "karfiol", meals: ["lunch", "dinner"] };
 
   assert.equal(plannerFoodMealEligible(zucchini, "breakfast"), true);
-  assert.deepEqual(zucchini.meals, ["lunch", "dinner", "breakfast"]);
+  assert.deepEqual(zucchini.meals, ["lunch", "dinner"]);
   assert.equal(plannerFoodMealEligible(karfiol, "breakfast"), false);
   assert.deepEqual(karfiol.meals, ["lunch", "dinner"]);
 });
@@ -75,7 +76,6 @@ test("kuratierte Frühstücks-FOODs funktionieren auch aus einem unnormalisierte
 test("vorhandene herzhafte Getreide-Rezepte werden als Frühstück nutzbar", () => {
   const foods = loadGlobalConst("data/foods.js", "FOOD_DB");
   const recipes = loadGlobalConst("data/recipes.js", "RECIPES");
-  plannerApplySavoryBreakfastMealAudit(foods);
 
   const savoryBreakfastRecipes = [
     "Gemüse-Hafer-Pancakes",

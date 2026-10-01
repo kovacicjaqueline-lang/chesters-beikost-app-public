@@ -86,6 +86,42 @@ try {
 
   const search = page.locator("#mealSelectorSearch");
   await search.click();
+  // Simuliere den verkleinerten sichtbaren Bereich, den die iPhone-Tastatur lässt.
+  await page.setViewportSize({ width: 390, height: 430 });
+  await page.waitForFunction(() => {
+    const sheet = document.querySelector("#genericModal .sheet");
+    return !!sheet && sheet.clientHeight < 430;
+  });
+  await search.fill("Nudeln");
+  const firstResultReady = await page.waitForFunction(() => {
+    const row = document.querySelector(".selector-results .selectFood:not([hidden])");
+    const actions = document.querySelector("#genericModal .sticky-form-actions");
+    const sheet = document.querySelector("#genericModal .sheet");
+    return !!row && !!actions && !!sheet && sheet.clientHeight < 430 &&
+      row.getBoundingClientRect().bottom <= actions.getBoundingClientRect().top + 1;
+  }, null, { timeout: 1500 }).then(() => true, () => false);
+  const firstVisibleResult = page.locator(".selector-results .selectFood:not([hidden])").first();
+  const firstResultBox = await firstVisibleResult.boundingBox();
+  const actionbarBox = await page.locator("#genericModal .sticky-form-actions").boundingBox();
+  const sheetMetrics = await page.locator("#genericModal .sheet").evaluate((element) => ({
+    scrollTop: element.scrollTop,
+    scrollHeight: element.scrollHeight,
+    clientHeight: element.clientHeight,
+    activeElement: document.activeElement?.id || document.activeElement?.tagName,
+  }));
+  const searchBox = await search.boundingBox();
+  assert.ok(firstResultBox && actionbarBox, "Treffer und Aktionsleiste müssen bei geöffneter Tastatur messbar sein");
+  assert.ok(
+    firstResultReady && firstResultBox.y + firstResultBox.height <= actionbarBox.y + 1,
+    "Erster Suchtreffer muss oberhalb der Aktionsleiste vollständig sichtbar sein: " + JSON.stringify({ firstResultReady, firstResultBox, actionbarBox, searchBox, sheetMetrics }),
+  );
+  const compactSheet = page.locator("#genericModal .sheet");
+  assert.ok(
+    await compactSheet.evaluate((element) => element.scrollHeight > element.clientHeight),
+    "Die Trefferliste muss im verkleinerten Tastatur-Viewport weiter scrollbar bleiben",
+  );
+  await page.setViewportSize({ width: 390, height: 844 });
+  await search.fill("");
   const originalInput = await search.elementHandle();
   assert.ok(originalInput, "Suchfeld muss vor der Eingabe existieren");
 

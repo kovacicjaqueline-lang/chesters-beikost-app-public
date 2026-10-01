@@ -901,7 +901,7 @@ function openAddMealMenu(date) {
 let manualMealSearchViewportAdjustmentInstalled = false;
 function keepFirstManualMealResultAboveActions() {
   let search = document.getElementById("mealSelectorSearch");
-  if (!search || document.activeElement !== search) return;
+  if (!search) return;
   let modal = document.getElementById("genericModal");
   let sheet = modal?.querySelector(".sheet");
   let firstResult = modal?.querySelector(".selector-results .selector-row:not([hidden])");

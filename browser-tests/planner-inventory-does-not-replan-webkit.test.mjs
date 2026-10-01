@@ -88,17 +88,19 @@ try {
 
   await page.locator('nav button[data-view="prep"]').click();
   await page.waitForFunction(() => document.getElementById("prep")?.classList.contains("active"));
-  await page.locator(".editInv").click();
+  await page.locator('#prep [data-prep-panel="stock"]').click();
+  await page.waitForFunction(() => document.getElementById("prepPanelStock")?.hidden === false);
+  await page.locator("#prepPanelStock .editInv").click();
   await page.locator("#invPortions").fill("2");
   await page.locator("#saveInv").click();
   assert.match(await page.locator("#blockPlan").innerText(), /Rind-Gemüse-Bolognese/);
   assert.equal(await page.locator("#blockPlan .recipe-stock-chip").count(), 1);
 
-  await page.locator(".useInv").click();
+  await page.locator("#prepPanelStock .useInv").click();
   assert.match(await page.locator("#blockPlan").innerText(), /Rind-Gemüse-Bolognese/);
   assert.equal(await page.locator("#blockPlan .recipe-stock-chip").count(), 1, "nach Verbrauch der ersten Portion bleibt die Mahlzeit gedeckt");
 
-  await page.locator(".deleteInv").click();
+  await page.locator("#prepPanelStock .deleteInv").click();
   assert.match(await page.locator("#blockPlan").innerText(), /Rind-Gemüse-Bolognese/);
   assert.equal(await page.locator("#blockPlan .recipe-stock-chip").count(), 0, "nach Löschen bleibt die Mahlzeit geplant und die Deckung entfällt");
 

@@ -252,8 +252,52 @@ try {
   assert.equal(await page.locator('[data-manual-preparation="pfirsich"]').isVisible(), false, "Pfirsich bleibt auch beim Wiederöffnen ohne Fake-Darreichung");
   await page.locator("#manualMealTargetDate").fill(dates.today);
   await page.locator("#manualMealTargetDate").dispatchEvent("change");
+  await page.evaluate(() => {
+    const events = [];
+    window.__manualMealSaveEvents = events;
+    const close = window.closeGeneric;
+    const show = window.showView;
+    const render = window.renderAll;
+    const raf = window.requestAnimationFrame.bind(window);
+    window.closeGeneric = function (...args) {
+      events.push("close");
+      return close.apply(this, args);
+    };
+    window.showView = function (view, ...args) {
+      events.push(`view:${view}`);
+      return show.call(this, view, ...args);
+    };
+    window.renderAll = function (...args) {
+      events.push("render");
+      return render.apply(this, args);
+    };
+    window.requestAnimationFrame = (callback) => raf((...args) => {
+      events.push("frame");
+      callback(...args);
+    });
+    window.__restoreManualMealSaveEvents = () => {
+      window.closeGeneric = close;
+      window.showView = show;
+      window.renderAll = render;
+      window.requestAnimationFrame = raf;
+    };
+  });
   await page.locator("#confirmManualMeal").click();
   await page.locator("#genericModal").waitFor({ state: "hidden" });
+  await page.waitForFunction(() => window.__manualMealSaveEvents?.includes("render"));
+  const saveEvents = await page.evaluate(() => {
+    const events = [...window.__manualMealSaveEvents];
+    window.__restoreManualMealSaveEvents();
+    return events;
+  });
+  const closeIndex = saveEvents.indexOf("close");
+  const planIndex = saveEvents.indexOf("view:plan");
+  const renderIndex = saveEvents.indexOf("render");
+  assert.ok(closeIndex >= 0 && planIndex > closeIndex, "Dialog schließt und Planansicht wird aktiviert, bevor die Gesamtrenderarbeit beginnt");
+  assert.ok(
+    saveEvents.some((event, index) => event === "frame" && index > planIndex && index < renderIndex),
+    "Gesamtrender läuft erst nach einer tatsächlichen Browser-Paint-Gelegenheit",
+  );
   await page.locator(`#blockPlan .removeManualMeal[data-date="${dates.today}"][data-meal="breakfast"]`).waitFor({ state: "attached" });
 
   savedState = await page.evaluate(() => window.__beikostTest.getState());

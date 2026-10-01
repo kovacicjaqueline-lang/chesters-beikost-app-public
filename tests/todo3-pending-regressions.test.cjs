@@ -16,7 +16,7 @@ const root = path.resolve(__dirname, '..');
  * - FOOD-COUNT -> tests/food-count-semantics.test.cjs
  * - SEASON-AUDIT -> tests/food-seasonmonths-at.test.cjs + tests/food-seasonmonths-runtime.test.cjs
  * - grundlegende Allergen-/Alias-Daten -> tests/food-intake-10.1.25.test.cjs
- * - UI-06 -> tests/ui06-completed-day-card-alignment.test.cjs
+ * - UI-06 -> browser-tests/completed-day-presentation-webkit.test.mjs
  */
 
 function source(file) {
@@ -138,26 +138,6 @@ test('TODO3 FOOD-ALLERGEN-PERSIST: kanonische und Custom-Allergengruppen bleiben
     merged.find((food) => food.id === 'custom-allergen-test')?.allergenGroup,
     'Sesam',
     'Custom-FOOD behält seine gespeicherte Allergengruppe',
-  );
-});
-
-test('TODO3 FOOD-ALLERGEN-UI: FOOD-Detail und Planner lesen dieselbe kanonische allergenGroup', () => {
-  const foodUiSource = source('js/foods.js');
-  const planningSource = source('js/planning.js');
-  assert.match(
-    foodUiSource,
-    /f\.allergenGroup\s*\?\s*` · Allergen: \$\{esc\(f\.allergenGroup\)\}`/,
-    'FOOD-Detail muss direkt allergenGroup rendern',
-  );
-
-  const dueStart = planningSource.indexOf('function dueAllergen');
-  assert.ok(dueStart >= 0, 'Planner muss dueAllergen definieren');
-  const nextFunction = planningSource.indexOf('\nfunction ', dueStart + 1);
-  const dueBody = planningSource.slice(dueStart, nextFunction >= 0 ? nextFunction : undefined);
-  assert.match(
-    dueBody,
-    /f\.allergenGroup/,
-    'Planner-Allergenlogik muss dasselbe allergenGroup-Feld verwenden',
   );
 });
 

@@ -6,8 +6,6 @@ const vm = require('node:vm');
 
 const root = path.resolve(__dirname, '..');
 const ui = fs.readFileSync(path.join(root, 'js/ui.js'), 'utf8');
-const css = fs.readFileSync(path.join(root, 'ui-meal-editor-footer.css'), 'utf8');
-const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
 const helperBlock = ui.match(
   /\/\* PLAN-TOOLBAR-SUMMARY START \*\/([\s\S]*?)\/\* PLAN-TOOLBAR-SUMMARY END \*\//,
@@ -106,27 +104,4 @@ test('Mengenorientierung wird für die kompakte Planbasis auf den Zahlenbereich 
   assert.equal(compactPlanAmountLabel('Kleine Portion (20–49 g)'), '20–49 g');
   assert.equal(compactPlanAmountLabel('Mahlzeit etabliert (ab 100 g)'), 'ab 100 g');
   assert.equal(compactPlanAmountLabel('Freie Angabe'), 'Freie Angabe');
-});
-
-test('Phase, Menge und Konsistenz liegen in der extern gestylten kompakten Planbasis', () => {
-  assert.match(ui, /plan-defaults-compact/);
-  assert.match(ui, /plan-defaults-line/);
-  assert.match(ui, /compactPlanAmountLabel\(amountLabel\)/);
-  assert.match(ui, /textureName\(\)/);
-  assert.match(css, /UI-08: Kompakter Plan-Kopf/);
-  assert.match(css, /#plan \.plan-defaults\.plan-defaults-compact/);
-});
-
-test('Inline-Monkey-Patch ist entfernt und Weitere Planaktionen bleibt geschlossen', () => {
-  assert.doesNotMatch(html, /planToolbarCompactStyles/);
-  assert.doesNotMatch(html, /renderPlanCoreCompactToolbar/);
-  assert.match(
-    html,
-    /<details class="plan-secondary-actions"><summary>Weitere Planaktionen<\/summary>/,
-  );
-  assert.doesNotMatch(html, /<details class="plan-secondary-actions"\s+open/);
-});
-
-test('renderPlanCore übergibt den bestehenden Completion-Check an die Lock-Zählung', () => {
-  assert.match(ui, /planLockSummaryCounts\(days, state\.planLocks \|\| \{\}, mealIsCompleted\)/);
 });

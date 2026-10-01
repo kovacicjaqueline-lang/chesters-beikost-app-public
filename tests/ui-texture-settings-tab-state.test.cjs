@@ -1,98 +1,12 @@
+"use strict";
+
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
 const root = path.resolve(__dirname, "..");
-const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
 
-function functionSource(source, name, nextName) {
-  const start = source.indexOf(`function ${name}(`);
-  const end = source.indexOf(`function ${nextName}(`, start + 1);
-  assert.ok(start >= 0 && end > start, `${name} muss im UI-Modul auffindbar sein`);
-  return source.slice(start, end);
-}
-
-test("UI: Konsistenzbezeichnungen liegen zentral in textureName", () => {
-  const source = read("js/ui.js");
-  const handling = read("js/handling-readiness.js");
-  const texture = functionSource(source, "textureName", "textureText");
-
-  assert.match(texture, /1: "glatt \/ fein"/);
-  assert.match(texture, /2: "dick \/ fein zerdrückt"/);
-  assert.match(texture, /3: "mit kleinen weichen Stückchen"/);
-  assert.match(texture, /4: "weiche Familienkost"/);
-  assert.doesNotMatch(texture, /Fingerfood/);
-  assert.doesNotMatch(texture, /dick püriert/);
-  assert.doesNotMatch(handling, /handlingAwareTextureName/);
-  assert.doesNotMatch(handling, /textureName\s*=\s*function/);
-});
-
-test("UI: vereinfachter Texture Coach nutzt keine Erfolgs-Schwelle und hält Fingerfood parallel", () => {
-  const handling = read("js/handling-readiness.js");
-  const coach = functionSource(
-    handling,
-    "renderSimplifiedTextureCoach",
-    "installTextureCoachRuntime",
-  );
-
-  assert.match(coach, /Nächster kleiner Schritt:/);
-  assert.match(coach, /Aktueller Fokus:/);
-  assert.match(coach, /Geeignetes weiches Fingerfood kann unabhängig von dieser Konsistenzstufe parallel angeboten werden/);
-  assert.doesNotMatch(coach, /textureSuccessCount/);
-  assert.doesNotMatch(coach, /successes\s*>=\s*4/);
-  assert.doesNotMatch(coach, /Test möglich/);
-});
-
-test("UI: Essfähigkeiten bleiben drei unabhängige beobachtete Controls", () => {
-  const handling = read("js/handling-readiness.js");
-  const settingsControl = functionSource(
-    handling,
-    "ensureFeedingApproachControl",
-    "textureCoachNextStep",
-  );
-
-  assert.match(settingsControl, /id="smallSoftPiecesCapability"/);
-  assert.match(settingsControl, /id="gradedBiteCapability"/);
-  assert.match(settingsControl, /id="structuredChewCapability"/);
-  assert.match(settingsControl, /Mein Kind kann bei einem weichen, aber formstabilen Stück gezielt einen passenden Bissen abtrennen\./);
-  assert.doesNotMatch(settingsControl, /halten oder abtrennen/);
-  assert.match(settingsControl, /Zähne sind keine Voraussetzung/);
-});
-
-test("UI: renderSettings übernimmt die zentralen Labels und beendet Sticky-Leerraum lokal", () => {
-  const source = read("js/ui.js");
-  const renderSettings = functionSource(source, "renderSettings", "renderAuditCore");
-
-  assert.match(renderSettings, /option\.textContent = `\$\{stage\} – \$\{textureName\(stage\)\}`/);
-  assert.match(renderSettings, /document\.getElementById\("settingsActionbar"\)/);
-  assert.match(renderSettings, /position: "static"/);
-  assert.match(renderSettings, /bottom: "auto"/);
-  assert.match(renderSettings, /background: "transparent"/);
-  assert.doesNotMatch(renderSettings, /safe-area-inset-bottom/);
-});
-
-test("UI: Haupttab-Wechsel behält Filter, Suchen und normale Accordions in der laufenden Sitzung", () => {
-  const source = read("js/ui.js");
-  const showView = functionSource(source, "showView", "existingFoodWithName");
-
-  assert.doesNotMatch(showView, /recipeFilter\s*=\s*"available"/);
-  assert.doesNotMatch(showView, /recipeQuery\s*=\s*""/);
-  assert.doesNotMatch(showView, /foodFilter\s*=\s*"open"/);
-  assert.doesNotMatch(showView, /logMonthFilter\s*=\s*"all"/);
-  assert.doesNotMatch(showView, /resetMoreTransientUi\(/);
-  assert.match(showView, /\.entry-chooser/);
-  assert.match(showView, /foodReorderMode = false/);
-  assert.doesNotMatch(
-    showView,
-    /renderFoods\(\)/,
-    "der ausgeblendete Lebensmittel-Tab wird beim Verlassen des Sortiermodus erst beim nächsten Öffnen neu gerendert",
-  );
-  assert.match(showView, /previous !== id[\s\S]*main\.scrollTop = 0/);
-});
-
-test("UI: kein nachgelagerter Session-Override wird mehr geladen", () => {
-  const html = read("index.html");
-  assert.doesNotMatch(html, /ui-session-state\.js/);
+test("entfernter Session-State-Override bleibt ein verbotener Legacy-Build-Bestandteil", () => {
   assert.equal(fs.existsSync(path.join(root, "js/ui-session-state.js")), false);
 });

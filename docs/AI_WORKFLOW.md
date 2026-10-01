@@ -62,6 +62,18 @@ Die verbindlichen Details stehen in `AGENTS.md`, `docs/FOOD_HANDLING_ORAL_PROCES
 
 `npm run verify` ist bewusst kein Standard nach jeder kleinen Änderung. Es ist der vollständige Gate, wenn der Scope mehrere Bereiche berührt oder ein Abschluss-/Releasecheck gebraucht wird.
 
+### Verhalten statt Implementierungstext
+
+Regressionen sollen beobachtbares Verhalten oder explizite Daten-/Build-Contracts absichern. Tests, die für eine Verhaltensaussage lediglich konkrete JavaScript-, HTML- oder CSS-Quelltextmuster per Regex/Stringsuche suchen, reichen nicht aus und sollen nicht neu eingeführt werden.
+
+- **UI-Sichtbarkeit und Interaktion:** Browser-/DOM-Tests prüfen, was tatsächlich sichtbar und bedienbar ist.
+- **Geschäftslogik:** direkt exportierte Funktionen oder tatsächlich ausgeführter Runtime-Code mit überprüften Ergebnissen.
+- **Seiteneffekte:** Harness, Spy oder Stub verwenden und Aufrufe/Zustandsänderungen beobachten.
+- **Statische Asset-, Versions- und Build-Contracts:** Source-Prüfungen sind zulässig, wenn genau dieser Inhalt der beabsichtigte Contract ist, z. B. Versionenkonsistenz, Precache-Inhalt oder verbotene Legacy-Assets.
+- **Architekturregeln:** nur als ausdrücklich benannte statische Regel; bei komplexeren Regeln AST-/Lint-Prüfungen einem fragilen Regex vorziehen.
+
+Regex oder Stringvergleiche auf HTML/Text, das eine ausgeführte Funktion erzeugt hat, sind Assertions über das Ergebnis und keine bloße Source-Prüfung. Bei Reviews auch neue und geänderte Tests auf das Source-Regex-Anti-Pattern prüfen. Bestehende Tests nicht pauschal wegen Regex-Einsatzes umbauen: zuerst Contract und tatsächlich getestetes Verhalten bestimmen.
+
 ### Testbefehle nach Prüfbedarf
 
 Die Testgruppen werden durch `scripts/test-manifest.mjs` bestimmt und bleiben bei unbekannten oder querschnittlichen Änderungen fail-closed. Die historischen Namen `test:unit` und `test:integration` sind dabei nur praktische, dateinamenbasierte Teilmengen für schnelle lokale Läufe; sie definieren **keine** architektonische Unit-/Integrationsgrenze. Für belastbare Abdeckung sind die fachlich betroffenen Tests und die unten genannten Gates maßgeblich, nicht diese beiden Labels.

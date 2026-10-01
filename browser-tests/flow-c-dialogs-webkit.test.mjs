@@ -38,6 +38,7 @@ try {
   await page.waitForFunction(() => document.getElementById("logForm")?.classList.contains("flow-dialog-body"));
   assert.equal(await page.locator("#logModal").evaluate((node) => node.classList.contains("flow-dialog")), true);
   assert.equal(await page.locator("#logTitle").textContent(), "Essen eintragen");
+  assert.doesNotMatch(await page.locator("#logForm").innerText(), /Kostprobe|Protokollieren/);
   assert.equal(await page.locator("#logMeal").count(), 1);
   assert.equal(await page.locator("#logMeal").inputValue(), "");
   assert.equal(await page.locator("#logForm .flow-dialog-actions").count(), 1);

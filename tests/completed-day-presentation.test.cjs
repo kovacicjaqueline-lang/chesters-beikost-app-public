@@ -1,8 +1,6 @@
 "use strict";
 
 const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const path = require("node:path");
 const test = require("node:test");
 
 const {
@@ -53,27 +51,5 @@ test("nur nicht angeboten gilt nicht als abgeschlossener Tag", () => {
   assert.deepEqual(
     plannerCompletedLogOnlyDayState({}, plannerCore(logs), date),
     { canCollapse: false, count: 1, completedCount: 0, grams: 0 },
-  );
-});
-
-test("Bearbeiten-Aktion wird im Plan in einer zentrierten Vollbreiten-Zeile platziert", () => {
-  const source = fs.readFileSync(
-    path.join(__dirname, "..", "js", "planner-meal-presentation.js"),
-    "utf8",
-  );
-  assert.match(source, /#blockPlan \.completed-edit-actions\s*\{[\s\S]*?justify-content:\s*center;/);
-  assert.match(source, /querySelectorAll\("\.mealbox\.completed \.completed-body-direct \.editCompletedLog"\)/);
-  assert.match(source, /actions\.className = "completed-edit-actions";/);
-  assert.match(source, /plannerCollapseFinishedLogOnlyDays\(\);\s*plannerCenterCompletedEditActions\(\);/);
-});
-
-test("eingeklappte erledigte Tage halten 8 px Abstand zwischen Titel und Protokollzahl", () => {
-  const source = fs.readFileSync(
-    path.join(__dirname, "..", "js", "planner-meal-presentation.js"),
-    "utf8",
-  );
-  assert.match(
-    source,
-    /#blockPlan \.completed-day-title \+ \.small\s*\{[\s\S]*?margin-left:\s*8px;/,
   );
 });

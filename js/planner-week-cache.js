@@ -90,6 +90,17 @@
     for (const day of refreshedDays) {
       for (const meal of day.meals || []) {
         if (meal?.active && !meal.empty) {
+          const recipeName = meal.recipeName;
+          if (
+            recipeName &&
+            !meal.recipeInventoryId &&
+            typeof globalScope.recipeInventoryPortions === "function" &&
+            typeof globalScope.oldestRecipeBatch === "function" &&
+            globalScope.recipeInventoryPortions(recipeName) >
+              (context.recipeReserved.get(recipeName) || 0)
+          ) {
+            meal.recipeInventoryId = globalScope.oldestRecipeBatch(recipeName)?.id || "";
+          }
           globalScope.reserveMealInventory(meal, context);
         }
       }

@@ -58,6 +58,8 @@ try {
     return date;
   });
 
+  await page.locator('nav button[data-view="plan"]').click();
+  await page.waitForFunction(() => document.getElementById("plan")?.classList.contains("active"));
   const lunchCard = page.locator(`#blockPlan .day-card`).filter({ hasText: "Rind-Gemüse-Bolognese" }).first();
   await lunchCard.waitFor();
   assert.match(await lunchCard.innerText(), /Rind-Gemüse-Bolognese/);

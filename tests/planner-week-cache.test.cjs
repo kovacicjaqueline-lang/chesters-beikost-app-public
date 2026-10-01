@@ -273,6 +273,9 @@ test("Vorratsänderungen behalten Mahlzeiten und aktualisieren nur die Reservier
       .filter((item) => item.kind === "recipe" && item.recipeName === name && item.portions > 0)
       .sort((a, b) => String(a.frozenDate || "").localeCompare(String(b.frozenDate || "")))[0] || null,
     reserveMealInventory: (meal, reservationContext) => {
+      if (meal.recipeName && !meal.recipeInventoryId) {
+        meal.recipeInventoryId = context.oldestRecipeBatch(meal.recipeName)?.id || "";
+      }
       if (meal.recipeInventoryId) {
         reservationContext.recipeReserved.set(
           meal.recipeName,

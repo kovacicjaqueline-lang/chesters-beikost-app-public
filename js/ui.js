@@ -1024,7 +1024,6 @@ function openManualMealSelector(date, meal, initialMeal = null) {
       ? `<div class="notice warn manual-role-warning"><b>So passt die Auswahl noch nicht</b><div>${validation.messages.map((message) => esc(manualLearningValidationText(message))).join("<br>")}</div></div>`
       : '<div class="notice olive manual-role-ok">Hauptbasis und Lernrolle werden getrennt gespeichert.</div>';
     let body = `<div class="meal-selector-tabs"><button id="selectorRecipes" class="${tab === "recipes" ? "active" : ""}">Rezepte</button><button id="selectorFoods" class="${tab === "foods" ? "active" : ""}">Lebensmittel</button></div>
-      ${warning}
       <div class="field"><label>Suchen</label><input id="mealSelectorSearch" value="${esc(query)}" placeholder="${tab === "recipes" ? "Rezept suchen" : "Lebensmittel suchen"}"></div>
       <div class="selector-results">
         ${
@@ -1056,6 +1055,7 @@ function openManualMealSelector(date, meal, initialMeal = null) {
               : '<div class="empty">Kein Lebensmittel gefunden.</div>'
         }
       </div>
+      ${warning}
       ${selectedRolesHtml(validation)}
       <div class="sticky-form-actions ds-actionbar"><button class="btn secondary" id="cancelManualMeal" type="button">Abbrechen</button><button class="btn" id="confirmManualMeal" ${((tab === "recipes" && !selectedRecipe) || !validation.ok) ? "disabled" : ""}>${isNewManualSlot ? "Mahlzeit hinzufügen" : "Änderungen speichern"}</button></div>`;
     openGeneric(isNewManualSlot ? `Mahlzeit hinzufügen · ${mealName(meal)}` : `Mahlzeit bearbeiten · ${mealName(meal)}`, body);

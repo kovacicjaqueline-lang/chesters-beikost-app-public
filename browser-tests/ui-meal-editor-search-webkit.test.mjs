@@ -95,7 +95,7 @@ try {
   assert.ok(firstResultBox && actionbarBox, "Treffer und Aktionsleiste müssen bei geöffneter Tastatur messbar sein");
   assert.ok(
     firstResultBox.y + firstResultBox.height <= actionbarBox.y + 1,
-    "Der erste Suchtreffer muss oberhalb der Aktionsleiste vollständig sichtbar bleiben, wenn die Tastatur den Viewport verkleinert",
+    "Erster Suchtreffer muss oberhalb der Aktionsleiste vollständig sichtbar sein: " + JSON.stringify({ firstResultBox, actionbarBox }),
   );
   const compactSheet = page.locator("#genericModal .sheet");
   assert.ok(

@@ -164,34 +164,7 @@ try {
     // Remove those render side effects so this assertion exercises a fresh week.
     state.planLocks = {};
     state.autoLockExcluded = {};
-    const emptySlotDiagnostics = [];
-    const originalBuildDay = window.buildDay;
-    window.buildDay = function traceEmptyPlannerSlots(date, index, ctx) {
-      const day = originalBuildDay.call(this, date, index, ctx);
-      for (const meal of day.meals || []) {
-        if (!meal.active || !meal.empty || !["breakfast", "lunch", "dinner"].includes(meal.meal)) continue;
-        const candidates = (state.foods || [])
-          .filter((record) => eligible(record, meal.meal, date) && canCombine(record))
-          .map((record) => ({
-            id: record.id,
-            category: record.category,
-            status: status(record),
-            trustedBase: isTrustedBase(record),
-            meals: [...(record.meals || [])],
-          }));
-        emptySlotDiagnostics.push({
-          date,
-          meal: meal.meal,
-          candidateCount: candidates.length,
-          candidates,
-          baseIds: candidates.filter((record) => record.trustedBase).map((record) => record.id),
-          planLockKeys: Object.keys(state.planLocks || {}).filter((key) => key.startsWith(`${date}|`)),
-        });
-      }
-      return day;
-    };
     const trustedDays = api.buildDays(on, 7);
-    window.buildDay = originalBuildDay;
     const trustedTrace = culinaryTrace.splice(0);
     if (typeof baseCulinaryAssessment === "function") {
       window.plannerCulinaryAssessment = baseCulinaryAssessment;
@@ -221,7 +194,6 @@ try {
       everydayTrace,
       trusted: compact(trustedDays),
       trustedTrace,
-      emptySlotDiagnostics,
     };
   });
 
@@ -232,7 +204,6 @@ try {
       everyday: diagnostics.everydayTrace.length,
       trusted: diagnostics.trustedTrace.length,
     },
-    emptySlotDiagnostics: diagnostics.emptySlotDiagnostics,
   })}`);
 
   const trustedVisible = diagnostics.trusted.flatMap((day) => day.meals)

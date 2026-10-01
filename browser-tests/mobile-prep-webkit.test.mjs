@@ -130,7 +130,7 @@ try {
 
   assert.ok(await page.locator("#prepToday .prep-task-mobile").count() >= 1, "Heute fällige Vorbereitung wird als kompakte Aufgabe gezeigt");
   assert.ok(await page.locator("#prepTomorrow .prep-task-mobile").count() >= 1, "Morgen fällige Vorbereitung wird getrennt gezeigt");
-  const suggestedStock = page.locator("#prepNow .addSuggestedStock").first();
+  const suggestedStock = page.locator("#prepToday .addSuggestedStock, #prepTomorrow .addSuggestedStock").first();
   await suggestedStock.waitFor();
   await suggestedStock.click();
   await page.locator("#genericModal.open").waitFor();

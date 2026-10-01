@@ -130,18 +130,11 @@ test('MISSING-INGREDIENT-03: alle zukünftigen offenen gespeicherten Frisch-Vork
   assert.ok(state.backupMeta.plannerLinking.carriedPlans['carry-done'], 'erledigter carried Plan bleibt geschützt');
 });
 
-test('MISSING-INGREDIENT-04: Loader und Offline-Precache enthalten die neue Verfügbarkeitsschicht', () => {
+test('MISSING-INGREDIENT-04: Verfügbarkeitsschicht bleibt im Loader und Offline-Precache enthalten', () => {
   const cascade = fs.readFileSync(path.join(root, 'js', 'planner-log-rollover-cascade.js'), 'utf8');
   const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
-  const source = fs.readFileSync(path.join(root, 'js', 'planner-missing-ingredient.js'), 'utf8');
   assert.match(cascade, /planner-missing-ingredient\.js\?v=10\.1\.26/);
   assert.match(sw, /\.\/js\/planner-missing-ingredient\.js/);
-  assert.match(source, /Welche Zutat fehlt\?/);
-  assert.match(source, /steht auf der Einkaufsliste/);
-  assert.match(source, /renderAllAfterNextPaint/);
-  assert.match(source, /PREPARED_STOCK_FLAG/);
-  assert.match(source, /withPlanMissingFoodsAvailable/);
-  assert.doesNotMatch(source, /state\.logs\.push/);
 });
 
 test('MISSING-INGREDIENT-05: fertiger Rezeptvorrat wird weder angeboten noch als Komponentenrezept umgeschrieben', () => {

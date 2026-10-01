@@ -95,6 +95,28 @@
     let swap = globalScope.__plannerRandomSwap;
     if (!swap?.randomizePlannedMeal || !targets?.length) return { changed: 0, attempted: 0 };
 
+    let initialDays = typeof planDisplayDays === "function"
+      ? planDisplayDays(from, 7)
+      : buildDays(from, 7, false);
+    let identities = new Map();
+    for (let day of initialDays || []) {
+      for (let meal of day.meals || []) {
+        let identity = plannerMealIdentity(meal);
+        if (!identity) continue;
+        let key = `${day.date}|${meal.meal}`;
+        let keys = identities.get(identity) || [];
+        keys.push(key);
+        identities.set(identity, keys);
+      }
+    }
+    let duplicateTargets = new Set(
+      [...identities.values()]
+        .filter((keys) => keys.length > 1)
+        .flat(),
+    );
+    targets = targets.filter((target) => duplicateTargets.has(`${target.date}|${target.meal}`));
+    if (!targets.length) return { changed: 0, attempted: 0 };
+
     let changedKeys = new Set();
     let attempted = 0;
     let previousRenderAll = typeof renderAll === "function" ? renderAll : null;
@@ -126,6 +148,26 @@
 
     return { changed: changedKeys.size, attempted };
   }
+
+  let runtimeCache = null;
+  function runWeekReplanWithDiversification(rebuild, args = []) {
+    if (typeof rebuild !== "function") return undefined;
+    let from = state.settings?.planFrom || today();
+    let beforeDays = typeof planDisplayDays === "function"
+      ? planDisplayDays(from, 7)
+      : buildDays(from, 7, false);
+    let targets = collectWeekReplanTargets(
+      state,
+      beforeDays,
+      (date, meal) => mealIsCompleted(date, meal),
+      args[0] === true,
+      today(),
+    );
+    let result = rebuild(...args);
+    diversifyRebuiltWeek(targets, from);
+    return result;
+  }
+  globalScope.__plannerWeekReplanWithDiversification = runWeekReplanWithDiversification;
 
   const NON_PLANNER_SETTING_KEYS = new Set([
     "phaseReadinessSignalsByPhase",
@@ -225,7 +267,7 @@
   if (typeof window === "undefined" || typeof document === "undefined") return;
 
   if (!globalScope.__dayPlanRuntimeCache && typeof buildDays === "function") {
-    let runtimeCache = createDayPlanRuntimeCache(
+    runtimeCache = createDayPlanRuntimeCache(
       buildDays,
       () => dayPlanRuntimePlannerInput(state),
       () => today(),
@@ -242,24 +284,12 @@
       };
       let baseRebuildVisiblePlan = rebuildVisiblePlan;
       rebuildVisiblePlan = function cacheAwareRebuildVisiblePlan(...args) {
-        runtimeCache.invalidate();
-        let from = state.settings?.planFrom || today();
-        let releaseManualLocks = args[0] === true;
-        let beforeDays = typeof planDisplayDays === "function"
-          ? planDisplayDays(from, 7)
-          : buildDays(from, 7, false);
-        let targets = collectWeekReplanTargets(
-          state,
-          beforeDays,
-          (date, meal) => mealIsCompleted(date, meal),
-          releaseManualLocks,
-          today(),
+        return runWeekReplanWithDiversification(
+          (...nextArgs) => baseRebuildVisiblePlan.apply(this, nextArgs),
+          args,
         );
-        let result = baseRebuildVisiblePlan.apply(this, args);
-        runtimeCache.invalidate();
-        diversifyRebuiltWeek(targets, from);
-        return result;
       };
+      globalScope.rebuildVisiblePlan = rebuildVisiblePlan;
     }
   }
 

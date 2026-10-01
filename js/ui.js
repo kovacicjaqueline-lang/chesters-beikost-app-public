@@ -916,6 +916,9 @@ function installManualMealSearchViewportAdjustment() {
   document.addEventListener("focusin", (event) => {
     if (event.target?.id === "mealSelectorSearch") scheduleAdjustment();
   });
+  document.addEventListener("input", (event) => {
+    if (event.target?.id === "mealSelectorSearch") scheduleAdjustment();
+  }, true);
   window.addEventListener("resize", scheduleAdjustment, { passive: true });
   window.visualViewport?.addEventListener("resize", scheduleAdjustment, { passive: true });
   manualMealSearchViewportAdjustmentInstalled = true;

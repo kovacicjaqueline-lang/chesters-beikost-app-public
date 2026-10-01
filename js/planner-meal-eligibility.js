@@ -2,8 +2,8 @@
 
 /* Zentrale automatische FOOD- und Rezept-Mahlzeiteneignung für Planner/App.
  * FOOD.meals ist für Frühstück, Mittag und Abend eine harte Eingangsvoraussetzung.
- * Fachlich freigegebene herzhafte Frühstücks-FOODs werden vor der Prüfung einmalig
- * in dieses bestehende meals-Modell normalisiert; es entsteht kein zweiter Bypass-Gate.
+ * Fachlich freigegebene herzhafte Frühstücks-FOODs werden für diese Prüfung
+ * effektiv um breakfast ergänzt, ohne den Planner-State während der Planung zu mutieren.
  * Snack bleibt bewusst rezeptgetrieben und erhält kein neues allgemeines FOOD-snack-Feld.
  * autoPlan, Verfügbarkeit, Mindestphase und Mindestalter werden hier zentral gehalten,
  * damit App- und Planner-Pfad dieselbe Regelquelle verwenden.
@@ -28,23 +28,13 @@ const PLANNER_FOOD_PHASE_ORDER = Object.freeze([
   "familie",
 ]);
 
-function plannerApplySavoryBreakfastMealAudit(foods = []) {
-  if (!Array.isArray(foods)) return foods;
-  for (let item of foods) {
-    if (!item || !PLANNER_SAVORY_BREAKFAST_FOOD_IDS.has(item.id)) continue;
-    let meals = Array.isArray(item.meals) ? item.meals : [];
-    if (!meals.includes("breakfast")) item.meals = [...meals, "breakfast"];
-  }
-  return foods;
-}
-
-function plannerApplySavoryBreakfastMealAuditRuntime() {
-  if (typeof FOOD_DB !== "undefined" && Array.isArray(FOOD_DB)) {
-    plannerApplySavoryBreakfastMealAudit(FOOD_DB);
-  }
-  if (typeof state !== "undefined" && Array.isArray(state?.foods)) {
-    plannerApplySavoryBreakfastMealAudit(state.foods);
-  }
+function plannerEffectiveFoodMeals(foodRecord) {
+  let meals = Array.isArray(foodRecord?.meals) ? foodRecord.meals : [];
+  if (
+    PLANNER_SAVORY_BREAKFAST_FOOD_IDS.has(foodRecord?.id) &&
+    !meals.includes("breakfast")
+  ) return [...meals, "breakfast"];
+  return meals;
 }
 
 function plannerFoodMonthsOld(on, birthDate) {
@@ -104,7 +94,6 @@ function plannerAutomaticFoodEligibilityRuntime(foodRecord, on, settings = {}) {
 
 function installPlannerAutomaticFoodEligibilityRuntime() {
   if (typeof globalThis === "undefined") return false;
-  plannerApplySavoryBreakfastMealAuditRuntime();
   globalThis.automaticFoodEligibility = plannerAutomaticFoodEligibilityRuntime;
   globalThis.__plannerAutomaticFoodEligibilityCoreInstalled = true;
   return true;
@@ -113,8 +102,7 @@ function installPlannerAutomaticFoodEligibilityRuntime() {
 function plannerFoodMealEligible(foodRecord, meal) {
   if (!foodRecord) return false;
   if (!PLANNER_MEAL_ELIGIBILITY_MAIN_MEALS.has(meal)) return true;
-  plannerApplySavoryBreakfastMealAudit([foodRecord]);
-  return Array.isArray(foodRecord.meals) && foodRecord.meals.includes(meal);
+  return plannerEffectiveFoodMeals(foodRecord).includes(meal);
 }
 
 function plannerAutomaticFoodMealEligible(
@@ -281,7 +269,6 @@ function installPlannerMealEligibilityRuntime() {
 
   let withMealEligibleFoods = (meal, on, includeIds, callback) => {
     if (!state?.foods) return callback();
-    plannerApplySavoryBreakfastMealAudit(state.foods);
     let originalFoods = state.foods;
     let keep = new Set(includeIds || []);
     state.foods = originalFoods.filter(
@@ -380,7 +367,6 @@ function installPlannerMealEligibilityRuntime() {
   };
 
   if (typeof state !== "undefined" && state) {
-    plannerApplySavoryBreakfastMealAudit(state.foods);
     let changed = pruneIneligibleAutomaticPlanState(state);
     if (changed) {
       if (typeof save === "function") save();
@@ -402,7 +388,7 @@ if (typeof module !== "undefined" && module.exports) {
     PLANNER_MEAL_ELIGIBILITY_MAIN_MEALS,
     PLANNER_SAVORY_BREAKFAST_FOOD_IDS,
     PLANNER_FOOD_PHASE_ORDER,
-    plannerApplySavoryBreakfastMealAudit,
+    plannerEffectiveFoodMeals,
     plannerFoodMonthsOld,
     plannerAutomaticFoodEligibilityCore,
     plannerAutomaticFoodEligibilityRuntime,

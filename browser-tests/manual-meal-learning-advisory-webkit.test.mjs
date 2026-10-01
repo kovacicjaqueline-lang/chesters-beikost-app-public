@@ -59,6 +59,10 @@ try {
     return ids.includes("bangus-milkfish") && ids.includes("reis");
   });
 
+  const repetition = page.locator(".manual-role-group.sample .manual-role-item").filter({ hasText: "Reis" });
+  await repetition.waitFor();
+  assert.match(await repetition.innerText(), /Wiederholung/, "Probiert muss im Editor als Wiederholung erscheinen");
+
   assert.equal(
     await page.locator(".manual-role-advisory").count(),
     0,

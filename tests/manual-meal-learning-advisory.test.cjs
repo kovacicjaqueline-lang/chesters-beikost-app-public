@@ -115,12 +115,3 @@ test("nach Entfernen des Lernblockers läuft die nachgelagerte Strukturprüfung 
   assert.deepEqual(result.messages, ["Komponentenformen brauchen außerhalb eines Rezepts eine geeignete Hauptbasis: Tahin."]);
   assert.equal(result.advisories.length, 1);
 });
-
-test("Editor wandelt den grünen Zustand bei mehreren offenen Lernlebensmitteln in einen Hinweis um", () => {
-  assert.match(runtimeSource, /\.manual-role-group\.sample \.removeManualSelected\[data-food\]/);
-  assert.match(runtimeSource, /status\(item\) === "Offen"/);
-  assert.match(runtimeSource, /Hinweis zur Einführung/);
-  assert.match(runtimeSource, /notice olive manual-role-advisory/);
-  assert.match(runtimeSource, /manualMealValidation = function manualFlowManualMealValidation/);
-  assert.match(runtimeSource, /plannerManualComponentBaseViolation\(/);
-});

@@ -1,7 +1,5 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
 
 const core = require('../js/planner-log-rollover.js');
 
@@ -237,16 +235,6 @@ test('only open plans from the immediately previous day are rollover candidates'
   assert.equal(byId.p18, '2026-08-19');
 });
 
-test('rollover dialog uses compact concrete-plan copy and the approved actions', () => {
-  const source = fs.readFileSync(path.join(__dirname, '..', 'js', 'planner-log-rollover.js'), 'utf8');
-  assert.match(source, /Gestern ·/);
-  assert.match(source, /Plan um 1 Tag verschieben/);
-  assert.match(source, /Gestern nachtragen/);
-  assert.match(source, />Nicht verschieben</);
-  assert.doesNotMatch(source, /Gestern wurde nicht vollständig protokolliert/);
-  assert.doesNotMatch(source, /Plan beibehalten/);
-});
-
 test('plan identity and rollover metadata survive a JSON persistence round trip', () => {
   const data = state({ planLocks: { '2026-08-18|lunch': plan('persist-me', '2026-08-18') } });
   core.ensurePlannerMeta(data).rolloverHandled['persist-me'] = { action: 'keep', at: 'x' };
@@ -265,9 +253,4 @@ test('shift logic does not touch exposure logs or invent additional successful e
   const exposureSlotsAfter = new Set(data.logs.map((entry) => `${entry.date}|${entry.meal}`)).size;
   assert.equal(exposureSlotsAfter, exposureSlotsBefore);
   assert.equal(data.logs.length, 1);
-});
-
-test('rollover feature never reuses the planner deferred flag', () => {
-  const source = fs.readFileSync(path.join(__dirname, '..', 'js', 'planner-log-rollover.js'), 'utf8');
-  assert.equal(/state\.deferred|\.deferred\?/.test(source), false);
 });

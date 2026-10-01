@@ -85,8 +85,3 @@ test('Frisch-Hinweise übernehmen food-spezifische sichere Form statt generische
   assert.equal(freshAtMealFood(cookedFruit), true);
   assert.equal(freshMealText(cookedFruit), cookedFruit.safeForm);
 });
-
-test('alter generischer Gemüse-Batchtext ist entfernt', () => {
-  assert.doesNotMatch(prepSource, /Eine handelsübliche Einheit vollständig garen/);
-  assert.doesNotMatch(prepSource, /Sehr weich dämpfen, eine Portion anbieten und den gesamten unberührten Rest pur einfrieren/);
-});

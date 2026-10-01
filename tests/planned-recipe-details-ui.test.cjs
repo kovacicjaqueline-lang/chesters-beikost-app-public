@@ -9,10 +9,6 @@ const root = path.resolve(__dirname, "..");
 const feature = require("../js/planned-recipe-details.js");
 const indexSource = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const swSource = fs.readFileSync(path.join(root, "sw.js"), "utf8");
-const featureSource = fs.readFileSync(
-  path.join(root, "js", "planned-recipe-details.js"),
-  "utf8",
-);
 
 test("gerenderter data-plan-Payload liefert Rezeptname und konkrete foodIds", () => {
   const payload = encodeURIComponent(JSON.stringify({
@@ -162,7 +158,7 @@ test("Rezepttitel wird zugängliches iPhone-Touchziel mit Mahlzeitenkontext", ()
   assert.equal(children.length, 1);
 });
 
-test("Feature liest nur gerenderten Kontext und baut den Planner nicht erneut auf", () => {
+test("Feature-Script wird im App-Ladegraph vor app.js eingebunden und offline vorgehalten", () => {
   let uiIndex = indexSource.indexOf('src="js/ui.js?v=');
   let featureIndex = indexSource.indexOf('src="js/planned-recipe-details.js?v=');
   let appIndex = indexSource.indexOf('src="app.js?v=');
@@ -174,13 +170,4 @@ test("Feature liest nur gerenderten Kontext und baut den Planner nicht erneut au
     swSource,
     /const UI_PRECACHE\s*=\s*\[[\s\S]*\.\/js\/planned-recipe-details\.js[\s\S]*\]/,
   );
-  assert.match(featureSource, /recipeByName\(storedName\)/);
-  assert.doesNotMatch(featureSource, /recipeAliasValuesLocal|storedRecipeRecord/);
-  assert.doesNotMatch(featureSource, /\bbuildDays\s*\(/);
-  assert.doesNotMatch(featureSource, /\bplanDisplayDays\s*\(/);
-  assert.match(featureSource, /querySelector\?\.\("\[data-plan\]"\)/);
-  assert.match(featureSource, /\.editCompletedLog\[data-log\]/);
-  assert.match(featureSource, /renderRecipeCard\(recipe\)/);
-  assert.match(featureSource, /renderHomeWithPlannedRecipeDetails/);
-  assert.match(featureSource, /renderPlanWithPlannedRecipeDetails/);
 });

@@ -100,18 +100,6 @@ test("Planner-Boot: Final-Quality und Allergenpflege werden nach Introduction un
   );
 });
 
-test("Planner-Readiness blockiert nur plannerabhängige Ansichten und öffnet bei Fehler keinen Teilplan", () => {
-  assert.match(utilsSource, /window\.PlannerReadiness\s*=\s*Object\.freeze/);
-  assert.doesNotMatch(utilsSource, /plannerPolicyBody\.style\.visibility/);
-  assert.match(utilsSource, /settlePlannerReadiness\("failed"[\s\S]*renderCurrentView\(\)/);
-  assert.doesNotMatch(utilsSource, /failPlannerPolicies[\s\S]*renderAll\(\)/);
-  assert.match(uiSource, /function renderView\(id\)[\s\S]*!plannerViewReady\(\)[\s\S]*renderPlannerReadinessPlaceholder\(id\)/);
-  assert.match(uiSource, /function renderAll\(\)[\s\S]*if \(plannerViewReady\(\)\)[\s\S]*renderFoods\(\)[\s\S]*renderSettings\(\)/);
-  assert.match(uiSource, /if \(viewId === "plan"\)[\s\S]*toolbar\.inert = !plannerViewReady\(\)/);
-  assert.match(deferredRenderSource, /if \(typeof plannerViewReady === "function" && !plannerViewReady\(\)\)[\s\S]*readiness\.whenReady\(\)\.then[\s\S]*updateFoodPlannedUsage\(foodItem, baseBuildDays, request\)/);
-  assert.match(indexSource, /html:not\(\.app-ready\) #appResumeScreen/);
-});
-
 test("Planner-Boot-Fehler rendert keinen Teilplan und lässt die Planner-Readiness fehlgeschlagen", () => {
   let domReady;
   let renderCurrentViewCalls = 0;

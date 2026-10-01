@@ -52,7 +52,12 @@ try {
         ],
       };
     };
-    window.buildDays = (from, count = 7) => Array.from({ length: count }, (_, index) => chooseMeal(window.__beikostTest.addDays(from, index), index));
+    window.buildDays = (from, count = 7) => Array.from({ length: count }, (_, index) => {
+      const on = window.__beikostTest.addDays(from, index);
+      return on === date
+        ? chooseMeal(on, index)
+        : { date: on, index, introDue: false, introAssigned: false, meals: [] };
+    });
     window.__plannerWeekCache.clear();
     window.renderPlan();
     return date;

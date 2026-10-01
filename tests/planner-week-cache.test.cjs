@@ -266,11 +266,19 @@ test("Vorratsänderungen behalten Mahlzeiten und aktualisieren nur die Reservier
       return [{ date: from, meals: [{ meal: "lunch", active: true, recipeName: stocked ? "Rezept B" : "Rezept A", recipeInventoryId: "", inventoryFoodIds: [] }] }];
     },
     planDisplayDays: (from, count) => context.buildDays(from, count),
+    recipeInventoryPortions: (name) => context.state.inventory
+      .filter((item) => item.kind === "recipe" && item.recipeName === name && item.portions > 0)
+      .reduce((sum, item) => sum + item.portions, 0),
+    oldestRecipeBatch: (name) => context.state.inventory
+      .filter((item) => item.kind === "recipe" && item.recipeName === name && item.portions > 0)
+      .sort((a, b) => String(a.frozenDate || "").localeCompare(String(b.frozenDate || "")))[0] || null,
     reserveMealInventory: (meal, reservationContext) => {
-      if (meal.recipeName !== "Rezept A") return meal;
-      const batch = context.state.inventory.find((item) => item.recipeName === meal.recipeName && item.portions > 0);
-      meal.recipeInventoryId = batch?.id || "";
-      if (batch) reservationContext.recipeReserved.set(meal.recipeName, 1);
+      if (meal.recipeInventoryId) {
+        reservationContext.recipeReserved.set(
+          meal.recipeName,
+          (reservationContext.recipeReserved.get(meal.recipeName) || 0) + 1,
+        );
+      }
       return meal;
     },
     save: () => {},
@@ -286,7 +294,7 @@ test("Vorratsänderungen behalten Mahlzeiten und aktualisieren nur die Reservier
   assert.equal(initial.recipeName, "Rezept A");
   assert.equal(builds, 1);
 
-  context.state.inventory.push({ id: "batch-a", recipeName: "Rezept A", portions: 2 });
+  context.state.inventory.push({ id: "batch-a", kind: "recipe", recipeName: "Rezept A", portions: 2 });
   context.save({ preservePlanCache: true });
   const stocked = context.planDisplayDays("2026-09-20", 1)[0].meals[0];
   assert.equal(stocked.recipeName, "Rezept A");
@@ -302,7 +310,7 @@ test("Vorratsänderungen behalten Mahlzeiten und aktualisieren nur die Reservier
   assert.equal(context.__plannerWeekCache.readOnly("2026-09-20", 1)[0].meals[0].recipeInventoryId, "");
   assert.equal(builds, 1);
 
-  context.state.inventory.push({ id: "batch-a-again", recipeName: "Rezept A", portions: 1 });
+  context.state.inventory.push({ id: "batch-a-again", kind: "recipe", recipeName: "Rezept A", portions: 1 });
   context.save({ preservePlanCache: true });
   context.state.inventory[0].portions -= 1;
   context.save({ preservePlanCache: true });
@@ -311,7 +319,7 @@ test("Vorratsänderungen behalten Mahlzeiten und aktualisieren nur die Reservier
   assert.equal(consumed.recipeInventoryId, "");
   assert.equal(builds, 1, "−1 aktualisiert die Deckung ohne Neuberechnung");
 
-  context.state.inventory.push({ id: "batch-a-replan", recipeName: "Rezept A", portions: 1 });
+  context.state.inventory.push({ id: "batch-a-replan", kind: "recipe", recipeName: "Rezept A", portions: 1 });
   context.save();
   const replanned = context.planDisplayDays("2026-09-20", 1)[0].meals[0];
   assert.equal(replanned.recipeName, "Rezept B", "ein normaler Planner-Save darf die Auswahl neu berechnen");

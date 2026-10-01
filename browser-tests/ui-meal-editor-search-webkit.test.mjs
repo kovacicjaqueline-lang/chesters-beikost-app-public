@@ -89,12 +89,17 @@ try {
   // Simuliere den verkleinerten sichtbaren Bereich, den die iPhone-Tastatur lässt.
   await page.setViewportSize({ width: 390, height: 430 });
   await search.fill("Nudeln");
+  const firstResultReady = await page.waitForFunction(() => {
+    const row = document.querySelector(".selector-results .selectFood:not([hidden])");
+    const actions = document.querySelector("#genericModal .sticky-form-actions");
+    return !!row && !!actions && row.getBoundingClientRect().bottom <= actions.getBoundingClientRect().top + 1;
+  }, null, { timeout: 1500 }).then(() => true, () => false);
   const firstVisibleResult = page.locator(".selector-results .selectFood:not([hidden])").first();
   const firstResultBox = await firstVisibleResult.boundingBox();
   const actionbarBox = await page.locator("#genericModal .sticky-form-actions").boundingBox();
   assert.ok(firstResultBox && actionbarBox, "Treffer und Aktionsleiste müssen bei geöffneter Tastatur messbar sein");
   assert.ok(
-    firstResultBox.y + firstResultBox.height <= actionbarBox.y + 1,
+    firstResultReady && firstResultBox.y + firstResultBox.height <= actionbarBox.y + 1,
     "Erster Suchtreffer muss oberhalb der Aktionsleiste vollständig sichtbar sein: " + JSON.stringify({ firstResultBox, actionbarBox }),
   );
   const compactSheet = page.locator("#genericModal .sheet");

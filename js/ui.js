@@ -898,7 +898,30 @@ function openAddMealMenu(date) {
       (button.onclick = () => openManualMealSelector(date, button.dataset.meal)),
   );
 }
+let manualMealSearchViewportAdjustmentInstalled = false;
+function keepFirstManualMealResultAboveActions() {
+  let search = document.getElementById("mealSelectorSearch");
+  if (!search || document.activeElement !== search) return;
+  let modal = document.getElementById("genericModal");
+  let sheet = modal?.querySelector(".sheet");
+  let firstResult = modal?.querySelector(".selector-results .selector-row:not([hidden])");
+  let actions = modal?.querySelector(".sticky-form-actions");
+  if (!sheet || !firstResult || !actions) return;
+  let overlap = firstResult.getBoundingClientRect().bottom - actions.getBoundingClientRect().top;
+  if (overlap > 0) sheet.scrollTop += overlap + 8;
+}
+function installManualMealSearchViewportAdjustment() {
+  if (manualMealSearchViewportAdjustmentInstalled) return;
+  let scheduleAdjustment = () => window.requestAnimationFrame(keepFirstManualMealResultAboveActions);
+  document.addEventListener("focusin", (event) => {
+    if (event.target?.id === "mealSelectorSearch") scheduleAdjustment();
+  });
+  window.addEventListener("resize", scheduleAdjustment, { passive: true });
+  window.visualViewport?.addEventListener("resize", scheduleAdjustment, { passive: true });
+  manualMealSearchViewportAdjustmentInstalled = true;
+}
 function openManualMealSelector(date, meal, initialMeal = null) {
+  installManualMealSearchViewportAdjustment();
   let key = manualMealKey(date, meal);
   let storedManual = state.manualMeals?.[key] || null;
   let existing = storedManual || initialMeal || null;

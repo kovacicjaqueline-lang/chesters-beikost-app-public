@@ -414,7 +414,13 @@ function installPlannerRecipeFirstPrepRuntime() {
     let from = state?.settings?.planFrom || today();
     if (from < today()) from = today();
     let entries = plannerRecipeFirstFreshMeals(
-      buildDays(from, 7),
+      typeof viewRenderPlanDays === "function"
+        ? viewRenderPlanDays(from, 7)
+        : typeof planDisplayDays === "function"
+          ? planDisplayDays(from, 7)
+          : typeof viewRenderBuildDays === "function"
+            ? viewRenderBuildDays(from, 7)
+            : buildDays(from, 7),
       typeof mealIsCompleted === "function" ? mealIsCompleted : null,
     );
     if (!entries.length) return;

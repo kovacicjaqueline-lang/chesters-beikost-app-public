@@ -49,6 +49,10 @@ try {
 
   await page.evaluate(() => window.showView("plan"));
   await waitForView(page, "plan");
+  await page.waitForFunction(() =>
+    document.querySelectorAll("#planWeekOverview .plan-week-day").length === 7 &&
+    !document.getElementById("plan")?.hasAttribute("aria-busy"),
+  );
   const planProfile = await page.evaluate(() => {
     window.__targetedActionRenderProbe.full = 0;
     window.__targetedActionRenderProbe.current = 0;

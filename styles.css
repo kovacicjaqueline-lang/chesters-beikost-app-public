@@ -13,6 +13,7 @@
 .completed-details{margin:7px 0 0 39px}
 .completed-details summary{font-size:13px;color:var(--accent);font-weight:750;cursor:pointer}
 .completed-body{margin-top:7px;padding:9px 10px;border-radius:12px;background:#f7f1e8}
+#prep[aria-busy="true"] > :not(.prep-render-loading),body.mobile-foundation #prep[aria-busy="true"] > :not(.prep-render-loading){display:none}
 .day-complete{background:var(--okbg);color:#3b5940}
 .completed-day{padding:0;overflow:hidden}
 .completed-day>summary{list-style:none;display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:9px;align-items:center;padding:12px 14px;cursor:pointer}

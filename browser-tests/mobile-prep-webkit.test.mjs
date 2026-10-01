@@ -167,6 +167,13 @@ try {
   assert.equal(await page.locator('#catalogSwitch [data-catalog-mode="recipes"]').getAttribute("aria-pressed"), "true", "Prep-Rezeptaktion führt weiterhin direkt in den Rezeptkatalog");
 
   await page.locator('nav button[data-view="prep"]').click();
+  await page.waitForFunction(() => {
+    const prep = document.getElementById("prep");
+    return prep?.classList.contains("active") &&
+      !prep.hasAttribute("aria-busy") &&
+      !prep.querySelector(":scope > .prep-render-loading") &&
+      prep.querySelector("#prepToday .prep-task-mobile");
+  });
   const stickyPosition = await page.evaluate(async () => {
     const main = document.querySelector("main");
     const segments = document.querySelector("#prep .prep-segments");

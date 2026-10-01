@@ -18,16 +18,21 @@ function createHarness({ withAnimationFrame = true } = {}) {
   const events = [];
   const raf = [];
   const timers = [];
+  const documentListeners = {};
   const sandbox = {
     console,
     Promise,
+    document: {
+      readyState: "loading",
+      addEventListener(type, callback) { documentListeners[type] = callback; },
+    },
     renderAll: () => events.push("render"),
     setTimeout: (callback) => { timers.push(callback); return timers.length; },
   };
   if (withAnimationFrame) sandbox.requestAnimationFrame = (callback) => { raf.push(callback); return raf.length; };
   vm.createContext(sandbox);
   vm.runInContext(source, sandbox, { filename: "js/deferred-render.js" });
-  return { sandbox, events, raf, timers };
+  return { sandbox, events, raf, timers, documentListeners };
 }
 
 {
@@ -81,10 +86,37 @@ function createHarness({ withAnimationFrame = true } = {}) {
   h.sandbox.renderViewAfterNextPaint("plan", (id) => renderedViews.push(id));
   h.sandbox.renderViewAfterNextPaint("prep", (id) => renderedViews.push(id));
 
-  assert.equal(h.raf.length, 1, "Schnelle Tabwechsel müssen in einer Paint-Gelegenheit gebündelt werden");
+  assert.equal(h.raf.length, 1, "Schnelle Tabwechsel müssen in einer Render-Gelegenheit gebündelt werden");
   h.raf.shift()();
+  assert.deepEqual(renderedViews, [], "Der Prep-Render darf den ersten Paint nicht im Animationsframe blockieren");
+  assert.equal(h.timers.length, 1, "Der vollständige Prep-Render folgt nach der sichtbaren Ladeansicht");
   h.timers.shift()();
-  assert.deepEqual(renderedViews, ["prep"], "Nur der zuletzt angeforderte Tab darf gerendert werden");
+  assert.deepEqual(renderedViews, ["prep"]);
+}
+
+{
+  const h = createHarness();
+  const renderedViews = [];
+  h.sandbox.renderViewAfterNextPaint("plan", (id) => renderedViews.push(id));
+
+  h.raf.shift()();
+  assert.deepEqual(renderedViews, [], "Andere Tabs behalten die sichtbare Paint-Gelegenheit vor der teuren Renderarbeit");
+  assert.equal(h.timers.length, 1);
+  h.timers.shift()();
+  assert.deepEqual(renderedViews, ["plan"]);
+}
+
+{
+  const h = createHarness();
+  const renderedViews = [];
+  h.sandbox.renderViewAfterNextPaint("prep", (id) => renderedViews.push(id));
+
+  h.raf.shift()();
+  assert.deepEqual(renderedViews, [], "Bei schneller Weiternavigation darf Prep den finalen Zieltab nicht vorziehen");
+  assert.equal(h.timers.length, 1);
+  h.sandbox.renderViewAfterNextPaint("foods", (id) => renderedViews.push(id));
+  h.timers.shift()();
+  assert.deepEqual(renderedViews, ["foods"], "Nur der zuletzt angeforderte Tab darf gerendert werden");
 }
 
 {
@@ -95,6 +127,46 @@ function createHarness({ withAnimationFrame = true } = {}) {
   h.raf.shift()();
   h.timers.shift()();
   assert.deepEqual(renderedViews, [], "Ein synchron übernommener Render muss den geplanten View-Render verwerfen");
+}
+
+{
+  const h = createHarness();
+  const renderedViews = [];
+  h.sandbox.renderViewAfterNextPaint("prep", (id) => renderedViews.push(id));
+  h.raf.shift()();
+  assert.equal(h.timers.length, 1, "Nach der ersten Paint-Gelegenheit wartet der Prep-Render auf den Task");
+  h.sandbox.cancelDeferredViewRender();
+  h.timers.shift()();
+  assert.deepEqual(renderedViews, [], "Abbruch nach dem Frame muss auch den bereits geplanten Prep-Render verwerfen");
+}
+
+{
+  const h = createHarness();
+  const renderedViews = [];
+  h.sandbox.renderView = (id) => renderedViews.push(id);
+  h.sandbox.save = () => {};
+  h.sandbox.installViewRenderCache();
+
+  // First render establishes the cached signature. A real nav click marks the
+  // following deferred render as navigation-only, so an unchanged view can be
+  // skipped without losing the final tab selection.
+  h.sandbox.renderView("prep");
+  h.documentListeners.click({ target: { closest: () => true } });
+  h.sandbox.renderViewAfterNextPaint("prep", (id) => h.sandbox.renderView(id));
+  h.raf.shift()();
+  h.timers.shift()(); // end the click-scoped navigation marker
+  h.timers.shift()(); // execute the deferred Prep render
+  assert.deepEqual(renderedViews, ["prep"], "Unverändertes Prep darf bei Tabnavigation aus dem View-Render-Cache kommen");
+
+  // Saves invalidate the signature. The same deferred navigation must render
+  // again after state changes instead of incorrectly reusing stale content.
+  h.sandbox.save();
+  h.documentListeners.click({ target: { closest: () => true } });
+  h.sandbox.renderViewAfterNextPaint("prep", (id) => h.sandbox.renderView(id));
+  h.raf.shift()();
+  h.timers.shift()();
+  h.timers.shift()();
+  assert.deepEqual(renderedViews, ["prep", "prep"], "Ein Save muss den View-Cache vor dem nächsten Prep-Render invalidieren");
 }
 
 console.log("Deferred full-render scheduling regression passed.");

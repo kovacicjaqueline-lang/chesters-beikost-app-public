@@ -139,12 +139,44 @@ try {
     calls: { buildDay: 0, buildDays: 0, planDisplayDays: 0 },
   }, "Resume-Cover muss unabhängig von ausstehenden Planner-Regeln nach zwei Paints verschwinden");
 
+  await page.locator('nav button[data-view="prep"]').click();
+  await page.waitForFunction(() =>
+    !!document.querySelector("#prepNow .planner-readiness-message") &&
+    document.querySelector("#prep > .prep-render-loading")?.textContent === "Planungsregeln werden geladen …",
+  );
+  assert.deepEqual(
+    await page.evaluate(() => ({
+      busy: document.getElementById("prep")?.getAttribute("aria-busy"),
+      loading: document.querySelector("#prep > .prep-render-loading")?.textContent || "",
+      prepShellDisplay: getComputedStyle(document.querySelector("#prep > .prep-mobile-head")).display,
+    })),
+    { busy: "true", loading: "Planungsregeln werden geladen …", prepShellDisplay: "none" },
+    "Prep muss bis zur Planner-Readiness den Ladehinweis halten und alte Inhalte verbergen",
+  );
+  await page.locator('nav button[data-view="prep"]').click();
+  assert.deepEqual(
+    await page.evaluate(() => ({
+      busy: document.getElementById("prep")?.getAttribute("aria-busy"),
+      loading: document.querySelector("#prep > .prep-render-loading")?.textContent || "",
+      prepShellDisplay: getComputedStyle(document.querySelector("#prep > .prep-mobile-head")).display,
+    })),
+    { busy: "true", loading: "Planungsregeln werden geladen …", prepShellDisplay: "none" },
+    "Ein erneuter Tap auf Prep darf den Readiness-Ladezustand nicht entfernen",
+  );
+
   releasePolicies.resolve();
   await page.waitForFunction(() => window.PlannerReadiness?.state === "ready");
-  assert.equal(await page.locator("#plan .plan-toolbar").evaluate((toolbar) => toolbar.inert), false, "Planänderungen werden nach vollständiger Regelinstallation freigegeben");
   await page.waitForFunction(() =>
-    document.querySelectorAll("#planWeekOverview .plan-week-day").length === 7,
+    document.querySelectorAll("#prepSummary > span").length === 3 &&
+    !document.getElementById("prep")?.hasAttribute("aria-busy") &&
+    !document.querySelector("#prep > .prep-render-loading"),
   );
+  await page.locator('nav button[data-view="plan"]').click();
+  await page.waitForFunction(() =>
+    document.querySelectorAll("#planWeekOverview .plan-week-day").length === 7 &&
+    document.querySelector("#plan .plan-toolbar")?.inert === false,
+  );
+  assert.equal(await page.locator("#plan .plan-toolbar").evaluate((toolbar) => toolbar.inert), false, "Planänderungen werden nach vollständiger Regelinstallation freigegeben");
   assert.ok(
     await page.evaluate(() => Object.values(window.__plannerBuildCalls).some((count) => count > 0)),
     "Planner-Berechnung darf nach erfolgreicher Regelinstallation wieder laufen",

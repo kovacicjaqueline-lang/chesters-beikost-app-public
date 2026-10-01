@@ -93,13 +93,15 @@
           const recipeName = meal.recipeName;
           if (
             recipeName &&
-            !meal.recipeInventoryId &&
-            typeof globalScope.recipeInventoryPortions === "function" &&
-            typeof globalScope.oldestRecipeBatch === "function" &&
-            globalScope.recipeInventoryPortions(recipeName) >
-              (context.recipeReserved.get(recipeName) || 0)
+            typeof globalScope.recipeInventoryPortions === "function"
           ) {
-            meal.recipeInventoryId = globalScope.oldestRecipeBatch(recipeName)?.id || "";
+            const available = globalScope.recipeInventoryPortions(recipeName);
+            const reserved = context.recipeReserved.get(recipeName) || 0;
+            if (reserved >= available) {
+              meal.recipeInventoryId = "";
+            } else if (!meal.recipeInventoryId && typeof globalScope.oldestRecipeBatch === "function") {
+              meal.recipeInventoryId = globalScope.oldestRecipeBatch(recipeName)?.id || "";
+            }
           }
           globalScope.reserveMealInventory(meal, context);
         }

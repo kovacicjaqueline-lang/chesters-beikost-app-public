@@ -112,9 +112,6 @@
   function buildWeek(snapshot, start) {
     state = snapshot;
     state.settings = state.settings || {};
-    if (typeof plannerApplySavoryBreakfastMealAudit === "function") {
-      plannerApplySavoryBreakfastMealAudit(state.foods);
-    }
     if (typeof installHandlingReadinessRuntime === "function") {
       installHandlingReadinessRuntime();
     }

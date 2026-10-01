@@ -206,6 +206,20 @@ try {
   assert.ok(await page.locator('#recipeFilter [data-recipe-filter="freezer"]').evaluate((button) => button.classList.contains("active")));
   await page.locator('#catalogSwitch [data-catalog-mode="foods"]').click();
   assert.equal(await page.locator("#foodsCatalogSection").isVisible(), true, "Lebensmittel bleiben über den bestehenden Umschalter erreichbar");
+  await page.evaluate(() => {
+    const bridge = window.__beikostTest;
+    const state = bridge.getState();
+    state.foods.find((item) => item.id === "karotte").manualStatus = "Bekannt";
+    bridge.setState(state);
+  });
+  const knownFoodCard = page.locator('#foodsCatalogSection .foodcard[data-food="karotte"]');
+  await knownFoodCard.waitFor();
+  assert.equal(await knownFoodCard.locator(".food-status-text").innerText(), "Bekannt");
+  assert.equal(
+    await knownFoodCard.evaluate((element) => element.classList.contains("status-tolerated")),
+    true,
+    "Bekannt muss in der Lebensmittelübersicht die aktive Statusdarstellung erhalten",
+  );
   const foodCard = page.locator("#foodsCatalogSection .foodcard").first();
   await foodCard.locator(".foodInfo").click();
   await page.locator("#genericModal.open").waitFor();

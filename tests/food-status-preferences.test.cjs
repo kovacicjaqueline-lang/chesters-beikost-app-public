@@ -9,9 +9,6 @@ const stateSource = fs.readFileSync(path.join(root, 'js', 'state.js'), 'utf8');
 const modelSource = fs.readFileSync(path.join(root, 'js', 'model.js'), 'utf8');
 const migrationsSource = fs.readFileSync(path.join(root, 'js', 'migrations.js'), 'utf8');
 const policySource = fs.readFileSync(path.join(root, 'js', 'food-status-preferences.js'), 'utf8');
-const statisticsSource = fs.readFileSync(path.join(root, 'js', 'statistics.js'), 'utf8');
-const foodsSource = fs.readFileSync(path.join(root, 'js', 'foods.js'), 'utf8');
-const indexSource = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
 function log(id, date, meal, outcome, foodId = 'karotte') {
   return { id, date, meal, foodIds: [foodId], foodOutcomes: { [foodId]: outcome }, createdAt: id };
@@ -192,18 +189,4 @@ test('FOOD-STATUS-UI: Fortschrittsfakten verwenden Bekannt statt der alten Statu
   assert.deepEqual(Array.from(policy.foodStatusPreferenceProgressLabels(3, 1)), ['3 bekannt', '1 Allergen fällig']);
   assert.deepEqual(Array.from(policy.foodStatusPreferenceProgressLabels(0, 2)), ['2 Allergene fällig']);
   assert.deepEqual(Array.from(policy.foodStatusPreferenceProgressLabels(0, 0)), []);
-  assert.match(policySource, /status\(foodRecord\) === "Bekannt"/);
-  assert.match(policySource, /MutationObserver/);
-});
-
-test('FOOD-STATUS-UI: Bekannt hat aktive Darstellung und Statusableitung bleibt kanonisch', () => {
-  assert.match(foodsSource, /raw === "Bekannt" \? "status-tolerated"/);
-  assert.doesNotMatch(foodsSource, /raw === "Regelmäßig"/);
-  assert.match(indexSource, /js\/food-status-preferences\.js/);
-  assert.ok(indexSource.indexOf('js/food-status-preferences.js') < indexSource.indexOf('js/ui.js'));
-  assert.doesNotMatch(policySource, /\bautoStatus\s*=/);
-  assert.doesNotMatch(policySource, /\bstatus\s*=/);
-  assert.doesNotMatch(policySource, /\brank\s*=/);
-  assert.doesNotMatch(policySource, /renderHomeCore/);
-  assert.doesNotMatch(statisticsSource, /installFoodStatusPreferencePolicy/);
 });

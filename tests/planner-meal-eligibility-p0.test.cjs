@@ -99,8 +99,8 @@ test("alte automatische Locks mit falscher FOOD-Mahlzeit werden entfernt, manuel
 function runtimeContext() {
   const recipe = {
     name: "Test-Pancakes",
-    requires: ["Hafer", "Zucchini"],
-    alternatives: [["Hafer", "Banane"]],
+    requires: ["Hafer", "Pferdefleisch"],
+    alternatives: [["Hafer", "Zucchini"]],
   };
   const context = {
     console,
@@ -181,8 +181,7 @@ test("Begleiter werden vor Kombinationslogik auf FOOD.meals begrenzt", () => {
   const focus = context.state.foods.find((item) => item.id === "hafer");
   const companion = context.companionFor(focus, "breakfast", "2026-08-18");
 
-  assert.equal(companion.id, "banane");
-  assert.notEqual(companion.id, "zucchini");
+  assert.equal(companion.id, "zucchini");
   assert.notEqual(companion.id, "pferd");
 });
 
@@ -192,8 +191,8 @@ test("automatischer Rezeptpfad verwendet auch nach Kandidatenauswahl nur mahlzei
   assert.ok(recipe);
 
   const ids = context.recipeFoodIds(recipe);
-  assert.deepEqual(Array.from(ids), ["hafer", "banane"]);
-  assert.equal(ids.includes("zucchini"), false);
+  assert.deepEqual(Array.from(ids), ["hafer", "zucchini"]);
+  assert.equal(ids.includes("pferd"), false);
 });
 
 test("Snack bleibt von der neuen Hauptmahlzeiten-FOOD-Schranke unberührt", () => {
@@ -201,7 +200,7 @@ test("Snack bleibt von der neuen Hauptmahlzeiten-FOOD-Schranke unberührt", () =
   const recipe = context.snackRecipeCandidate("2026-08-18", {});
   const ids = context.recipeFoodIds(recipe);
 
-  assert.deepEqual(Array.from(ids), ["hafer", "zucchini"]);
+  assert.deepEqual(Array.from(ids), ["hafer", "pferd"]);
 });
 
 test("automatische Wiedervorlage wird nicht in eine für das FOOD ungeeignete Hauptmahlzeit geschrieben", () => {
@@ -227,7 +226,7 @@ test("gepatchte zentrale Bereinigung entfernt auch Rezept-/FOOD-Locks mit unpass
     "2026-08-18|breakfast": {
       mode: "auto",
       focusId: "hafer",
-      foodIds: ["hafer", "zucchini"],
+      foodIds: ["hafer", "pferd"],
       recipeName: "Test-Pancakes",
     },
     "2026-08-18|snack": {

@@ -8,6 +8,8 @@ const vm = require("node:vm");
 
 const root = path.resolve(__dirname, "..");
 const maintenance = require("../js/planner-allergen-maintenance.js");
+const planningSource = fs.readFileSync(path.join(root, "js", "planning.js"), "utf8");
+const presentationSource = fs.readFileSync(path.join(root, "js", "planner-meal-presentation.js"), "utf8");
 
 const foods = [
   { id: "hafer", name: "Hafer", allergenGroup: "Glutenhaltiges Getreide", allergenFamily: "hafer" },
@@ -119,6 +121,73 @@ test("Fällige Ziele werden pro Maintenance-Ziel dedupliziert", () => {
     outcomeForFoodFn: outcome,
   }).filter((target) => target.key === "allergen:Glutenhaltiges Getreide");
   assert.equal(due.length, 1);
+});
+
+test("Maintenance-Kennzeichnung bleibt über Lock-Snapshot, Hydration und erneutes Lösen erhalten", () => {
+  const milk = { id: "frischkaese", name: "Frischkäse", active: true, allergenGroup: "Milch" };
+  const zucchini = { id: "zucchini", name: "Zucchini", active: true, allergenGroup: "" };
+  const context = vm.createContext({});
+  vm.runInContext(planningSource, context);
+  vm.runInContext(presentationSource, context);
+
+  const state = { foods: [milk, zucchini], planLocks: {} };
+  context.state = state;
+  context.food = (id) => state.foods.find((item) => item.id === id) || null;
+  context.status = () => "Regelmäßig";
+  context.esc = (value) => String(value ?? "");
+  context.foodRolesFor = () => ({ zucchini: "base", frischkaese: "component" });
+  context.phasePortion = () => 30;
+  context.plannedMealAmounts = () => ({
+    targetGrams: 30,
+    sampleGrams: 0,
+    totalOfferedGrams: 30,
+    amounts: { zucchini: 20, frischkaese: 10 },
+  });
+
+  const planned = {
+    meal: "lunch",
+    active: true,
+    focusId: "zucchini",
+    foodIds: ["zucchini", "frischkaese"],
+    baseFoodIds: ["zucchini"],
+    sampleFoodIds: [],
+    foodRoles: { zucchini: "base", frischkaese: "component" },
+    ingredientAmounts: { zucchini: 20, frischkaese: 10 },
+    portionTargetGrams: 30,
+    totalOfferedGrams: 30,
+    type: "bekannt",
+  };
+  const target = maintenance.targetForFood(milk);
+  maintenance.annotateMaintenanceFoodIds([target], [planned], state.foods);
+  assert.deepEqual(planned.allergenMaintenanceFoodIds, ["frischkaese"]);
+
+  const snapshot = context.mealSnapshot("2026-10-02", "lunch", planned, "manual");
+  assert.deepEqual(Array.from(snapshot.allergenMaintenanceFoodIds), ["frischkaese"]);
+  planned.allergenMaintenanceFoodIds.push("später-geändert");
+  assert.deepEqual(
+    Array.from(snapshot.allergenMaintenanceFoodIds),
+    ["frischkaese"],
+    "Snapshot enthält eine eigene Kopie der Annotation",
+  );
+  planned.allergenMaintenanceFoodIds.pop();
+
+  state.planLocks["2026-10-02|lunch"] = JSON.parse(JSON.stringify(snapshot));
+  const locked = context.lockedMeal("2026-10-02", "lunch");
+  assert.deepEqual(Array.from(locked.allergenMaintenanceFoodIds), ["frischkaese"]);
+  assert.deepEqual(Array.from(locked.foodIds), ["zucchini", "frischkaese"]);
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(context.plannerLearningRoleGroups(locked))),
+    [{ label: "Allergen weiter anbieten", names: ["Frischkäse"] }],
+  );
+  assert.match(
+    context.plannerCompactLearningRolesHtml(locked),
+    /Frischkäse<\/b><span>Allergen weiter anbieten<\/span>/,
+  );
+
+  delete state.planLocks["2026-10-02|lunch"];
+  const unlockedAgain = context.mealSnapshot("2026-10-02", "lunch", locked, "auto");
+  assert.deepEqual(Array.from(unlockedAgain.allergenMaintenanceFoodIds), ["frischkaese"]);
+  assert.deepEqual(Array.from(unlockedAgain.foodIds), ["zucchini", "frischkaese"]);
 });
 
 test("Alternative bekannte Quelle kann ein fälliges Ziel bedienen", () => {

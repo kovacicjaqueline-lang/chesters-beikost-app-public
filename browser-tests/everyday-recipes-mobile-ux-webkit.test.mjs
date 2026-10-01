@@ -206,6 +206,7 @@ try {
   assert.ok(await page.locator('#recipeFilter [data-recipe-filter="freezer"]').evaluate((button) => button.classList.contains("active")));
   await page.locator('#catalogSwitch [data-catalog-mode="foods"]').click();
   assert.equal(await page.locator("#foodsCatalogSection").isVisible(), true, "Lebensmittel bleiben über den bestehenden Umschalter erreichbar");
+  await page.locator(".food-primary-select > summary").click();
   await page.locator('#foodFilters [data-filter="all"]').click();
   await page.evaluate(() => {
     const bridge = window.__beikostTest;

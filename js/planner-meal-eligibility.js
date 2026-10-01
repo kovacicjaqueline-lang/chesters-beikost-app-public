@@ -2,6 +2,8 @@
 
 /* Zentrale automatische FOOD- und Rezept-Mahlzeiteneignung für Planner/App.
  * FOOD.meals ist für Frühstück, Mittag und Abend eine harte Eingangsvoraussetzung.
+ * Fachlich freigegebene herzhafte Frühstücks-FOODs werden für diese Prüfung
+ * effektiv um breakfast ergänzt, ohne den Planner-State während der Planung zu mutieren.
  * Snack bleibt bewusst rezeptgetrieben und erhält kein neues allgemeines FOOD-snack-Feld.
  * autoPlan, Verfügbarkeit, Mindestphase und Mindestalter werden hier zentral gehalten,
  * damit App- und Planner-Pfad dieselbe Regelquelle verwenden.
@@ -12,12 +14,28 @@ const PLANNER_MEAL_ELIGIBILITY_MAIN_MEALS = new Set([
   "lunch",
   "dinner",
 ]);
+const PLANNER_SAVORY_BREAKFAST_FOOD_IDS = new Set([
+  "tomate",
+  "zucchini",
+  "karotte",
+  "kuerbis",
+  "brokkoli",
+]);
 const PLANNER_FOOD_PHASE_ORDER = Object.freeze([
   "kennenlernen",
   "aufbau",
   "drei",
   "familie",
 ]);
+
+function plannerEffectiveFoodMeals(foodRecord) {
+  let meals = Array.isArray(foodRecord?.meals) ? foodRecord.meals : [];
+  if (
+    PLANNER_SAVORY_BREAKFAST_FOOD_IDS.has(foodRecord?.id) &&
+    !meals.includes("breakfast")
+  ) return [...meals, "breakfast"];
+  return meals;
+}
 
 function plannerFoodMonthsOld(on, birthDate) {
   let [ay, am, ad] = String(birthDate || "").split("-").map(Number);
@@ -84,7 +102,7 @@ function installPlannerAutomaticFoodEligibilityRuntime() {
 function plannerFoodMealEligible(foodRecord, meal) {
   if (!foodRecord) return false;
   if (!PLANNER_MEAL_ELIGIBILITY_MAIN_MEALS.has(meal)) return true;
-  return Array.isArray(foodRecord.meals) && foodRecord.meals.includes(meal);
+  return plannerEffectiveFoodMeals(foodRecord).includes(meal);
 }
 
 function plannerAutomaticFoodMealEligible(
@@ -368,7 +386,9 @@ if (typeof window !== "undefined" && typeof document !== "undefined") {
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     PLANNER_MEAL_ELIGIBILITY_MAIN_MEALS,
+    PLANNER_SAVORY_BREAKFAST_FOOD_IDS,
     PLANNER_FOOD_PHASE_ORDER,
+    plannerEffectiveFoodMeals,
     plannerFoodMonthsOld,
     plannerAutomaticFoodEligibilityCore,
     plannerAutomaticFoodEligibilityRuntime,

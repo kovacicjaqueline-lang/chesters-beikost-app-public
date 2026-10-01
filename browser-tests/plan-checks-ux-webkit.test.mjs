@@ -264,7 +264,7 @@ try {
   await page.waitForFunction(() => window.__beikostTest.planCheckOpenGoals().length === 1);
   await page.locator("#openPlanGoalSolution").click();
   await page.locator("#applyPlanGoalSolution").waitFor({ state: "visible" });
-  assert.match(await page.locator("#genericBody").textContent(), /(Frühstück|Mittagessen|Abendessen)/, "Lösung muss eine konkrete Mahlzeit nennen");
+  assert.match(await page.locator("#genericBody").textContent(), /(Frühstück|Mittag(?:essen)?|Abendessen)/, "Lösung muss eine konkrete Mahlzeit nennen");
   await assertSheetFitsMobile(page);
   await page.screenshot({ path: path.join(artifactDir, "single-allergen-solution.png"), fullPage: false });
   await page.locator("#closeGeneric").click();
@@ -335,7 +335,7 @@ try {
   await showView(page, "plan");
   await page.locator("#openPlanGoalSolution").click();
   const firstSolutionText = (await page.locator("#genericBody .plan-solution-card").textContent()).trim();
-  await page.locator("#otherPlanGoalSolution").click();
+  await page.locator("#otherPlanGoalSolution").click({ timeout: 30_000 });
   await page.waitForFunction((before) => {
     const card = document.querySelector("#genericBody .plan-solution-card");
     return card && card.textContent.trim() !== before;

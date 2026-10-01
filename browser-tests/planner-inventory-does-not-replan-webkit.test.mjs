@@ -72,7 +72,12 @@ try {
 
   await addBologneseStock();
   assert.match(await page.locator("#blockPlan").innerText(), /Rind-Gemüse-Bolognese/);
-  assert.equal(await page.locator("#blockPlan .recipe-stock-chip").count(), 1, "neue Rezeptportion wird der bestehenden Mahlzeit zugeordnet");
+  const stockDebug = await page.evaluate((date) => ({
+    inventory: window.__beikostTest.getState().inventory,
+    planned: window.__plannerWeekCache.readOnly(date, 7).find((day) => day.date === date)?.meals,
+    hasReservationFunction: typeof window.reserveMealInventory === "function",
+  }), tomorrow);
+  assert.equal(await page.locator("#blockPlan .recipe-stock-chip").count(), 1, `neue Rezeptportion wird der bestehenden Mahlzeit zugeordnet: ${JSON.stringify(stockDebug)}`);
   assert.match(await page.locator("#prepCovered").innerText(), /Rind-Gemüse-Bolognese/);
   assert.match(await page.locator("#prepCovered").innerText(), /1 vorhanden/);
 

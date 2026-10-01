@@ -62,6 +62,16 @@ test("herzhafte Frühstücks-FOODs werden gezielt in FOOD.meals normalisiert", (
   );
 });
 
+test("kuratierte Frühstücks-FOODs funktionieren auch aus einem unnormalisierten Snapshot", () => {
+  const zucchini = { id: "zucchini", meals: ["lunch", "dinner"] };
+  const karfiol = { id: "karfiol", meals: ["lunch", "dinner"] };
+
+  assert.equal(plannerFoodMealEligible(zucchini, "breakfast"), true);
+  assert.deepEqual(zucchini.meals, ["lunch", "dinner", "breakfast"]);
+  assert.equal(plannerFoodMealEligible(karfiol, "breakfast"), false);
+  assert.deepEqual(karfiol.meals, ["lunch", "dinner"]);
+});
+
 test("vorhandene herzhafte Getreide-Rezepte werden als Frühstück nutzbar", () => {
   const foods = loadGlobalConst("data/foods.js", "FOOD_DB");
   const recipes = loadGlobalConst("data/recipes.js", "RECIPES");
@@ -97,18 +107,4 @@ test("vorhandene herzhafte Getreide-Rezepte werden als Frühstück nutzbar", () 
     false,
     "die bestehende Frühstücks-Rezeptstruktur bleibt erhalten",
   );
-});
-
-test("Planner-Worker normalisiert den Snapshot vor buildDays", () => {
-  const workerSource = fs.readFileSync(
-    path.join(root, "js", "planner-week-worker.js"),
-    "utf8",
-  );
-  const stateAssignment = workerSource.indexOf("state = snapshot;");
-  const savoryAudit = workerSource.indexOf("plannerApplySavoryBreakfastMealAudit(state.foods)");
-  const buildDaysCall = workerSource.indexOf("buildDays(futureFrom");
-
-  assert.ok(stateAssignment >= 0);
-  assert.ok(savoryAudit > stateAssignment);
-  assert.ok(buildDaysCall > savoryAudit);
 });

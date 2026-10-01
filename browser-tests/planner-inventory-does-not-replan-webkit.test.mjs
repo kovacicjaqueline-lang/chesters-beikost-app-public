@@ -110,6 +110,7 @@ try {
   await page.waitForFunction(() => document.getElementById("plan")?.classList.contains("active"));
   await page.locator("#plan .plan-secondary-toggle").click();
   await page.locator("#planRecalculate").click();
+  await page.locator("#confirmPlanRebuild").click();
   await page.waitForFunction(() => document.querySelector("#blockPlan")?.innerText.includes("Baby-Linsen-Bolognese"));
   assert.match(await page.locator("#blockPlan").innerText(), /Baby-Linsen-Bolognese/, "erst die ausdrückliche Neuplanung wählt anhand des neuen Vorrats einen anderen Slot");
 

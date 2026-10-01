@@ -263,7 +263,7 @@ test("Vorratsänderungen behalten Mahlzeiten und aktualisieren nur die Reservier
     buildDays: (from) => {
       builds += 1;
       const stocked = context.state.inventory.some((item) => item.recipeName === "Rezept A" && item.portions > 0);
-      return [{ date: from, meals: [{ meal: "lunch", active: true, recipeName: stocked ? "Rezept B" : "Rezept A", recipeInventoryId: "", inventoryFoodIds: [] }] }];
+      return [{ date: from, meals: ["lunch", "dinner"].map((meal) => ({ meal, active: true, recipeName: stocked ? "Rezept B" : "Rezept A", recipeInventoryId: "", inventoryFoodIds: [] })) }];
     },
     planDisplayDays: (from, count) => context.buildDays(from, count),
     recipeInventoryPortions: (name) => context.state.inventory
@@ -290,23 +290,29 @@ test("Vorratsänderungen behalten Mahlzeiten und aktualisieren nur die Reservier
   vm.createContext(context);
   vm.runInContext(source, context);
 
-  const initial = context.planDisplayDays("2026-09-20", 1)[0].meals[0];
-  assert.equal(initial.recipeName, "Rezept A");
+  const initial = context.planDisplayDays("2026-09-20", 1)[0].meals;
+  assert.deepEqual(initial.map((meal) => meal.recipeName), ["Rezept A", "Rezept A"]);
   assert.equal(builds, 1);
 
   context.state.inventory.push({ id: "batch-a", kind: "recipe", recipeName: "Rezept A", portions: 2 });
   context.save({ preservePlanCache: true });
-  const stocked = context.planDisplayDays("2026-09-20", 1)[0].meals[0];
-  assert.equal(stocked.recipeName, "Rezept A");
-  assert.equal(stocked.recipeInventoryId, "batch-a");
+  const stocked = context.planDisplayDays("2026-09-20", 1)[0].meals;
+  assert.deepEqual(stocked.map((meal) => meal.recipeName), ["Rezept A", "Rezept A"]);
+  assert.deepEqual(stocked.map((meal) => meal.recipeInventoryId), ["batch-a", "batch-a"]);
   assert.equal(context.__plannerWeekCache.readOnly("2026-09-20", 1)[0].meals[0].recipeInventoryId, "batch-a");
   assert.equal(builds, 1, "Vorrat hinzufügen rechnet keine Mahlzeit neu aus");
 
+  context.state.inventory[0].portions = 1;
+  context.save({ preservePlanCache: true });
+  const edited = context.planDisplayDays("2026-09-20", 1)[0].meals;
+  assert.deepEqual(edited.map((meal) => meal.recipeName), ["Rezept A", "Rezept A"]);
+  assert.deepEqual(edited.map((meal) => meal.recipeInventoryId), ["batch-a", ""], "Bearbeiten aktualisiert die Deckung ohne die Rezeptauswahl oder verfügbare Portionen zu überbuchen");
+
   context.state.inventory = [];
   context.save({ preservePlanCache: true });
-  const deleted = context.planDisplayDays("2026-09-20", 1)[0].meals[0];
-  assert.equal(deleted.recipeName, "Rezept A");
-  assert.equal(deleted.recipeInventoryId, "", "Löschen entfernt nur die Vorratsdeckung");
+  const deleted = context.planDisplayDays("2026-09-20", 1)[0].meals;
+  assert.deepEqual(deleted.map((meal) => meal.recipeName), ["Rezept A", "Rezept A"]);
+  assert.deepEqual(deleted.map((meal) => meal.recipeInventoryId), ["", ""], "Löschen entfernt nur die Vorratsdeckung");
   assert.equal(context.__plannerWeekCache.readOnly("2026-09-20", 1)[0].meals[0].recipeInventoryId, "");
   assert.equal(builds, 1);
 
@@ -314,14 +320,14 @@ test("Vorratsänderungen behalten Mahlzeiten und aktualisieren nur die Reservier
   context.save({ preservePlanCache: true });
   context.state.inventory[0].portions -= 1;
   context.save({ preservePlanCache: true });
-  const consumed = context.planDisplayDays("2026-09-20", 1)[0].meals[0];
-  assert.equal(consumed.recipeName, "Rezept A");
-  assert.equal(consumed.recipeInventoryId, "");
+  const consumed = context.planDisplayDays("2026-09-20", 1)[0].meals;
+  assert.deepEqual(consumed.map((meal) => meal.recipeName), ["Rezept A", "Rezept A"]);
+  assert.deepEqual(consumed.map((meal) => meal.recipeInventoryId), ["", ""]);
   assert.equal(builds, 1, "−1 aktualisiert die Deckung ohne Neuberechnung");
 
   context.state.inventory.push({ id: "batch-a-replan", kind: "recipe", recipeName: "Rezept A", portions: 1 });
   context.save();
-  const replanned = context.planDisplayDays("2026-09-20", 1)[0].meals[0];
-  assert.equal(replanned.recipeName, "Rezept B", "ein normaler Planner-Save darf die Auswahl neu berechnen");
+  const replanned = context.planDisplayDays("2026-09-20", 1)[0].meals;
+  assert.deepEqual(replanned.map((meal) => meal.recipeName), ["Rezept B", "Rezept B"], "ein normaler Planner-Save darf die Auswahl neu berechnen");
   assert.equal(builds, 2);
 });

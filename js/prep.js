@@ -393,7 +393,7 @@ function calculateBatch() {
           note: "Restportion aus derselben Kochmenge",
         });
       invalidateInventoryAggregateCache();
-      save();
+      save({ preservePlanCache: true });
       renderAll();
       showToast(`${storedPortions} ${storedPortions === 1 ? "Portion" : "Portionen"} ${f.name} zum Vorrat hinzugefügt.`);
     };
@@ -684,7 +684,7 @@ function renderPrepCore() {
         let id = button.closest("[data-inv]").dataset.inv;
         state.inventory = state.inventory.filter((i) => i.id !== id);
         invalidateInventoryAggregateCache();
-        save();
+        save({ preservePlanCache: true });
         renderAll();
       }),
   );
@@ -693,7 +693,7 @@ function renderPrepCore() {
       (button.onclick = () => {
         let id = button.closest("[data-inv]").dataset.inv;
         if (!consumeInventoryItem(id)) return;
-        save();
+        save({ preservePlanCache: true });
         renderAll();
         showToast("Eine Vorratsportion verbraucht.");
       }),

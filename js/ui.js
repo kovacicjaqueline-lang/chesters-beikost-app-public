@@ -1585,7 +1585,7 @@ function addInventoryForm(preset = {}) {
       else state.inventory.push({ id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, ...values });
       if (typeof invalidateInventoryAggregateCache === "function") invalidateInventoryAggregateCache();
       let label = candidateName(selectedKey);
-      save(); closeGeneric(); renderAll(); showToast(editing ? "Vorratseintrag aktualisiert." : `${label} als neuer Vorrat hinzugefügt.`);
+      save({ preservePlanCache: true }); closeGeneric(); renderAll(); showToast(editing ? "Vorratseintrag aktualisiert." : `${label} als neuer Vorrat hinzugefügt.`);
     });
   }
   renderInventoryForm();

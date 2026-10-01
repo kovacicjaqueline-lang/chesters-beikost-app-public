@@ -4,9 +4,9 @@
  * Abgeleiteter Wochen-Cache für den Planner.
  *
  * Der Cache ist niemals Nutzerzustand: Er enthält nur eine Momentaufnahme der
- * dynamisch berechneten Vorschläge. Deshalb werden keine Locks erzeugt und der
- * Cache wird bei fachlichen State-Änderungen invalidiert. Ein Wechsel des
- * sichtbaren Wochenstarts darf ihn dagegen behalten.
+ * dynamisch berechneten Vorschläge. Deshalb werden keine Locks erzeugt.
+ * Fachliche Planänderungen invalidieren den Cache; Vorratsänderungen behalten
+ * die Mahlzeitenauswahl und aktualisieren nur abgeleitete Reservierungen.
  */
 (function installPlannerWeekCache(globalScope) {
   if (
@@ -75,6 +75,26 @@
     const snapshot = cloneValue(days || []);
     cache.set(key, snapshot);
     return cloneValue(snapshot);
+  }
+
+  function refreshInventoryReservations(days) {
+    if (typeof globalScope.reserveMealInventory !== "function") return days;
+    const refreshedDays = (days || []).map((day) => ({
+      ...day,
+      meals: (day.meals || []).map((meal) => ({ ...meal })),
+    }));
+    const context = {
+      inventoryReserved: new Map(),
+      recipeReserved: new Map(),
+    };
+    for (const day of refreshedDays) {
+      for (const meal of day.meals || []) {
+        if (meal?.active && !meal.empty) {
+          globalScope.reserveMealInventory(meal, context);
+        }
+      }
+    }
+    return refreshedDays;
   }
 
 
@@ -226,7 +246,7 @@
     const key = cacheKey(from, count);
     if (cache.has(key)) {
       scheduleWarmup();
-      return cloneValue(cache.get(key));
+      return refreshInventoryReservations(cloneValue(cache.get(key)));
     }
 
     const days = basePlanDisplayDays(from, count);
@@ -234,7 +254,7 @@
     // advances the revision while the plan is being calculated.
     put(cacheKey(from, count), days);
     scheduleWarmup();
-    return days;
+    return refreshInventoryReservations(days);
   };
 
   const baseSave = typeof globalScope.save === "function" ? globalScope.save : null;
@@ -274,9 +294,9 @@
       const key = cacheKey(from, count);
       if (!cache.has(key)) return null;
       scheduleWarmup();
-      // Prep only reads this internal snapshot. Avoid a costly deep clone on
-      // its first render; callers must treat the returned days as immutable.
-      return cache.get(key);
+      // Prep needs current inventory reservations but must not mutate the
+      // cached meal selection. Shallow-copy only days and meals for the overlay.
+      return refreshInventoryReservations(cache.get(key));
     },
     clear: invalidate,
     warmup: warmupNow,

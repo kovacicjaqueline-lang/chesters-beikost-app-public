@@ -81,7 +81,7 @@ test("gültige Wochen werden wiederverwendet und Warmup blockiert ohne Worker ni
   assert.equal(context.__plannerWeekCache.size, 0);
 });
 
-test("Prep kann den Wochen-Cache read-only ohne Deep Clone verwenden", () => {
+test("Prep bekommt aktuelle Vorratsreservierungen ohne Deep Clone des Wochenplans", () => {
   let cloneCalls = 0;
   const context = {
     state: { settings: {} },
@@ -89,6 +89,7 @@ test("Prep kann den Wochen-Cache read-only ohne Deep Clone verwenden", () => {
     addDays: (date, offset) => `${date}+${offset}`,
     buildDays: (from) => [{ date: from, meals: [{ meal: "lunch", foodIds: ["karotte"] }] }],
     planDisplayDays: (from, count) => context.buildDays(from, count),
+    reserveMealInventory: () => {},
     clone: (value) => {
       cloneCalls += 1;
       return JSON.parse(JSON.stringify(value));
@@ -107,9 +108,9 @@ test("Prep kann den Wochen-Cache read-only ohne Deep Clone verwenden", () => {
   const afterPublicMutation = context.__plannerWeekCache.readOnly("2026-09-20", 7);
 
   assert.deepEqual([...afterPublicMutation[0].meals[0].foodIds], ["karotte"]);
-  assert.equal(cloneCalls, 3, "Read-only Prep-Lookup benötigt keinen weiteren Deep Clone");
-  assert.strictEqual(readOnly, readOnlyAgain, "read-only Lookups geben denselben internen Snapshot zurück");
-  assert.strictEqual(readOnly, afterPublicMutation, "normale geklonte Rückgaben können den Cache nicht verändern");
+  assert.equal(cloneCalls, 3, "Read-only Prep-Lookup benötigt keinen zusätzlichen Deep Clone");
+  assert.notStrictEqual(readOnly, readOnlyAgain, "Vorratsreservierungen werden in isolierten Overlay-Kopien aktualisiert");
+  assert.notStrictEqual(readOnly, afterPublicMutation, "Overlay-Rückgaben verändern den internen Snapshot nicht");
   assert.notStrictEqual(first, second);
   assert.notStrictEqual(second, readOnly);
 });
@@ -251,4 +252,68 @@ test("ein Phasenwechsel kann keinen Wochenplan aus der vorherigen Phase zurückg
   assert.deepEqual(threeMeals[0].meals.map((meal) => meal.meal), ["breakfast", "lunch", "dinner"]);
   assert.deepEqual(twoMeals[0].meals.map((meal) => meal.meal), ["lunch", "dinner"]);
   assert.equal(buildCalls, 2);
+});
+
+test("Vorratsänderungen behalten Mahlzeiten und aktualisieren nur die Reservierung", () => {
+  let builds = 0;
+  const context = {
+    state: { settings: {}, inventory: [] },
+    visiblePlanStart: () => "2026-09-20",
+    addDays: (date, offset) => `${date}+${offset}`,
+    buildDays: (from) => {
+      builds += 1;
+      const stocked = context.state.inventory.some((item) => item.recipeName === "Rezept A" && item.portions > 0);
+      return [{ date: from, meals: [{ meal: "lunch", active: true, recipeName: stocked ? "Rezept B" : "Rezept A", recipeInventoryId: "", inventoryFoodIds: [] }] }];
+    },
+    planDisplayDays: (from, count) => context.buildDays(from, count),
+    reserveMealInventory: (meal, reservationContext) => {
+      if (meal.recipeName !== "Rezept A") return meal;
+      const batch = context.state.inventory.find((item) => item.recipeName === meal.recipeName && item.portions > 0);
+      meal.recipeInventoryId = batch?.id || "";
+      if (batch) reservationContext.recipeReserved.set(meal.recipeName, 1);
+      return meal;
+    },
+    save: () => {},
+    requestIdleCallback: () => 1,
+    cancelIdleCallback: () => {},
+    clearTimeout: () => {},
+    clone: (value) => JSON.parse(JSON.stringify(value)),
+  };
+  vm.createContext(context);
+  vm.runInContext(source, context);
+
+  const initial = context.planDisplayDays("2026-09-20", 1)[0].meals[0];
+  assert.equal(initial.recipeName, "Rezept A");
+  assert.equal(builds, 1);
+
+  context.state.inventory.push({ id: "batch-a", recipeName: "Rezept A", portions: 2 });
+  context.save({ preservePlanCache: true });
+  const stocked = context.planDisplayDays("2026-09-20", 1)[0].meals[0];
+  assert.equal(stocked.recipeName, "Rezept A");
+  assert.equal(stocked.recipeInventoryId, "batch-a");
+  assert.equal(context.__plannerWeekCache.readOnly("2026-09-20", 1)[0].meals[0].recipeInventoryId, "batch-a");
+  assert.equal(builds, 1, "Vorrat hinzufügen rechnet keine Mahlzeit neu aus");
+
+  context.state.inventory = [];
+  context.save({ preservePlanCache: true });
+  const deleted = context.planDisplayDays("2026-09-20", 1)[0].meals[0];
+  assert.equal(deleted.recipeName, "Rezept A");
+  assert.equal(deleted.recipeInventoryId, "", "Löschen entfernt nur die Vorratsdeckung");
+  assert.equal(context.__plannerWeekCache.readOnly("2026-09-20", 1)[0].meals[0].recipeInventoryId, "");
+  assert.equal(builds, 1);
+
+  context.state.inventory.push({ id: "batch-a-again", recipeName: "Rezept A", portions: 1 });
+  context.save({ preservePlanCache: true });
+  context.state.inventory[0].portions -= 1;
+  context.save({ preservePlanCache: true });
+  const consumed = context.planDisplayDays("2026-09-20", 1)[0].meals[0];
+  assert.equal(consumed.recipeName, "Rezept A");
+  assert.equal(consumed.recipeInventoryId, "");
+  assert.equal(builds, 1, "−1 aktualisiert die Deckung ohne Neuberechnung");
+
+  context.state.inventory.push({ id: "batch-a-replan", recipeName: "Rezept A", portions: 1 });
+  context.save();
+  const replanned = context.planDisplayDays("2026-09-20", 1)[0].meals[0];
+  assert.equal(replanned.recipeName, "Rezept B", "ein normaler Planner-Save darf die Auswahl neu berechnen");
+  assert.equal(builds, 2);
 });

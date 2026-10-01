@@ -9,7 +9,8 @@
  * - vorhandene FOOD-Zubereitungs-/Handlingoptionen je Lebensmittel,
  * - bestehende dishTitle()-Benennung für manuelle Karten,
  * - Durchreichen der expliziten Zubereitungsauswahl in Lock, Verschieben und Log,
- * - Lernhinweise blockieren die Planung nicht; Wiederholungen zählen nicht als neue Einführung.
+ * - Lernhinweise blockieren die Planung nicht; Wiederholungen zählen nicht als neue Einführung,
+ * - automatische FOOD.meals-Slots begrenzen die manuelle Lebensmittelwahl nicht.
  *
  * Es werden keine neuen Mahlzeiteneignungs-, Phasen- oder Konsistenzregeln definiert.
  * Die Lernhinweis-Korrektur ändert nur die Validierung des manuellen Editors. Die
@@ -76,6 +77,22 @@ function manualMealFlowNormalizePreparationKeys(keys, foodIds) {
       .filter(([foodId, key]) => allowed.has(foodId) && typeof key === "string" && key.trim())
       .map(([foodId, key]) => [foodId, key.trim()]),
   );
+}
+
+function manualMealFlowRoleInfoForManualSlot(originalRoleInfo, foodOrId, meal, on, context = {}) {
+  if (typeof originalRoleInfo !== "function") return { role: "excluded", reason: "missing" };
+  let item = typeof foodOrId === "string" && typeof food === "function" ? food(foodOrId) : foodOrId;
+  let recipeContext = !!context?.recipeName || context?.recipe === true;
+  if (!item || recipeContext || (item.meals || []).includes(meal))
+    return originalRoleInfo(foodOrId, meal, on, context);
+
+  // FOOD.meals steuert die automatische Slot-Eignung. Bei einer explizit manuellen
+  // Auswahl bleiben alle übrigen Guards der bestehenden Rollenprüfung erhalten.
+  let manualItem = {
+    ...item,
+    meals: [...new Set([...(item.meals || []), meal])],
+  };
+  return originalRoleInfo(manualItem, meal, on, context);
 }
 
 function manualMealFlowPreparationOptions(foodId) {
@@ -374,6 +391,19 @@ function installManualMealFlowRuntime() {
 
   globalThis.__manualMealFlowRuntimeInstalled = true;
 
+  if (typeof manualMealRoleInfo === "function") {
+    let originalManualMealRoleInfo = manualMealRoleInfo;
+    manualMealRoleInfo = function manualFlowManualMealRoleInfo(foodOrId, meal, on, context = {}) {
+      return manualMealFlowRoleInfoForManualSlot(
+        originalManualMealRoleInfo,
+        foodOrId,
+        meal,
+        on,
+        context,
+      );
+    };
+  }
+
   if (typeof manualMealValidation === "function") {
     let originalManualMealValidation = manualMealValidation;
     manualMealValidation = function manualFlowManualMealValidation(...args) {
@@ -576,6 +606,7 @@ if (typeof module !== "undefined" && module.exports) {
     manualMealFlowLearningAdvisoryText,
     manualMealFlowLearningValidation,
     manualMealFlowNormalizePreparationKeys,
+    manualMealFlowRoleInfoForManualSlot,
     manualMealFlowStoredConflict,
     manualMealFlowRemoveSource,
     installManualMealFlowRuntime,

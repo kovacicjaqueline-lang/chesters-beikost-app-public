@@ -108,7 +108,7 @@ try {
   assert.match(await page.locator("#blockPlan").innerText(), /Rind-Gemüse-Bolognese/);
   await page.locator('nav button[data-view="plan"]').click();
   await page.waitForFunction(() => document.getElementById("plan")?.classList.contains("active"));
-  await page.locator("#plan .plan-secondary-actions > summary").click();
+  await page.locator("#plan .plan-secondary-toggle").click();
   await page.locator("#planRecalculate").click();
   await page.waitForFunction(() => document.querySelector("#blockPlan")?.innerText.includes("Baby-Linsen-Bolognese"));
   assert.match(await page.locator("#blockPlan").innerText(), /Baby-Linsen-Bolognese/, "erst die ausdrückliche Neuplanung wählt anhand des neuen Vorrats einen anderen Slot");

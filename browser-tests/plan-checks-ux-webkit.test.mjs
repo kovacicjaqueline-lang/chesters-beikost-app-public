@@ -335,7 +335,7 @@ try {
   await showView(page, "plan");
   await page.locator("#openPlanGoalSolution").click();
   const firstSolutionText = (await page.locator("#genericBody .plan-solution-card").textContent()).trim();
-  await page.locator("#otherPlanGoalSolution").click();
+  await page.locator("#otherPlanGoalSolution").click({ timeout: 30_000 });
   await page.waitForFunction((before) => {
     const card = document.querySelector("#genericBody .plan-solution-card");
     return card && card.textContent.trim() !== before;

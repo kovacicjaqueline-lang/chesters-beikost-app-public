@@ -18,16 +18,21 @@ function createHarness({ withAnimationFrame = true } = {}) {
   const events = [];
   const raf = [];
   const timers = [];
+  const documentListeners = {};
   const sandbox = {
     console,
     Promise,
+    document: {
+      readyState: "loading",
+      addEventListener(type, callback) { documentListeners[type] = callback; },
+    },
     renderAll: () => events.push("render"),
     setTimeout: (callback) => { timers.push(callback); return timers.length; },
   };
   if (withAnimationFrame) sandbox.requestAnimationFrame = (callback) => { raf.push(callback); return raf.length; };
   vm.createContext(sandbox);
   vm.runInContext(source, sandbox, { filename: "js/deferred-render.js" });
-  return { sandbox, events, raf, timers };
+  return { sandbox, events, raf, timers, documentListeners };
 }
 
 {
@@ -133,6 +138,35 @@ function createHarness({ withAnimationFrame = true } = {}) {
   h.sandbox.cancelDeferredViewRender();
   h.timers.shift()();
   assert.deepEqual(renderedViews, [], "Abbruch nach dem Frame muss auch den bereits geplanten Prep-Render verwerfen");
+}
+
+{
+  const h = createHarness();
+  const renderedViews = [];
+  h.sandbox.renderView = (id) => renderedViews.push(id);
+  h.sandbox.save = () => {};
+  h.sandbox.installViewRenderCache();
+
+  // First render establishes the cached signature. A real nav click marks the
+  // following deferred render as navigation-only, so an unchanged view can be
+  // skipped without losing the final tab selection.
+  h.sandbox.renderView("prep");
+  h.documentListeners.click({ target: { closest: () => true } });
+  h.sandbox.renderViewAfterNextPaint("prep", (id) => h.sandbox.renderView(id));
+  h.raf.shift()();
+  h.timers.shift()(); // end the click-scoped navigation marker
+  h.timers.shift()(); // execute the deferred Prep render
+  assert.deepEqual(renderedViews, ["prep"], "Unverändertes Prep darf bei Tabnavigation aus dem View-Render-Cache kommen");
+
+  // Saves invalidate the signature. The same deferred navigation must render
+  // again after state changes instead of incorrectly reusing stale content.
+  h.sandbox.save();
+  h.documentListeners.click({ target: { closest: () => true } });
+  h.sandbox.renderViewAfterNextPaint("prep", (id) => h.sandbox.renderView(id));
+  h.raf.shift()();
+  h.timers.shift()();
+  h.timers.shift()();
+  assert.deepEqual(renderedViews, ["prep", "prep"], "Ein Save muss den View-Cache vor dem nächsten Prep-Render invalidieren");
 }
 
 console.log("Deferred full-render scheduling regression passed.");

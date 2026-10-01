@@ -97,7 +97,7 @@ try {
   assert.match(await foodPlannerPreview.textContent(), /Planungsregeln werden geladen/);
   await page.locator("#closeGeneric").click();
   await page.locator('nav button[data-view="plan"]').click();
-  await page.waitForFunction(() => !!document.querySelector("#plan .planner-readiness-message"));
+  await page.locator("#plan .planner-readiness-message").waitFor({ state: "visible" });
   assert.ok(await page.locator("#plan .planner-readiness-message").count(), "Der Plan muss lokal warten, solange die Runtime-Regeln fehlen");
   assert.equal(await page.locator("#plan .plan-toolbar").evaluate((toolbar) => toolbar.inert), true, "Planänderungen müssen während des Planner-Boots gesperrt bleiben");
   assert.deepEqual(

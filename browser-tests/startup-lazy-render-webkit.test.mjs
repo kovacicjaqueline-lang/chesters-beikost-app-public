@@ -174,6 +174,11 @@ try {
     !document.getElementById("prep")?.hasAttribute("aria-busy"),
   );
   assert.equal(await page.evaluate(() => window.__prepRenderCalls), 1, "Prep wird nach der Ladeansicht genau einmal gerendert");
+  assert.equal(
+    await page.locator("#recipeList > *").count(),
+    0,
+    "Der Prep-Render darf den vollständigen Rezeptkatalog nicht vorzeitig aufbauen",
+  );
   const prepRenderDurationMs = await page.evaluate(() => window.__prepRenderDurationMs);
   assert.equal(
     await page.evaluate(() => window.__prepWeekCacheHitBefore),

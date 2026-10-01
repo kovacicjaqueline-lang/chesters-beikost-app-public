@@ -88,11 +88,17 @@ try {
   await search.click();
   // Simuliere den verkleinerten sichtbaren Bereich, den die iPhone-Tastatur lässt.
   await page.setViewportSize({ width: 390, height: 430 });
+  await page.waitForFunction(() => {
+    const sheet = document.querySelector("#genericModal .sheet");
+    return !!sheet && sheet.clientHeight < 430;
+  });
   await search.fill("Nudeln");
   const firstResultReady = await page.waitForFunction(() => {
     const row = document.querySelector(".selector-results .selectFood:not([hidden])");
     const actions = document.querySelector("#genericModal .sticky-form-actions");
-    return !!row && !!actions && row.getBoundingClientRect().bottom <= actions.getBoundingClientRect().top + 1;
+    const sheet = document.querySelector("#genericModal .sheet");
+    return !!row && !!actions && !!sheet && sheet.clientHeight < 430 &&
+      row.getBoundingClientRect().bottom <= actions.getBoundingClientRect().top + 1;
   }, null, { timeout: 1500 }).then(() => true, () => false);
   const firstVisibleResult = page.locator(".selector-results .selectFood:not([hidden])").first();
   const firstResultBox = await firstVisibleResult.boundingBox();

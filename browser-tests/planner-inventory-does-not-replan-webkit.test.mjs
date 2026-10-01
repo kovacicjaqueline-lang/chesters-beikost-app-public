@@ -86,6 +86,8 @@ try {
   assert.match(await page.locator("#prepCovered").innerText(), /Rind-Gemüse-Bolognese/);
   assert.match(await page.locator("#prepCovered").innerText(), /1\s*vorhanden/);
 
+  await page.locator('nav button[data-view="prep"]').click();
+  await page.waitForFunction(() => document.getElementById("prep")?.classList.contains("active"));
   await page.locator(".editInv").click();
   await page.locator("#invPortions").fill("2");
   await page.locator("#saveInv").click();
@@ -102,6 +104,8 @@ try {
 
   await addBologneseStock();
   assert.match(await page.locator("#blockPlan").innerText(), /Rind-Gemüse-Bolognese/);
+  await page.locator('nav button[data-view="plan"]').click();
+  await page.waitForFunction(() => document.getElementById("plan")?.classList.contains("active"));
   await page.locator("#planRecalculate").click();
   await page.waitForFunction(() => document.querySelector("#blockPlan")?.innerText.includes("Baby-Linsen-Bolognese"));
   assert.match(await page.locator("#blockPlan").innerText(), /Baby-Linsen-Bolognese/, "erst die ausdrückliche Neuplanung wählt anhand des neuen Vorrats einen anderen Slot");

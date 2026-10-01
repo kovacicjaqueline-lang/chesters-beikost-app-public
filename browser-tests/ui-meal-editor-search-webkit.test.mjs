@@ -97,10 +97,17 @@ try {
   const firstVisibleResult = page.locator(".selector-results .selectFood:not([hidden])").first();
   const firstResultBox = await firstVisibleResult.boundingBox();
   const actionbarBox = await page.locator("#genericModal .sticky-form-actions").boundingBox();
+  const sheetMetrics = await page.locator("#genericModal .sheet").evaluate((element) => ({
+    scrollTop: element.scrollTop,
+    scrollHeight: element.scrollHeight,
+    clientHeight: element.clientHeight,
+    activeElement: document.activeElement?.id || document.activeElement?.tagName,
+  }));
+  const searchBox = await search.boundingBox();
   assert.ok(firstResultBox && actionbarBox, "Treffer und Aktionsleiste müssen bei geöffneter Tastatur messbar sein");
   assert.ok(
     firstResultReady && firstResultBox.y + firstResultBox.height <= actionbarBox.y + 1,
-    "Erster Suchtreffer muss oberhalb der Aktionsleiste vollständig sichtbar sein: " + JSON.stringify({ firstResultBox, actionbarBox }),
+    "Erster Suchtreffer muss oberhalb der Aktionsleiste vollständig sichtbar sein: " + JSON.stringify({ firstResultReady, firstResultBox, actionbarBox, searchBox, sheetMetrics }),
   );
   const compactSheet = page.locator("#genericModal .sheet");
   assert.ok(

@@ -173,9 +173,10 @@ try {
 
   // Einstellungen speichern und sofort den Bottom-Tab wechseln: kein globaler Render darf den Tap blockieren.
   await page.evaluate(() => {
-    window.showView("more");
+    document.querySelector('nav button[data-view="more"]').click();
     document.querySelector("#more .settings-card > details > summary")?.click();
   });
+  await page.waitForFunction(() => Number.isFinite(window.__plannerWeekCache?.revision));
   const settingsCacheRevisionBefore = await page.evaluate(() => window.__plannerWeekCache.revision);
   const settingsImmediate = await page.evaluate(() => {
     const input = document.getElementById("newFoodEvery");

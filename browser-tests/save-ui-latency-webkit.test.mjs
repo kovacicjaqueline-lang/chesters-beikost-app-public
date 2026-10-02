@@ -179,7 +179,9 @@ try {
   const settingsCacheRevisionBefore = await page.evaluate(() => window.__plannerWeekCache.revision);
   const settingsImmediate = await page.evaluate(() => {
     const input = document.getElementById("newFoodEvery");
-    input.value = String(Math.max(2, Number(input.value || 2) + 1));
+    const options = [...input.options].map((option) => option.value);
+    const currentIndex = options.indexOf(input.value);
+    input.value = options[(currentIndex + 1) % options.length];
     const expected = input.value;
     const before = window.__saveUiLatencyProbe.renderCalls;
     document.getElementById("saveSettings").click();

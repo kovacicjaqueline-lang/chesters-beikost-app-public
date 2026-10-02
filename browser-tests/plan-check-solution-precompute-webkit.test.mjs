@@ -16,10 +16,19 @@ try {
     deviceScaleFactor: 2,
     isMobile: true,
     hasTouch: true,
+    // This regression tests plan-check caching, not PWA behavior. Block the
+    // app's production service worker so its large async precache cannot race
+    // this test's deliberate reloads and storage-denial simulation.
+    serviceWorkers: "block",
   });
   const page = await context.newPage();
   const pageErrors = [];
-  page.on("pageerror", (error) => pageErrors.push(error.message));
+  const failedRequests = [];
+  page.on("pageerror", (error) => pageErrors.push({ message: error.message, stack: error.stack || "" }));
+  page.on("requestfailed", (request) => failedRequests.push({
+    url: request.url(),
+    error: request.failure()?.errorText || "",
+  }));
 
   const diagnosticSnapshot = async (label) => {
     const snapshot = await page.evaluate((snapshotLabel) => {
@@ -390,7 +399,11 @@ try {
     `Bei etablierter Glutenpflege darf keine Weizengrieß-Einführung fortgesetzt werden: ${glutenReport.join(", ")}`,
   );
 
-  assert.deepEqual(pageErrors, [], `Keine Page-Errors erwartet: ${pageErrors.join(" | ")}`);
+  assert.deepEqual(
+    pageErrors,
+    [],
+    `Keine Page-Errors erwartet; Request-Fehler: ${JSON.stringify(failedRequests)}; Page-Errors: ${JSON.stringify(pageErrors)}`,
+  );
 } finally {
   await closeBrowserApp({ context: typeof context !== "undefined" ? context : null, browser, server });
 }

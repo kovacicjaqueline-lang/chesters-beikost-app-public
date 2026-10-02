@@ -45,6 +45,50 @@ try {
     const culinaryTrace = [];
     let traceCulinary = false;
     const baseCulinaryAssessment = window.plannerCulinaryAssessment;
+    const candidateTrace = [];
+    const eligibilityRejects = {};
+    let tracePlannerCandidates = false;
+    const tracedPlannerGlobals = {};
+    for (const name of ["introductionCandidate", "breakfastBaseIntroductionCandidate", "knownRecipeCandidate", "knownCandidate"]) {
+      const original = window[name];
+      if (typeof original !== "function") continue;
+      tracedPlannerGlobals[name] = original;
+      window[name] = function tracedPlannerCandidate(...args) {
+        const result = original.apply(this, args);
+        if (tracePlannerCandidates) candidateTrace.push({
+          fn: name,
+          meal: args[0] || "",
+          date: args[1] || "",
+          excluded: Array.isArray(args[3]) ? [...args[3]] : [],
+          picked: result?.f?.id || result?.recipe?.name || "",
+          type: result?.type || "",
+        });
+        return result;
+      };
+    }
+    const originalEligible = window.eligible;
+    if (typeof originalEligible === "function") {
+      tracedPlannerGlobals.eligible = originalEligible;
+      window.eligible = function tracedPlannerEligibility(food, meal, on) {
+        const result = originalEligible.apply(this, arguments);
+        if (tracePlannerCandidates && !result) {
+          const key = `${on}|${meal}`;
+          const bucket = eligibilityRejects[key] ||= { count: 0, samples: [] };
+          bucket.count += 1;
+          if (bucket.samples.length < 12) bucket.samples.push({
+            id: food?.id || "",
+            active: !!food?.active,
+            mealAllowed: !!food?.meals?.includes(meal),
+            status: food?.manualStatus || "",
+            category: food?.category || "",
+            autoPlan: food?.autoPlan,
+            minPhase: food?.minPhase,
+            minAgeMonths: food?.minAgeMonths,
+          });
+        }
+        return result;
+      };
+    }
     if (typeof baseCulinaryAssessment === "function") {
       window.plannerCulinaryAssessment = function tracedPlannerCulinaryAssessment(ids, foods, meal, options = {}) {
         const result = baseCulinaryAssessment(ids, foods, meal, options);
@@ -164,8 +208,11 @@ try {
     // Remove those render side effects so this assertion exercises a fresh week.
     state.planLocks = {};
     state.autoLockExcluded = {};
+    tracePlannerCandidates = true;
     const trustedDays = api.buildDays(on, 7);
+    tracePlannerCandidates = false;
     const trustedTrace = culinaryTrace.splice(0);
+    for (const [name, original] of Object.entries(tracedPlannerGlobals)) window[name] = original;
     if (typeof baseCulinaryAssessment === "function") {
       window.plannerCulinaryAssessment = baseCulinaryAssessment;
     }
@@ -194,6 +241,8 @@ try {
       everydayTrace,
       trusted: compact(trustedDays),
       trustedTrace,
+      candidateTrace,
+      eligibilityRejects,
     };
   });
 
@@ -204,6 +253,8 @@ try {
       everyday: diagnostics.everydayTrace.length,
       trusted: diagnostics.trustedTrace.length,
     },
+    trustedCandidateTrace: diagnostics.candidateTrace,
+    trustedEligibilityRejects: diagnostics.eligibilityRejects,
   })}`);
 
   const trustedVisible = diagnostics.trusted.flatMap((day) => day.meals)

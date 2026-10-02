@@ -273,7 +273,9 @@ function chooseFocus(meal, on, exclude = [], key = "") {
     let f = retries[0];
     return {
       f,
-      type: eatenExposureCount(f.id) >= 1
+      type: f.allergenGroup && rank(f) === 1
+        ? "Allergen wiederholen"
+        : eatenExposureCount(f.id) >= 1
         ? "bekannt kombinieren"
         : "gezielt wiederholen",
     };
@@ -290,7 +292,10 @@ function chooseFocus(meal, on, exclude = [], key = "") {
       rank(f) === 0 &&
       (!f.allergenGroup || baseExists || plannerAllergenCanBeStandalone(f)),
   );
-  fresh.sort((a, b) => effectivePriority(a, on) - effectivePriority(b, on));
+  fresh.sort((a, b) =>
+    Number(!a.allergenGroup) - Number(!b.allergenGroup) ||
+    effectivePriority(a, on) - effectivePriority(b, on),
+  );
   if (fresh.length) return { f: fresh[0], type: fresh[0].allergenGroup ? "Allergen einführen" : "neu" };
   let regular = pool.filter((f) => rank(f) >= 2);
   regular.sort(
@@ -552,12 +557,20 @@ function introductionCandidate(meal, on, ctx, exclude = [], baseExclude = exclud
     lastOutcome(f.id) === "not_accepted" ||
     (!!f.allergenGroup && rank(f) === 1),
   );
-  retries.sort((a, b) => effectivePriority(a, on) - effectivePriority(b, on));
+  retries.sort((a, b) =>
+    (a.allergenGroup && b.allergenGroup && typeof foodSpecificSuccessfulExposureCount === "function"
+      ? foodSpecificSuccessfulExposureCount(a.id) - foodSpecificSuccessfulExposureCount(b.id)
+      : 0) ||
+    Number(!a.allergenGroup) - Number(!b.allergenGroup) ||
+    effectivePriority(a, on) - effectivePriority(b, on),
+  );
   if (retries.length) {
     let f = retries[0];
     return {
       f,
-      type: eatenExposureCount(f.id) >= 1
+      type: f.allergenGroup && rank(f) === 1
+        ? "Allergen wiederholen"
+        : eatenExposureCount(f.id) >= 1
         ? "bekannt kombinieren"
         : "gezielt wiederholen",
     };
@@ -574,7 +587,10 @@ function introductionCandidate(meal, on, ctx, exclude = [], baseExclude = exclud
       rank(f) === 0 &&
       (!f.allergenGroup || baseExists || plannerAllergenCanBeStandalone(f)),
   );
-  fresh.sort((a, b) => effectivePriority(a, on) - effectivePriority(b, on));
+  fresh.sort((a, b) =>
+    Number(!a.allergenGroup) - Number(!b.allergenGroup) ||
+    effectivePriority(a, on) - effectivePriority(b, on),
+  );
   return fresh.length ? { f: fresh[0], type: fresh[0].allergenGroup ? "Allergen einführen" : "neu" } : null;
 }
 function breakfastBaseIntroductionCandidate(meal, on, ctx, exclude = []) {

@@ -138,6 +138,9 @@
       rankFn: (record) => typeof rank === "function" ? rank(record) : 0,
       outcomeForFoodFn: (logRecord, id) => typeof outcomeForFood === "function" ? outcomeForFood(logRecord, id) : "",
       projectedTargetKeys: new Set(),
+      exposureKeyFn: (logRecord) => typeof plannerLogExposureKey === "function"
+        ? plannerLogExposureKey(logRecord)
+        : `${logRecord?.date || ""}|${logRecord?.meal || logRecord?.id || "entry"}`,
     });
 
     const items = dueTargets.map((target) => {

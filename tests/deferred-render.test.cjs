@@ -25,8 +25,11 @@ function createHarness({ withAnimationFrame = true } = {}) {
     document: {
       readyState: "loading",
       addEventListener(type, callback) { documentListeners[type] = callback; },
+      querySelector: () => ({ id: "home" }),
+      getElementById: () => null,
     },
     renderAll: () => events.push("render"),
+    renderCurrentView: () => events.push("current"),
     setTimeout: (callback) => { timers.push(callback); return timers.length; },
   };
   if (withAnimationFrame) sandbox.requestAnimationFrame = (callback) => { raf.push(callback); return raf.length; };
@@ -69,6 +72,42 @@ function createHarness({ withAnimationFrame = true } = {}) {
   h.timers.shift()();
   assert.deepEqual(h.events, ["action", "visible-ui", "render"]);
   assert.deepEqual(callbacks, ["after-render"]);
+}
+
+
+{
+  const h = createHarness();
+  const activeView = { id: "home" };
+  h.sandbox.document = { querySelector: () => activeView };
+  const callbacks = [];
+  h.sandbox.runWithDeferredCurrentViewRender(() => {
+    h.events.push("save");
+    h.sandbox.renderAll();
+  }, () => callbacks.push("after-current-view"));
+
+  assert.deepEqual(h.events, ["save"], "Speichern darf die Navigation nicht durch einen synchronen Render blockieren");
+  h.raf.shift()();
+  assert.deepEqual(h.events, ["save"], "Der gezielte Render muss nach der Paint-Gelegenheit liegen");
+  h.timers.shift()();
+  assert.deepEqual(h.events, ["save", "current"]);
+  assert.deepEqual(callbacks, ["after-current-view"]);
+}
+
+{
+  const h = createHarness();
+  const activeView = { id: "home" };
+  h.sandbox.document = { querySelector: () => activeView };
+  const callbacks = [];
+  h.sandbox.runWithDeferredCurrentViewRender(() => {
+    h.sandbox.renderAll();
+  }, () => callbacks.push("stale-view-callback"));
+
+  activeView.id = "foods";
+  h.events.push("tab:foods");
+  h.raf.shift()();
+  h.timers.shift()();
+  assert.deepEqual(h.events, ["tab:foods"], "Ein inzwischen geöffneter Haupttab darf keinen veralteten Save-Render erhalten");
+  assert.deepEqual(callbacks, [], "Save-Nacharbeit darf nach einem Tabwechsel nicht in die neue Ansicht scrollen");
 }
 
 {

@@ -133,7 +133,7 @@ try {
   const logImmediate = await page.evaluate(() => {
     const before = window.__saveUiLatencyProbe.renderCalls;
     document.getElementById("saveLog").click();
-    return {
+    const result = {
       before,
       after: window.__saveUiLatencyProbe.renderCalls,
       modalOpen: document.getElementById("logModal").classList.contains("open"),
@@ -141,12 +141,16 @@ try {
       homeVisible: document.getElementById("home").classList.contains("active"),
       moreVisible: document.getElementById("more").classList.contains("active"),
     };
+    document.querySelector('nav button[data-view="foods"]').click();
+    result.foodsVisible = document.getElementById("foods").classList.contains("active");
+    return result;
   });
-  assert.equal(logImmediate.after, logImmediate.before, "Protokoll-Save darf nicht synchron voll rendern");
+  assert.equal(logImmediate.after, logImmediate.before, "Protokoll-Save darf nicht synchron alle Ansichten rendern");
   assert.equal(logImmediate.modalOpen, false, "Protokoll-Modal muss sofort schließen");
   assert.equal(logImmediate.logCount, logsBefore + 1, "Protokoll muss vor dem Voll-Render persistiert sein");
   assert.equal(logImmediate.homeVisible, true, "Ausgangsansicht muss nach dem Speichern aktiv bleiben");
   assert.equal(logImmediate.moreVisible, false, "Speichern darf nicht automatisch in die Protokollansicht wechseln");
+  assert.equal(logImmediate.foodsVisible, true, "Die Hauptnavigation muss direkt nach dem Schließen des Protokoll-Dialogs reagieren");
   const persistedLogShape = await page.evaluate(async () => {
     await saveQueue;
     const db = await new Promise((resolve, reject) => {
@@ -164,11 +168,16 @@ try {
   });
   assert.equal(Object.hasOwn(persistedLogShape.state, "logs"), false, "App-Datensatz darf keine vollständige Log-Historie enthalten");
   assert.equal(persistedLogShape.logs.length, logsBefore + 1, "IndexedDB soll getrennte Protokolldatensätze enthalten");
-  await waitForDeferredRender(page, logImmediate.before);
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0))));
   assert.equal(
-    await page.evaluate(() => document.getElementById("home").classList.contains("active")),
+    await page.evaluate(() => window.__saveUiLatencyProbe.renderCalls),
+    logImmediate.before,
+    "Protokoll-Save darf nach dem Tabwechsel keinen Voll-Render auslösen, der die Hauptnavigation blockiert",
+  );
+  assert.equal(
+    await page.evaluate(() => document.getElementById("foods").classList.contains("active")),
     true,
-    "Ausgangsansicht muss auch nach dem verzögerten Voll-Render aktiv bleiben",
+    "Der neue Haupttab muss nach den aufgeschobenen Save-Updates aktiv bleiben",
   );
 
   // Einstellungen speichern und sofort den Bottom-Tab wechseln: kein globaler Render darf den Tap blockieren.

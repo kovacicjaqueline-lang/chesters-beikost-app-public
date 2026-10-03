@@ -201,6 +201,41 @@ function runWithDeferredFullRender(callback, afterRender = null) {
   }
 }
 
+function runWithDeferredCurrentViewRender(callback, afterRender = null) {
+  if (typeof callback !== "function") return;
+  if (typeof renderAll !== "function" || typeof renderCurrentView !== "function") {
+    return runWithDeferredFullRender(callback, afterRender);
+  }
+
+  let baseRenderAll = renderAll;
+  let initialViewId = typeof document !== "undefined" && typeof document.querySelector === "function"
+    ? document.querySelector(".view.active")?.id || ""
+    : "";
+  let requested = false;
+  renderAll = function requestDeferredCurrentViewRender() {
+    requested = true;
+  };
+  try {
+    return callback();
+  } finally {
+    renderAll = baseRenderAll;
+    if (requested) {
+      afterNextPaint(() => {
+        let activeViewId = typeof document !== "undefined" && typeof document.querySelector === "function"
+          ? document.querySelector(".view.active")?.id || ""
+          : "";
+        let viewUnchanged = !initialViewId || !activeViewId || activeViewId === initialViewId;
+        if (viewUnchanged) {
+          renderCurrentView();
+          if (typeof afterRender === "function") afterRender();
+        }
+      });
+    } else if (typeof afterRender === "function") {
+      afterRender();
+    }
+  }
+}
+
 function runWithTargetedFullRender(callback, renderTarget, { wrapUndo = false } = {}) {
   if (typeof callback !== "function") return;
   if (typeof renderAll !== "function" || typeof renderTarget !== "function") return callback();
@@ -354,28 +389,43 @@ function installSaveUiLatencyFlows() {
 
   if (typeof saveLog === "function") {
     let baseSaveLog = saveLog;
-    saveLog = function saveLogWithoutBlockingFullRender(...args) {
+    saveLog = function saveLogWithTargetedDeferredRender(...args) {
       let editId = pendingLog?.editId || "";
       let beforeRef = editId ? state.logs.find((log) => log.id === editId) : null;
       let beforeIds = editId ? null : new Set(state.logs.map((log) => log.id));
-      let result;
       let savedLog = null;
-      if (!beginDeferredFullRender()) return baseSaveLog.apply(this, args);
+      let baseShowToast = typeof showToast === "function" ? showToast : null;
+
+      if (baseShowToast) {
+        showToast = function showLogToastWithTargetedUndo(message, undoFn = null) {
+          let targetedUndo = typeof undoFn === "function"
+            ? () => runWithDeferredCurrentViewRender(undoFn)
+            : undoFn;
+          return baseShowToast(message, targetedUndo);
+        };
+      }
+
       try {
-        result = baseSaveLog.apply(this, args);
-        savedLog = editId
-          ? state.logs.find((log) => log.id === editId)
-          : state.logs.find((log) => !beforeIds.has(log.id));
-        if (editId && savedLog === beforeRef) savedLog = null;
-        return result;
+        return runWithDeferredCurrentViewRender(
+          () => {
+            let result = baseSaveLog.apply(this, args);
+            savedLog = editId
+              ? state.logs.find((log) => log.id === editId)
+              : state.logs.find((log) => !beforeIds.has(log.id));
+            if (editId && savedLog === beforeRef) savedLog = null;
+            return result;
+          },
+          () => {
+            let savedId = savedLog?.id || "";
+            if (!savedId) return;
+            let details = document.getElementById("logDetails");
+            if (details) details.open = true;
+            let entry = document.querySelector(`[data-log="${savedId}"]`);
+            (entry || document.getElementById("logSection"))?.scrollIntoView({ behavior: "smooth", block: "start" });
+          },
+        );
       } finally {
-        let savedId = savedLog?.id || "";
-        endDeferredFullRender(savedId ? () => {
-          let details = document.getElementById("logDetails");
-          if (details) details.open = true;
-          let entry = document.querySelector(`[data-log="${savedId}"]`);
-          (entry || document.getElementById("logSection"))?.scrollIntoView({ behavior: "smooth", block: "start" });
-        } : null);
+        if (baseShowToast) showToast = baseShowToast;
       }
     };
   }

@@ -28,6 +28,8 @@
 
     const cache = new Map();
     const batches = new Map();
+    const cachedEvaluations = new Map();
+    const MAX_CACHED_EVALUATIONS = 8;
     const PERSISTED_NONE_KEY = `beikost-plan-check-none-v2-f${solutions.FEATURE_VERSION}`;
     const PERSISTED_NONE_LIMIT = 32;
     const PERSISTED_NONE_TTL_MS = 14 * 24 * 60 * 60 * 1000;
@@ -120,11 +122,30 @@
       }
     }
 
-    function activateEvaluation(evaluationKey) {
-      if (activeEvaluationKey === evaluationKey) return;
-      activeEvaluationKey = evaluationKey;
+    function evictEvaluation(evaluationKey) {
+      const prefix = `${evaluationKey}|`;
       for (const key of cache.keys()) {
-        if (!key.startsWith(`${evaluationKey}|`)) cache.delete(key);
+        if (key.startsWith(prefix)) cache.delete(key);
+      }
+      cachedEvaluations.delete(evaluationKey);
+    }
+
+    function activateEvaluation(evaluationKey) {
+      if (activeEvaluationKey && activeEvaluationKey !== evaluationKey) {
+        const previousPrefix = `${activeEvaluationKey}|`;
+        for (const [key, entry] of cache) {
+          if (
+            key.startsWith(previousPrefix) &&
+            (entry?.status === "pending" || entry?.status === "error")
+          ) cache.delete(key);
+        }
+      }
+
+      activeEvaluationKey = evaluationKey;
+      cachedEvaluations.delete(evaluationKey);
+      cachedEvaluations.set(evaluationKey, true);
+      while (cachedEvaluations.size > MAX_CACHED_EVALUATIONS) {
+        evictEvaluation(cachedEvaluations.keys().next().value);
       }
     }
 

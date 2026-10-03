@@ -51,6 +51,14 @@ function foodStatusPreferenceNextAutomaticResult(producer, exclude = []) {
   return null;
 }
 
+function foodStatusPreferenceStoredMealVisible(date, meal, stored, currentDate, activeMealFn) {
+  if (!stored) return false;
+  if (stored.manualAdded === true) return true;
+  if (!date || !currentDate || String(date) < String(currentDate)) return true;
+  if (typeof activeMealFn !== "function") return true;
+  return !!activeMealFn(meal, date);
+}
+
 function foodStatusPreferenceKnownBase(meal, exclude = []) {
   let pool = state.foods.filter((foodRecord) =>
     foodRecord.active &&
@@ -70,15 +78,22 @@ function foodStatusPreferenceKnownBase(meal, exclude = []) {
 }
 
 function foodStatusPreferenceCompanionFor(focus, meal, on, focusType = "") {
-  if (focus.allergenGroup) return knownBase(meal, [focus.id]);
-
   let introductionTypes = new Set([
     "neu",
     "gezielt wiederholen",
+    "Allergen einführen",
     "Allergen wiederholen",
     "manuell",
   ]);
-  let needsTrustedBase = introductionTypes.has(focusType) && !isTrustedBase(focus);
+  let standaloneAllergen = typeof plannerAllergenCanBeStandalone === "function"
+    ? plannerAllergenCanBeStandalone(focus)
+    : !!focus?.allergenGroup && focus?.plannerIntroductionMode === "standalone";
+  let standaloneIntroduction = typeof plannerAllergenIsStandaloneIntroduction === "function"
+    ? plannerAllergenIsStandaloneIntroduction(focus, focusType)
+    : standaloneAllergen && introductionTypes.has(focusType) && !isTrustedBase(focus);
+  let needsTrustedBase = introductionTypes.has(focusType) && !isTrustedBase(focus) && !standaloneAllergen;
+
+  if (standaloneIntroduction) return null;
 
   let pool = state.foods.filter((candidate) => {
     let normalMealMatch = eligible(candidate, meal, on);
@@ -219,6 +234,17 @@ function installFoodStatusPreferencePolicy() {
   if (typeof companionFor === "function") {
     companionFor = foodStatusPreferenceCompanionFor;
   }
+  if (typeof lockedMeal === "function") {
+    let originalLockedMeal = lockedMeal;
+    lockedMeal = function foodStatusPreferenceLockedMeal(date, meal) {
+      let stored = originalLockedMeal(date, meal);
+      let currentDate = typeof today === "function" ? today() : date;
+      let activeMealFn = typeof activeMeal === "function" ? activeMeal : null;
+      return foodStatusPreferenceStoredMealVisible(date, meal, stored, currentDate, activeMealFn)
+        ? stored
+        : null;
+    };
+  }
 
   if (typeof chooseFocus === "function") {
     let originalChooseFocus = chooseFocus;
@@ -251,12 +277,12 @@ function installFoodStatusPreferencePolicy() {
         );
       }
 
-      let settings = document.querySelector(".food-detail-settings");
-      if (settings && !document.getElementById("foodDetailsLiked")) {
+      let preference = document.querySelector(".food-detail-preference");
+      if (preference && !document.getElementById("foodDetailsLiked")) {
         let label = document.createElement("label");
         label.className = "toggleline";
         label.innerHTML = `<input class="ds-toggle-input" type="checkbox" id="foodDetailsLiked" ${foodStatusPreferenceLiked(foodRecord) ? "checked" : ""}><span class="toggle-copy"><b>❤️ Wird gern gegessen</b><span class="small">Optional. Nicht markiert bedeutet neutral.</span></span><span class="toggle-state" aria-hidden="true"></span>`;
-        settings.appendChild(label);
+        preference.appendChild(label);
         document.getElementById("foodDetailsLiked").onchange = (event) => {
           foodRecord.liked = event.target.checked === true;
           save();
@@ -283,6 +309,8 @@ if (typeof module !== "undefined" && module.exports) {
     foodStatusPreferenceCanCombine,
     foodStatusPreferenceShouldRetry,
     foodStatusPreferenceShouldSkipAutomaticResult,
+    foodStatusPreferenceStoredMealVisible,
+    foodStatusPreferenceCompanionFor,
     foodStatusPreferenceProgressLabels,
     installFoodStatusPreferencePolicy,
   };

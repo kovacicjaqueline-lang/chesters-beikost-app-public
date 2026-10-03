@@ -13,6 +13,8 @@
 
 Der Review erfolgte breadth-first: Zuerst wurden Dateistruktur, Ladefolge, produktive Module, Datenkataloge, Persistenz-, PWA- und Testpfade statisch erfasst. Danach wurden auffällige Call-Chains in Planner, Migration/Persistenz, Backup/Restore, Protokoll, Vorrat, dynamischen Runtime-Policies und Service Worker vertieft. Candidates wurden gegen den tatsächlichen Daten- und Kontrollfluss sowie vorhandene Regressionen geprüft. Root-Cause-gleiche Symptome sind zusammengeführt.
 
+**Hinweis zum aktuellen Arbeitsstand:** Der historische Produktallergen-/Sulfitpfad wurde nach diesem Audit entfernt. Aktuelle Exporte verwenden wieder Schema 5; Schema-6-Altbackups mit Produktallergen-Metadaten bleiben als Importformat lesbar und werden bei der Migration um Produkt-/Sulfitdaten bereinigt. Die folgende Finding-Dokumentation beschreibt weiterhin den damaligen Audit-Befund; CR-002 ist für den aktuellen Arbeitsstand damit überholt.
+
 Technische Grenzen: Es wurde ausschließlich der bereitgestellte PUBLIC-Workspace untersucht; es gab keinen Remote und keinen direkten GitHub-Netzwerkzugriff. Deshalb konnten Repository-Identität, externer `main`, PR-Metadaten und GitHub Actions nicht zusätzlich serverseitig geprüft werden. Die visuelle/fachliche FOOD-V2-Icon-Bewertung war gemäß Auftrag ausgeschlossen; geprüft wurden nur technische Mappings, Dateien und Cache-Referenzen. Eine fachliche Neubewertung medizinischer Inhalte fand nicht statt. Browser-spezifische Fehler wurden nur dort als bestätigt gewertet, wo der Plattformfluss aus Web-API-Semantik und Code eindeutig folgt.
 
 ## Coverage-Matrix
@@ -32,7 +34,7 @@ Technische Grenzen: Es wurde ausschließlich der bereitgestellte PUBLIC-Workspac
 | Protokoll und abgeleitete Statuswerte | ja | Anlegen/Bearbeiten/Löschen, Outcomes, Rollen, Textur, Planverknüpfung und Statistiken geprüft | – |
 | Follow-ups und Missed-Day-Rollover | ja | Erzeugung, Verschiebung, Konflikte, Kaskade und Konsequenz-Neuaufbau geprüft | – |
 | Vorrat, Batch-Rechner und Verbrauch | ja | FOOD-/Rezeptbatches, Portionen, FIFO, Reservierungen und Frozen-Ingredient-Fluss geprüft | – |
-| Produktallergene/Sulfite | ja | Schema-Wrapper, Snapshots, Log-/Vorratsübernahme und Guards geprüft | CR-002 |
+| Produktallergene/Sulfite | ja | Historischen Pfad geprüft und anschließend entfernt; Altbackup-Migration und Bereinigung regressionsgeprüft | – |
 | UI-State, Dialoge und Navigation | ja | View-State, Modals, Meal-Editor, Karten, Suche und Event-Bindings geprüft | – |
 | Statistiken | ja | tatsächliche Gaben, Identitäten, Zeitraum und Neuberechnung geprüft | – |
 | PWA, Service Worker und Offline-Cache | ja | Install/Activate/Fetch, dynamische Precache-Listen und Offline-Fallback geprüft | CR-003 |
@@ -57,10 +59,10 @@ Technische Grenzen: Es wurde ausschließlich der bereitgestellte PUBLIC-Workspac
 **Fehlender Regressionstest:** Simulierter erfolgreicher IDB-Stand A → fehlgeschlagener Write von B bei erfolgreichem localStorage → neuer Boot mit wieder erreichbarem IDB; B muss erhalten bleiben und kontrolliert nach IDB zurückgeschrieben werden.
 **Kleinste sinnvolle Reparaturrichtung:** Beide Spiegel mit einer monotonen Revision bzw. `updatedAt` versehen und beim Boot den neuesten validen Stand wählen; alternativ beim Write-Fehler den IDB-Stand eindeutig als stale markieren und beim nächsten Boot die Notfallkopie priorisieren, bis ein verifizierter Write-back gelungen ist.
 
-### CR-002 | MEDIUM | CONFIRMED
+### CR-002 | MEDIUM | CONFIRMED ON AUDIT BASIS; SUPERSEDED IN CURRENT WORKTREE
 
 **Bereich:** Backup-Kompatibilität, Schema-Metadaten
-**Betroffene Datei(en)/Funktion(en):** `VERSION.json`; `js/state.js`: `SCHEMA_VERSION`; `js/storage.js`: `buildBackupPackage`, `validateBackup`; `js/product-allergens-guards.js`: `PRODUCT_ALLERGEN_BACKUP_SCHEMA_VERSION`, Backup-/Validate-Wrapper
+**Betroffene Datei(en)/Funktion(en) im Audit-Basisstand:** `VERSION.json`; `js/state.js`: `SCHEMA_VERSION`; `js/storage.js`: `buildBackupPackage`, `validateBackup`; `js/product-allergens-guards.js`: `PRODUCT_ALLERGEN_BACKUP_SCHEMA_VERSION`, Backup-/Validate-Wrapper. Im aktuellen Arbeitsstand ist der Produkt-/Sulfitpfad durch `js/recipe-inventory-ingredients.js` ersetzt.
 **Problem:** Der Release-Metadatensatz deklariert `schemaVersion: 7`, während der Storage-Kern Version 5 verwendet und der nachgeladene Produktallergen-Wrapper aktuelle Exporte auf Version 6 umschreibt. Der Import akzeptiert das spezielle aktuelle Format nur exakt als Version 6; alle übrigen Pakete laufen in die Basiskontrolle, die jede Version über 5 ablehnt. Damit kann der Stand `10.1.26` kein Backup mit der von seinen eigenen Release-Metadaten ausgewiesenen Schema-Version 7 importieren und exportiert selbst weiterhin Version 6.
 **Konkrete Auswirkung / reproduzierbares Szenario:** Ein formal zur dokumentierten Version `10.1.26` gehörendes Backup-Paket mit `schemaVersion: 7` wird zuerst vom Produktallergen-Sonderpfad abgewiesen (nicht exakt 6) und danach von `validateBackup` als „neuere App-Version“ verworfen (`7 > 5`). Umgekehrt enthält ein frisch erzeugtes Backup Version 6 statt der in `VERSION.json` ausgewiesenen 7. Automatisierte Support-/Kompatibilitätsentscheidungen erhalten widersprüchliche Angaben.
 **Technischer Beleg:** Die drei produktiven Konstanten/Metadatenwerte sind 7, 5 und 6. Der Wrapper setzt Export und Payload explizit auf 6 und lässt nur `schemaVersion === 6` mit `productAllergenSchemaVersion === 1` passieren; der Basispfad prüft gegen 5.

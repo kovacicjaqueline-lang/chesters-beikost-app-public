@@ -4,6 +4,7 @@
   const PIN_FLAG = "randomSwapPinned";
   const PRESERVE_FLAG = "randomSwapPreserved";
   const TARGET_FLAG = "randomSwapTarget";
+  let preservedVisiblePlanIds = new Map();
 
   function slotKey(date, meal) {
     return `${date}|${meal}`;
@@ -30,7 +31,7 @@
     const result = [];
     for (const day of days || []) {
       for (const meal of day.meals || []) {
-        if (!meal?.active || meal.empty || !meal.focusId) continue;
+        if (!meal?.active || meal.empty || (!meal.focusId && !meal.recipeName)) continue;
         if (slotKey(day.date, meal.meal) === targetKey) continue;
         result.push(meal);
       }
@@ -97,6 +98,26 @@
     data.planLocks ||= {};
     data.manualMeals ||= {};
     data.autoLockExcluded ||= {};
+    globalScope.__plannerLogRolloverCore?.ensurePrimaryPlanIds?.(data);
+    const visiblePlanIds = new Map();
+    const visiblePlanPayloads = new Map();
+    const preserveVisiblePayload = (lock, payload) => {
+      if (!lock || !payload) return;
+      for (const field of ["foodIds", "recipeName", "recipeId", "plannedMealId", "focusId", "sampleFoodIds", "type", "texture", "fatId"]) {
+        if (payload[field] !== undefined) lock[field] = clone(payload[field]);
+      }
+    };
+    for (const button of globalScope.document?.querySelectorAll?.("#blockPlan .logMeal[data-plan]") || []) {
+      try {
+        const payload = JSON.parse(decodeURIComponent(button.dataset.plan || ""));
+        if (payload.date && payload.meal && payload.planId) {
+          const key = slotKey(payload.date, payload.meal);
+          visiblePlanIds.set(key, payload.planId);
+          visiblePlanPayloads.set(key, payload);
+        }
+      } catch (_) {}
+    }
+    preservedVisiblePlanIds = visiblePlanIds;
     let pinned = 0;
     for (const day of days || []) {
       if (!day?.date || day.date < todayValue) continue;
@@ -106,9 +127,31 @@
         if (key === targetKey || isCompleted?.(day.date, meal.meal)) continue;
         if (data.manualMeals?.[key]?.manualAdded) continue;
         const existing = data.planLocks?.[key];
+        const visiblePlanId = visiblePlanIds.get(key);
         if (existing?.followUpFoodId || existing?.mode === "manual" || existing?.[PIN_FLAG]) continue;
+        if (existing?.mode === "auto") {
+          if (!existing.planId && globalScope.__plannerLogRolloverCore?.stablePlanId) {
+            existing.planId = globalScope.__plannerLogRolloverCore.stablePlanId(meal, day.date, meal.meal);
+          }
+          if (visiblePlanId || meal.planId) existing.planId = visiblePlanId || meal.planId;
+          preserveVisiblePayload(existing, visiblePlanPayloads.get(key));
+          for (const field of ["plannedMealId", "recipeInventoryId", "recipeBatchId"]) {
+            if (!existing[field] && meal[field]) existing[field] = meal[field];
+          }
+          existing[PIN_FLAG] = true;
+          existing[PRESERVE_FLAG] = true;
+          // A tracking-only snapshot is ignored by lockedMeal. Once explicitly
+          // pinned for a swap, it must become a real automatic fixed snapshot.
+          delete existing.plannerTrackingSnapshot;
+          delete data.autoLockExcluded?.[key];
+          pinned += 1;
+          continue;
+        }
         const snapshot = snapshotFactory(day.date, meal.meal, meal, "auto");
         if (!snapshot?.focusId) continue;
+        snapshot.planId = visiblePlanId || meal.planId ||
+          globalScope.__plannerLogRolloverCore?.stablePlanId?.(meal, day.date, meal.meal) ||
+          snapshot.planId;
         snapshot.mode = "auto";
         snapshot[PIN_FLAG] = true;
         snapshot[PRESERVE_FLAG] = true;
@@ -116,6 +159,12 @@
         delete data.autoLockExcluded?.[key];
         pinned += 1;
       }
+    }
+    for (const [visibleKey, planId] of visiblePlanIds) {
+      if (visibleKey === targetKey || !planId) continue;
+      data.planLocks[visibleKey] ||= { mode: "auto" };
+      data.planLocks[visibleKey].planId = planId;
+      preserveVisiblePayload(data.planLocks[visibleKey], visiblePlanPayloads.get(visibleKey));
     }
     return pinned;
   }
@@ -132,6 +181,9 @@
     chooseAlternative,
     automaticFocusAllowed,
     learningCandidateCompatible,
+    recipeAlternativeCompatible,
+    recipeAlternativeNewFoodIds,
+    recipeAlternativeMilkCompatible,
     pinVisibleAutomaticMeals,
   };
 
@@ -273,6 +325,181 @@
     return alternatives;
   }
 
+  function recipeAlternativeNewFoodIds(ids, isKnown = () => true) {
+    return [...new Set(ids || [])].filter((id) => !isKnown(id));
+  }
+
+  function recipeAlternativeCompatible(current, recipe, ids, isKnown = () => true) {
+    if (!current || !recipe || !recipe.name || recipe.name === current.recipeName) return false;
+    const samples = [...new Set(current.sampleFoodIds || [])];
+    const uniqueIds = [...new Set(ids || [])];
+    const unknown = recipeAlternativeNewFoodIds(uniqueIds, isKnown);
+    if (unknown.length > 1) return false;
+    return samples.every((id) => uniqueIds.includes(id));
+  }
+
+  function recipeAlternativeMilkCompatible(current, recipe, ids = []) {
+    const currentMilk = String(current?.milkMeal || (typeof mealMilkLevel === "function" ? mealMilkLevel(current) : ""));
+    const inferredMilk = typeof mealContainsMilkProduct === "function" && mealContainsMilkProduct(ids)
+      ? "full"
+      : "";
+    const recipeMilk = String(recipe?.milkMeal || inferredMilk);
+    return currentMilk === recipeMilk;
+  }
+
+  function recipeAlternativeFoodReady(id, meal, date) {
+    const item = typeof food === "function" ? food(id) : null;
+    if (!item || (typeof status === "function" && status(item) === "Pausiert")) return false;
+    if (typeof plannerAutomaticFoodMealEligible === "function") {
+      return plannerAutomaticFoodMealEligible(
+        item,
+        meal,
+        date,
+        state.settings || {},
+        typeof automaticFoodEligibility === "function" ? automaticFoodEligibility : null,
+      );
+    }
+    if (typeof plannerFoodMealEligible === "function" && !plannerFoodMealEligible(item, meal)) return false;
+    return typeof automaticFoodEligibility !== "function" ||
+      automaticFoodEligibility(item, date, state.settings || {});
+  }
+
+  function recipeAlternativeNameVariants(recipe) {
+    if (typeof plannerRecipeNameVariants === "function") return plannerRecipeNameVariants(recipe);
+    if (!recipe) return [];
+    const bases = [recipe.requires || [], ...(recipe.alternatives || [])]
+      .filter((items, index) => items.length || index === 0)
+      .map((items) => [...items]);
+    const groups = [];
+    if (Array.isArray(recipe.oneOf) && recipe.oneOf.length) groups.push(recipe.oneOf);
+    if (Array.isArray(recipe.milkChoices) && recipe.milkChoices.length) groups.push(recipe.milkChoices);
+    let variants = bases.length ? bases : [[]];
+    for (const group of groups) variants = variants.flatMap((base) => group.map((choice) => [...base, choice]));
+    return variants.map((names) => [...new Set(names.filter(Boolean))]);
+  }
+
+  function recipeAlternativeVariantIds(recipe) {
+    return recipeAlternativeNameVariants(recipe)
+      .map((names) => names.map((name) => {
+        const item = typeof foodByName === "function"
+          ? foodByName(name, state.foods || [])
+          : (state.foods || []).find((candidate) => candidate.name === name);
+        return item?.id || "";
+      }).filter(Boolean))
+      .filter((ids) => ids.length)
+      .map((ids) => [...new Set(ids)]);
+  }
+
+  function buildRecipeAlternativeMeal(
+    recipe,
+    date,
+    meal,
+    ctx,
+    ids = null,
+    sampleIds = [],
+    learningType = "neu",
+  ) {
+    if (!recipe || typeof recipeFoodIds !== "function") return null;
+    const selectedIds = ids?.length ? [...ids] : recipeFoodIds(recipe);
+    const selectedSampleIds = [...new Set(sampleIds || [])].filter((id) => selectedIds.includes(id));
+    if (!selectedIds.length) return null;
+
+    const reserved = Number(ctx?.recipeReserved?.get(recipe.name) || 0);
+    const availableStock =
+      typeof recipeInventoryPortions === "function" &&
+      recipeInventoryPortions(recipe.name) > reserved;
+    const batch =
+      state.settings?.preferInventoryInPlan && availableStock && typeof oldestRecipeBatch === "function"
+        ? oldestRecipeBatch(recipe.name)
+        : null;
+    const generated = applyPlannedMealAmounts({
+      meal,
+      active: true,
+      focusId: selectedSampleIds[0] || selectedIds[0],
+      foodIds: selectedIds,
+      baseFoodIds: selectedIds.filter((id) => !selectedSampleIds.includes(id)),
+      sampleFoodIds: selectedSampleIds,
+      optionalAddons: [],
+      inventoryFoodIds: [],
+      recipeName: recipe.name,
+      recipeInventoryId: batch?.id || "",
+      milkMeal: recipe.milkMeal || "",
+      type: selectedSampleIds.length
+        ? learningType
+        : batch
+          ? "Rezeptvorrat"
+          : "Rezept",
+      note: selectedSampleIds.length
+        ? `Rezept mit genau einem neuen Lebensmittel; ${food(selectedSampleIds[0])?.name || selectedSampleIds[0]} bleibt die einzige Kostprobe.`
+        : batch
+          ? "Eine alternative vorbereitete Portion aus dem Gefriervorrat verwenden."
+          : "Passendes alternatives Rezept statt der bisherigen Rezeptmahlzeit.",
+    });
+    if (typeof reserveMealInventory === "function") reserveMealInventory(generated, ctx);
+    return generated;
+  }
+
+  function recipeAlternatives(days, date, meal, current) {
+    const targetKey = slotKey(date, meal);
+    const baseline = reservationContext(days, targetKey);
+    const alternatives = [];
+    const seen = new Set();
+    const recipes = typeof recipeStates === "function" ? recipeStates() : [];
+    const suitable = typeof plannerRecipeSuitableForMeal === "function"
+      ? plannerRecipeSuitableForMeal
+      : recipeSuitableForMeal;
+    for (const recipe of shuffle(recipes)) {
+      if (!recipe || recipe.name === current.recipeName) continue;
+      if (Array.isArray(recipe.requirementMissing) && recipe.requirementMissing.length) continue;
+      if (!suitable(recipe, meal)) continue;
+
+      for (const ids of recipeAlternativeVariantIds(recipe)) {
+        const known = (id) => {
+          const item = typeof food === "function" ? food(id) : null;
+          return !!item && (typeof recipeIngredientReady !== "function" || recipeIngredientReady(item.name));
+        };
+        if (
+          !ids.length ||
+          !ids.every((id) => recipeAlternativeFoodReady(id, meal, date)) ||
+          !recipeAlternativeCompatible(current, recipe, ids, known) ||
+          !recipeAlternativeMilkCompatible(current, recipe, ids)
+        ) continue;
+
+        const candidateMilk = recipe.milkMeal ||
+          (typeof mealContainsMilkProduct === "function" && mealContainsMilkProduct(ids) ? "full" : "");
+        const hasMeatOrFish = ids.some((id) =>
+          typeof isMeatOrFish === "function" && isMeatOrFish(food(id)),
+        );
+        if (candidateMilk === "full" && hasMeatOrFish) continue;
+        if (candidateMilk === "full" && baseline.fullMilkDates?.has(date)) continue;
+
+        const combination = canonicalCombination(ids);
+        const identity = `${recipe.name}|${combination}`;
+        if (!combination || seen.has(identity)) continue;
+
+        const newFoodIds = recipeAlternativeNewFoodIds(ids, known);
+        const learningType = current.sampleFoodIds?.length
+          ? current.type || "neu"
+          : "neu";
+        const generated = buildRecipeAlternativeMeal(
+          recipe,
+          date,
+          meal,
+          reservationContext(days, targetKey),
+          ids,
+          newFoodIds,
+          learningType,
+        );
+        if (!generated || generated.recipeName === current.recipeName) continue;
+        seen.add(identity);
+        alternatives.push(generated);
+        if (alternatives.length >= 12) break;
+      }
+      if (alternatives.length >= 12) break;
+    }
+    return alternatives;
+  }
+
   function automaticRecipeFoodReady(id, date) {
     const item = food(id);
     if (!item || status(item) === "Pausiert") return false;
@@ -291,7 +518,7 @@
     const ctx = freshPlanContext();
     for (const day of days || []) {
       for (const meal of day.meals || []) {
-        if (!meal?.active || meal.empty || !meal.focusId) continue;
+        if (!meal?.active || meal.empty || (!meal.focusId && !meal.recipeName)) continue;
         if (slotKey(day.date, meal.meal) === targetKey) continue;
         if (mealMilkLevel(meal) === "full") ctx.fullMilkDates?.add(day.date);
         if (meal.recipeName && meal.recipeInventoryId) {
@@ -353,7 +580,9 @@
     const dependency = hasFutureLearningDependency(contextDays, date, current);
     const alternatives = meal === "snack"
       ? snackAlternatives(contextDays, date, current)
-      : mainMealAlternatives(targetDays, contextDays, date, meal, current);
+      : current.recipeName
+        ? recipeAlternatives(contextDays, date, meal, current)
+        : mainMealAlternatives(targetDays, contextDays, date, meal, current);
     const chosen = chooseAlternative(alternatives, otherMealsForSlot(contextDays, key));
     if (!chosen) {
       showToast(
@@ -402,6 +631,17 @@
     delete state.autoLockExcluded?.[key];
     save();
     renderAll();
+    for (const button of globalScope.document?.querySelectorAll?.("#blockPlan .logMeal[data-plan]") || []) {
+      try {
+        const payload = JSON.parse(decodeURIComponent(button.dataset.plan || ""));
+        const preserved = preservedVisiblePlanIds.get(slotKey(payload.date, payload.meal));
+        if (preserved && slotKey(payload.date, payload.meal) !== key) {
+          payload.planId = preserved;
+          payload.plannedMealId = preserved;
+          button.dataset.plan = encodeURIComponent(JSON.stringify(payload));
+        }
+      } catch (_) {}
+    }
     showToast("Mahlzeit getauscht. Der restliche Wochenplan bleibt unverändert.");
     return { ok: true, meal: snapshot };
   }
@@ -422,6 +662,19 @@
     } finally {
       isAutoLockDate = originalIsAutoLockDate;
     }
+  };
+
+  const baseLockedMeal = lockedMeal;
+  lockedMeal = function randomSwapAwareLockedMeal(date, meal) {
+    const generated = baseLockedMeal(date, meal);
+    const lock = state.planLocks?.[slotKey(date, meal)];
+    const preservedPlanId = lock?.[PIN_FLAG] && (lock.planId || lock.plannedMealId);
+    if (!generated || !preservedPlanId) return generated;
+    return {
+      ...generated,
+      planId: preservedPlanId,
+      plannedMealId: lock.plannedMealId || preservedPlanId,
+    };
   };
 
   const baseRenderMealCore = renderMealCore;

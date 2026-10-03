@@ -196,6 +196,15 @@ test('partially logged previous day prompts only for the uncompleted concrete pl
   assert.deepEqual(core.outstandingPastPlans(data, '2026-08-19').map((entry) => entry.planId), ['lunch']);
 });
 
+test('manually completed days do not create an outstanding rollover prompt', () => {
+  const data = state({
+    planLocks: { '2026-08-19|lunch': plan('closed-day-plan', '2026-08-19') },
+    dayClosures: { '2026-08-19': { closedAt: '2026-08-19T20:00:00.000Z' } },
+  });
+  assert.deepEqual(core.outstandingPastPlans(data, '2026-08-20'), []);
+  assert.equal(core.openPlanInstances(data, (item) => item.date === '2026-08-19').length, 1, 'der offene Plan bleibt fachlich offen');
+});
+
 test('Nicht verschieben persists an acknowledgement and suppresses the same prompt', () => {
   const data = state({ planLocks: { '2026-08-18|lunch': plan('open', '2026-08-18') } });
   const outstanding = core.outstandingPastPlans(data, '2026-08-19');

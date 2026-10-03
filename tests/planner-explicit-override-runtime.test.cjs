@@ -84,11 +84,15 @@ function buildInstalledRuntime({ foods, ranks, overrides, activeMeals, index = 1
       oneOf: [],
       milkChoices: [],
       requirementMissing: [],
+      unlocked: true,
       freezable: true,
       milkMeal: '',
     }];
   };
   context.recipeInventoryPortions = () => 1;
+  context.plannerRecipeVariantIdSets = () => [['karotte']];
+  context.recipeIngredientReady = () => true;
+  context.recipeNameMatches = (a, b) => a === b;
   context.oldestRecipeBatch = () => ({ id: 'batch-1', frozenDate: '2026-08-01' });
   context.mealContainsMilkProduct = () => false;
   context.combinationPaused = () => false;

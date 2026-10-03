@@ -41,26 +41,149 @@ function recipeStructuredFoodSearchTerms(recipe) {
 if (typeof RECIPES !== "undefined" && typeof FOOD_DB !== "undefined") canonicalizeRecipeFoodLabels(RECIPES, FOOD_DB);
 
 let logsForCache = new WeakMap();
-function logsFor(id) {
-  let logs = Array.isArray(state.logs) ? state.logs : [];
-  let cached = logsForCache.get(logs);
-  if (cached?.length !== logs.length) {
-    let byFoodId = new Map();
-    for (let log of logs) {
-      for (let foodId of new Set(log.foodIds || [])) {
-        if (!byFoodId.has(foodId)) byFoodId.set(foodId, []);
-        byFoodId.get(foodId).push(log);
-      }
-    }
-    for (let entries of byFoodId.values()) {
-      entries.sort((a, b) =>
-        (a.date + a.createdAt).localeCompare(b.date + b.createdAt),
-      );
-    }
-    cached = { length: logs.length, byFoodId };
-    logsForCache.set(logs, cached);
+let foodAutoStatusCache = new WeakMap();
+let logsForCacheRevision = 0;
+function logIndexCombinationKey(ids) {
+  return [...new Set(ids || [])].filter(Boolean).sort().join("+");
+}
+function logIndexCompletion(log) {
+  if (!log) return false;
+  if (log.foodOutcomes && typeof log.foodOutcomes === "object") {
+    return Object.values(log.foodOutcomes).some((outcome) => outcome !== "not_offered");
   }
-  return cached.byFoodId.get(id) || [];
+  return log.outcome !== "not_offered";
+}
+function logIndexFor(logs = typeof state !== "undefined" ? state.logs : []) {
+  let list = Array.isArray(logs) ? logs : [];
+  let cached = logsForCache.get(list);
+  if (cached?.length === list.length) return cached;
+
+  let byFoodId = new Map();
+  let usageCountByFoodId = new Map();
+  let eatenExposureCountByFoodId = new Map();
+  let positiveExposureCountByFoodId = new Map();
+  let reactionPausedFoodIds = new Set();
+  let refusalByFoodId = new Map();
+  let latestByFoodId = new Map();
+  let byCombinationKey = new Map();
+  let byDate = new Map();
+  let byDateMealCompletion = new Map();
+  let byPlannedMealId = new Map();
+  let exposureKeyFor = (log) => {
+    if (typeof logExposureKey === "function") return logExposureKey(log);
+    let hasMeal = log?.entryType !== "sample" && ["breakfast", "snack", "lunch", "dinner"].includes(String(log?.meal || ""));
+    return hasMeal
+      ? `${log?.date || ""}|${log.meal}`
+      : `${log?.date || ""}|entry:${log?.id || log?.createdAt || log?.updatedAt || "free"}`;
+  };
+  let latestFirst = (a, b) =>
+    `${b.date || ""}${b.updatedAt || b.createdAt || ""}`.localeCompare(
+      `${a.date || ""}${a.updatedAt || a.createdAt || ""}`,
+    );
+  let dateMealOrder = (a, b) => {
+    let mealOrder = { breakfast: 1, lunch: 2, snack: 3, dinner: 4 };
+    let order = (mealOrder[a.meal] || 99) - (mealOrder[b.meal] || 99);
+    return order || String(a.createdAt || "").localeCompare(String(b.createdAt || ""));
+  };
+
+  for (let log of list) {
+    let ids = new Set(log?.foodIds || []);
+    for (let foodId of ids) {
+      if (!byFoodId.has(foodId)) byFoodId.set(foodId, []);
+      byFoodId.get(foodId).push(log);
+      let outcome = outcomeForFood(log, foodId);
+      let exposureKey = null;
+      let currentExposureKey = () => exposureKey ??= exposureKeyFor(log);
+      if (outcome === "eaten") {
+        usageCountByFoodId.set(foodId, (usageCountByFoodId.get(foodId) || 0) + 1);
+        let exposures = eatenExposureCountByFoodId.get(foodId) || new Set();
+        exposures.add(currentExposureKey());
+        eatenExposureCountByFoodId.set(foodId, exposures);
+      }
+      if (["tried", "eaten"].includes(outcome)) {
+        let exposures = positiveExposureCountByFoodId.get(foodId) || new Set();
+        exposures.add(currentExposureKey());
+        positiveExposureCountByFoodId.set(foodId, exposures);
+      }
+      if (outcome === "reaction" && (!log.reactionFoodId || log.reactionFoodId === foodId)) {
+        reactionPausedFoodIds.add(foodId);
+      }
+      if (outcome === "not_accepted") {
+        if (!refusalByFoodId.has(foodId)) refusalByFoodId.set(foodId, []);
+        refusalByFoodId.get(foodId).push(log);
+      }
+      let previous = latestByFoodId.get(foodId);
+      if (!previous || latestFirst(log, previous) < 0) latestByFoodId.set(foodId, log);
+    }
+
+    let combinationKey = logIndexCombinationKey(log?.foodIds);
+    if (!byCombinationKey.has(combinationKey)) byCombinationKey.set(combinationKey, []);
+    byCombinationKey.get(combinationKey).push(log);
+    if (!byDate.has(log?.date)) byDate.set(log?.date, []);
+    byDate.get(log?.date).push(log);
+    if (log?.date && log?.meal && logIndexCompletion(log)) {
+      let key = `${log.date}|${log.meal}`;
+      if (!byDateMealCompletion.has(key)) byDateMealCompletion.set(key, []);
+      byDateMealCompletion.get(key).push(log);
+    }
+    if (log?.plannedMealId) {
+      if (!byPlannedMealId.has(log.plannedMealId)) byPlannedMealId.set(log.plannedMealId, []);
+      byPlannedMealId.get(log.plannedMealId).push(log);
+    }
+  }
+
+  for (let entries of byFoodId.values()) entries.sort((a, b) =>
+    (a.date + a.createdAt).localeCompare(b.date + b.createdAt),
+  );
+  for (let entries of refusalByFoodId.values()) entries.sort((a, b) =>
+    (a.date + a.createdAt).localeCompare(b.date + b.createdAt),
+  );
+  for (let entries of byCombinationKey.values()) entries.sort((a, b) =>
+    `${a.date}|${a.createdAt || ""}`.localeCompare(`${b.date}|${b.createdAt || ""}`),
+  );
+  for (let entries of byDate.values()) entries.sort(dateMealOrder);
+  for (let entries of byDateMealCompletion.values()) entries.sort((a, b) =>
+    String(b.createdAt || "").localeCompare(String(a.createdAt || "")),
+  );
+  for (let entries of byPlannedMealId.values()) entries.sort((a, b) =>
+    String(b.createdAt || "").localeCompare(String(a.createdAt || "")),
+  );
+
+  cached = {
+    length: list.length,
+    byFoodId,
+    usageCountByFoodId,
+    eatenExposureCountByFoodId,
+    positiveExposureCountByFoodId,
+    reactionPausedFoodIds,
+    refusalByFoodId,
+    latestByFoodId,
+    byCombinationKey,
+    byDate,
+    byDateMealCompletion,
+    byPlannedMealId,
+  };
+  logsForCache.set(list, cached);
+  return cached;
+}
+function invalidateLogsForCache(logs = typeof state !== "undefined" ? state.logs : null) {
+  if (Array.isArray(logs)) logsForCache.delete(logs);
+  logsForCacheRevision += 1;
+}
+function logsFor(id) {
+  return logIndexFor().byFoodId.get(id) || [];
+}
+function foodLogAggregate(id) {
+  return {
+    usageCount: foodUsageCount(id),
+    eatenExposureCount: foodEatenExposureCount(id),
+  };
+}
+function foodUsageCount(id) {
+  return logIndexFor().usageCountByFoodId.get(id) || 0;
+}
+function foodEatenExposureCount(id) {
+  return logIndexFor().eatenExposureCountByFoodId.get(id)?.size || 0;
 }
 function outcomeForFood(log, id) {
   if (log.foodOutcomes && log.foodOutcomes[id]) return log.foodOutcomes[id];
@@ -71,32 +194,60 @@ function modelExposureKey(log) {
   let hasMeal = log?.entryType !== "sample" && ["breakfast", "snack", "lunch", "dinner"].includes(String(log?.meal || ""));
   return hasMeal ? `${log.date}|${log.meal}` : `${log?.date || ""}|entry:${log?.id || log?.createdAt || log?.updatedAt || "free"}`;
 }
+function autoStatusSnapshot(f) {
+  let logs = typeof state !== "undefined" && Array.isArray(state?.logs) ? state.logs : [];
+  let cached = foodAutoStatusCache.get(f);
+  if (cached?.logs === logs && cached.revision === logsForCacheRevision) return cached;
+  let index = logIndexFor(logs);
+  let value = index.reactionPausedFoodIds.has(f.id)
+    ? "Pausiert"
+    : (index.eatenExposureCountByFoodId.get(f.id)?.size || 0) >= 2
+      ? "Bekannt"
+      : (index.positiveExposureCountByFoodId.get(f.id)?.size || 0) >= 1
+        ? "Probiert"
+        : "Offen";
+  cached = {
+    logs,
+    revision: logsForCacheRevision,
+    status: value,
+    rank: STATUS_ORDER[value] ?? 0,
+  };
+  foodAutoStatusCache.set(f, cached);
+  return cached;
+}
 function autoStatus(f) {
-  let ls = logsFor(f.id);
-  if (ls.some((l) => outcomeForFood(l, f.id) === "reaction" && (!l.reactionFoodId || l.reactionFoodId === f.id))) return "Pausiert";
-  let success = new Set(ls.filter((l) => outcomeForFood(l, f.id) === "eaten").map(modelExposureKey));
-  let positive = new Set(ls.filter((l) => ["tried", "eaten"].includes(outcomeForFood(l, f.id))).map(modelExposureKey));
-  if (success.size >= 2) return "Bekannt";
-  if (positive.size >= 1) return "Probiert";
-  return "Offen";
+  return autoStatusSnapshot(f).status;
 }
 function status(f) {
+  if (f.manualStatus === "Probiert") {
+    let loggedStatus = autoStatus(f);
+    // Manuell "Probiert" erfasst den bisherigen Kenntnisstand als Untergrenze.
+    // Spätere Protokolle dürfen das Lebensmittel regulär zu Bekannt hochstufen;
+    // eine dokumentierte Reaktion bleibt dabei weiterhin ein Pausiergrund.
+    if (loggedStatus === "Bekannt" || loggedStatus === "Pausiert") return loggedStatus;
+    return "Probiert";
+  }
   return f.manualStatus && f.manualStatus !== "auto"
     ? f.manualStatus
     : autoStatus(f);
 }
 function rank(f) {
-  return STATUS_ORDER[status(f)] ?? 0;
+  if (f.manualStatus === "Probiert") return STATUS_ORDER[status(f)] ?? 0;
+  if (f.manualStatus && f.manualStatus !== "auto") return STATUS_ORDER[f.manualStatus] ?? 0;
+  return autoStatusSnapshot(f).rank;
 }
 function statusSource(f) {
-  if (f.manualStatus && f.manualStatus !== "auto") return "manuell gesetzt";
-  let ls = logsFor(f.id);
-  let success = new Set(ls.filter((l) => outcomeForFood(l, f.id) === "eaten").map(modelExposureKey));
-  let positive = new Set(ls.filter((l) => ["tried", "eaten"].includes(outcomeForFood(l, f.id))).map(modelExposureKey));
-  if (success.size >= 2) return `automatisch aus ${success.size} getrennten gegessenen Expositionen`;
-  if (success.size === 1) return "automatisch aus einer gegessenen Exposition";
-  if (positive.size > 1) return `automatisch aus ${positive.size} protokollierten Probier-Expositionen`;
-  if (positive.size === 1) return "automatisch aus einer protokollierten Probier-Exposition";
+  if (f.manualStatus && f.manualStatus !== "auto" && !(f.manualStatus === "Probiert" && status(f) !== "Probiert")) {
+    return "manuell gesetzt";
+  }
+  if (status(f) === "Pausiert") return "automatisch pausiert nach dokumentierter Reaktion";
+  let index = logIndexFor();
+  let success = index.eatenExposureCountByFoodId.get(f.id)?.size || 0;
+  let positive = index.positiveExposureCountByFoodId.get(f.id)?.size || 0;
+  if (success >= 2) return `automatisch aus ${success} getrennten gegessenen Expositionen`;
+  if (success === 1) return "automatisch aus einer gegessenen Exposition";
+  if (positive > 1) return `automatisch aus ${positive} protokollierten Probier-Expositionen`;
+  if (positive === 1) return "automatisch aus einer protokollierten Probier-Exposition";
   return "automatisch – noch ohne Protokoll";
 }
 
@@ -259,7 +410,9 @@ function setPhase(key) {
   state.settings.phaseSelected = key;
   state.settings.phaseModelVersion = 2;
   state.settings.phaseMode = "manual-v2";
-  save(); renderAll();
+  save();
+  if (typeof renderAllAfterNextPaint === "function") renderAllAfterNextPaint();
+  else renderAll();
   return true;
 }
 function mealProgressRank() {
@@ -298,6 +451,7 @@ function inventoryName(item) {
     : food(item.foodId)?.name || item.foodName || "Lebensmittel";
 }
 function recipeInventoryPortions(recipeName) {
+  if (typeof inventoryRecipePortions === "function") return inventoryRecipePortions(recipeName);
   return state.inventory
     .filter(
       (i) =>
@@ -333,5 +487,6 @@ function consumeInventoryItem(id) {
   item.portions = Math.max(0, Math.floor(Number(item.portions) || 0) - 1);
   if (item.portions <= 0)
     state.inventory = state.inventory.filter((i) => i.id !== id);
+  if (typeof invalidateInventoryAggregateCache === "function") invalidateInventoryAggregateCache();
   return true;
 }

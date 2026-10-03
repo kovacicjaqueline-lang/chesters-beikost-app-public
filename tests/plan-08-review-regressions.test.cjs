@@ -139,7 +139,7 @@ test("PLAN-08 review: genau ein freigeschaltetes exaktes Rezept darf ein sonst s
   assert.equal(context.companionFor(banana, "lunch", "2026-08-18", "bekannt")?.id, "karotte");
 });
 
-test("PLAN-08 review: erster sichtbarer Render erfolgt erst nach vollständiger Browser-Policy-Kette", () => {
+test("PLAN-08 review: Planner-Readiness wird nach vollständiger Browser-Policy-Kette gemeldet", () => {
   let domReady = null;
   let renders = 0;
   let fullRenders = 0;
@@ -180,6 +180,7 @@ test("PLAN-08 review: erster sichtbarer Render erfolgt erst nach vollständiger 
         if (script.src.includes("planner-food-role-stability")) context.installPlannerFoodRoleStabilityRuntime = () => true;
         if (script.src.includes("planner-quality-rotation")) context.installPlannerQualityRotationRuntime = () => true;
         if (script.src.includes("planner-introduction-policy")) context.installPlannerIntroductionPolicyRuntime = () => true;
+        if (script.src.includes("planner-final-quality")) context.installPlannerFinalQualityRuntime = () => true;
         if (script.src.includes("planner-allergen-maintenance")) context.PlannerAllergenMaintenance = {};
         if (script.src.includes("food-handling")) {
           context.FOOD_HANDLING_CONTRACT = {};
@@ -194,10 +195,10 @@ test("PLAN-08 review: erster sichtbarer Render erfolgt erst nach vollständiger 
 
   vm.createContext(context);
   vm.runInContext(utilsSource, context);
-  assert.equal(body.style.visibility, "hidden");
   assert.equal(renders, 0);
   assert.equal(fullRenders, 0);
   assert.equal(context.__plannerPoliciesReady, false);
+  assert.equal(context.PlannerReadiness.state, "loading");
   assert.equal(typeof domReady, "function");
 
   domReady();
@@ -213,6 +214,7 @@ test("PLAN-08 review: erster sichtbarer Render erfolgt erst nach vollständiger 
     `js/planner-food-role-stability.js?v=${appVersion}`,
     `js/planner-quality-rotation.js?v=${appVersion}`,
     `js/planner-introduction-policy.js?v=${appVersion}`,
+    `js/planner-final-quality.js?v=${appVersion}`,
     `js/planner-allergen-maintenance.js?v=${appVersion}`,
     `data/food-handling.js?v=${appVersion}`,
     `js/handling-readiness.js?v=${appVersion}`,
@@ -221,5 +223,6 @@ test("PLAN-08 review: erster sichtbarer Render erfolgt erst nach vollständiger 
   assert.equal(context.__plannerPoliciesReady, true);
   assert.equal(renders, 1);
   assert.equal(fullRenders, 0);
+  assert.equal(context.PlannerReadiness.state, "ready");
   assert.equal(body.style.visibility, "");
 });

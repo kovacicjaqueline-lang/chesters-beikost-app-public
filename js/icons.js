@@ -229,6 +229,7 @@ const RECIPE_ICON_PATHS = Object.freeze({
   "Rote-Linsen-Bratlinge": "assets/illustrations-v2/recipes/rote-linsen-bratlinge.svg",
   "Polenta-Zucchini-Sticks": "assets/illustrations-v2/recipes/polenta-zucchini-sticks.svg",
   "Süßkartoffel-Hirse-Sticks": "assets/illustrations-v2/recipes/suesskartoffel-hirse-sticks.svg",
+  "Herzhafte Hirseschnitten": "assets/illustrations-v2/recipes/herzhafte-hirseschnitten.svg",
   "Omelettstreifen": "assets/illustrations-v2/recipes/omelettstreifen.svg",
   "Zucchini-Omelett": "assets/illustrations-v2/recipes/zucchini-omelett.svg",
   "Obst-Haferbrei": "assets/illustrations-v2/recipes/obst-haferbrei.svg",
@@ -268,6 +269,7 @@ const RECIPE_ICON_PATHS = Object.freeze({
   "Zucchini-Kartoffel-Brei": "assets/illustrations-v2/recipes/zucchini-kartoffel-brei.svg",
   "Erbsen-Kartoffel-Stampf": "assets/illustrations-v2/recipes/erbsen-kartoffel-stampf.svg",
   "Kürbis-Linsen-Suppe": "assets/illustrations-v2/recipes/kuerbis-linsen-suppe.svg",
+  "Hirsotto": "assets/illustrations-v2/recipes/hirsotto.svg",
   "Mildes Rote-Linsen-Dhal": "assets/illustrations-v2/recipes/mildes-rote-linsen-dhal.svg",
   "Huhn-Karotte-Nudel-Topf": "assets/illustrations-v2/recipes/huhn-karotte-nudel-topf.svg",
   "Huhn-Lauch-Kartoffel-Topf": "assets/illustrations-v2/recipes/huhn-lauch-kartoffel-topf.svg",
@@ -327,6 +329,7 @@ const RECIPE_RUNTIME_ICON_ALIASES = Object.freeze({
   "Apfel-Bananen-Baked-Oatmeal": "assets/illustrations-v2/recipes/apfel-bananen-baked-oatmeal.svg",
   "Weiche Apfel-Hafer-Riegel": "assets/illustrations-v2/recipes/weiche-apfel-hafer-riegel.svg",
   "Bananen-French-Toast-Finger": "assets/illustrations-v2/recipes/bananen-french-toast-finger.svg",
+  "Bananen-Hirseschnitten": "assets/illustrations-v2/recipes/bananen-hirseschnitten.svg",
   "Karotten-Linsen-Aufstrich": "assets/illustrations-v2/recipes/karotten-linsen-aufstrich.svg",
   "Weiße-Bohnen-Paprika-Aufstrich": "assets/illustrations-v2/recipes/weisse-bohnen-paprika-aufstrich.svg",
   "Erbsen-Basilikum-Pesto ohne Salz": "assets/illustrations-v2/recipes/erbsen-basilikum-pesto-ohne-salz.svg",
@@ -339,7 +342,20 @@ const RECIPE_RUNTIME_ICON_ALIASES = Object.freeze({
   "Huhn-Spinat-Quinoa-Auflauf": "assets/illustrations-v2/recipes/huhn-spinat-quinoa-auflauf.svg",
   "Lachs-Brokkoli-Kartoffel-Auflauf": "assets/illustrations-v2/recipes/lachs-brokkoli-kartoffel-auflauf.svg",
   "Mildes Bohnen-Süßkartoffel-Chili": "assets/illustrations-v2/recipes/mildes-bohnen-suesskartoffel-chili.svg",
-  "Gefüllte Paprika mit Linsenreis": "assets/illustrations-v2/recipes/gefuellte-paprika-mit-linsenreis.svg"
+  "Gefüllte Paprika mit Linsenreis": "assets/illustrations-v2/recipes/gefuellte-paprika-mit-linsenreis.svg",
+  "Apfel-Pflaumen-Kompott": "assets/illustrations-v2/recipes/apfel-pflaumen-kompott.svg",
+  "Birne-Pfirsich-Kompott": "assets/illustrations-v2/recipes/birne-pfirsich-kompott.svg",
+  "Mango-Bananen-Creme": "assets/illustrations-v2/recipes/mango-bananen-creme.svg",
+  "Kartoffel-Karotten-Stampf": "assets/illustrations-v2/recipes/kartoffel-karotten-stampf.svg",
+  "Quinoa-Huhn-Süßkartoffel-Finger": "assets/illustrations-v2/recipes/quinoa-huhn-suesskartoffel-finger.svg",
+  "Quinoa-Linsen-Gemüse-Khichdi": "assets/illustrations-v2/recipes/quinoa-linsen-gemuese-khichdi.svg",
+  "Quinoa-Gemüse-Puffer": "assets/illustrations-v2/recipes/quinoa-gemuese-puffer.svg",
+  "Bulgur-Zucchini-Ei": "assets/illustrations-v2/recipes/bulgur-zucchini-ei.svg",
+  "Bulgur-Gemüse-Köfte": "assets/illustrations-v2/recipes/bulgur-gemuese-koefte.svg",
+  "Bulgur-Linsen-Suppe": "assets/illustrations-v2/recipes/bulgur-linsen-suppe.svg",
+  "Forelle-Kartoffel-Bällchen": "assets/illustrations-v2/recipes/forelle-kartoffel-baellchen.svg",
+  "Kabeljau-Süßkartoffel-Fischküchlein": "assets/illustrations-v2/recipes/kabeljau-suesskartoffel-fischkuechlein.svg",
+  "Gemüse-Reis-Brei": "assets/illustrations-v2/recipes/gemuese-reis-brei.svg"
 });
 
 function foodIllustrationPath(f){
@@ -357,16 +373,22 @@ function illustrationMissingMarkup(label,kind="food"){
 }
 const ILLUSTRATION_ASSET_REVISION = "10.1.25";
 function revisionedIllustrationSrc(src){ return `${src}${String(src).includes("?") ? "&" : "?"}v=${ILLUSTRATION_ASSET_REVISION}`; }
-function illustrationImg(src,label,kind="food"){
+function illustrationLoadAttributes(options = {}){
+  const loading = options.loading === "eager" ? "eager" : "lazy";
+  const fetchPriority = options.fetchPriority === "high" ? ' fetchpriority="high"' : "";
+  return `loading="${loading}" decoding="async"${fetchPriority}`;
+}
+function illustrationImg(src,label,kind="food",options={}){
   if(!src) return illustrationMissingMarkup(label,kind);
   const assetSrc=revisionedIllustrationSrc(src);
+  const loadAttributes = illustrationLoadAttributes(options);
   if(isV2IllustrationPath(src)){
-    return `<span class="illustration-icon illustration-icon--${kind} item-illustration ${kind}-illustration" aria-hidden="true"><img class="illustration-icon__asset" src="${assetSrc}" alt="" aria-hidden="true" loading="lazy" decoding="async" data-illustration-label="${esc(label)}" data-illustration-kind="${kind}"></span>`;
+    return `<span class="illustration-icon illustration-icon--${kind} item-illustration ${kind}-illustration" aria-hidden="true"><img class="illustration-icon__asset" src="${assetSrc}" alt="" aria-hidden="true" ${loadAttributes} data-illustration-label="${esc(label)}" data-illustration-kind="${kind}"></span>`;
   }
-  return `<img class="item-illustration ${kind}-illustration" src="${assetSrc}" alt="" aria-hidden="true" loading="lazy" decoding="async">`;
+  return `<img class="item-illustration ${kind}-illustration" src="${assetSrc}" alt="" aria-hidden="true" ${loadAttributes}>`;
 }
-function foodIconSvg(foodOrId){ const f=typeof foodOrId==="string" ? (food(foodOrId)||FOOD_DB.find(x=>x.id===foodOrId)) : foodOrId; return illustrationImg(foodIllustrationPath(f),f?.name||"unbekanntes Lebensmittel","food"); }
-function recipeIconSvg(recipeOrName){ const r=typeof recipeOrName==="string" ? RECIPES.find(x=>x.name===recipeOrName) : recipeOrName; const src=r&&(RECIPE_ICON_PATHS[r.name]||RECIPE_RUNTIME_ICON_ALIASES[r.name]); return illustrationImg(src,r?.name||String(recipeOrName||"unbekanntes Rezept"),"recipe"); }
+function foodIconSvg(foodOrId,options={}){ const f=typeof foodOrId==="string" ? (food(foodOrId)||FOOD_DB.find(x=>x.id===foodOrId)) : foodOrId; return illustrationImg(foodIllustrationPath(f),f?.name||"unbekanntes Lebensmittel","food",options); }
+function recipeIconSvg(recipeOrName,options={}){ const r=typeof recipeOrName==="string" ? RECIPES.find(x=>x.name===recipeOrName) : recipeOrName; const src=r&&(RECIPE_ICON_PATHS[r.name]||RECIPE_RUNTIME_ICON_ALIASES[r.name]); return illustrationImg(src,r?.name||String(recipeOrName||"unbekanntes Rezept"),"recipe",options); }
 function foodIllustrationUsesFallback(f){ return !foodIllustrationPath(f); }
 function recipeIllustrationPath(r){ return r&&(RECIPE_ICON_PATHS[r.name]||RECIPE_RUNTIME_ICON_ALIASES[r.name])||""; }
 function auditIllustrationCoverage(){ return {foodsMissing:FOOD_DB.filter(foodIllustrationUsesFallback).map(f=>f.name),recipesMissing:RECIPES.filter(r=>!recipeIllustrationPath(r)).map(r=>r.name),foodCount:FOOD_DB.length,recipeCount:RECIPES.length}; }

@@ -1,51 +1,10 @@
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { webkit } from "playwright";
+import { closeBrowserApp, startStaticServer } from "./helpers/app-harness.mjs";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const mimeTypes = {
-  ".html": "text/html; charset=utf-8",
-  ".js": "text/javascript; charset=utf-8",
-  ".css": "text/css; charset=utf-8",
-  ".json": "application/json; charset=utf-8",
-  ".webmanifest": "application/manifest+json; charset=utf-8",
-  ".svg": "image/svg+xml",
-  ".png": "image/png",
-  ".webp": "image/webp",
-};
 
-function startStaticServer() {
-  const server = http.createServer((request, response) => {
-    const url = new URL(request.url || "/", "http://127.0.0.1");
-    const pathname = decodeURIComponent(url.pathname === "/" ? "/index.html" : url.pathname);
-    const filePath = path.resolve(root, `.${pathname}`);
-
-    if (filePath !== path.join(root, "index.html") && !filePath.startsWith(`${root}${path.sep}`)) {
-      response.writeHead(403).end("Forbidden");
-      return;
-    }
-
-    fs.stat(filePath, (statError, stat) => {
-      if (statError || !stat.isFile()) {
-        response.writeHead(404).end("Not found");
-        return;
-      }
-      response.writeHead(200, {
-        "content-type": mimeTypes[path.extname(filePath)] || "application/octet-stream",
-        "cache-control": "no-store",
-      });
-      fs.createReadStream(filePath).pipe(response);
-    });
-  });
-
-  return new Promise((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(0, "127.0.0.1", () => resolve(server));
-  });
-}
 
 function assertInsideViewport(box, width, height, label) {
   assert.ok(box, `${label} muss ein messbares Layout-Rechteck besitzen`);
@@ -61,16 +20,21 @@ async function waitForApp(page) {
 }
 
 async function openManualCard(locator) {
+  const date = await locator.evaluate((element) => element.querySelector("[data-date]")?.dataset.date || "");
+  if (date) {
+    await locator.evaluate((_element, targetDate) => {
+      const dayButton = document.querySelector(`#planWeekOverview .plan-week-day[data-plan-date="${targetDate}"]`);
+      if (dayButton) dayButton.click();
+    }, date);
+    await locator.waitFor({ state: "attached" });
+  }
+
   await locator.evaluate((element) => {
-    const date = element.querySelector("[data-date]")?.dataset.date || "";
-    const dayButton = date
-      ? document.querySelector(`#planWeekOverview .plan-week-day[data-plan-date="${date}"]`)
-      : null;
-    if (dayButton) dayButton.click();
     const day = element.closest("details.day-details");
     if (day) day.open = true;
     element.open = true;
   });
+  await locator.locator(".manual-meal-actions").waitFor({ state: "attached" });
 }
 
 async function clickSelectorRow(page, selector) {
@@ -275,7 +239,7 @@ try {
   await openManualCard(manualCard);
   assert.match(await manualCard.locator(".manual-meal-title").innerText(), /Banane.*Pfirsich.*Einführung/, "Kartentitel muss Hauptbasis und Einführung repräsentieren");
   assert.equal(await manualCard.locator("summary").evaluate((element) => getComputedStyle(element).listStyleType), "none", "nativer Details-Marker darf nicht einrücken");
-  assert.equal(await manualCard.locator(".manual-meal-actions").evaluate((element) => getComputedStyle(element).gap), "12px", "Aktionsbuttons müssen den 12px-Gruppenabstand des Designsystems verwenden");
+  assert.equal(await manualCard.locator(".manual-meal-actions").evaluate((element) => getComputedStyle(element).rowGap), "12px", "Aktionsbuttons müssen den vertikalen 12px-Gruppenabstand des Designsystems verwenden");
 
   savedState = await page.evaluate(() => window.__beikostTest.getState());
   assert.equal(savedState.manualMeals[`${dates.future}|breakfast`].foodPreparationKeys.banane, preparationKey);
@@ -342,10 +306,8 @@ try {
   assert.equal(savedBreakfastLog.foodPreparationKeys?.banane, preparationKey, "Darreichung des tatsächlich protokollierten Lebensmittels bleibt erhalten");
   assert.equal(savedBreakfastLog.foodPreparationKeys?.pfirsich, undefined, "entfernte Kostprobe darf keine veraltete Darreichung im Log hinterlassen");
 
-  await context.close();
 } finally {
-  await browser.close();
-  await new Promise((resolve) => server.close(resolve));
+  await closeBrowserApp({ context: typeof context !== "undefined" ? context : null, browser, server });
 }
 
 console.log("WebKit meal editor regression passed for 320/375/390px plus manual meal flow.");

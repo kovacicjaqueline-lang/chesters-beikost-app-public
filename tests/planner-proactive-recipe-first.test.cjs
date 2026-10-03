@@ -197,6 +197,21 @@ test("PLAN-08 proactive: gleichrangige unterschiedliche Rezeptformen werden nich
   );
 });
 
+test("PLAN-08 proactive: eine fachlich besser bewertete Rezeptform wird tatsächlich ausgewählt", () => {
+  const previous = global.plannerCulinaryRecipeScore;
+  global.plannerCulinaryRecipeScore = (recipe) => recipe.name === "Gemuese" ? 20 : 5;
+  try {
+    const candidates = [
+      { recipe: { name: "Neutral" }, ids: ["a", "b", "c"], addedIds: ["c"] },
+      { recipe: { name: "Gemuese" }, ids: ["a", "b", "c"], addedIds: ["c"] },
+    ];
+    assert.equal(proactive.plannerSelectProactiveRecipe(candidates, { recipePlannedUse: new Map() })?.recipe.name, "Gemuese");
+  } finally {
+    if (previous === undefined) delete global.plannerCulinaryRecipeScore;
+    else global.plannerCulinaryRecipeScore = previous;
+  }
+});
+
 test("PLAN-08 proactive: Rezept mit Kostprobe behält kanonische base/component/sample-Rollen", () => {
   const meal = {
     meal: "lunch",

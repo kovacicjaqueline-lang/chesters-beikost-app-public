@@ -1,51 +1,10 @@
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { webkit } from "playwright";
+import { closeBrowserApp, startStaticServer } from "./helpers/app-harness.mjs";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const mimeTypes = {
-  ".html": "text/html; charset=utf-8",
-  ".js": "text/javascript; charset=utf-8",
-  ".css": "text/css; charset=utf-8",
-  ".json": "application/json; charset=utf-8",
-  ".webmanifest": "application/manifest+json; charset=utf-8",
-  ".svg": "image/svg+xml",
-  ".png": "image/png",
-  ".webp": "image/webp",
-};
 
-function startStaticServer() {
-  const server = http.createServer((request, response) => {
-    const url = new URL(request.url || "/", "http://127.0.0.1");
-    const pathname = decodeURIComponent(url.pathname === "/" ? "/index.html" : url.pathname);
-    const filePath = path.resolve(root, `.${pathname}`);
-
-    if (filePath !== path.join(root, "index.html") && !filePath.startsWith(`${root}${path.sep}`)) {
-      response.writeHead(403).end("Forbidden");
-      return;
-    }
-
-    fs.stat(filePath, (statError, stat) => {
-      if (statError || !stat.isFile()) {
-        response.writeHead(404).end("Not found");
-        return;
-      }
-      response.writeHead(200, {
-        "content-type": mimeTypes[path.extname(filePath)] || "application/octet-stream",
-        "cache-control": "no-store",
-      });
-      fs.createReadStream(filePath).pipe(response);
-    });
-  });
-
-  return new Promise((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(0, "127.0.0.1", () => resolve(server));
-  });
-}
 
 const server = await startStaticServer();
 const { port } = server.address();
@@ -81,10 +40,88 @@ try {
     window.__beikostTest.setState(next);
     window.__beikostTest.openManualMealSelector(window.__beikostTest.today(), "lunch");
   });
+
+  const recipeVisuals = page.locator('.selector-row.selectRecipe .meal-selector-visual');
+  assert.ok(await recipeVisuals.count() > 0, "Rezepttreffer müssen eine eigene Bildspalte haben");
+  await recipeVisuals.first().waitFor({ state: "visible" });
+  assert.equal(await recipeVisuals.first().isVisible(), true, "Rezeptbild muss in der Auswahl sichtbar sein");
+  assert.match(
+    await recipeVisuals.first().locator("img").getAttribute("src"),
+    /illustrations-v2\/recipes\//,
+    "Rezepttreffer müssen das bestehende Rezeptbild verwenden",
+  );
   await page.locator("#selectorFoods").click();
+
+  const foodVisuals = page.locator('.selector-row.selectFood .meal-selector-visual');
+  assert.ok(await foodVisuals.count() > 0, "Lebensmitteltreffer müssen eine eigene Bildspalte haben");
+  await foodVisuals.first().waitFor({ state: "visible" });
+  assert.equal(await foodVisuals.first().isVisible(), true, "Lebensmittelbild muss in der Auswahl sichtbar sein");
+  assert.match(
+    await foodVisuals.first().locator("img").getAttribute("src"),
+    /illustrations-v2\/foods\//,
+    "Lebensmitteltreffer müssen das bestehende Lebensmittelbild verwenden",
+  );
+
+  const firstFoodRow = page.locator(".selector-row.selectFood").first();
+  const rowLayout = await firstFoodRow.evaluate((row) => {
+    const rect = (selector) => {
+      const box = row.querySelector(selector)?.getBoundingClientRect();
+      return box ? { left: box.left, right: box.right, width: box.width } : null;
+    };
+    const rowBox = row.getBoundingClientRect();
+    const rowStyle = getComputedStyle(row);
+    const contentRight = rowBox.right - Number.parseFloat(rowStyle.paddingRight) - Number.parseFloat(rowStyle.borderRightWidth);
+    return {
+      row: { left: rowBox.left, right: contentRight, width: rowBox.width },
+      visual: rect(".meal-selector-visual"),
+      copy: rect(".grow"),
+      role: rect(".manual-role-type"),
+      check: rect(".selector-check"),
+    };
+  });
+  assert.ok(rowLayout.visual?.width >= 40, "Die Lebensmittelkarte muss eine stabile Bildspalte besitzen");
+  assert.ok(rowLayout.copy?.width >= 80, "Die Lebensmittelkarte muss dem Namen eine nutzbare Textbreite geben");
+  assert.ok(rowLayout.check && rowLayout.row && rowLayout.check.right >= rowLayout.row.right - 2, "Das Häkchen muss am rechten Kartenrand stehen");
+  assert.ok(rowLayout.copy && rowLayout.check && rowLayout.copy.right < rowLayout.check.left, "Text und Häkchen dürfen nicht in derselben schmalen Spalte kollabieren");
 
   const search = page.locator("#mealSelectorSearch");
   await search.click();
+  // Simuliere den verkleinerten sichtbaren Bereich, den die iPhone-Tastatur lässt.
+  await page.setViewportSize({ width: 390, height: 430 });
+  await page.waitForFunction(() => {
+    const sheet = document.querySelector("#genericModal .sheet");
+    return !!sheet && sheet.clientHeight < 430;
+  });
+  await search.fill("Nudeln");
+  const firstResultReady = await page.waitForFunction(() => {
+    const row = document.querySelector(".selector-results .selectFood:not([hidden])");
+    const actions = document.querySelector("#genericModal .sticky-form-actions");
+    const sheet = document.querySelector("#genericModal .sheet");
+    return !!row && !!actions && !!sheet && sheet.clientHeight < 430 &&
+      row.getBoundingClientRect().bottom <= actions.getBoundingClientRect().top + 1;
+  }, null, { timeout: 1500 }).then(() => true, () => false);
+  const firstVisibleResult = page.locator(".selector-results .selectFood:not([hidden])").first();
+  const firstResultBox = await firstVisibleResult.boundingBox();
+  const actionbarBox = await page.locator("#genericModal .sticky-form-actions").boundingBox();
+  const sheetMetrics = await page.locator("#genericModal .sheet").evaluate((element) => ({
+    scrollTop: element.scrollTop,
+    scrollHeight: element.scrollHeight,
+    clientHeight: element.clientHeight,
+    activeElement: document.activeElement?.id || document.activeElement?.tagName,
+  }));
+  const searchBox = await search.boundingBox();
+  assert.ok(firstResultBox && actionbarBox, "Treffer und Aktionsleiste müssen bei geöffneter Tastatur messbar sein");
+  assert.ok(
+    firstResultReady && firstResultBox.y + firstResultBox.height <= actionbarBox.y + 1,
+    "Erster Suchtreffer muss oberhalb der Aktionsleiste vollständig sichtbar sein: " + JSON.stringify({ firstResultReady, firstResultBox, actionbarBox, searchBox, sheetMetrics }),
+  );
+  const compactSheet = page.locator("#genericModal .sheet");
+  assert.ok(
+    await compactSheet.evaluate((element) => element.scrollHeight > element.clientHeight),
+    "Die Trefferliste muss im verkleinerten Tastatur-Viewport weiter scrollbar bleiben",
+  );
+  await page.setViewportSize({ width: 390, height: 844 });
+  await search.fill("");
   const originalInput = await search.elementHandle();
   assert.ok(originalInput, "Suchfeld muss vor der Eingabe existieren");
 
@@ -151,6 +188,5 @@ try {
   await context.close();
   console.log("ui-meal-editor-search-webkit: ok");
 } finally {
-  await browser.close();
-  await new Promise((resolve) => server.close(resolve));
+  await closeBrowserApp({ context: typeof context !== "undefined" ? context : null, browser, server });
 }

@@ -85,9 +85,12 @@ nativeAddEventListener("fetch", (event) => {
 // schon beim Service-Worker-Install in denselben App-Cache, damit der erste
 // Offline-Start nach einer frischen Installation die vollständige Policy-Kette hat.
 const PLAN08_PRECACHE = [
+  "./data/recipe-food-pairings.js?v=10.1.26",
+  "./js/planner-recipe-food-composition.js?v=10.1.26",
   "./js/planner-meal-eligibility.js",
   "./js/planner-milk-policy.js",
   "./js/planner-iron-preference.js",
+  "./js/planner-culinary-quality.js?v=10.1.26",
   "./data/food-presentation.js",
   "./js/planner-meal-presentation.js",
   "./js/planner-recipe-first.js",
@@ -95,6 +98,7 @@ const PLAN08_PRECACHE = [
   "./js/planner-food-role-stability.js",
   "./js/planner-quality-rotation.js",
   "./js/planner-introduction-policy.js",
+  "./js/planner-final-quality.js?v=10.1.26",
   "./js/planner-allergen-maintenance.js",
 ];
 
@@ -129,6 +133,7 @@ const PLAN_CHECK_PRECACHE = [
   "./js/plan-checks-contract-extension.js?v=10.1.26",
   "./js/plan-checks-solution-precompute.js?v=10.1.26",
   "./js/plan-checks-ui-core.js?v=10.1.26",
+  "./js/plan-meal-copy.js?v=10.1.26",
   "./js/plan-mobile-ui.js?v=10.1.26",
 ];
 
@@ -137,14 +142,17 @@ const PLAN_CHECK_PRECACHE = [
 // Der bisherige CSS-Schlüssel bleibt für einen Update-Zyklus dabei: Bereits geöffnete
 // PWA-Clients mit dem alten index.html erhalten beim nächsten Start trotzdem den Fix.
 const UI_PRECACHE = [
+  "./js/planner-week-cache.js?v=10.1.26&planner-cache=5",
+  "./js/planner-week-worker.js?v=10.1.26",
   "./ui-meal-editor-footer.css?v=10.1.26-circle-r2",
   "./ui-meal-editor-footer.css?v=10.1.26",
-  "./flow-dialog-ui.css?v=10.1.26",
+  "./flow-dialog-ui.css?v=10.1.26-compact-r1",
   "./catalog-navigation.css",
   "./mobile-beikost-more.css?v=10.1.26",
   "./plan-checks-ui.css?v=10.1.26",
   "./plan-mobile-ui.css?v=10.1.26",
   "./js/mobile-ui-lifecycle.js?v=10.1.26",
+  "./js/app-resume-screen.js?v=10.1.26",
   "./js/deferred-render.js?v=10.1.26",
   "./js/manual-meal-flow.js",
   "./js/recipe-v2-component-options.js",
@@ -157,14 +165,16 @@ const UI_PRECACHE = [
   "./js/planner-log-rollover-cascade.js",
   "./js/planner-log-rollover-review-fixes.js",
   "./js/planner-random-swap.js",
+  "./js/planner-task-alternatives.js",
   "./js/planner-missing-ingredient.js",
-  "./js/product-allergens.js",
-  "./js/product-allergens-guards.js",
+  "./js/recipe-inventory-ingredients.js?v=10.1.26",
   "./js/catalog-navigation.js",
+  "./js/app-focus-mode.js?v=10.1.26",
   "./js/mobile-beikost-more.js?v=10.1.26",
 ];
 
 const RECIPE_RUNTIME_PRECACHE = [
+  "./assets/illustrations-v2/recipes/herzhafte-hirseschnitten.svg",
   "./assets/illustrations-v2/recipes/pizza-wrap.svg",
   "./assets/illustrations-v2/recipes/chicken-fajita-wrap.svg",
   "./assets/illustrations-v2/recipes/griessschnitten-ohne-panade.svg",
@@ -172,6 +182,7 @@ const RECIPE_RUNTIME_PRECACHE = [
   "./assets/illustrations-v2/recipes/apfel-bananen-baked-oatmeal.svg",
   "./assets/illustrations-v2/recipes/weiche-apfel-hafer-riegel.svg",
   "./assets/illustrations-v2/recipes/bananen-french-toast-finger.svg",
+  "./assets/illustrations-v2/recipes/bananen-hirseschnitten.svg",
   "./assets/illustrations-v2/recipes/karotten-linsen-aufstrich.svg",
   "./assets/illustrations-v2/recipes/weisse-bohnen-paprika-aufstrich.svg",
   "./assets/illustrations-v2/recipes/erbsen-basilikum-pesto-ohne-salz.svg",
@@ -185,6 +196,19 @@ const RECIPE_RUNTIME_PRECACHE = [
   "./assets/illustrations-v2/recipes/lachs-brokkoli-kartoffel-auflauf.svg",
   "./assets/illustrations-v2/recipes/mildes-bohnen-suesskartoffel-chili.svg",
   "./assets/illustrations-v2/recipes/gefuellte-paprika-mit-linsenreis.svg",
+  "./assets/illustrations-v2/recipes/apfel-pflaumen-kompott.svg",
+  "./assets/illustrations-v2/recipes/birne-pfirsich-kompott.svg",
+  "./assets/illustrations-v2/recipes/mango-bananen-creme.svg",
+  "./assets/illustrations-v2/recipes/kartoffel-karotten-stampf.svg",
+  "./assets/illustrations-v2/recipes/quinoa-huhn-suesskartoffel-finger.svg",
+  "./assets/illustrations-v2/recipes/quinoa-linsen-gemuese-khichdi.svg",
+  "./assets/illustrations-v2/recipes/quinoa-gemuese-puffer.svg",
+  "./assets/illustrations-v2/recipes/bulgur-zucchini-ei.svg",
+  "./assets/illustrations-v2/recipes/bulgur-gemuese-koefte.svg",
+  "./assets/illustrations-v2/recipes/bulgur-linsen-suppe.svg",
+  "./assets/illustrations-v2/recipes/forelle-kartoffel-baellchen.svg",
+  "./assets/illustrations-v2/recipes/kabeljau-suesskartoffel-fischkuechlein.svg",
+  "./assets/illustrations-v2/recipes/gemuese-reis-brei.svg",
 ];
 
 self.addEventListener("install", (event) => {

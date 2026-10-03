@@ -8,6 +8,8 @@ const vm = require("node:vm");
 
 const root = path.resolve(__dirname, "..");
 const maintenance = require("../js/planner-allergen-maintenance.js");
+const planningSource = fs.readFileSync(path.join(root, "js", "planning.js"), "utf8");
+const presentationSource = fs.readFileSync(path.join(root, "js", "planner-meal-presentation.js"), "utf8");
 
 const foods = [
   { id: "hafer", name: "Hafer", allergenGroup: "Glutenhaltiges Getreide", allergenFamily: "hafer" },
@@ -119,6 +121,119 @@ test("Fällige Ziele werden pro Maintenance-Ziel dedupliziert", () => {
     outcomeForFoodFn: outcome,
   }).filter((target) => target.key === "allergen:Glutenhaltiges Getreide");
   assert.equal(due.length, 1);
+});
+
+test("Maintenance-Kennzeichnung bleibt über Lock-Snapshot, Hydration und erneutes Lösen erhalten", () => {
+  const milk = { id: "frischkaese", name: "Frischkäse", active: true, allergenGroup: "Milch" };
+  const zucchini = { id: "zucchini", name: "Zucchini", active: true, allergenGroup: "" };
+  const context = vm.createContext({});
+  vm.runInContext(planningSource, context);
+  vm.runInContext(presentationSource, context);
+
+  const state = { foods: [milk, zucchini], planLocks: {} };
+  context.state = state;
+  context.food = (id) => state.foods.find((item) => item.id === id) || null;
+  context.status = () => "Regelmäßig";
+  context.esc = (value) => String(value ?? "");
+  context.foodRolesFor = () => ({ zucchini: "base", frischkaese: "component" });
+  context.phasePortion = () => 30;
+  context.plannedMealAmounts = () => ({
+    targetGrams: 30,
+    sampleGrams: 0,
+    totalOfferedGrams: 30,
+    amounts: { zucchini: 20, frischkaese: 10 },
+  });
+
+  const planned = {
+    meal: "lunch",
+    active: true,
+    focusId: "zucchini",
+    foodIds: ["zucchini", "frischkaese"],
+    baseFoodIds: ["zucchini"],
+    sampleFoodIds: [],
+    foodRoles: { zucchini: "base", frischkaese: "component" },
+    ingredientAmounts: { zucchini: 20, frischkaese: 10 },
+    portionTargetGrams: 30,
+    totalOfferedGrams: 30,
+    type: "bekannt",
+  };
+  const target = maintenance.targetForFood(milk);
+  maintenance.annotateMaintenanceFoodIds([target], [planned], state.foods);
+  assert.deepEqual(planned.allergenMaintenanceFoodIds, ["frischkaese"]);
+
+  const snapshot = context.mealSnapshot("2026-10-02", "lunch", planned, "manual");
+  assert.deepEqual(Array.from(snapshot.allergenMaintenanceFoodIds), ["frischkaese"]);
+  planned.allergenMaintenanceFoodIds.push("später-geändert");
+  assert.deepEqual(
+    Array.from(snapshot.allergenMaintenanceFoodIds),
+    ["frischkaese"],
+    "Snapshot enthält eine eigene Kopie der Annotation",
+  );
+  planned.allergenMaintenanceFoodIds.pop();
+
+  state.planLocks["2026-10-02|lunch"] = JSON.parse(JSON.stringify(snapshot));
+  const locked = context.lockedMeal("2026-10-02", "lunch");
+  assert.deepEqual(Array.from(locked.allergenMaintenanceFoodIds), ["frischkaese"]);
+  assert.deepEqual(Array.from(locked.foodIds), ["zucchini", "frischkaese"]);
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(context.plannerLearningRoleGroups(locked))),
+    [{ label: "Allergen weiter anbieten", names: ["Frischkäse"] }],
+  );
+  assert.match(
+    context.plannerCompactLearningRolesHtml(locked),
+    /Frischkäse<\/b><span>Allergen weiter anbieten<\/span>/,
+  );
+
+  delete state.planLocks["2026-10-02|lunch"];
+  const unlockedAgain = context.mealSnapshot("2026-10-02", "lunch", locked, "auto");
+  assert.deepEqual(Array.from(unlockedAgain.allergenMaintenanceFoodIds), ["frischkaese"]);
+  assert.deepEqual(Array.from(unlockedAgain.foodIds), ["zucchini", "frischkaese"]);
+});
+
+test("Maintenance wird nach zwei erfolgreichen Expositionen auf verschiedenen Quellen etabliert", () => {
+  const maintenanceFoods = [
+    { id: "joghurt", name: "Naturjoghurt", allergenGroup: "Milch", allergenFamily: "milch" },
+    { id: "kaese", name: "Käse", allergenGroup: "Milch", allergenFamily: "milch" },
+    { id: "weizen", name: "Weizen", allergenGroup: "Glutenhaltiges Getreide" },
+    { id: "dinkel", name: "Dinkel", allergenGroup: "Glutenhaltiges Getreide" },
+  ];
+  const logs = [
+    { date: "2026-08-01", meal: "lunch", foodIds: ["joghurt"], outcome: "eaten" },
+    { date: "2026-08-02", meal: "lunch", foodIds: ["kaese"], outcome: "eaten" },
+    { date: "2026-08-01", meal: "dinner", foodIds: ["weizen"], outcome: "eaten" },
+    { date: "2026-08-02", meal: "dinner", foodIds: ["dinkel"], outcome: "eaten" },
+  ];
+  const due = maintenance.dueTargets({
+    foods: maintenanceFoods,
+    logs,
+    on: "2026-08-20",
+    intervalDays: 7,
+    rankFn: () => 1,
+    outcomeForFoodFn: (log, id) => log.foodOutcomes?.[id] || log.outcome || "",
+  });
+  assert.deepEqual(new Set(due.map((target) => target.key)), new Set([
+    "family:milch",
+    "allergen:Glutenhaltiges Getreide",
+  ]));
+});
+
+test("Maintenance-Etablierung zählt keine nicht gegessenen Quellen", () => {
+  const milkFoods = [
+    { id: "joghurt", allergenGroup: "Milch", allergenFamily: "milch" },
+    { id: "kaese", allergenGroup: "Milch", allergenFamily: "milch" },
+  ];
+  const due = maintenance.dueTargets({
+    foods: milkFoods,
+    logs: [
+      { date: "2026-08-01", meal: "lunch", foodIds: ["joghurt"], outcome: "not_accepted" },
+      { date: "2026-08-02", meal: "lunch", foodIds: ["kaese"], outcome: "not_offered" },
+    ],
+    on: "2026-08-20",
+    intervalDays: 7,
+    rankFn: () => 1,
+    outcomeForFoodFn: (log, id) => log.foodOutcomes?.[id] || log.outcome || "",
+  });
+  assert.deepEqual(due, []);
 });
 
 test("Alternative bekannte Quelle kann ein fälliges Ziel bedienen", () => {
@@ -351,4 +466,73 @@ test("Runtime: erledigter Lock mit tried zählt weder als Projektion noch als hi
   assert.equal(days[0].meals[0].focusId, "weizen");
   assert.equal(days[1].meals[0].focusId, "weizen");
   assert.equal(days[1].meals[0].type, "bekannt kombinieren");
+});
+
+test("Runtime: Allergen-Fortsetzung wird je Datum nur einmal historisch geprüft", () => {
+  const context = runtimeContext(`
+    var window = {};
+    var document = {};
+    var rankCalls = 0;
+    var state = {
+      settings: { allergenDays: 7 },
+      foods: [
+        { id: "hafer", name: "Hafer", allergenGroup: "Glutenhaltiges Getreide", allergenFamily: "hafer", _rank: 2 },
+        { id: "weizen", name: "Weizen", allergenGroup: "Glutenhaltiges Getreide", _rank: 2 },
+        { id: "mandel", name: "Mandel", allergenGroup: "Schalenfrüchte", allergenFamily: "nuss:mandel", _rank: 2 }
+      ],
+      logs: [
+        { date: "2026-08-01", meal: "breakfast", foodIds: ["hafer"], foodOutcomes: { hafer: "eaten" } },
+        { date: "2026-08-01", meal: "lunch", foodIds: ["mandel"], foodOutcomes: { mandel: "eaten" } }
+      ],
+      manualMeals: {}, planLocks: {}
+    };
+    function food(id) { return state.foods.find((item) => item.id === id); }
+    function rank(item) { rankCalls++; return item?._rank || 0; }
+    function outcomeForFood(log, id) { return log.foodOutcomes?.[id] || ""; }
+    function dueAllergen() { return false; }
+    function manualMealFor() { return null; }
+    function lockedMeal() { return null; }
+    function recipeByName() { return null; }
+    function recipeFoodIds() { return []; }
+    function recipeStockCandidate() { return null; }
+    function snackRecipeCandidate() { return null; }
+    function addDays(value, amount) {
+      let d = new Date(value + "T00:00:00Z");
+      d.setUTCDate(d.getUTCDate() + amount);
+      return d.toISOString().slice(0, 10);
+    }
+    function freshPlanContext() { return {}; }
+    function ensureAutoLocks() { return false; }
+    function knownCandidate() { return { f: food("hafer"), type: "bekannt" }; }
+    function buildDay(date, index, ctx) {
+      const breakfast = knownCandidate("breakfast", date, ctx, []);
+      const lunch = knownCandidate("lunch", date, ctx, []);
+      return {
+        date, index,
+        meals: [
+          { meal: "breakfast", active: true, focusId: breakfast.f.id, foodIds: [breakfast.f.id], baseFoodIds: [breakfast.f.id], sampleFoodIds: [], type: breakfast.type },
+          { meal: "lunch", active: true, focusId: lunch.f.id, foodIds: [lunch.f.id], baseFoodIds: [lunch.f.id], sampleFoodIds: [], type: lunch.type }
+        ]
+      };
+    }
+    function buildDays(from, n = 7, applyAutoLocks = true) {
+      const ctx = freshPlanContext();
+      return Array.from({ length: n }, (_, index) => buildDay(addDays(from, index), index, ctx));
+    }
+  `);
+
+  const days = vm.runInContext(`buildDays("2026-08-20", 1, false)`, context);
+  assert.equal(days.length, 1);
+  assert.equal(context.rankCalls, 3, "Maintenance-Ränge werden für das Datum nur einmal über den FOOD-Stamm gelesen");
+});
+
+test("Katalog-Hafer kann Glutenpflege abdecken, ohne selbst als Allergen geführt zu werden", () => {
+  const context = vm.createContext({});
+  const catalogSource = fs.readFileSync(path.join(root, "data", "foods.js"), "utf8");
+  vm.runInContext(`${catalogSource}\nthis.__catalogFoods = FOOD_DB;`, context);
+  const hafer = context.__catalogFoods.find((item) => item.id === "hafer");
+  assert.ok(hafer);
+  assert.equal(hafer.allergenGroup, "");
+  assert.equal(hafer.allergenMaintenanceGroup, "Glutenhaltiges Getreide");
+  assert.equal(maintenance.targetForFood(hafer).key, "allergen:Glutenhaltiges Getreide");
 });

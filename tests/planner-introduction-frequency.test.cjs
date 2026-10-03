@@ -105,7 +105,8 @@ function installFakePlanner({ foods, ranks, outcomes = {}, dueIds = [], snackRec
     }
     const pool = foods.filter((item) =>
       (item.meals || []).includes(meal) &&
-      !exclude.includes(item.id),
+      !exclude.includes(item.id) &&
+      !ctx?.reserved?.has(item.id),
     );
     const retry = pool.find((item) => global.rank(item) === 1);
     if (retry) return { f: retry, type: "bekannt kombinieren" };
@@ -183,10 +184,22 @@ test("bekannt kombinieren ist kein Lernslot; echte Kostprobe bleibt Lernslot", (
   assert.equal(policy.plannerIntroductionMealIsLearning({ active: true, type: "manuell", sampleFoodIds: ["brokkoli"] }), true);
 });
 
-test("erfolgreich Probiert blockiert keine frische Einführung, echte Ablehnung bleibt zulässig", () => {
+test("gewöhnliche automatische Einführung wird übersprungen, echte Ablehnung bleibt zulässig", () => {
   const tried = { f: { id: "zucchini", allergenGroup: "" }, type: "bekannt kombinieren" };
-  assert.equal(policy.plannerIntroductionCandidateShouldSkip(tried, () => 1, () => "eaten", true), true);
-  assert.equal(policy.plannerIntroductionCandidateShouldSkip(tried, () => 1, () => "not_accepted", true), false);
+  assert.equal(policy.plannerIntroductionCandidateShouldSkip(tried, () => 1, () => "eaten", true, false), true);
+  assert.equal(policy.plannerIntroductionCandidateShouldSkip(tried, () => 1, () => "not_accepted", true, false), false);
+  assert.equal(policy.plannerIntroductionCandidateShouldSkip({ f: { id: "neu", allergenGroup: "" }, type: "manuell" }, () => 0, () => "", true, false), false);
+});
+
+test("einmal gegessenes Nicht-Allergen bleibt ausgeschlossen, Allergen-Rank-1 darf fortgesetzt werden", () => {
+  const normal = { f: { id: "zucchini", allergenGroup: "" }, type: "bekannt kombinieren" };
+  const allergen = { f: { id: "bangus", allergenGroup: "Fisch" }, type: "bekannt kombinieren" };
+  assert.equal(policy.plannerIntroductionCandidateShouldSkip(normal, () => 1, () => "eaten"), true);
+  assert.equal(policy.plannerIntroductionCandidateShouldSkip(allergen, () => 1, () => "eaten"), false);
+  assert.equal(
+    policy.plannerIntroductionNormalizeCandidate(allergen, "2026-08-23", null, () => "eaten", () => 1).type,
+    "Allergen wiederholen",
+  );
 });
 
 test("fälliges Allergen wird auch aus altem 'bekannt kombinieren'-Ergebnis als Allergen-Wiederholung erkannt", () => {
@@ -212,7 +225,7 @@ test("Snack-FOOD-Pfad ist eng auf bekanntes geeignetes Obst begrenzt", () => {
   assert.equal(policy.plannerIntroductionKnownSnackFruitEligible({ id: "kartoffel", active: true, category: "Wurzel/Knolle", allergenGroup: "", known: true }, "2026-08-23", options), false);
 });
 
-test("Runtime plant täglich je ein neues Nicht-Allergen pro Hauptmahlzeit; Probiert blockiert nicht", () => {
+test("Runtime plant höchstens eine geeignete neue Nicht-Allergen-Kostprobe pro Tag", () => {
   withRuntimeGlobals(() => {
     installFakePlanner({
       foods: [
@@ -225,21 +238,50 @@ test("Runtime plant täglich je ein neues Nicht-Allergen pro Hauptmahlzeit; Prob
       ],
       ranks: { probiert: 1, basis: 2, banane: 2 },
       outcomes: { probiert: "eaten" },
+      initialState: { settings: { newFoodEvery: 1 } },
     });
   }, () => {
     const day = global.buildDay("2026-08-23", 1, blankContext());
     const byMeal = Object.fromEntries(day.meals.map((meal) => [meal.meal, meal]));
     assert.deepEqual(byMeal.breakfast.sampleFoodIds, ["frueh"]);
-    assert.deepEqual(byMeal.lunch.sampleFoodIds, ["mittag"]);
-    assert.deepEqual(byMeal.dinner.sampleFoodIds, ["abend"]);
+    assert.deepEqual(byMeal.lunch.sampleFoodIds, []);
+    assert.deepEqual(byMeal.dinner.sampleFoodIds, []);
+    assert.equal(byMeal.breakfast.focusId, "frueh");
+    assert.equal(byMeal.lunch.focusId, "basis");
+    assert.equal(byMeal.dinner.focusId, "basis");
     assert.equal(byMeal.breakfast.stackApplied, true);
-    assert.equal(byMeal.lunch.stackApplied, true, "zusätzliche Einführung muss erneut den vollständigen Planner-Stack durchlaufen");
+    assert.equal(byMeal.lunch.stackApplied, true);
     assert.equal(byMeal.dinner.stackApplied, true);
     assert.equal(byMeal.snack.focusId, "banane");
     assert.deepEqual(byMeal.snack.sampleFoodIds, []);
     assert.equal(global.manualMealRoleInfo("banane", "snack").role, "base");
     assert.equal(global.manualMealRoleInfo("frueh", "snack").role, "excluded");
-    assert.equal(global.state.settings.newFoodEvery, 4, "Legacy-Einstellung darf nicht mutiert werden");
+    assert.equal(global.state.settings.newFoodEvery, 1, "Einstellung darf nicht verändert werden");
+    assert.equal(policy.PLANNER_INTRODUCTION_AUTOPLAN_NON_ALLERGENS, true);
+  });
+});
+
+test("Runtime hält den eingestellten Mindestabstand zwischen automatischen neuen Kostproben ein", () => {
+  withRuntimeGlobals(() => {
+    installFakePlanner({
+      foods: [
+        { id: "neu-a", active: true, category: "Gemüse", allergenGroup: "", meals: ["breakfast", "lunch", "dinner"], priority: 1 },
+        { id: "neu-b", active: true, category: "Obst", allergenGroup: "", meals: ["breakfast", "lunch", "dinner"], priority: 2 },
+        { id: "neu-c", active: true, category: "Gemüse", allergenGroup: "", meals: ["breakfast", "lunch", "dinner"], priority: 3 },
+        { id: "basis", active: true, category: "Wurzel/Knolle", allergenGroup: "", meals: ["breakfast", "lunch", "dinner"], priority: 4 },
+      ],
+      ranks: { basis: 2 },
+      initialState: { settings: { newFoodEvery: 2 } },
+    });
+  }, () => {
+    const ctx = blankContext();
+    const days = [0, 1, 2, 3].map((index) =>
+      global.buildDay(`2026-08-${String(23 + index).padStart(2, "0")}`, index, ctx),
+    );
+    const dailyLearningCounts = days.map((day) => day.meals.filter(policy.plannerIntroductionMealIsLearning).length);
+
+    assert.deepEqual(dailyLearningCounts, [1, 0, 1, 0]);
+    assert.equal(global.state.settings.newFoodEvery, 2, "Planner-Laufzeit darf die Einstellung nicht überschreiben");
   });
 });
 
@@ -253,6 +295,7 @@ test("Runtime macht eine Allergen-Einführung zur einzigen Lernaufgabe des Tages
         { id: "basis", active: true, category: "Wurzel/Knolle", allergenGroup: "", meals: ["breakfast", "lunch", "dinner"], priority: 4 },
       ],
       ranks: { basis: 2 },
+      initialState: { settings: { newFoodEvery: 1 } },
     });
   }, () => {
     const day = global.buildDay("2026-08-23", 1, blankContext());
@@ -276,6 +319,7 @@ test("fällige Allergen-Wiederholung bleibt exklusiv und wird nicht als bekannte
       ranks: { hafer: 1, basis: 2 },
       outcomes: { hafer: "eaten" },
       dueIds: ["hafer"],
+      initialState: { settings: { newFoodEvery: 1 } },
     });
   }, () => {
     const day = global.buildDay("2026-08-23", 1, blankContext());
@@ -287,7 +331,7 @@ test("fällige Allergen-Wiederholung bleibt exklusiv und wird nicht als bekannte
   });
 });
 
-test("geschützte Nicht-Allergen-Kostprobe erlaubt weitere Nicht-Allergen-Einführungen, aber kein Allergen wird dazugemischt", () => {
+test("geschützte Nicht-Allergen-Kostprobe bleibt erhalten, erzeugt aber keine weiteren automatischen Einführungen", () => {
   withRuntimeGlobals(() => {
     installFakePlanner({
       foods: [
@@ -312,7 +356,7 @@ test("geschützte Nicht-Allergen-Kostprobe erlaubt weitere Nicht-Allergen-Einfü
   }, () => {
     const day = global.buildDay("2026-08-23", 1, blankContext());
     const learning = day.meals.filter(policy.plannerIntroductionMealIsLearning);
-    assert.deepEqual(learning.map((meal) => meal.focusId), ["birne", "mittag", "abend"]);
+    assert.deepEqual(learning.map((meal) => meal.focusId), ["birne"]);
     assert.equal(day.meals.some((meal) => (meal.foodIds || []).includes("hafer")), false);
     const breakfast = day.meals.find((meal) => meal.meal === "breakfast");
     assert.deepEqual(breakfast.sampleFoodIds, ["birne"], "geschützte Rollen müssen nach interner Normalisierung unverändert sichtbar bleiben");

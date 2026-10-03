@@ -528,6 +528,10 @@
   };
 
   function renderUnifiedTodayCard() {
+    if (typeof plannerViewReady === "function" && !plannerViewReady()) {
+      renderPlannerReadinessPlaceholder("home");
+      return;
+    }
     let card = document.getElementById("todayCard");
     if (!card) return;
 

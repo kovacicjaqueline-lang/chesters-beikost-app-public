@@ -19,6 +19,21 @@ body.mobile-foundation #foods .catalog-switch {
   backdrop-filter: none;
 }
 
+/* Sticky-Köpfe mit negativem oberen Margin müssen auch den dadurch außerhalb ihrer
+ * eigenen Box liegenden Streifen decken. Sonst scrollt der Katalog dort auf iOS
+ * sichtbar zwischen App-Bar und Sticky-Kopf durch. */
+body.mobile-foundation #foods .catalog-switch::before,
+body.mobile-foundation #more .more-panel-header::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -14px;
+  height: 14px;
+  background: rgb(244, 239, 231);
+  pointer-events: none;
+}
+
 body.mobile-foundation #foods .catalog-switch button {
   min-height: 44px;
   border-radius: 14px;
@@ -509,16 +524,146 @@ body.mobile-foundation #more .version-details {
   }
 
   body.mobile-foundation #foods .recipe-heading-with-icon {
-    grid-template-columns: 76px minmax(0, 1fr);
+    grid-template-columns: 52px minmax(0, 1fr);
   }
 
   body.mobile-foundation #foods .recipe-heading-with-icon .recipe-icon,
   body.mobile-foundation #foods .recipe-heading-with-icon .illustration-icon--recipe,
   body.mobile-foundation #foods .recipe-heading-with-icon img,
   body.mobile-foundation #foods .recipe-heading-with-icon svg {
-    --illustration-size: 76px;
-    width: 76px;
-    min-width: 76px;
-    height: 76px;
+    --illustration-size: 52px;
+    width: 52px;
+    min-width: 52px;
+    height: 52px;
   }
+}
+
+/* Recipe catalog: freigegebene kompakte Filter- und Kartenhierarchie. */
+body.mobile-foundation #foods #recipesDetails > summary b{font-size:23px}
+body.mobile-foundation #foods #recipesDetails > summary small{margin-top:3px}
+body.mobile-foundation #foods .recipe-filter-field,
+body.mobile-foundation #foods .recipe-meal-filter-field{margin-bottom:8px}
+body.mobile-foundation #foods .recipe-filter-field>label,
+body.mobile-foundation #foods .recipe-meal-filter-field>label{display:none}
+body.mobile-foundation #foods #recipeFilter,
+body.mobile-foundation #foods #recipeMealFilter{display:flex;gap:6px;overflow-x:auto;padding:0 0 2px;scrollbar-width:none}
+body.mobile-foundation #foods #recipeFilter::-webkit-scrollbar,
+body.mobile-foundation #foods #recipeMealFilter::-webkit-scrollbar{display:none}
+body.mobile-foundation #foods #recipeFilter button,
+body.mobile-foundation #foods #recipeMealFilter button{flex:0 0 auto;min-height:40px;width:auto;white-space:nowrap}
+
+/* Mobile catalog filters: compact selector fields keep the search result area visible. */
+body.mobile-foundation #foods .mobile-filter-toolbar{display:flex;align-items:flex-start;gap:8px;margin:0 0 10px;position:relative;overflow:visible}
+body.mobile-foundation #foods .mobile-filter-select{position:relative;flex:1 1 0;min-width:0}
+body.mobile-foundation #foods .mobile-filter-select>summary{display:flex;align-items:center;justify-content:space-between;gap:6px;min-height:42px;padding:9px 11px;border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink);font-size:13px;font-weight:800;line-height:1.15;list-style:none;cursor:pointer}
+body.mobile-foundation #foods .mobile-filter-select>summary::-webkit-details-marker{display:none}
+body.mobile-foundation #foods .mobile-filter-select>summary>span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body.mobile-foundation #foods .mobile-filter-select[open]>summary{border-color:var(--accent);background:var(--accent2)}
+body.mobile-foundation #foods .mobile-filter-select-menu{position:absolute;left:0;top:calc(100% + 6px);z-index:40;min-width:190px;padding:6px;border:1px solid var(--line);border-radius:16px;background:var(--card);box-shadow:0 12px 28px rgba(48,40,30,.16)}
+body.mobile-foundation #foods .mobile-filter-select-menu .seg{display:grid;gap:4px;margin:0;padding:0;overflow:visible}
+body.mobile-foundation #foods .mobile-filter-select-menu button{width:100%;min-height:40px;padding:8px 10px;border-radius:10px;text-align:left;white-space:normal}
+body.mobile-foundation #foods .mobile-filter-select-menu .field{margin:0}
+body.mobile-foundation #foods .mobile-filter-select-menu .field>label{display:none}
+body.mobile-foundation #foods .recipe-filter-toolbar .recipe-more-filter-button{flex:0 0 auto;min-height:42px;margin:0;padding:9px 12px;white-space:nowrap}
+body.mobile-foundation #foods .recipe-filter-toolbar .mobile-filter-select:first-child{flex:1.25 1 0}
+body.mobile-foundation #foods .recipe-filter-toolbar .mobile-filter-select:nth-child(2){flex:1.05 1 0}
+body.mobile-foundation #foods .recipe-filter-toolbar .mobile-filter-select-menu{min-width:205px}
+body.mobile-foundation #foods .recipe-filter-toolbar .recipe-filter-field,
+body.mobile-foundation #foods .recipe-filter-toolbar .recipe-meal-filter-field{margin:0}
+body.mobile-foundation #foods .recipe-filter-toolbar .recipe-filters,
+body.mobile-foundation #foods .recipe-filter-toolbar .recipe-meal-filters{display:grid;gap:4px;margin:0;padding:0;overflow:visible}
+/* Die globalen #recipeFilter-Regeln sind spezifischer als die generischen
+ * .seg-Regeln. Im geöffneten Auswahlfeld müssen sie deshalb ausdrücklich
+ * überschrieben werden, sonst bleibt die Filterliste horizontal und läuft
+ * auf kleinen Viewports aus dem Menü heraus. */
+body.mobile-foundation #foods .mobile-filter-select-menu #recipeFilter,
+body.mobile-foundation #foods .mobile-filter-select-menu #recipeMealFilter{
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  gap:4px;
+  width:100%;
+  max-width:none;
+  margin:0;
+  padding:0;
+  overflow:visible;
+}
+body.mobile-foundation #foods .mobile-filter-select-menu #recipeFilter>button,
+body.mobile-foundation #foods .mobile-filter-select-menu #recipeMealFilter>button{
+  display:block;
+  width:100%;
+  min-width:0;
+  max-width:none;
+  flex:0 0 auto;
+  text-align:left;
+  white-space:normal;
+}
+body.mobile-foundation #foods .food-filter-toolbar .mobile-filter-select:first-child{flex:1.05 1 0}
+body.mobile-foundation #foods .food-filter-toolbar .mobile-filter-select:nth-child(2){flex:1 1 0}
+body.mobile-foundation #foods .food-filter-toolbar .mobile-filter-select-menu{min-width:175px}
+body.mobile-foundation #foods .recipe-more-filter-button{min-height:42px;margin:0 0 12px;padding:8px 13px}
+body.mobile-foundation #foods .recipe-filter-sheet[hidden]{display:none}
+body.mobile-foundation #foods .recipe-filter-sheet{position:fixed;inset:0;z-index:60;display:flex;align-items:flex-end}
+body.mobile-foundation #foods .recipe-filter-sheet-backdrop{position:absolute;inset:0;border:0;background:rgba(33,29,24,.34)}
+body.mobile-foundation #foods .recipe-filter-sheet-panel{position:relative;width:100%;max-height:min(78dvh,680px);overflow:auto;padding:18px 16px calc(16px + env(safe-area-inset-bottom));border-radius:22px 22px 0 0;background:var(--card);box-shadow:0 -10px 30px rgba(33,29,24,.16)}
+body.mobile-foundation #foods .recipe-filter-sheet-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+body.mobile-foundation #foods .recipe-filter-sheet-head h2{margin:0;font-size:21px}
+body.mobile-foundation #foods .recipe-filter-sheet-group{margin-top:18px}
+body.mobile-foundation #foods .recipe-filter-sheet-group h3{margin:0 0 8px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+body.mobile-foundation #foods .recipe-extra-filter-list{display:flex;flex-wrap:wrap;gap:7px}
+body.mobile-foundation #foods .recipe-extra-filter-list button{flex:0 0 auto;width:auto;min-height:42px}
+body.mobile-foundation #foods .recipe-filter-sheet-actions{position:sticky;bottom:calc(-16px - env(safe-area-inset-bottom));display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;margin:20px -16px calc(-16px - env(safe-area-inset-bottom));padding:10px 16px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:var(--card)}
+body.mobile-foundation #foods .recipe-card-v2{margin:0;border-radius:0;border-top:1px solid var(--line);background:transparent}
+body.mobile-foundation #foods #recipeList>.recipe-card-v2:first-child{border-top:1px solid var(--line)}
+body.mobile-foundation #foods .recipe-card-v2>summary{min-height:68px;padding:8px 0}
+body.mobile-foundation #foods .recipe-heading-with-icon{grid-template-columns:52px minmax(0,1fr);gap:10px}
+body.mobile-foundation #foods .recipe-heading-with-icon>.recipe-illustration{--illustration-size:52px;width:52px;min-width:52px;height:52px;flex:0 0 52px}
+body.mobile-foundation #foods .recipe-heading-with-icon>.recipe-illustration>.illustration-icon__asset{width:52px;height:52px;max-width:100%;max-height:100%;object-fit:contain}
+body.mobile-foundation #foods .recipe-type-text,
+body.mobile-foundation #foods .recipe-tech-text,
+body.mobile-foundation #foods .recipe-summary-end .pill{display:none!important}
+body.mobile-foundation #foods .recipe-summary-end{gap:0}
+body.mobile-foundation #foods .recipe-chevron{font-size:0}
+body.mobile-foundation #foods .recipe-chevron::after{content:"›";font-size:26px}
+body.mobile-foundation #foods .recipe-card-v2[open] .recipe-chevron{transform:rotate(90deg)}
+
+/* Recipe-Assets bleiben auch gegen die ältere Media-Regel des Katalogs kompakt. */
+body.mobile-foundation #foods .recipe-heading-with-icon > .recipe-illustration > img.illustration-icon__asset,
+body.mobile-foundation #foods .recipe-heading-with-icon > img.recipe-illustration {
+  width: 52px !important;
+  height: 52px !important;
+  max-width: 52px;
+  max-height: 52px;
+  object-fit: contain;
+}
+
+/* Normalisierte Recipe-V2-Assets dürfen die kompakte 52px-Reihe optisch nicht sprengen. */
+body.mobile-foundation #foods .recipe-card-v2 .illustration-icon--recipe > .illustration-icon__asset[src*="/recipes/"] {
+  transform: translate(var(--recipe-circle-shift-x, 0), var(--recipe-circle-shift-y, 0)) scale(min(1.153846, var(--recipe-circle-scale, 1)));
+}
+
+/* Die sichtbare Mehr-Überschrift ist selbst ein semantisches Zurück-Bedienelement. */
+body.mobile-foundation #more .more-panel-title-button {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+}
+
+body.mobile-foundation #more .more-panel-title {
+  display: block;
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+body.mobile-foundation #more .more-panel-title-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }

@@ -1,5 +1,16 @@
 "use strict";
 
+function classifyPhaseReadinessReasons(reasons = [], missingPrerequisites = []) {
+  const described = (reasons || []).filter((item) => item?.text);
+  const fulfilled = described.filter((item) => item.code.endsWith("Confirmed") && !item.code.endsWith("NotConfirmed"));
+  const missing = described.filter((item) => item.code.endsWith("NotConfirmed") || item.code.endsWith("Unknown"));
+  const representedMissing = new Set(missing.flatMap((item) => ["currentPatternAccepted", "additionalMealCue", "routineCompatible"].filter((signal) => item.code.startsWith(signal))));
+  for (const signal of missingPrerequisites || []) {
+    if (!representedMissing.has(signal)) missing.push({ code: `${signal}Unknown`, text: `${signal} ist noch nicht angegeben.` });
+  }
+  return { fulfilled, missing };
+}
+
 /*
  * Sichtbare UX für den strukturierten AP3-/Solution-Vertrag.
  * Auswahl, Scoring, Validierung und Planmutation bleiben in PlannerPlanCheckSolutions.
@@ -25,8 +36,7 @@
   function targetLabel(item) {
     const target = item?.refs?.allergenTargets?.[0];
     const representative = item?.details?.representativeFoodId || target?.representativeFoodId || item?.refs?.foodIds?.[0];
-    if ([solutions.INTRO_OPEN_CODE, solutions.INTRO_PROJECTED_CODE].includes(item?.code)) return foodName(representative);
-    return target?.value || target?.allergenGroup || foodName(representative) || "Allergen";
+    return target?.allergenGroup || target?.value || foodName(representative) || "Allergen";
   }
 
   function mealTitle(meal) {
@@ -181,7 +191,10 @@
     const updated = !!activeGoalFlow?.appliedAny;
     activeGoalFlow = null;
     closeGeneric();
-    if (updated) showToast("Plan aktualisiert");
+    if (updated) {
+      renderAll();
+      showToast("Plan aktualisiert");
+    }
   }
 
   function nextFlowGoal(preferredKey = "") {
@@ -202,8 +215,13 @@
     }
     const key = solutions.goalKey(item);
     const rejected = activeGoalFlow.rejectedByGoal.get(key) || new Set();
+    const rejectedSlots = activeGoalFlow.rejectedSlotsByGoal.get(key) || new Set();
     activeGoalFlow.rejectedByGoal.set(key, rejected);
-    const solution = solutions.findSolution(item, days, { rejectedSolutionIds: [...rejected] });
+    activeGoalFlow.rejectedSlotsByGoal.set(key, rejectedSlots);
+    const solution = solutions.findSolution(item, days, {
+      rejectedSolutionIds: [...rejected],
+      rejectedSlotKeys: [...rejectedSlots],
+    });
 
     if (!solution) {
       openGeneric(
@@ -234,11 +252,11 @@
       if (!solutions.applySolution(solution)) return;
       activeGoalFlow.appliedAny = true;
       save();
-      renderAll();
       openGoalStep();
     });
     document.getElementById("otherPlanGoalSolution")?.addEventListener("click", () => {
       rejected.add(solution.id);
+      rejectedSlots.add(`${solution.date}|${solution.meal}`);
       openGoalStep(key);
     });
     document.getElementById("leavePlanGoal")?.addEventListener("click", () => {
@@ -248,7 +266,7 @@
   }
 
   function startGoalFlow(item) {
-    activeGoalFlow = { rejectedByGoal: new Map(), appliedAny: false };
+    activeGoalFlow = { rejectedByGoal: new Map(), rejectedSlotsByGoal: new Map(), appliedAny: false };
     openGoalStep(solutions.goalKey(item));
   }
 
@@ -323,11 +341,11 @@
     const phase = currentPhase();
     if (!readiness) return;
     const reasons = (readiness.reasons || []).map((code) => ({ code, text: readinessReasonText(code) })).filter((item) => item.text);
-    const fulfilled = reasons.filter((item) => item.code.endsWith("Confirmed") && !item.code.endsWith("NotConfirmed"));
-    const missing = reasons.filter((item) => item.code.endsWith("NotConfirmed") || item.code.endsWith("Unknown"));
-    const representedMissing = new Set(missing.flatMap((item) => ["currentPatternAccepted", "additionalMealCue", "routineCompatible"].filter((signal) => item.code.startsWith(signal))));
-    for (const signal of readiness.missingPrerequisites || []) {
-      if (!representedMissing.has(signal)) missing.push({ code: `${signal}Unknown`, text: `${readinessSignalLabel(signal)} ist noch nicht angegeben.` });
+    const { fulfilled, missing } = classifyPhaseReadinessReasons(reasons, readiness.missingPrerequisites);
+    for (const item of missing) {
+      if (!item.text || !item.code.endsWith("Unknown")) continue;
+      const signal = ["currentPatternAccepted", "additionalMealCue", "routineCompatible"].find((candidate) => item.code.startsWith(candidate));
+      if (signal && item.text === `${signal} ist noch nicht angegeben.`) item.text = `${readinessSignalLabel(signal)} ist noch nicht angegeben.`;
     }
 
     const signalRows = ["currentPatternAccepted", "additionalMealCue", "routineCompatible"].map((signal) => {
@@ -470,3 +488,5 @@
   if (typeof renderCurrentView === "function") renderCurrentView();
   else renderAll();
 })(typeof globalThis !== "undefined" ? globalThis : this);
+
+if (typeof module !== "undefined" && module.exports) module.exports = { classifyPhaseReadinessReasons };

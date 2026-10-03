@@ -63,13 +63,28 @@ test("Speichern eines Protokolleintrags bleibt in der aktuellen Ansicht", () => 
   assert.ok(saveStart >= 0, "saveLog muss vorhanden sein");
   const saveSource = logSource.slice(saveStart);
 
-  assert.match(saveSource, /save\(\); closeLog\(\); renderAll\(\);/);
+  assert.match(saveSource, /save\(\{ logMutation: \{ upserts: \[newLog\] \} \}\); closeLog\(\); renderAll\(\);/);
   assert.doesNotMatch(saveSource, /showView\(["']more["']\)/);
   assert.doesNotMatch(saveSource, /getElementById\(["']logDetails["']\)/);
   assert.doesNotMatch(saveSource, /scrollIntoView\(/);
 });
 
+test("Undo-Snapshot kopiert Protokolle nicht erneut vollständig", () => {
+  assert.match(logSource, /function snapshotStateForLogUndo\(source = state\)/);
+  assert.match(logSource, /clone\(\{ \.\.\.source, logs: \[\] \}\)/);
+  assert.match(logSource, /if \(!isEdit\) logsBefore\.length = logCountBefore/);
+  assert.match(logSource, /stateBefore\.logs = logsBefore/);
+});
+
 test("Log-Selector bleibt mobil einspaltig und blendet inaktive Panels aus", () => {
   assert.match(css, /#logModal\.flow-dialog \.flow-log-selector-panel\[hidden\]\s*\{\s*display:\s*none;/s);
   assert.match(css, /#logModal\.flow-dialog \.flow-log-selector \.flow-log-selector-panel\s*\{\s*margin:\s*0;/s);
+});
+
+test("Mahlzeit-Editor nutzt kompakte Zeilen für Lebensmittel und Rezepte", () => {
+  assert.match(css, /#genericModal:has\(#cancelManualMeal\) \.selector-row\s*\{[^}]*min-height:\s*46px;[^}]*padding:\s*6px 10px;[^}]*box-shadow:\s*none;/s);
+  assert.match(css, /#genericModal:has\(#cancelManualMeal\) \.selector-row\.selectFood\s*\{[^}]*grid-template-columns:\s*44px minmax\(0, 1fr\) 24px;/s);
+  assert.match(css, /#genericModal:has\(#cancelManualMeal\) \.selector-row\.selectRecipe\s*\{[^}]*grid-template-columns:\s*44px minmax\(0, 1fr\) 24px;/s);
+  assert.match(css, /#genericModal:has\(#cancelManualMeal\) \.selector-row > \.manual-role-type\s*\{[^}]*display:\s*none;/s);
+  assert.match(css, /#genericModal:has\(#cancelManualMeal\) \.manual-role-overview\s*\{[^}]*display:\s*block;/s);
 });

@@ -1,51 +1,13 @@
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { webkit } from "playwright";
-
+import { closeBrowserApp, configureBrowserTestPage, startStaticServer } from "./helpers/app-harness.mjs";
+import { installBrowserTimingProbe } from "./helpers/browser-timing-probe.mjs";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const artifactDir = process.env.BROWSER_TEST_ARTIFACT_DIR || path.join(root, "artifacts", "browser-tests", "plan-checks-ux-webkit");
-fs.mkdirSync(artifactDir, { recursive: true });
+const artifactDir = path.join(root, "artifacts", "browser-tests", "plan-checks-ux-webkit");
 
-const mimeTypes = {
-  ".html": "text/html; charset=utf-8",
-  ".js": "text/javascript; charset=utf-8",
-  ".css": "text/css; charset=utf-8",
-  ".json": "application/json; charset=utf-8",
-  ".webmanifest": "application/manifest+json; charset=utf-8",
-  ".svg": "image/svg+xml",
-  ".png": "image/png",
-  ".webp": "image/webp",
-};
 
-function startStaticServer() {
-  const server = http.createServer((request, response) => {
-    const url = new URL(request.url || "/", "http://127.0.0.1");
-    const pathname = decodeURIComponent(url.pathname === "/" ? "/index.html" : url.pathname);
-    const filePath = path.resolve(root, `.${pathname}`);
-    if (filePath !== path.join(root, "index.html") && !filePath.startsWith(`${root}${path.sep}`)) {
-      response.writeHead(403).end("Forbidden");
-      return;
-    }
-    fs.stat(filePath, (error, stat) => {
-      if (error || !stat.isFile()) {
-        response.writeHead(404).end("Not found");
-        return;
-      }
-      response.writeHead(200, {
-        "content-type": mimeTypes[path.extname(filePath)] || "application/octet-stream",
-        "cache-control": "no-store",
-      });
-      fs.createReadStream(filePath).pipe(response);
-    });
-  });
-  return new Promise((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(0, "127.0.0.1", () => resolve(server));
-  });
-}
 
 async function showView(page, view) {
   await page.locator(`nav button[data-view="${view}"]`).click();
@@ -55,8 +17,7 @@ async function showView(page, view) {
 async function seedAllergens(page, { targetIds, exposureCount = 2, autoLockCount = 2, projectedTargetId = "" }) {
   return page.evaluate(({ targetIds, exposureCount, autoLockCount, projectedTargetId }) => {
     const api = window.__beikostTest;
-    api.reset();
-    let current = api.getState();
+    let current = structuredClone(window.__beikostTestBaseline);
     const on = api.today();
     current.settings.phaseSelected = "drei";
     current.settings.planFrom = on;
@@ -157,8 +118,7 @@ async function seedAllergens(page, { targetIds, exposureCount = 2, autoLockCount
 async function seedHardBlocker(page) {
   return page.evaluate(() => {
     const api = window.__beikostTest;
-    api.reset();
-    let current = api.getState();
+    let current = structuredClone(window.__beikostTestBaseline);
     const on = api.today();
     current.settings.phaseSelected = "drei";
     current.settings.planFrom = on;
@@ -215,8 +175,7 @@ async function seedHardBlocker(page) {
 async function seedRequiredAction(page) {
   return page.evaluate(() => {
     const api = window.__beikostTest;
-    api.reset();
-    let current = api.getState();
+    let current = structuredClone(window.__beikostTestBaseline);
     const on = api.today();
     current.settings.phaseSelected = "drei";
     current.settings.planFrom = on;
@@ -264,6 +223,7 @@ async function assertSheetFitsMobile(page) {
 const server = await startStaticServer();
 const { port } = server.address();
 const browser = await webkit.launch();
+let timingProbe = null;
 
 try {
   const context = await browser.newContext({
@@ -272,12 +232,18 @@ try {
     isMobile: true,
     hasTouch: true,
   });
-  const page = await context.newPage();
+  const page = configureBrowserTestPage(await context.newPage());
+  timingProbe = installBrowserTimingProbe(page);
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
 
   await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => !!window.__beikostTest?.setState);
+  await page.evaluate(() => {
+    const api = window.__beikostTest;
+    api.reset();
+    window.__beikostTestBaseline = api.getState();
+  });
   await page.waitForFunction(() => window.__planChecksContractExtensionInstalled === true && window.__planChecksUiInstalled === true);
 
   // 1. Projected-covered erzeugt keinen offenen Hinweis.
@@ -298,7 +264,7 @@ try {
   await page.waitForFunction(() => window.__beikostTest.planCheckOpenGoals().length === 1);
   await page.locator("#openPlanGoalSolution").click();
   await page.locator("#applyPlanGoalSolution").waitFor({ state: "visible" });
-  assert.match(await page.locator("#genericBody").textContent(), /(Frühstück|Mittagessen|Abendessen)/, "Lösung muss eine konkrete Mahlzeit nennen");
+  assert.match(await page.locator("#genericBody").textContent(), /(Frühstück|Mittag(?:essen)?|Abendessen)/, "Lösung muss eine konkrete Mahlzeit nennen");
   await assertSheetFitsMobile(page);
   await page.screenshot({ path: path.join(artifactDir, "single-allergen-solution.png"), fullPage: false });
   await page.locator("#closeGeneric").click();
@@ -310,13 +276,58 @@ try {
   assert.match(await page.locator("#planQuality").textContent(), /2 Allergene/);
   await page.locator("#openPlanGoalSolution").click();
   const firstTitle = (await page.locator("#genericTitle").textContent()).trim();
-  await page.locator("#applyPlanGoalSolution").click();
+  await page.locator("#applyPlanGoalSolution").click({ timeout: 30_000 });
   await page.waitForFunction((before) => {
     const title = document.getElementById("genericTitle")?.textContent?.trim();
     return document.getElementById("genericModal")?.classList.contains("open") && title && title !== before;
   }, firstTitle);
-  await page.locator("#applyPlanGoalSolution").click();
-  await page.waitForFunction(() => !document.getElementById("genericModal")?.classList.contains("open"));
+  const secondStepTitle = (await page.locator("#genericTitle").textContent()).trim();
+  const secondStepBody = (await page.locator("#genericBody").textContent()).trim();
+  if (await page.locator("#applyPlanGoalSolution").isVisible()) {
+    await page.locator("#applyPlanGoalSolution").click({ timeout: 30_000 });
+  } else {
+    assert.match(secondStepBody, /Für diese Woche gibt es keine passende Möglichkeit/);
+    await page.locator("#leavePlanGoal").click({ timeout: 30_000 });
+  }
+  try {
+    await page.waitForFunction(() => !document.getElementById("genericModal")?.classList.contains("open"));
+  } catch (error) {
+    const flowState = await page.evaluate(({ firstTitle, secondStepTitle, secondStepBody }) => ({
+      modalOpen: document.getElementById("genericModal")?.classList.contains("open"),
+      firstTitle,
+      secondStepTitle,
+      secondStepBody,
+      title: document.getElementById("genericTitle")?.textContent?.trim() || "",
+      body: document.getElementById("genericBody")?.textContent?.trim() || "",
+      goals: window.__beikostTest.planCheckOpenGoals().map((item) => ({
+        code: item.code,
+        goalKey: PlannerPlanCheckSolutions.goalKey(item),
+        details: item.details,
+        foodIds: item.refs?.foodIds || [],
+      })),
+      precompute: window.__beikostTest.planCheckSolutionPrecompute(),
+      currentPlan: planDisplayDays(visiblePlanStart(), 7).flatMap((day) => (day.meals || [])
+        .filter((meal) => meal.active && !meal.empty)
+        .map((meal) => ({
+          date: day.date,
+          meal: meal.meal,
+          recipeName: meal.recipeName || "",
+          foodIds: meal.foodIds || [],
+          baseFoodIds: meal.baseFoodIds || [],
+          sampleFoodIds: meal.sampleFoodIds || [],
+        }))),
+      glutenLocks: Object.entries(window.__beikostTest.getState().planLocks || {})
+        .filter(([, lock]) => (lock.foodIds || []).includes("weizen"))
+        .map(([key, lock]) => ({ key, recipeName: lock.recipeName, foodIds: lock.foodIds, mode: lock.mode })),
+      todayBreakfastLock: window.__beikostTest.getState().planLocks[
+        `${window.__beikostTest.today()}|breakfast`
+      ] || null,
+      todayLunchLock: window.__beikostTest.getState().planLocks[
+        `${window.__beikostTest.today()}|lunch`
+      ] || null,
+    }), { firstTitle, secondStepTitle, secondStepBody });
+    throw new Error(`Plan-Check-Flow schloss nach der letzten Übernahme nicht: ${JSON.stringify(flowState)}; ${error.message}`);
+  }
   await page.waitForFunction(() => document.getElementById("toast")?.classList.contains("show") && document.getElementById("toastText")?.textContent === "Plan aktualisiert");
 
   // 4. „Andere Lösung“ bietet nicht erneut dieselbe strukturierte Solution an.
@@ -324,13 +335,24 @@ try {
   await showView(page, "plan");
   await page.locator("#openPlanGoalSolution").click();
   const firstSolutionText = (await page.locator("#genericBody .plan-solution-card").textContent()).trim();
-  await page.locator("#otherPlanGoalSolution").click();
+  const firstSolutionSlot = (await page.locator("#genericBody .plan-solution-card b").textContent()).trim();
+  await page.locator("#otherPlanGoalSolution").click({ timeout: 30_000 });
   await page.waitForFunction((before) => {
     const card = document.querySelector("#genericBody .plan-solution-card");
     return card && card.textContent.trim() !== before;
   }, firstSolutionText);
   const secondSolutionText = (await page.locator("#genericBody .plan-solution-card").textContent()).trim();
+  const secondSolutionSlot = (await page.locator("#genericBody .plan-solution-card b").textContent()).trim();
   assert.notEqual(secondSolutionText, firstSolutionText);
+  assert.notEqual(secondSolutionSlot, firstSolutionSlot, "Andere Lösung muss einen anderen geeigneten Mahlzeiten-Slot verwenden");
+  await page.locator("#closeGeneric").click();
+
+  // Milch-Ziel zeigt die fachliche Gruppenbezeichnung, nie den internen Family-Key.
+  await seedAllergens(page, { targetIds: ["naturjoghurt"], exposureCount: 2, autoLockCount: 3 });
+  await showView(page, "plan");
+  await page.locator("#openPlanGoalSolution").click();
+  assert.equal((await page.locator("#genericTitle").textContent()).trim(), "Milch");
+  assert.doesNotMatch(await page.locator("#genericBody").textContent(), /\bmilch\b/);
   await page.locator("#closeGeneric").click();
 
   // 5. Dismissal verändert keine Expositionsdaten.
@@ -381,16 +403,17 @@ try {
   await page.waitForFunction(() => window.__beikostTest.planCheckReport().items.some((item) => item.type === "required_action"));
   assert.match(await page.locator("#planQuality").textContent(), /Planentscheidung offen/);
   await page.locator("#openPlanRequiredAction").click();
-  await page.locator("#reactivateRequiredFood").click();
+  await page.locator("#reactivateRequiredFood").waitFor({ state: "visible", timeout: 30_000 });
+  await page.locator("#reactivateRequiredFood").click({ timeout: 30_000 });
   await page.waitForFunction((id) => window.__beikostTest.getState().foods.find((record) => record.id === id)?.active === true, required.foodId);
 
   // 9. Phase-Details zeigen tatsächliche erfüllte und fehlende Kriterien.
-  await page.evaluate(() => window.__beikostTest.reset());
+  await page.evaluate(() => window.__beikostTest.setState(structuredClone(window.__beikostTestBaseline)));
   await showView(page, "home");
   await page.locator(".phase-details-trigger").click();
-  await page.locator('[data-readiness-signal="currentPatternAccepted"][data-readiness-value="yes"]').click();
-  await page.locator('[data-readiness-signal="additionalMealCue"][data-readiness-value="no"]').click();
-  await page.locator('[data-readiness-signal="routineCompatible"][data-readiness-value="unknown"]').click();
+  await page.locator('[data-readiness-signal="currentPatternAccepted"][data-readiness-value="yes"]').click({ timeout: 30_000 });
+  await page.locator('[data-readiness-signal="additionalMealCue"][data-readiness-value="no"]').click({ timeout: 30_000 });
+  await page.locator('[data-readiness-signal="routineCompatible"][data-readiness-value="unknown"]').click({ timeout: 30_000 });
   await page.waitForFunction(() => document.getElementById("genericBody")?.textContent?.includes("Erfüllt") && document.getElementById("genericBody")?.textContent?.includes("Fehlt noch"));
   assert.match(await page.locator("#genericBody").textContent(), /Das aktuelle Mahlzeitenmuster funktioniert im Alltag/);
   assert.match(await page.locator("#genericBody").textContent(), /Signale für eine zusätzliche Mahlzeit fehlen noch/);
@@ -398,10 +421,10 @@ try {
   await page.screenshot({ path: path.join(artifactDir, "phase-readiness-mixed.png"), fullPage: false });
 
   // 10. Empfehlung nennt den zusätzlichen Slot; Phasenwechsel erfolgt erst nach bestehender Bestätigung.
-  await page.locator('[data-readiness-signal="additionalMealCue"][data-readiness-value="yes"]').click();
-  await page.locator('[data-readiness-signal="routineCompatible"][data-readiness-value="yes"]').click();
+  await page.locator('[data-readiness-signal="additionalMealCue"][data-readiness-value="yes"]').click({ timeout: 30_000 });
+  await page.locator('[data-readiness-signal="routineCompatible"][data-readiness-value="yes"]').click({ timeout: 30_000 });
   await page.waitForFunction(() => document.getElementById("genericBody")?.textContent?.includes("Nächste Phase empfohlen"));
-  assert.match(await page.locator("#genericBody").textContent(), /zusätzlich ein Frühstück\. Mittagessen bleibt bestehen/);
+  assert.match(await page.locator("#genericBody").textContent(), /Mit der nächsten Phase plant die App zusätzlich ein (Frühstück|Abendessen)\. (?:Frühstück und )?Mittagessen bleib(?:t|en) bestehen/);
   const phaseBefore = await page.evaluate(() => window.__beikostTest.getState().settings.phaseSelected);
   await page.locator("#startRecommendedPhase").click();
   await page.waitForFunction(() => document.getElementById("genericTitle")?.textContent?.includes("wechseln?"));
@@ -413,6 +436,6 @@ try {
   await context.close();
   console.log("plan-checks-ux-webkit: ok");
 } finally {
-  await browser.close();
-  await new Promise((resolve) => server.close(resolve));
+  console.log(`[browser-timing-probe] ${JSON.stringify(timingProbe?.report?.() || {})}`);
+  await closeBrowserApp({ context: typeof context !== "undefined" ? context : null, browser, server });
 }

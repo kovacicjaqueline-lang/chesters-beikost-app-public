@@ -1,47 +1,10 @@
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { webkit } from "playwright";
+import { closeBrowserApp, startStaticServer } from "./helpers/app-harness.mjs";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const mimeTypes = {
-  ".html": "text/html; charset=utf-8",
-  ".js": "text/javascript; charset=utf-8",
-  ".css": "text/css; charset=utf-8",
-  ".json": "application/json; charset=utf-8",
-  ".svg": "image/svg+xml",
-  ".png": "image/png",
-  ".webp": "image/webp",
-};
 
-function startStaticServer() {
-  const server = http.createServer((request, response) => {
-    const url = new URL(request.url || "/", "http://127.0.0.1");
-    const pathname = decodeURIComponent(url.pathname === "/" ? "/index.html" : url.pathname);
-    const filePath = path.resolve(root, `.${pathname}`);
-    if (filePath !== path.join(root, "index.html") && !filePath.startsWith(`${root}${path.sep}`)) {
-      response.writeHead(403).end("Forbidden");
-      return;
-    }
-    fs.stat(filePath, (error, stat) => {
-      if (error || !stat.isFile()) {
-        response.writeHead(404).end("Not found");
-        return;
-      }
-      response.writeHead(200, {
-        "content-type": mimeTypes[path.extname(filePath)] || "application/octet-stream",
-        "cache-control": "no-store",
-      });
-      fs.createReadStream(filePath).pipe(response);
-    });
-  });
-  return new Promise((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(0, "127.0.0.1", () => resolve(server));
-  });
-}
 
 const server = await startStaticServer();
 const { port } = server.address();
@@ -75,6 +38,7 @@ try {
   });
 
   await page.evaluate((date) => window.__beikostTest.openManualMealSelector(date, "breakfast"), today);
+  await page.locator("#genericBody").getByText("Noch kein Rezept ausgewählt.").waitFor();
   assert.match(await page.locator("#genericBody").innerText(), /Noch kein Rezept ausgewählt\./);
   assert.match(await page.locator("#genericBody").innerText(), /Bitte ein Rezept auswählen\./);
 
@@ -133,11 +97,21 @@ try {
   await fruitSlot.selectOption("apfel");
   await page.locator('[data-recipe-component-slot="oneOf"]').waitFor();
   assert.equal(await page.locator('[data-recipe-component-slot="oneOf"]').inputValue(), "apfel");
+  await page.locator("#selectorFoods").click();
+  await page.locator('.selectFood[data-food="karotte"]').click();
+  await page.locator("#selectorRecipes").click();
+  assert.equal(await page.locator('.selectRecipe.selected[data-recipe]').count(), 1, "Lebensmittel-Tab darf die Rezeptauswahl nicht aufheben");
+  assert.match(await page.locator("#genericBody").innerText(), /Karotte/, "Zusätzliches Lebensmittel muss beim Tabwechsel erhalten bleiben");
+  await fruitSlot.selectOption("birne");
+  await page.locator('[data-recipe-component-slot="oneOf"]').waitFor();
+  assert.equal(await page.locator('[data-recipe-component-slot="oneOf"]').inputValue(), "birne");
+  assert.match(await page.locator("#genericBody").innerText(), /Karotte/, "Rezeptvariante darf zusätzliche Lebensmittel nicht löschen");
   await page.locator("#confirmManualMeal").click();
   await page.waitForFunction((date) => !!window.__beikostTest.getState().planLocks?.[`${date}|breakfast`], today);
   let saved = await page.evaluate(() => window.__beikostTest.getState());
   assert.ok(saved.planLocks[`${today}|breakfast`].foodIds.includes("hafer"));
-  assert.ok(saved.planLocks[`${today}|breakfast`].foodIds.includes("apfel"));
+  assert.ok(saved.planLocks[`${today}|breakfast`].foodIds.includes("birne"));
+  assert.ok(saved.planLocks[`${today}|breakfast`].foodIds.includes("karotte"));
   assert.equal(saved.planLocks[`${today}|breakfast`].foodIds.includes("banane"), false);
 
   await page.evaluate((date) => {
@@ -145,7 +119,8 @@ try {
     window.__beikostTest.openManualMealSelector(date, "breakfast", lock);
   }, today);
   await page.locator('[data-recipe-component-slot="oneOf"]').waitFor();
-  assert.equal(await page.locator('[data-recipe-component-slot="oneOf"]').inputValue(), "apfel", "gespeicherte Obstauswahl muss beim Wiederöffnen vorausgefüllt sein");
+  assert.equal(await page.locator('[data-recipe-component-slot="oneOf"]').inputValue(), "birne", "gespeicherte Obstauswahl muss beim Wiederöffnen vorausgefüllt sein");
+  assert.match(await page.locator("#genericBody").innerText(), /Karotte/, "Gespeicherte Rezeptkombination muss zusätzliche Lebensmittel behalten");
 
   await page.evaluate((date) => {
     window.__beikostTest.openManualMealSelector(date, "breakfast", {
@@ -228,8 +203,6 @@ try {
   await page.locator("#selectorFoods").click();
   assert.equal(await page.locator('.selectFood.selected[data-food="karotte"]').count(), 1);
 
-  await context.close();
 } finally {
-  await browser.close();
-  await new Promise((resolve) => server.close(resolve));
+  await closeBrowserApp({ context: typeof context !== "undefined" ? context : null, browser, server });
 }

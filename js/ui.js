@@ -22,7 +22,7 @@ function showToast(message, undoFn = null) {
   document.getElementById("toastText").textContent = message;
   undo.style.display = undoFn ? "block" : "none";
   toast.classList.add("show");
-  toastTimer = setTimeout(() => toast.classList.remove("show"), 5500);
+  toastTimer = setTimeout(() => toast.classList.remove("show"), 2200);
 }
 let activeViewRenderCycle = null;
 function withViewRenderCycle(viewId, callback) {
@@ -58,6 +58,18 @@ function viewRenderBuildDays(from, n = 7, applyAutoLocks = true) {
   }
   return activeViewRenderCycle.days.get(key);
 }
+function viewRenderPlanDays(from, n = 7) {
+  return memoizeViewRenderValue(
+    `planDisplayDays|${String(from)}|${Number(n)}`,
+    () => planDisplayDays(from, n),
+  );
+}
+function viewRenderPrepPlanDays(from, n = 7) {
+  return memoizeViewRenderValue(
+    `prepPlanDays|${String(from)}|${Number(n)}`,
+    () => globalThis.__plannerWeekCache?.readOnly?.(from, n) || planDisplayDays(from, n),
+  );
+}
 function viewRenderRecipeStates() {
   if (!activeViewRenderCycle) return recipeStates();
   if (!activeViewRenderCycle.recipeStatesReady) {
@@ -74,27 +86,73 @@ function viewRenderPrepDemand() {
   }
   return activeViewRenderCycle.prepDemand;
 }
+function plannerReadinessState() {
+  return globalThis.PlannerReadiness?.state ||
+    (typeof window !== "undefined" && window.__plannerPoliciesReady === false ? "loading" : "ready");
+}
+function plannerViewReady() {
+  return plannerReadinessState() === "ready";
+}
+function renderPlannerReadinessPlaceholder(viewId) {
+  let targets = { home: "todayCard", plan: "blockPlan", prep: "prepNow", allergen: "allergenModule" };
+  let target = document.getElementById(targets[viewId] || "");
+  if (!target) return false;
+  let failed = plannerReadinessState() === "failed";
+  target.innerHTML = `<div class="notice ${failed ? "warn" : "olive"} planner-readiness-message" role="status">${failed
+    ? "Die Planungsregeln konnten nicht geladen werden. Bitte lade die App erneut."
+    : "Planungsregeln werden geladen …"}</div>`;
+  let view = target.closest(".view");
+  if (view) {
+    if (failed) view.removeAttribute("aria-busy");
+    else view.setAttribute("aria-busy", "true");
+  }
+  if (viewId === "plan") {
+    let toolbar = document.querySelector("#plan .plan-toolbar");
+    if (toolbar) toolbar.inert = !plannerViewReady();
+  }
+  return true;
+}
 function renderAll() {
-  renderHome();
-  renderPlan();
+  if (plannerViewReady()) {
+    renderHome();
+    renderPlan();
+    renderPrep();
+    renderAllergenModule();
+  } else {
+    renderPlannerReadinessPlaceholder("home");
+    renderPlannerReadinessPlaceholder("plan");
+    renderPlannerReadinessPlaceholder("prep");
+    renderPlannerReadinessPlaceholder("allergen");
+  }
   renderLogs();
   renderStatistics();
   renderFoods();
-  renderPrep();
-  renderAllergenModule();
   renderSettings();
   if (document.getElementById("auditList")) renderAudit();
   renderStorageStatus();
 }
 function renderView(id) {
-  if (id === "home") renderHome();
-  else if (id === "plan") renderPlan();
-  else if (id === "prep") renderPrep();
+  if (["home", "plan", "prep"].includes(id) && !plannerViewReady()) {
+    renderPlannerReadinessPlaceholder(id);
+  }
+  else if (id === "home") {
+    document.getElementById(id)?.removeAttribute("aria-busy");
+    renderHome();
+  }
+  else if (id === "plan") {
+    document.getElementById(id)?.removeAttribute("aria-busy");
+    renderPlan();
+  }
+  else if (id === "prep") {
+    document.getElementById(id)?.removeAttribute("aria-busy");
+    renderPrep();
+  }
   else if (id === "foods") renderFoods();
   else if (id === "more") {
     renderLogs();
     renderStatistics();
-    renderAllergenModule();
+    if (plannerViewReady()) renderAllergenModule();
+    else renderPlannerReadinessPlaceholder("allergen");
     renderSettings();
     if (document.getElementById("auditList")) renderAudit();
     renderStorageStatus();
@@ -234,6 +292,10 @@ function mealStatusText(m) {
   return text === "Heute geplant" ? "" : text;
 }
 function renderHomeCore() {
+  if (!plannerViewReady()) {
+    renderPlannerReadinessPlaceholder("home");
+    return;
+  }
   let learned = learnedFoods(),
     tried = typeof learnedCountIdentities === "function" ? learnedCountIdentities().length : learned.length,
     target = Number(state.settings.targetFoods) || 100,
@@ -519,6 +581,10 @@ function compactPlanAmountLabel(label = "") {
 }
 /* PLAN-TOOLBAR-SUMMARY END */
 function renderPlanCore() {
+  if (!plannerViewReady()) {
+    renderPlannerReadinessPlaceholder("plan");
+    return;
+  }
   let from = visiblePlanStart();
   document.getElementById("planFrom").value = from;
   let days = planDisplayDays(from, 7);
@@ -832,7 +898,33 @@ function openAddMealMenu(date) {
       (button.onclick = () => openManualMealSelector(date, button.dataset.meal)),
   );
 }
+let manualMealSearchViewportAdjustmentInstalled = false;
+function keepFirstManualMealResultAboveActions() {
+  let search = document.getElementById("mealSelectorSearch");
+  if (!search) return;
+  let modal = document.getElementById("genericModal");
+  let sheet = modal?.querySelector(".sheet");
+  let firstResult = modal?.querySelector(".selector-results .selector-row:not([hidden])");
+  let actions = modal?.querySelector(".sticky-form-actions");
+  if (!sheet || !firstResult || !actions) return;
+  let overlap = firstResult.getBoundingClientRect().bottom - actions.getBoundingClientRect().top;
+  if (overlap > 0) sheet.scrollTop += overlap + 8;
+}
+function installManualMealSearchViewportAdjustment() {
+  if (manualMealSearchViewportAdjustmentInstalled) return;
+  let scheduleAdjustment = () => window.requestAnimationFrame(keepFirstManualMealResultAboveActions);
+  document.addEventListener("focusin", (event) => {
+    if (event.target?.id === "mealSelectorSearch") scheduleAdjustment();
+  });
+  document.addEventListener("input", (event) => {
+    if (event.target?.id === "mealSelectorSearch") scheduleAdjustment();
+  }, true);
+  window.addEventListener("resize", scheduleAdjustment, { passive: true });
+  window.visualViewport?.addEventListener("resize", scheduleAdjustment, { passive: true });
+  manualMealSearchViewportAdjustmentInstalled = true;
+}
 function openManualMealSelector(date, meal, initialMeal = null) {
+  installManualMealSearchViewportAdjustment();
   let key = manualMealKey(date, meal);
   let storedManual = state.manualMeals?.[key] || null;
   let existing = storedManual || initialMeal || null;
@@ -871,6 +963,25 @@ function openManualMealSelector(date, meal, initialMeal = null) {
     else if (info.role === "sample") sampleFoodIds.add(id);
     // Bekannte Komponenten bleiben bewusst außerhalb von Hauptbasis und Lernrolle.
   }
+  function manualRecipeComponentIds(recipe) {
+    if (!recipe) return new Set();
+    let names = [
+      ...(recipe.requires || []),
+      ...(recipe.alternatives || []).flat(),
+      ...(recipe.oneOf || []),
+      ...(recipe.milkChoices || []),
+    ];
+    let ids = typeof recipeFoodIds === "function" ? recipeFoodIds(recipe) : [];
+    for (let name of names) {
+      let id = typeof foodByName === "function" ? foodByName(name, state.foods)?.id : "";
+      if (id) ids.push(id);
+    }
+    return new Set(ids.filter(Boolean));
+  }
+  function selectedManualRecipeAdditions(recipe) {
+    let recipeIds = manualRecipeComponentIds(recipe);
+    return [...selectedFoods].filter((id) => !recipeIds.has(id));
+  }
   function setRole(id, role) {
     if (!selectedFoods.has(id)) return;
     let info = manualMealRoleInfo(id, meal, date, { recipeName: selectedRecipe });
@@ -906,21 +1017,25 @@ function openManualMealSelector(date, meal, initialMeal = null) {
     }).join("") : '<div class="small manual-role-none">Keine</div>'}</div>`;
     return `<div class="manual-role-overview">${group("Hauptbasis", validation.bases, "base")}${group("Bekannte Komponente", validation.components || [], "component")}${group("Einführung und Wiederholung", validation.samples, "sample")}</div>`;
   }
+  function mealSelectorVisual(markup, kind) {
+    return `<span class="meal-selector-visual meal-selector-visual--${kind}" aria-hidden="true">${markup}</span>`;
+  }
   function renderSelector() {
     let roleData = currentRoleData();
     let validation = manualMealValidation(roleData, meal, date);
+    let recipeRoleContext = selectedRecipe ? { recipeName: selectedRecipe } : {};
     let recipeRows = recipeStates()
       .filter(
         (r) =>
           (r.unlocked || r.almost || r.name === selectedRecipe) &&
-          recipeSuitableForMeal(r, meal) &&
+          plannerRecipeSuitableForManualMeal(r, meal) &&
           (!query || normalizeName(recipeSearchText(r)).includes(normalizeName(query))),
       )
       .sort((a, b) => Number(b.unlocked) - Number(a.unlocked) || a.name.localeCompare(b.name, "de"));
     let foodRows = state.foods
       .filter((f) => {
         let alreadySelected = selectedFoods.has(f.id);
-        let selectable = manualMealRoleInfo(f, meal, date).role !== "excluded";
+        let selectable = manualMealRoleInfo(f, meal, date, recipeRoleContext).role !== "excluded";
         return (alreadySelected || selectable) && (!query || foodSearchMatches(f, query));
       })
       .sort(
@@ -935,8 +1050,7 @@ function openManualMealSelector(date, meal, initialMeal = null) {
       ? `<div class="notice warn manual-role-warning"><b>So passt die Auswahl noch nicht</b><div>${validation.messages.map((message) => esc(manualLearningValidationText(message))).join("<br>")}</div></div>`
       : '<div class="notice olive manual-role-ok">Hauptbasis und Lernrolle werden getrennt gespeichert.</div>';
     let body = `<div class="meal-selector-tabs"><button id="selectorRecipes" class="${tab === "recipes" ? "active" : ""}">Rezepte</button><button id="selectorFoods" class="${tab === "foods" ? "active" : ""}">Lebensmittel</button></div>
-      ${selectedRolesHtml(validation)}
-      ${warning}
+      ${validation.messages.length ? warning : ""}
       <div class="field"><label>Suchen</label><input id="mealSelectorSearch" value="${esc(query)}" placeholder="${tab === "recipes" ? "Rezept suchen" : "Lebensmittel suchen"}"></div>
       <div class="selector-results">
         ${
@@ -947,13 +1061,13 @@ function openManualMealSelector(date, meal, initialMeal = null) {
                 let recipeBases = recipeIds.filter((id) => recipeRoleInfos[id].role === "base"), recipeSamples = recipeIds.filter((id) => recipeRoleInfos[id].role === "sample");
                 let preview = manualMealValidation({ recipeName: r.name, foodIds: recipeIds, baseFoodIds: recipeBases, sampleFoodIds: recipeSamples, foodRoles: foodRolesFor(recipeIds, recipeBases, recipeSamples) }, meal, date);
                 let roleHint = preview.multipleUnsafeIds.length ? ` · nicht speicherbar: ${preview.multipleUnsafeIds.map((id) => food(id)?.name || id).join(", ")}` : preview.samples.length ? ` · ${preview.samples.map((id) => `${manualLearningRoleText(id)}: ${food(id)?.name || id}`).join(", ")}` : "";
-                return `<button class="selector-row selectRecipe ${selectedRecipe === r.name ? "selected" : ""}" data-recipe="${encodeURIComponent(r.name)}">${recipeIconSvg(r)}<span class="grow"><b>${esc(r.name)}</b><span class="small" style="display:block">${r.unlocked ? "Jetzt passend" : `Fast passend · ${esc(recipeMissingSummary(r))}`}${recipeInventoryPortions(r.name) ? ` · ${recipeInventoryPortions(r.name)} im Vorrat` : ""}${esc(roleHint)}</span></span><span class="selector-check" aria-hidden="true">${selectedRecipe === r.name ? "✓" : ""}</span></button>`;
+                return `<button class="selector-row selectRecipe ${selectedRecipe === r.name ? "selected" : ""}" data-recipe="${encodeURIComponent(r.name)}">${mealSelectorVisual(recipeIconSvg(r), "recipe")}<span class="grow"><b>${esc(r.name)}</b><span class="small" style="display:block">${r.unlocked ? "Jetzt passend" : `Fast passend · ${esc(recipeMissingSummary(r))}`}${recipeInventoryPortions(r.name) ? ` · ${recipeInventoryPortions(r.name)} im Vorrat` : ""}${esc(roleHint)}</span></span><span class="selector-check" aria-hidden="true">${selectedRecipe === r.name ? "✓" : ""}</span></button>`;
               }).join("")
               : '<div class="empty">Kein passendes Rezept gefunden.</div>'
             : foodRows.length
               ? foodRows.map((f) => {
                 let selected = selectedFoods.has(f.id), role = sampleFoodIds.has(f.id) ? "sample" : baseFoodIds.has(f.id) ? "base" : selected ? "component" : "";
-                let roleInfo = manualMealRoleInfo(f, meal, date), pausedManual = roleInfo.reason === "paused_manual";
+                let roleInfo = manualMealRoleInfo(f, meal, date, recipeRoleContext), pausedManual = roleInfo.reason === "paused_manual";
                 let learningLabel = manualLearningRoleText(f, existing?.type || "");
                 let roleLabel = pausedManual
                   ? "Pausiert · manuell"
@@ -963,11 +1077,13 @@ function openManualMealSelector(date, meal, initialMeal = null) {
                         : roleInfo.role === "sample" ? `wird ${learningLabel}`
                           : roleInfo.role === "component" ? "wird bekannte Komponente"
                             : "wird Hauptbasis";
-                return `<button class="selector-row selectFood ${selected ? "selected" : ""} ${pausedManual ? "manual-paused-food" : ""}" data-food="${f.id}">${foodIconSvg(f)}<span class="grow"><b>${esc(f.name)}</b><span class="small" style="display:block">${esc(status(f))}${pausedManual ? " · nur manuell" : ""}${!f.active ? " · deaktiviert" : ""}${inventoryPortions(f.id) ? ` · ${inventoryPortions(f.id)} Portionen im Vorrat` : ""}</span></span><span class="manual-role-type ${role || roleInfo.role} ${pausedManual ? "paused" : ""}">${esc(roleLabel)}</span><span class="selector-check" aria-hidden="true">${selected ? "✓" : ""}</span></button>`;
+                return `<button class="selector-row selectFood ${selected ? "selected" : ""} ${pausedManual ? "manual-paused-food" : ""}" data-food="${f.id}">${mealSelectorVisual(foodIconSvg(f), "food")}<span class="grow"><b>${esc(f.name)}</b><span class="small" style="display:block">${esc(status(f))}${pausedManual ? " · nur manuell" : ""}${!f.active ? " · deaktiviert" : ""}${inventoryPortions(f.id) ? ` · ${inventoryPortions(f.id)} Portionen im Vorrat` : ""}</span></span><span class="manual-role-type ${role || roleInfo.role} ${pausedManual ? "paused" : ""}">${esc(roleLabel)}</span><span class="selector-check" aria-hidden="true">${selected ? "✓" : ""}</span></button>`;
               }).join("")
               : '<div class="empty">Kein Lebensmittel gefunden.</div>'
         }
       </div>
+      ${validation.messages.length ? "" : warning}
+      ${selectedRolesHtml(validation)}
       <div class="sticky-form-actions ds-actionbar"><button class="btn secondary" id="cancelManualMeal" type="button">Abbrechen</button><button class="btn" id="confirmManualMeal" ${((tab === "recipes" && !selectedRecipe) || !validation.ok) ? "disabled" : ""}>${isNewManualSlot ? "Mahlzeit hinzufügen" : "Änderungen speichern"}</button></div>`;
     openGeneric(isNewManualSlot ? `Mahlzeit hinzufügen · ${mealName(meal)}` : `Mahlzeit bearbeiten · ${mealName(meal)}`, body);
     document.getElementById("cancelManualMeal")?.addEventListener("click", closeGeneric);
@@ -983,20 +1099,22 @@ function openManualMealSelector(date, meal, initialMeal = null) {
       });
     };
     document.querySelectorAll(".selectRecipe").forEach((button) => button.onclick = () => {
+      let previousRecipe = selectedRecipe ? recipeByName(selectedRecipe) : null;
+      let additions = selectedManualRecipeAdditions(previousRecipe);
       selectedRecipe = decodeURIComponent(button.dataset.recipe);
       selectedFoods.clear(); baseFoodIds.clear(); sampleFoodIds.clear();
       for (let id of recipeFoodIds(recipeByName(selectedRecipe))) { selectedFoods.add(id); assignAutomaticRole(id, true); }
+      for (let id of additions) { selectedFoods.add(id); assignAutomaticRole(id); }
       renderSelector();
     });
     document.querySelectorAll(".selectFood").forEach((button) => button.onclick = () => {
-      selectedRecipe = "";
       let id = button.dataset.food;
       if (selectedFoods.has(id)) removeSelectedFood(id);
       else { selectedFoods.add(id); assignAutomaticRole(id); }
       renderSelector();
     });
     document.querySelectorAll(".setManualRole").forEach((button) => button.onclick = () => { setRole(button.dataset.food, button.dataset.role); renderSelector(); });
-    document.querySelectorAll(".removeManualSelected").forEach((button) => button.onclick = () => { selectedRecipe = ""; removeSelectedFood(button.dataset.food); renderSelector(); });
+    document.querySelectorAll(".removeManualSelected").forEach((button) => button.onclick = () => { removeSelectedFood(button.dataset.food); renderSelector(); });
     let confirm = document.getElementById("confirmManualMeal");
     if (confirm) confirm.onclick = () => {
       let current = currentRoleData();
@@ -1028,6 +1146,7 @@ function openManualMealSelector(date, meal, initialMeal = null) {
     };
   }
   renderSelector();
+  if (typeof mealEditorRecipeEnhance === "function") mealEditorRecipeEnhance();
 }
 function chooseReplacement(date, meal, currentId) {
   let current = buildDays(date, 1)[0]?.meals.find(
@@ -1121,9 +1240,10 @@ function renderMeal(day, meal) {
 }
 
 function renderPlan() {
+  if (!plannerViewReady()) return renderPlannerReadinessPlaceholder("plan");
+  document.querySelector("#plan .plan-toolbar")?.removeAttribute("inert");
   return withViewRenderCycle("plan", () => {
     renderPlanCore();
-    globalThis.MobileUiLifecycle?.afterRender("plan");
     let summary = document.getElementById("planLockSummary");
     let amountLabel = AMOUNT_LEVELS[currentAmountLevel()]?.label || "";
     let compactAmount = compactPlanAmountLabel(amountLabel);
@@ -1143,10 +1263,12 @@ function renderPlan() {
     document.querySelectorAll("#blockPlan .day-card .status-chips .pill").forEach((pill) => {
       if ([phaseText(), amountLabel, textureText()].includes((pill.textContent || "").trim())) pill.remove();
     });
+    globalThis.MobileUiLifecycle?.afterRender("plan");
   });
 }
 
 function renderHome() {
+  if (!plannerViewReady()) return renderPlannerReadinessPlaceholder("home");
   return withViewRenderCycle("home", () => {
     renderHomeCore();
     let button = document.getElementById("homeAddEntry");
@@ -1187,13 +1309,13 @@ function renderAuditCore() {
   if (!document.getElementById("auditList")) return;
   let ids = [...document.querySelectorAll("[id]")].map((element) => element.id);
   let duplicateIds = ids.filter((id, index) => ids.indexOf(id) !== index);
-  let outcomes = [["eaten", "Gegessen"], ["tried", "Probiert"], ["not_accepted", "Nicht angenommen"], ["reaction", "Reaktion"], ["not_offered", "Nicht angeboten"]];
+  let outcomes = [["eaten", "Gegessen"], ["not_accepted", "Nicht angenommen"], ["reaction", "Reaktion"], ["not_offered", "Nicht angeboten"]];
   let recipeNames = RECIPES.map((recipe) => recipe.name);
   let checks = [
     ["Mindestens 100 Lebensmittel", uniqueEligibleCount() >= 100],
     ["Lebensmittel-Standardfilter Offen", foodFilter === "open"],
     ["Alle 11 Allergengruppen vorhanden", new Set(state.foods.filter((f) => f.allergenGroup).map((f) => f.allergenGroup)).size === 11],
-    ["Nur die fünf bestätigten Ergebnisbegriffe", outcomes.length === 5 && new Set(outcomes.map(([, label]) => label)).size === 5],
+    ["Nur die vier bestätigten Ergebnisbegriffe", outcomes.length === 4 && new Set(outcomes.map(([, label]) => label)).size === 4],
     ["Keine doppelten aktiven HTML-IDs", duplicateIds.length === 0],
     ["IndexedDB-Schnittstelle verfügbar", !!window.indexedDB],
     ["V8.8-Rohbackup wird erkannt", typeof validateBackup === "function"],
@@ -1233,22 +1355,58 @@ function showView(id) {
   if (previous === "foods" && id !== "foods" && foodReorderMode) {
     foodReorderMode = false;
   }
-  document.querySelectorAll('.view[aria-busy="true"]').forEach((view) => view.removeAttribute("aria-busy"));
+  document.querySelectorAll('.view[aria-busy="true"]').forEach((view) => {
+    view.removeAttribute("aria-busy");
+    view.querySelector(":scope > .prep-render-loading")?.remove();
+  });
   document
     .querySelectorAll(".view")
     .forEach((v) => v.classList.toggle("active", v.id === id));
   document
     .querySelectorAll("nav button")
     .forEach((b) => b.classList.toggle("active", b.dataset.view === id));
+  if (previous !== id) {
+    let main = document.querySelector("main");
+    if (main) main.scrollTop = 0;
+  }
   globalThis.MobileUiLifecycle?.afterViewChange(id, previous);
+  let ensurePrepLoading = (view, text) => {
+    let loading = view.querySelector(":scope > .prep-render-loading");
+    if (!loading) {
+      loading = document.createElement("div");
+      loading.className = "notice olive prep-render-loading";
+      loading.setAttribute("role", "status");
+      view.prepend(loading);
+    }
+    loading.textContent = text;
+    return loading;
+  };
   let finishViewChange = () => {
     let view = document.getElementById(id);
     if (!view?.classList.contains("active")) return;
     try {
       renderView(id);
-      window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
-      view.removeAttribute("aria-busy");
+      let readiness = globalThis.PlannerReadiness;
+      if (id === "prep" && typeof plannerViewReady === "function" && !plannerViewReady() && typeof readiness?.whenReady === "function") {
+        view.setAttribute("aria-busy", "true");
+        ensurePrepLoading(view, "Planungsregeln werden geladen …");
+        readiness.whenReady().then((result) => {
+          let currentView = document.getElementById("prep");
+          if (!currentView?.classList.contains("active")) return;
+          let currentLoading = currentView.querySelector(":scope > .prep-render-loading");
+          if (result?.state === "ready") {
+            currentView.removeAttribute("aria-busy");
+            currentLoading?.remove();
+          } else if (result?.state === "failed") {
+            currentView.setAttribute("aria-busy", "true");
+            if (currentLoading) currentLoading.textContent = "Die Planungsregeln konnten nicht geladen werden. Bitte lade die App erneut.";
+          }
+        });
+      } else {
+        view.removeAttribute("aria-busy");
+        view.querySelector(":scope > .prep-render-loading")?.remove();
+      }
     }
   };
   if (previous === id || typeof renderViewAfterNextPaint !== "function") {
@@ -1256,7 +1414,11 @@ function showView(id) {
     finishViewChange();
     return;
   }
-  document.getElementById(id)?.setAttribute("aria-busy", "true");
+  let targetView = document.getElementById(id);
+  targetView?.setAttribute("aria-busy", "true");
+  if (id === "prep" && targetView) {
+    ensurePrepLoading(targetView, "Vorbereitung wird geladen …");
+  }
   renderViewAfterNextPaint(id, finishViewChange);
 }
 function existingFoodWithName(name) {
@@ -1403,6 +1565,7 @@ function addInventoryForm(preset = {}) {
   function preserveInventoryDraft() {
     preset.portions = document.getElementById("invPortions")?.value || preset.portions;
     preset.size = document.getElementById("invSize")?.value || preset.size;
+    preset.preparationMode = document.getElementById("invPreparationMode")?.value || "";
     preset.frozenDate = document.getElementById("invDate")?.value || preset.frozenDate;
     preset.note = document.getElementById("invNote")?.value ?? preset.note;
   }
@@ -1425,6 +1588,7 @@ function addInventoryForm(preset = {}) {
       <div class="live-results ${selectedKey && !q ? "inventory-results-collapsed" : ""}">${results.length ? results.map((item) => { let key = kind === "food" ? item.id : item.name; let meta = kind === "food" ? `${item.category}${item.active ? "" : " · nicht im Plan aktiv"}` : `${item.unlocked ? "Jetzt passend" : item.almost ? "Fast passend" : "Später passend"} · einfrierbar`; return `<button class="live-result chooseInventoryTarget ${selectedKey === key ? "selected" : ""}" data-key="${encodeURIComponent(key)}">${kind === "food" ? foodIconSvg(item) : recipeIconSvg(item)}<span class="grow"><b>${esc(item.name)}</b><span class="small" style="display:block">${esc(meta)}</span></span><span class="selector-check" aria-hidden="true">${selectedKey === key ? "✓" : ""}</span></button>`; }).join("") : (q ? '<div class="empty">Kein Treffer.</div>' : "")}</div>
       <div class="grid2"><div class="field"><label>${kind === "recipe" ? "Anzahl" : "Portionen"}</label><input id="invPortions" type="number" min="1" step="1" value="${esc(Math.max(1, Math.floor(Number(preset.portions) || 4)))}"></div><div class="field"><label>${kind === "recipe" ? "Einheit" : "Größe/Form"}</label><select id="invSize">${renderedSizeOptions.map((option) => `<option ${option === currentSize ? "selected" : ""}>${esc(option)}</option>`).join("")}</select></div></div>
       <div class="field"><label>Eingefroren</label><input id="invDate" type="date" value="${esc(preset.frozenDate || today())}"></div>
+      ${kind === "recipe" && recipeByName(selectedKey)?.smoothBatchAllowed ? `<div class="field"><label>So wurde diese Portion zubereitet</label><select id="invPreparationMode"><option value="">Wie im Rezept / nicht angegeben</option><option value="spoon-smooth" ${preset.preparationMode === "spoon-smooth" ? "selected" : ""}>Vollständig glatt püriert</option></select><div class="small">Nur auswählen, wenn die gesamte Portion einschließlich aller Stücke glatt püriert wurde. Die Zutaten- und Altersprüfung bleibt bestehen.</div></div>` : ""}
       <div class="field"><label>Notiz</label><input id="invNote" value="${esc(preset.note || "")}" placeholder="z. B. einzeln vorgefroren"></div>
       <p class="small inventory-form-note">Jeder Koch- oder Einfriervorgang bleibt als eigener Vorratseintrag erhalten. Rezeptzutaten werden im Protokoll weiterhin einzeln berücksichtigt.</p>
       <div class="sticky-form-actions ds-actionbar"><button class="btn secondary" id="cancelInv" type="button">Abbrechen</button><button class="btn" id="saveInv" ${selectedKey ? "" : "disabled"}>${editing ? "Änderungen speichern" : "Als neuen Vorrat speichern"}</button></div>`;
@@ -1442,11 +1606,13 @@ function addInventoryForm(preset = {}) {
       let selectedSize = document.getElementById("invSize").value;
       let gramsPerPortion = kind === "food" ? prepPortionGramsFromSize(selectedSize) : 0;
       let values = { kind, foodId: kind === "food" ? selectedKey : "", recipeName: kind === "recipe" ? selectedKey : "", foodIds: kind === "recipe" ? recipeFoodIds(recipe) : [], portions: Math.max(1, Math.floor(Number(document.getElementById("invPortions").value) || 1)), size: selectedSize, frozenDate: document.getElementById("invDate").value || today(), note: document.getElementById("invNote").value };
+      if (kind === "recipe" && document.getElementById("invPreparationMode")?.value === "spoon-smooth") values.preparationMode = "spoon-smooth";
       if (gramsPerPortion > 0) values.gramsPerPortion = gramsPerPortion;
-      if (editing) { let item = state.inventory.find((entry) => entry.id === preset.editId); if (!item) return; Object.assign(item, values); if (!gramsPerPortion) delete item.gramsPerPortion; }
+      if (editing) { let item = state.inventory.find((entry) => entry.id === preset.editId); if (!item) return; Object.assign(item, values); if (!gramsPerPortion) delete item.gramsPerPortion; if (!values.preparationMode) delete item.preparationMode; }
       else state.inventory.push({ id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, ...values });
+      if (typeof invalidateInventoryAggregateCache === "function") invalidateInventoryAggregateCache();
       let label = candidateName(selectedKey);
-      save(); closeGeneric(); renderAll(); showToast(editing ? "Vorratseintrag aktualisiert." : `${label} als neuer Vorrat hinzugefügt.`);
+      save({ preservePlanCache: true }); closeGeneric(); renderAll(); showToast(editing ? "Vorratseintrag aktualisiert." : `${label} als neuer Vorrat hinzugefügt.`);
     });
   }
   renderInventoryForm();
@@ -1458,7 +1624,7 @@ function bind() {
     .forEach((b) => (b.onclick = () => showView(b.dataset.view)));
   document.getElementById("planFrom").onchange = (e) => {
     state.settings.planFrom = e.target.value;
-    save();
+    save({ preservePlanCache: true });
     renderAll();
   };
   document.getElementById("planToday").onclick = () => {
@@ -1521,7 +1687,7 @@ function bind() {
       state.settings.textureStageSince = today();
     if (!state.settings.planFrom) state.settings.planFrom = today();
     save();
-    renderAll();
+    renderSettings();
     showToast("Einstellungen gespeichert.");
   };
   document.getElementById("exportData").onclick = exportBackup;

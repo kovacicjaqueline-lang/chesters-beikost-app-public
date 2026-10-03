@@ -11,7 +11,15 @@
   root.__mobileBeikostMoreInstalled = true;
 
   const FOOD_PRIMARY_FILTERS = new Set(["all", "open", "allergen"]);
-  const RECIPE_PRIMARY_FILTERS = new Set(["available", "almost", "all"]);
+  const FOOD_FILTER_LABELS = {
+    all: "Alle",
+    open: "Offen",
+    allergen: "Allergene",
+    ph: "Philippinen",
+    iron: "Eisenreich",
+    paused: "Pause",
+    inactive: "Deaktiviert",
+  };
 
   function syncGroupedFilterVisibility() {
     document.querySelectorAll(".mobile-filter-secondary").forEach((secondary) => {
@@ -46,6 +54,87 @@
     syncGroupedFilterVisibility();
   }
 
+  function updateFoodFilterSelectorLabels() {
+    const filters = document.getElementById("foodFilters");
+    if (!filters) return;
+
+    const primary = filters.querySelector(".mobile-filter-primary");
+    const secondary = filters.querySelector(".mobile-filter-secondary");
+    const primarySummary = filters.querySelector("[data-food-primary-summary]");
+    const secondarySummary = filters.querySelector("[data-food-secondary-summary]");
+    const primaryActive = primary?.querySelector("button.active");
+    const secondaryActive = secondary?.querySelector("button.active");
+
+    if (primarySummary) {
+      primarySummary.textContent = FOOD_FILTER_LABELS[primaryActive?.dataset.filter] || "Offen";
+    }
+    if (secondarySummary) {
+      const count = secondary?.querySelectorAll("button.active").length || 0;
+      secondarySummary.textContent = count ? `Filter (${count})` : "Filter";
+    }
+  }
+
+  function installFoodFilterSelectors() {
+    const filters = document.getElementById("foodFilters");
+    if (!filters || filters.dataset.mobileCompactSelectors === "true") return;
+
+    const primary = filters.querySelector(".mobile-filter-primary");
+    const secondary = filters.querySelector(".mobile-filter-secondary");
+    const secondaryList = secondary?.querySelector(".mobile-filter-secondary-list");
+    if (!primary || !secondary || !secondaryList) return;
+
+    filters.dataset.mobileCompactSelectors = "true";
+    secondary.classList.add("mobile-filter-select", "food-secondary-select");
+
+    const primarySelect = document.createElement("details");
+    primarySelect.className = "mobile-filter-select food-primary-select";
+    primarySelect.innerHTML = `<summary><span data-food-primary-summary>Offen</span><span aria-hidden="true">⌄</span></summary><div class="mobile-filter-select-menu"></div>`;
+    primarySelect.querySelector(".mobile-filter-select-menu").appendChild(primary);
+
+    const secondarySummary = secondary.querySelector("summary");
+    if (secondarySummary) {
+      secondarySummary.innerHTML = `<span data-food-secondary-summary>Filter</span><span aria-hidden="true">⌄</span>`;
+    }
+    secondaryList.classList.add("mobile-filter-select-menu");
+
+    const toolbar = document.createElement("div");
+    toolbar.className = "mobile-filter-toolbar food-filter-toolbar";
+    toolbar.append(primarySelect, secondary);
+    filters.replaceChildren(toolbar);
+    filters.querySelectorAll("button").forEach((button) => {
+      button.addEventListener("click", () => button.closest("details")?.removeAttribute("open"));
+    });
+    updateFoodFilterSelectorLabels();
+  }
+
+  function installRecipeFilterSelectors() {
+    const section = document.getElementById("recipesSection");
+    const categoryField = document.getElementById("recipeFilter")?.closest(".recipe-filter-field");
+    const mealField = document.getElementById("recipeMealFilter")?.closest(".recipe-meal-filter-field");
+    const more = document.getElementById("recipeMoreFilters");
+    if (!section || !categoryField || !mealField || !more || section.dataset.mobileCompactSelectors === "true") return;
+
+    section.dataset.mobileCompactSelectors = "true";
+
+    const matchSelect = document.createElement("details");
+    matchSelect.className = "mobile-filter-select recipe-match-select";
+    matchSelect.innerHTML = `<summary><span data-recipe-match-summary>Fast passend</span><span aria-hidden="true">⌄</span></summary><div class="mobile-filter-select-menu"></div>`;
+    matchSelect.querySelector(".mobile-filter-select-menu").appendChild(categoryField);
+
+    const mealSelect = document.createElement("details");
+    mealSelect.className = "mobile-filter-select recipe-meal-select";
+    mealSelect.innerHTML = `<summary><span data-recipe-meal-summary>Mahlzeit</span><span aria-hidden="true">⌄</span></summary><div class="mobile-filter-select-menu"></div>`;
+    mealSelect.querySelector(".mobile-filter-select-menu").appendChild(mealField);
+
+    const toolbar = document.createElement("div");
+    toolbar.className = "mobile-filter-toolbar recipe-filter-toolbar";
+    toolbar.append(matchSelect, mealSelect, more);
+    document.getElementById("recipeSearch")?.closest(".field")?.after(toolbar);
+    section.querySelectorAll("#recipeFilter button, #recipeMealFilter button").forEach((button) => {
+      button.addEventListener("click", () => button.closest("details")?.removeAttribute("open"));
+    });
+  }
+
   function installFoodCatalogStructure() {
     const section = document.getElementById("foodsCatalogSection");
     if (!section || section.dataset.mobileCatalog === "true") return;
@@ -61,6 +150,7 @@
       "data-filter",
       "Weitere Filter",
     );
+    installFoodFilterSelectors();
   }
 
   function installRecipeCatalogStructure() {
@@ -70,12 +160,7 @@
     section.classList.add("mobile-recipe-catalog");
 
     document.getElementById("recipeSearch")?.closest(".field")?.classList.add("mobile-catalog-search");
-    groupFilters(
-      document.getElementById("recipeFilter"),
-      RECIPE_PRIMARY_FILTERS,
-      "data-recipe-filter",
-      "Weitere Kategorien",
-    );
+    installRecipeFilterSelectors();
   }
 
   function decorateFoodRows() {
@@ -137,9 +222,6 @@
     const more = document.getElementById("more");
     if (!more || more.dataset.mobileMore === "true") return;
 
-    const products = document.getElementById("productAllergenCard");
-    if (!products) return false;
-
     more.dataset.mobileMore = "true";
 
     const log = document.getElementById("logSection");
@@ -152,14 +234,13 @@
     const ids = {
       log: moreDestinationId(log, "logSection"),
       statistics: moreDestinationId(statistics, "statisticsSection"),
-      products: moreDestinationId(products, "productAllergenCard"),
       allergen: moreDestinationId(allergen, "allergenSection"),
       settings: moreDestinationId(settings, "settingsSection"),
       help: moreDestinationId(help, "helpSection"),
       data: moreDestinationId(data, "dataSection"),
     };
 
-    const destinations = [log, statistics, products, allergen, settings, help, data].filter(Boolean);
+    const destinations = [log, statistics, allergen, settings, help, data].filter(Boolean);
     if (!destinations.length) return;
 
     const navScreen = document.createElement("div");
@@ -178,9 +259,8 @@
         title: "Beikost",
         items: [
           [ids.allergen, "Allergene", "Einführen und wiederholen", ""],
-          [ids.products, "Konkrete Produkte", "Produktkennzeichnung und Sulfite", ""],
           [ids.settings, "Baby & Beikostphase", "Start, Phase und Tagesablauf", "baby"],
-          [ids.settings, "Konsistenz", "Mengenorientierung und Struktur", "texture"],
+          [ids.settings, "Konsistenz", "Mengenorientierung und Konsistenz", "texture"],
         ],
       },
       {
@@ -202,7 +282,7 @@
     panelScreen.className = "more-panel-screen";
     panelScreen.id = "morePanelScreen";
     panelScreen.hidden = true;
-    panelScreen.innerHTML = `<div class="more-panel-header"><button class="more-back-button" id="moreBack" type="button" aria-label="Zurück zu Mehr">‹</button><div><span class="today-section-kicker">Mehr</span><h2 id="morePanelTitle">Mehr</h2></div></div><div class="more-panel-host" id="morePanelHost"></div>`;
+    panelScreen.innerHTML = `<div class="more-panel-header"><button class="more-back-button" id="moreBack" type="button" aria-label="Zurück zu Mehr">‹</button><button class="more-panel-title-button" id="morePanelTitleButton" type="button" aria-label="Zurück zu Mehr"><span class="today-section-kicker">Mehr</span><span class="more-panel-title" id="morePanelTitle">Mehr</span></button></div><div class="more-panel-host" id="morePanelHost"></div>`;
     const host = panelScreen.querySelector("#morePanelHost");
 
     destinations.forEach((card) => {
@@ -220,20 +300,45 @@
       }
     }
 
+    function settingsGroupFor(controlId) {
+      return document.getElementById(controlId)?.closest(".settings-group") || null;
+    }
+
+    function organizeSettingsGroups() {
+      const freezerField = document.getElementById("freezerDays")?.closest(".field");
+      const appSettingsBody = settingsGroupFor("phMode")?.querySelector(":scope > .settings-group-body");
+      if (freezerField && appSettingsBody && freezerField.parentElement !== appSettingsBody) {
+        appSettingsBody.prepend(freezerField);
+      }
+    }
+
     function configureSettingsFocus(focus) {
       if (!settings) return;
-      const outer = settings.querySelector(":scope > details");
-      if (outer) outer.open = true;
+      organizeSettingsGroups();
       const settingGroups = [...settings.querySelectorAll(".settings-group")];
+      settingGroups.forEach((details) => {
+        details.hidden = false;
+        details.querySelector(":scope > summary")?.removeAttribute("hidden");
+      });
       if (!focus) return;
 
-      settingGroups.forEach((details) => { details.open = false; });
-      if (focus === "baby") {
-        [settingGroups[0], settingGroups[1]].filter(Boolean).forEach((details) => { details.open = true; });
-      } else if (focus === "texture") {
-        if (settingGroups[3]) settingGroups[3].open = true;
-      } else if (focus === "app") {
-        [settingGroups[2], settingGroups[4]].filter(Boolean).forEach((details) => { details.open = true; });
+      const focusGroups = {
+        baby: [settingsGroupFor("birthDate"), settingsGroupFor("settingsPhaseSummary")],
+        texture: [settingsGroupFor("textureStage")],
+        app: [settingsGroupFor("allergenDays"), settingsGroupFor("phMode")],
+      };
+      const visibleGroups = new Set((focusGroups[focus] || []).filter(Boolean));
+      if (!visibleGroups.size) return;
+
+      settingGroups.forEach((details) => {
+        const isVisible = visibleGroups.has(details);
+        details.hidden = !isVisible;
+        details.open = isVisible;
+      });
+
+      if (visibleGroups.size === 1) {
+        const [singleGroup] = visibleGroups;
+        singleGroup.querySelector(":scope > summary")?.setAttribute("hidden", "");
       }
     }
 
@@ -256,6 +361,7 @@
 
     function showMenu() {
       activeDestination = null;
+      configureSettingsFocus("");
       destinations.forEach((card) => { card.hidden = true; });
       panelScreen.hidden = true;
       navScreen.hidden = false;
@@ -271,6 +377,7 @@
       ));
     });
     panelScreen.querySelector("#moreBack")?.addEventListener("click", showMenu);
+    panelScreen.querySelector("#morePanelTitleButton")?.addEventListener("click", showMenu);
 
     const directOpenDetails = [
       [log?.querySelector(":scope > details"), ids.log, "Protokoll"],
@@ -302,6 +409,7 @@
   root.MobileUiLifecycle.onRender("foods", () => {
     decorateFoodRows();
     syncGroupedFilterVisibility();
+    updateFoodFilterSelectorLabels();
   });
   root.MobileUiLifecycle.onRender("prep", syncGroupedFilterVisibility);
   root.MobileUiLifecycle.onRender("more", () => {

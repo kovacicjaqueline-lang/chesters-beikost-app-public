@@ -1,48 +1,10 @@
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { webkit } from "playwright";
+import { closeBrowserApp, startStaticServer } from "./helpers/app-harness.mjs";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const mimeTypes = {
-  ".html": "text/html; charset=utf-8",
-  ".js": "text/javascript; charset=utf-8",
-  ".css": "text/css; charset=utf-8",
-  ".json": "application/json; charset=utf-8",
-  ".webmanifest": "application/manifest+json; charset=utf-8",
-  ".svg": "image/svg+xml",
-  ".png": "image/png",
-  ".webp": "image/webp",
-};
 
-function startStaticServer() {
-  const server = http.createServer((request, response) => {
-    const url = new URL(request.url || "/", "http://127.0.0.1");
-    const pathname = decodeURIComponent(url.pathname === "/" ? "/index.html" : url.pathname);
-    const filePath = path.resolve(root, `.${pathname}`);
-    if (filePath !== path.join(root, "index.html") && !filePath.startsWith(`${root}${path.sep}`)) {
-      response.writeHead(403).end("Forbidden");
-      return;
-    }
-    fs.stat(filePath, (error, stat) => {
-      if (error || !stat.isFile()) {
-        response.writeHead(404).end("Not found");
-        return;
-      }
-      response.writeHead(200, {
-        "content-type": mimeTypes[path.extname(filePath)] || "application/octet-stream",
-        "cache-control": "no-store",
-      });
-      fs.createReadStream(filePath).pipe(response);
-    });
-  });
-  return new Promise((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(0, "127.0.0.1", () => resolve(server));
-  });
-}
 
 async function waitForApp(page) {
   await page.waitForFunction(() => !!window.__beikostTest?.getState);
@@ -66,20 +28,21 @@ try {
   await page.locator('nav button[data-view="foods"]').click();
 
   assert.equal(
-    await page.locator("#foodFilters > .mobile-filter-primary > button").count(),
+    await page.locator("#foodFilters > .food-filter-toolbar > .food-primary-select .mobile-filter-primary > button").count(),
     3,
     "Lebensmittel sollen nur drei häufige Primärfilter direkt zeigen",
   );
   assert.equal(
-    await page.locator("#foodFilters > .mobile-filter-secondary .mobile-filter-secondary-list > button").count(),
+    await page.locator("#foodFilters > .food-filter-toolbar > .food-secondary-select .mobile-filter-secondary-list > button").count(),
     4,
     "weitere Lebensmittelfilter sollen in der sekundären Filteroberfläche liegen",
   );
   assert.equal(
-    await page.locator("#foodFilters > .mobile-filter-secondary").evaluate((details) => details.open),
+    await page.locator("#foodFilters > .food-filter-toolbar > .food-secondary-select").evaluate((details) => details.open),
     false,
     "sekundäre Lebensmittelfilter sollen standardmäßig geschlossen sein",
   );
+  assert.equal(await page.locator("#foodFilters > .food-filter-toolbar > .food-primary-select").count(), 1, "Primärfilter sollen als Auswahlfeld kompakt zusammengefasst sein");
 
   const firstFoodRow = page.locator("#foodList .mobile-food-row").first();
   await firstFoodRow.waitFor({ state: "visible" });
@@ -103,42 +66,60 @@ try {
   assert.equal(detailLayout.radius, "0px", "Lebensmittel-Details sollen kein Bottom-Sheet-Radiusmuster verwenden");
   await page.locator("#closeGeneric").click();
 
-  await page.evaluate(() => {
-    recipeFilter = "freezer";
-    renderPrep();
-  });
-  await page.waitForFunction(() => {
-    const details = document.querySelector("#recipeFilter > .mobile-filter-secondary");
-    const active = details?.querySelector('button[data-recipe-filter="freezer"].active');
-    return !!details?.open && !!active;
-  });
-  assert.equal(
-    await page.locator("#recipeFilter > .mobile-filter-secondary").evaluate((details) => details.open),
-    true,
-    "ein programmgesteuert aktiver sekundärer Rezeptfilter muss sichtbar aufgeklappt werden",
-  );
-  assert.equal(
-    await page.locator('#recipeFilter button[data-recipe-filter="freezer"]').evaluate((button) => button.classList.contains("active")),
-    true,
-    "der programmgesteuerte Filter Einfrierbar muss sichtbar aktiv sein",
-  );
-
   await page.locator('#catalogSwitch button[data-catalog-mode="recipes"]').click();
-  await page.locator('#recipeFilter button[data-recipe-filter="all"]').click();
+  assert.equal(await page.locator('[data-recipe-filter="almost"]').evaluate((button) => button.classList.contains("active")), true, "Fast passend soll im Rezeptkatalog standardmäßig aktiv sein");
+  assert.equal(await page.locator(".recipe-filter-toolbar").count(), 1, "Rezeptfilter sollen in einer kompakten Toolbar liegen");
+  await page.locator(".recipe-meal-select > summary").click();
+  assert.equal(await page.locator("#recipeMealFilter").isVisible(), true, "Mahlzeitenfilter müssen im Auswahlfeld erreichbar bleiben");
+  await page.locator(".recipe-match-select > summary").click();
+  const recipeFilterMenuPresentation = await page.locator("#recipeFilter").evaluate((filter) => {
+    const style = getComputedStyle(filter);
+    const rect = filter.getBoundingClientRect();
+    return {
+      display: style.display,
+      overflowX: style.overflowX,
+      width: rect.width,
+      scrollWidth: filter.scrollWidth,
+      buttonWidths: [...filter.children].map((button) => button.getBoundingClientRect().width),
+    };
+  });
+  assert.equal(recipeFilterMenuPresentation.display, "grid", "Verfügbarkeitsfilter sollen im Auswahlfeld untereinander stehen");
+  assert.equal(recipeFilterMenuPresentation.overflowX, "visible", "Das geöffnete Filterfeld darf nicht horizontal scrollen");
+  assert.ok(recipeFilterMenuPresentation.scrollWidth <= recipeFilterMenuPresentation.width + 1, "Verfügbarkeitsfilter dürfen das Auswahlfeld nicht verbreitern");
+  assert.ok(recipeFilterMenuPresentation.buttonWidths.every((width) => width <= recipeFilterMenuPresentation.width + 1), "Filterbeschriftungen müssen vollständig innerhalb des Auswahlfelds bleiben");
+  assert.equal(await page.locator('[data-recipe-filter="pantry"]').count(), 1, "Mit Vorrat ist als schneller Rezeptfilter erreichbar");
+  assert.equal(await page.locator('[data-recipe-filter="philippines"]').count(), 0, "Philippinen gehört nicht mehr in die normale Rezeptfilterung");
+
+  await page.locator("#recipeMoreFilters").click();
+  assert.equal(await page.locator("#recipeFilterSheet").isVisible(), true, "Weitere Rezeptfilter sollen als Bottom Sheet öffnen");
+  await page.locator('[data-recipe-extra-filter="freezer"]').click();
+  assert.equal(await page.locator("#recipeMoreFilters").textContent(), "Filter (1)", "Aktive Zusatzfilter sollen nur als Anzahl auf der Hauptansicht erscheinen");
+  await page.locator("#recipeFilterApply").click();
+  assert.equal(await page.locator("#recipeFilterSheet").isHidden(), true, "Rezepte anzeigen soll das Filter-Sheet schließen");
+
+  const recipeMatchSelect = page.locator(".recipe-match-select");
+  if (!(await recipeMatchSelect.evaluate((select) => select.open))) {
+    await recipeMatchSelect.locator("> summary").click();
+  }
+  await page.locator('[data-recipe-filter="all"]').click();
   const firstRecipe = page.locator("#recipeList .recipe-card-v2").first();
   await firstRecipe.waitFor({ state: "visible" });
   const recipePresentation = await firstRecipe.evaluate((card) => {
     const icon = card.querySelector(".recipe-heading-with-icon .recipe-icon, .recipe-heading-with-icon img, .recipe-heading-with-icon svg");
     const box = icon?.getBoundingClientRect();
+    const type = card.querySelector(".recipe-type-text");
+    const badge = card.querySelector(".recipe-summary-end .pill");
     return {
-      borderTopWidth: getComputedStyle(card).borderTopWidth,
+      borderRadius: getComputedStyle(card).borderRadius,
       iconWidth: box?.width || 0,
-      techMetaVisible: !!card.querySelector(".recipe-tech-text") && getComputedStyle(card.querySelector(".recipe-tech-text")).display !== "none",
+      typeVisible: !!type && getComputedStyle(type).display !== "none",
+      badgeVisible: !!badge && getComputedStyle(badge).display !== "none",
     };
   });
-  assert.equal(recipePresentation.borderTopWidth, "0px", "Recipe-V2-Karten sollen weniger Rahmen verwenden");
-  assert.ok(recipePresentation.iconWidth >= 70, "Recipe-V2-Illustrationen sollen im mobilen Katalog deutlich gewichtet bleiben");
-  assert.equal(recipePresentation.techMetaVisible, false, "sekundäre technische Rezept-Metadaten sollen in der Übersicht reduziert sein");
+  assert.equal(recipePresentation.borderRadius, "0px", "Rezeptübersicht soll als ruhige Liste statt Kartenstapel erscheinen");
+  assert.ok(recipePresentation.iconWidth <= 60, "Rezeptbilder sollen kompakt bleiben");
+  assert.equal(recipePresentation.typeVisible, false, "Rezeptart gehört nicht auf die schlichte Übersichtskarte");
+  assert.equal(recipePresentation.badgeVisible, false, "Einfrierbar- und Status-Badges gehören in die Details");
 
   await page.locator('nav button[data-view="more"]').click();
   await page.waitForFunction(() =>
@@ -147,9 +128,9 @@ try {
   );
   const groupLabels = await page.locator("#moreNavScreen .more-nav-group > h2").allTextContents();
   assert.deepEqual(groupLabels, ["Verlauf", "Beikost", "App"], "Mehr soll als gruppierte Navigationsliste aufgebaut sein");
-  assert.equal(await page.locator("#moreNavScreen .more-nav-row").count(), 9, "Mehr soll die bestehenden Ziele als kompakte Rows anbieten");
+  assert.equal(await page.locator("#moreNavScreen .more-nav-row").count(), 8, "Mehr soll die verbleibenden Ziele als kompakte Rows anbieten");
   assert.equal(await page.locator("#morePanelScreen").isHidden(), true, "Mehr soll zunächst die Navigationsliste zeigen");
-  assert.equal(await page.locator("#productAllergenCard").isHidden(), true, "Konkrete Produkte dürfen im Mehr-Menü nicht als große Restkarte sichtbar bleiben");
+  assert.equal(await page.locator("#productAllergenCard").count(), 0, "Konkrete Produkte dürfen im Mehr-Menü nicht mehr vorhanden sein");
 
   const rowHeight = await page.locator("#moreNavScreen .more-nav-row").first().evaluate((row) => row.getBoundingClientRect().height);
   assert.ok(rowHeight >= 44, "Mehr-Navigationsrows müssen mobile Touch-Ziele behalten");
@@ -159,24 +140,63 @@ try {
   assert.equal(await page.locator("#logSection").isVisible(), true, "bestehendes Protokoll muss auf der Unterseite weiterverwendet werden");
   assert.equal(await page.locator("#appBarTitle").textContent(), "Protokoll", "App-Bar soll das geöffnete Mehr-Ziel benennen");
 
-  await page.locator("#moreBack").click();
-  assert.equal(await page.locator("#moreNavScreen").isVisible(), true, "Zurück soll wieder in die gruppierte Mehr-Navigation führen");
+  const titleBackButton = page.locator("#morePanelTitleButton");
+  assert.equal(await titleBackButton.evaluate((button) => button.tagName), "BUTTON", "Überschriftsbereich soll ein semantischer Button sein");
+  assert.equal(await titleBackButton.getAttribute("aria-label"), "Zurück zu Mehr", "Überschriftsbutton braucht eine eindeutige Zurück-Beschriftung");
+  assert.ok(await titleBackButton.evaluate((button) => button.getBoundingClientRect().height >= 44), "Überschriftsbutton muss ein mobiles Touch-Ziel bleiben");
+  await titleBackButton.tap();
+  assert.equal(await page.locator("#moreNavScreen").isVisible(), true, "Touch auf die Überschrift soll zurück in die gruppierte Mehr-Navigation führen");
 
-  await page.locator('#moreNavScreen .more-nav-row[data-more-title="Konkrete Produkte"]').click();
-  assert.equal(await page.locator("#productAllergenCard").isVisible(), true, "Produktkennzeichnung soll als eigene Mehr-Unterseite erreichbar bleiben");
-  assert.equal(await page.locator("#appBarTitle").textContent(), "Konkrete Produkte", "App-Bar soll die Produkt-Unterseite benennen");
-
+  await page.locator('#moreNavScreen .more-nav-row[data-more-title="Protokoll"]').click();
   await page.locator("#moreBack").click();
+  assert.equal(await page.locator("#moreNavScreen").isVisible(), true, "Zurück-Pfeil soll weiter in die gruppierte Mehr-Navigation führen");
+
   await page.locator('#moreNavScreen .more-nav-row[data-more-title="Konsistenz"]').click();
   assert.equal(await page.locator("#settingsSection").isVisible(), true, "Konsistenz soll die bestehende Einstellungs-Unterseite nutzen");
-  const settingsGroups = await page.locator("#settingsSection .settings-group").evaluateAll((groups) => groups.map((details) => details.open));
-  assert.deepEqual(settingsGroups, [false, false, false, true, false], "Konsistenz soll direkt den relevanten Einstellungsbereich fokussieren");
+  const textureSettingsState = await page.locator("#settingsSection .settings-group").evaluateAll((groups) => groups.map((details) => ({
+    open: details.open,
+    hidden: details.hidden,
+    summaryHidden: details.querySelector(":scope > summary")?.hidden || false,
+  })));
+  assert.deepEqual(
+    textureSettingsState,
+    [
+      { open: false, hidden: true, summaryHidden: false },
+      { open: false, hidden: true, summaryHidden: false },
+      { open: false, hidden: true, summaryHidden: false },
+      { open: true, hidden: false, summaryHidden: true },
+      { open: false, hidden: true, summaryHidden: false },
+    ],
+    "Konsistenz soll nur den relevanten Bereich direkt zeigen, ohne ein Ein-Punkt-Untermenü",
+  );
+  assert.equal(await page.locator("#textureStage").isVisible(), true, "Konsistenzstufe muss ohne weiteren Tap direkt sichtbar sein");
+  assert.equal(await page.locator("#freezerDays").isVisible(), false, "Tiefkühl-Zielfrist gehört nicht in die Konsistenzansicht");
+
+  await page.locator("#moreBack").click();
+  await page.locator('#moreNavScreen .more-nav-row[data-more-title="Baby & Beikostphase"]').click();
+  assert.deepEqual(
+    await page.locator("#settingsSection .settings-group:not([hidden]) > summary").allTextContents(),
+    ["Baby und Beikoststart", "Phase und Tagesablauf"],
+    "Baby & Beikostphase soll nur seine zwei fachlich zusammengehörigen Unterbereiche zeigen",
+  );
+
+  await page.locator("#moreBack").click();
+  await page.locator('#moreNavScreen .more-nav-row[data-more-title="Einstellungen"]').click();
+  assert.deepEqual(
+    await page.locator("#settingsSection .settings-group:not([hidden]) > summary").allTextContents(),
+    ["Planung und Wiederholungen", "Reise und weitere Einstellungen"],
+    "Einstellungen soll nur seine zwei App-Unterbereiche zeigen",
+  );
+  assert.equal(await page.locator("#freezerDays").isVisible(), true, "Tiefkühl-Zielfrist muss unter Einstellungen erreichbar bleiben");
+  assert.equal(
+    await page.locator("#freezerDays").evaluate((input) => input.closest(".settings-group")?.querySelector(":scope > summary")?.textContent?.trim()),
+    "Reise und weitere Einstellungen",
+    "Tiefkühl-Zielfrist soll im Bereich Reise und weitere Einstellungen liegen",
+  );
 
   const overflow = await page.locator("main").evaluate((main) => main.scrollWidth - main.clientWidth);
   assert.ok(overflow <= 1, "Beikost und Mehr dürfen bei 390px keinen horizontalen App-Overflow erzeugen");
 
-  await context.close();
 } finally {
-  await browser.close();
-  await new Promise((resolve) => server.close(resolve));
+  await closeBrowserApp({ context: typeof context !== "undefined" ? context : null, browser, server });
 }

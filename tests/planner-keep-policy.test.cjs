@@ -1,5 +1,8 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
 const policy = require('../js/planner-keep-policy.js');
 const tracking = require('../js/planner-keep-tracking.js');
 const rollover = require('../js/planner-log-rollover.js');
@@ -108,6 +111,33 @@ test('Woche neu planen entfernt nur neu berechenbaren Auto-Zustand', () => {
   assert.equal(state.autoLockExcluded['2026-09-03|snack'], 'meal-removed', 'bewusst gelöschte Mahlzeit bleibt gelöscht');
   assert.ok(state.planLocks['2026-09-10|lunch'], 'außerhalb der Woche bleibt Zustand unverändert');
   assert.equal(state.autoLockExcluded['2026-09-10|lunch'], true);
+});
+
+test('bewusste Wochen-Neuplanung speichert die nächste Rotationsrunde und schützt feste Mahlzeiten', () => {
+  const source = fs.readFileSync(path.join(__dirname, '../js/planner-keep-policy.js'), 'utf8');
+  const state = {
+    settings: { planFrom: '2026-09-28' },
+    planLocks: {
+      '2026-09-28|lunch': { mode: 'auto', focusId: 'alt' },
+      '2026-09-28|dinner': { mode: 'manual', focusId: 'behalten' },
+    },
+  };
+  let saved = 0;
+  const context = vm.createContext({
+    state,
+    addDays,
+    save: () => { saved += 1; },
+    renderAll: () => {},
+    document: { getElementById: () => null, querySelector: () => null, querySelectorAll: () => [] },
+  });
+  vm.runInContext(source, context);
+  context.rebuildVisiblePlan();
+  assert.equal(state.settings.planRebuildGeneration, 1);
+  assert.equal(state.planLocks['2026-09-28|lunch'], undefined);
+  assert.equal(state.planLocks['2026-09-28|dinner'].focusId, 'behalten');
+  context.rebuildVisiblePlan();
+  assert.equal(state.settings.planRebuildGeneration, 2);
+  assert.equal(saved, 2);
 });
 
 test('interne Tracking- und Random-Swap-Snapshots sind kein sichtbares Behalten', () => {

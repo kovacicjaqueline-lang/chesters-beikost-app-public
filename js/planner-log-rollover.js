@@ -19,6 +19,26 @@
     return `${date}|${meal}`;
   }
 
+  function dayIsClosed(data, date) {
+    return !!data?.dayClosures?.[date];
+  }
+
+  function toggleDayClosure(date) {
+    if (!date || date > today()) return;
+    state.dayClosures ||= {};
+    if (state.dayClosures[date]) {
+      delete state.dayClosures[date];
+      save();
+      renderAll();
+      showToast("Tag wieder geöffnet.");
+      return;
+    }
+    state.dayClosures[date] = { closedAt: new Date().toISOString() };
+    save();
+    renderAll();
+    showToast("Tag abgeschlossen. Spätere Einträge bleiben möglich.");
+  }
+
   function previousIsoDate(date) {
     let [year, month, day] = String(date || "").split("-").map(Number);
     if (![year, month, day].every(Number.isFinite)) return "";
@@ -65,6 +85,9 @@
   }
 
   function logsForDate(data, date) {
+    if (typeof logIndexFor === "function") {
+      return (logIndexFor(data?.logs).byDate.get(date) || []).slice();
+    }
     return (data?.logs || [])
       .filter((log) => log?.date === date)
       .slice()
@@ -76,6 +99,9 @@
   }
 
   function legacyCompletedLog(data, date, meal) {
+    if (typeof logIndexFor === "function") {
+      return (logIndexFor(data?.logs).byDateMealCompletion.get(`${date}|${meal}`) || [])[0] || null;
+    }
     return (data?.logs || [])
       .filter((log) => log?.date === date && log?.meal === meal && logQualifiesAsCompletion(log))
       .slice()
@@ -127,6 +153,7 @@
         let selected = legacyCompletedLog(data, date, meal);
         if (selected && !selected.plannedMealId) {
           selected.plannedMealId = plan.planId;
+          if (typeof invalidateLogsForCache === "function") invalidateLogsForCache(data.logs);
           changed = true;
         }
       }
@@ -138,6 +165,13 @@
 
   function linkedCompletionLog(data, planId, date = "", meal = "") {
     if (!planId) return null;
+    if (typeof logIndexFor === "function") {
+      return (logIndexFor(data?.logs).byPlannedMealId.get(planId) || []).find((log) =>
+        (!date || log.date === date) &&
+        (!meal || log.meal === meal) &&
+        logQualifiesAsCompletion(log),
+      ) || null;
+    }
     return (data?.logs || [])
       .filter((log) =>
         log?.plannedMealId === planId &&
@@ -147,6 +181,45 @@
       )
       .slice()
       .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")))[0] || null;
+  }
+
+  function mealUsesSlotReplacement(meal) {
+    return meal === "breakfast" || meal === "lunch" || meal === "dinner";
+  }
+
+  function slotReplacementLogs(data, date, meal) {
+    if (!mealUsesSlotReplacement(meal)) return [];
+    return logsForDate(data, date)
+      .filter((log) =>
+        log?.meal === meal &&
+        !log?.plannedMealId &&
+        logQualifiesAsCompletion(log),
+      )
+      .slice()
+      .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
+  }
+
+  function planDisplayAssignments(data, plans = []) {
+    let planList = (plans || []).filter((plan) => plan?.planId && plan?.date && plan?.meal);
+    let byPlanId = new Map();
+    let claimedLogIds = new Set();
+
+    for (let plan of planList) {
+      let log = linkedCompletionLog(data, plan.planId, plan.date, plan.meal);
+      if (!log || claimedLogIds.has(log.id)) continue;
+      byPlanId.set(plan.planId, log);
+      claimedLogIds.add(log.id);
+    }
+
+    for (let plan of planList) {
+      if (byPlanId.has(plan.planId) || !mealUsesSlotReplacement(plan.meal)) continue;
+      let log = slotReplacementLogs(data, plan.date, plan.meal).find((candidate) => !claimedLogIds.has(candidate.id)) || null;
+      if (!log) continue;
+      byPlanId.set(plan.planId, log);
+      claimedLogIds.add(log.id);
+    }
+
+    return { byPlanId, claimedLogIds };
   }
 
   function primaryPlanInstances(data) {
@@ -185,6 +258,17 @@
       .map((plan) => ({ ...clonePlain(plan), active: true, source: "carried", carriedPlannerPlan: true }));
   }
 
+  function carriedPlanAllowedForPhase(plan, activeMealFn = null) {
+    if (
+      !plan?.visibleSnapshot ||
+      plan.mode !== "auto" ||
+      plan.manualAdded ||
+      plan.followUpFoodId ||
+      typeof activeMealFn !== "function"
+    ) return true;
+    return !!activeMealFn(plan.meal, plan.date);
+  }
+
   function allPlanInstances(data) {
     let seen = new Set();
     let result = [];
@@ -206,7 +290,7 @@
     let handled = ensurePlannerMeta(data).rolloverHandled || {};
     let previousDay = previousIsoDate(todayValue);
     if (!previousDay) return [];
-    return openPlanInstances(data, (plan) => plan.date === previousDay && !handled[plan.planId])
+    return openPlanInstances(data, (plan) => plan.date === previousDay && !handled[plan.planId] && !dayIsClosed(data, plan.date))
       .sort((a, b) => (MEAL_ORDER[a.meal] || 99) - (MEAL_ORDER[b.meal] || 99));
   }
 
@@ -317,19 +401,18 @@
 
   function dayPlannerEntries(data, date, plans = []) {
     let planList = (plans || []).filter((plan) => plan?.active && plan?.focusId);
-    let linkedIds = new Set();
+    let assignments = planDisplayAssignments(data, planList);
     let entries = [];
     for (let plan of planList) {
-      let log = linkedCompletionLog(data, plan.planId, date, plan.meal);
+      let log = assignments.byPlanId.get(plan.planId) || null;
       if (log) {
-        linkedIds.add(log.id);
         entries.push({ kind: "log", meal: log.meal, log, plan, planId: plan.planId, completedPlan: true });
       } else {
         entries.push({ kind: "plan", meal: plan.meal, plan, planId: plan.planId, completedPlan: false });
       }
     }
     for (let log of logsForDate(data, date)) {
-      if (linkedIds.has(log.id)) continue;
+      if (assignments.claimedLogIds.has(log.id)) continue;
       entries.push({ kind: "log", meal: log.meal, log, plan: null, planId: log.plannedMealId || "", completedPlan: false });
     }
     return entries.sort((a, b) => {
@@ -354,6 +437,7 @@
     linkedCompletionLog,
     primaryPlanInstances,
     carriedPlanInstances,
+    carriedPlanAllowedForPhase,
     allPlanInstances,
     openPlanInstances,
     outstandingPastPlans,
@@ -518,7 +602,11 @@
       let existing = new Set((day.meals || []).map((meal) => meal?.planId).filter(Boolean));
       day.meals ||= [];
       day.meals.push(...carried
-        .filter((plan) => plan.date === day.date && !existing.has(plan.planId))
+        .filter((plan) =>
+          plan.date === day.date &&
+          !existing.has(plan.planId) &&
+          CORE.carriedPlanAllowedForPhase(plan, typeof activeMeal === "function" ? activeMeal : null),
+        )
         .map((plan) => ({ ...plan, active: true })));
     }
     return days;
@@ -580,6 +668,14 @@
       : state.logs.find((log) => !beforeIds.has(log.id));
     if (!saved || (editId && saved === beforeEditedLog)) return result;
     let changed = false;
+    if (!plannedMealId && !editId && actualDate && actualMeal) {
+      let inferredPlanId = inferPlanId({ date: actualDate, meal: actualMeal });
+      if (inferredPlanId) {
+        plannedMealId = inferredPlanId;
+        plannedDate = actualDate;
+        plannedMeal = actualMeal;
+      }
+    }
     if (plannedMealId && actualDate === plannedDate && actualMeal === plannedMeal) {
       if (saved.plannedMealId !== plannedMealId) { saved.plannedMealId = plannedMealId; changed = true; }
     } else if (saved.plannedMealId) {
@@ -708,6 +804,7 @@
       moveMealTomorrow(payload);
     });
     document.querySelectorAll(".editCompletedLog").forEach((btn) => btn.onclick = () => editLogEntry(btn.dataset.log));
+    document.querySelectorAll(".closeDay, .reopenDay").forEach((btn) => btn.onclick = () => toggleDayClosure(btn.dataset.date));
     document.querySelectorAll(".meal-lock").forEach((btn) => btn.onclick = () => toggleMealLock(btn.dataset.lockDate, btn.dataset.lockMeal, JSON.parse(decodeURIComponent(btn.dataset.lockPayload))));
     document.querySelectorAll(".addExtraMeal").forEach((btn) => btn.onclick = () => openAddMealMenu(btn.dataset.date));
     document.querySelectorAll(".removeManualMeal").forEach((btn) => btn.onclick = () => removeManualMeal(btn.dataset.date, btn.dataset.meal));
@@ -717,7 +814,7 @@
   renderPlanCore = function plannerAwareRenderPlanCore() {
     let from = visiblePlanStart();
     document.getElementById("planFrom").value = from;
-    let days = mergeCarriedIntoDays(planDisplayDays(from, 7));
+    let days = mergeCarriedIntoDays(viewRenderPlanDays(from, 7));
     let allVisiblePlans = days.flatMap((day) => (day.meals || []).filter((meal) => meal?.active && meal?.focusId).map((meal) => ({ ...meal, date: day.date })));
     let autoCount = 0, manualCount = 0;
     for (let plan of allVisiblePlans) {
@@ -735,8 +832,21 @@
       let completedPlans = plans.filter((plan) => !!planCompletion(plan, day.date, plan.meal));
       let openPlans = plans.filter((plan) => !planCompletion(plan, day.date, plan.meal));
       let allDone = plans.length > 0 && openPlans.length === 0;
+      let manuallyClosed = dayIsClosed(state, day.date);
       let extra = day.date < today() ? [] : availableExtraMeals(day);
       let renderedEntries = entries.map((entry) => entry.kind === "log" ? plannerLogHtml(entry.log) : renderMealCore(day, entry.plan)).join("");
+
+      if (manuallyClosed) {
+        let logCount = CORE.logsForDate(state, day.date).length;
+        let visiblePlanEntries = entries.filter((entry) => entry.kind === "plan" || entry.completedPlan);
+        let openVisiblePlans = visiblePlanEntries.filter((entry) => entry.kind === "plan").length;
+        let completedVisiblePlans = visiblePlanEntries.filter((entry) => entry.completedPlan).length;
+        let summary = visiblePlanEntries.length
+          ? `${completedVisiblePlans}/${visiblePlanEntries.length} geplant dokumentiert${openVisiblePlans ? ` · ${openVisiblePlans} nicht dokumentiert` : ""}`
+          : `${logCount} ${logCount === 1 ? "Protokolleintrag" : "Protokolleinträge"}`;
+        let label = day.date === today() ? "Heute" : nice(day.date, true);
+        return `<details class="card block completed-day manual-day-closure"><summary><span><span class="completed-day-title">${esc(label)} abgeschlossen</span><span class="small">${summary}</span></span><span class="completed-day-chevron">▼</span></summary><div class="completed-day-body">${renderedEntries}${extra.length ? `<div class="add-meal-row"><button class="btn secondary smallbtn addExtraMeal" data-date="${day.date}">+ Mahlzeit hinzufügen</button></div>` : ""}<div class="day-closure-actions"><button class="btn secondary smallbtn reopenDay" data-date="${day.date}">Tag wieder öffnen</button></div></div></details>`;
+      }
 
       if (allDone) {
         let completedLogIds = new Set(completedPlans.map((plan) => planCompletion(plan, day.date, plan.meal)?.id).filter(Boolean));
@@ -750,7 +860,8 @@
       let completed = completedPlans.length;
       let dayBadge = completed && plans.length ? `<span class="pill ok">${completed}/${plans.length} erledigt</span>` : "";
       let empty = !entries.length ? '<div class="empty">Für diesen Tag gibt es weder einen offenen Plan noch einen Protokolleintrag.</div>' : "";
-      return `<div class="card block day-card"><div class="row day-head"><div class="grow"><div class="day-date">${nice(day.date, true)}</div><div class="small day-type-text">${day.introAssigned ? "Einführung und Wiederholung" : "Bekannter Tag"}</div></div>${dayBadge}</div>${renderedEntries}${empty}${extra.length ? `<div class="add-meal-row"><button class="btn secondary smallbtn addExtraMeal" data-date="${day.date}">+ Mahlzeit hinzufügen</button></div>` : ""}</div>`;
+      let closeAction = day.date <= today() ? `<div class="day-closure-actions"><button class="btn secondary smallbtn closeDay" data-date="${day.date}">Tag abschließen</button></div>` : "";
+      return `<div class="card block day-card"><div class="row day-head"><div class="grow"><div class="day-date">${nice(day.date, true)}</div><div class="small day-type-text">${day.introAssigned ? "Einführung und Wiederholung" : "Bekannter Tag"}</div></div>${dayBadge}</div>${renderedEntries}${empty}${extra.length ? `<div class="add-meal-row"><button class="btn secondary smallbtn addExtraMeal" data-date="${day.date}">+ Mahlzeit hinzufügen</button></div>` : ""}${closeAction}</div>`;
     }).join("");
     bindPlannerRenderedActions();
   };
@@ -758,7 +869,15 @@
   prepDemand = function plannerAwarePrepDemand() {
     let from = state.settings.planFrom || today();
     if (from < today()) from = today();
-    let days = mergeCarriedIntoDays(buildDays(from, 7));
+    // Reuse the visible planner snapshot. renderPlanCore() has already asked
+    // for these days during the same render, and planDisplayDays also shares
+    // the week cache across navigation. Rebuilding here made every week change
+    // calculate the same seven days a second time on the main thread.
+    let days = mergeCarriedIntoDays(
+      typeof viewRenderPlanDays === "function"
+        ? viewRenderPlanDays(from, 7)
+        : buildDays(from, 7),
+    );
     let map = new Map();
     days.forEach((day) => (day.meals || []).forEach((meal) => {
       if (!meal.active || meal.empty || !meal.focusId) return;
@@ -864,7 +983,6 @@
         plannerPromptOpen = false;
         save();
         closeGeneric();
-        renderAll();
         showToast("Planung nicht verschoben.");
       };
       document.getElementById("backfillOpenPlans").onclick = () => {
@@ -896,7 +1014,8 @@
     if (currentDay !== plannerLastSeenDay) {
       plannerLastSeenDay = currentDay;
       plannerSessionDeferred = false;
-      renderAll();
+      if (typeof invalidateViewRenderCache === "function") invalidateViewRenderCache();
+      renderCurrentView();
     }
     scheduleRolloverPrompt();
   }
@@ -909,6 +1028,8 @@
 
   globalScope.__plannerLogRolloverCore = CORE;
   globalScope.__plannerLogRollover = {
+    dayIsClosed,
+    toggleDayClosure,
     outstanding: () => clone(outstandingNow()),
     shiftOutstanding: () => {
       let plans = outstandingNow();

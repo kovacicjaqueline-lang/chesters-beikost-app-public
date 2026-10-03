@@ -12,6 +12,7 @@ const FAST_ONLY_FILES = new Set([
   'js/planner-food-role-stability.js',
   'js/planner-introduction-policy.js',
   'js/planner-iron-preference.js',
+  'js/planner-culinary-quality.js',
   'js/planner-log-rollover-cascade.js',
   'js/planner-log-rollover-review-fixes.js',
   'js/planner-log-rollover.js',
@@ -29,6 +30,14 @@ const FAST_ONLY_FILES = new Set([
 const FAST_ONLY_PATTERNS = [
   /^data\/.+/,
   /^tests\/[^/]+\.test\.(?:js|cjs)$/,
+];
+
+// Tests that verify browser-test or CI/test-selection infrastructure must keep
+// the full app gate required by docs/AI_WORKFLOW.md, even though they live in
+// the otherwise fast-only top-level tests directory.
+const APP_GATE_TEST_PATTERNS = [
+  /^tests\/(?:browser-|ci-)[^/]*\.test\.(?:js|cjs)$/,
+  /^tests\/test-manifest\.test\.(?:js|cjs)$/,
 ];
 
 // These paths can accompany an app-relevant change but are handled by another
@@ -55,6 +64,7 @@ export function isNeutralPath(file) {
 
 export function isFastOnlyPath(file) {
   const normalized = normalizePath(file);
+  if (APP_GATE_TEST_PATTERNS.some((pattern) => pattern.test(normalized))) return false;
   return FAST_ONLY_FILES.has(normalized)
     || FAST_ONLY_PATTERNS.some((pattern) => pattern.test(normalized));
 }

@@ -1,48 +1,10 @@
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { webkit } from "playwright";
+import { closeBrowserApp, startStaticServer } from "./helpers/app-harness.mjs";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const mimeTypes = {
-  ".html": "text/html; charset=utf-8",
-  ".js": "text/javascript; charset=utf-8",
-  ".css": "text/css; charset=utf-8",
-  ".json": "application/json; charset=utf-8",
-  ".webmanifest": "application/manifest+json; charset=utf-8",
-  ".svg": "image/svg+xml",
-  ".png": "image/png",
-  ".webp": "image/webp",
-};
 
-function startStaticServer() {
-  const server = http.createServer((request, response) => {
-    const url = new URL(request.url || "/", "http://127.0.0.1");
-    const pathname = decodeURIComponent(url.pathname === "/" ? "/index.html" : url.pathname);
-    const filePath = path.resolve(root, `.${pathname}`);
-    if (filePath !== path.join(root, "index.html") && !filePath.startsWith(`${root}${path.sep}`)) {
-      response.writeHead(403).end("Forbidden");
-      return;
-    }
-    fs.stat(filePath, (error, stat) => {
-      if (error || !stat.isFile()) {
-        response.writeHead(404).end("Not found");
-        return;
-      }
-      response.writeHead(200, {
-        "content-type": mimeTypes[path.extname(filePath)] || "application/octet-stream",
-        "cache-control": "no-store",
-      });
-      fs.createReadStream(filePath).pipe(response);
-    });
-  });
-  return new Promise((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(0, "127.0.0.1", () => resolve(server));
-  });
-}
 
 async function waitForApp(page) {
   await page.waitForFunction(() =>
@@ -60,11 +22,26 @@ async function seedTodayMeal(page) {
     window.__beikostTest.reset();
     const state = window.__beikostTest.getState();
     const today = window.__beikostTest.today();
+    state.settings.phaseSelected = "aufbau";
     state.settings.planFrom = today;
     state.settings.preferInventoryInPlan = true;
+    for (const food of state.foods) {
+      if (food.allergenGroup) {
+        food.active = false;
+        food.manualStatus = "auto";
+      }
+    }
 
     const potato = state.foods.find((food) => food.id === "kartoffel");
-    if (potato) potato.manualStatus = "Verträgliche Basis";
+    if (potato) {
+      potato.active = true;
+      potato.manualStatus = "Verträgliche Basis";
+    }
+    const carrot = state.foods.find((food) => food.id === "karotte");
+    if (carrot) {
+      carrot.active = true;
+      carrot.manualStatus = "Verträgliche Basis";
+    }
 
     state.inventory = [
       {
@@ -78,15 +55,30 @@ async function seedTodayMeal(page) {
       },
     ];
 
+    state.manualMeals[`${today}|lunch`] = {
+      date: today,
+      meal: "lunch",
+      focusId: "kartoffel",
+      foodIds: ["kartoffel", "karotte"],
+      baseFoodIds: ["kartoffel"],
+      sampleFoodIds: [],
+      optionalAddons: [],
+      inventoryFoodIds: ["kartoffel"],
+      recipeName: "",
+      type: "bekannt kombinieren",
+      manualAdded: false,
+      active: true,
+      mode: "manual",
+    };
     state.planLocks[`${today}|lunch`] = {
       date: today,
       meal: "lunch",
       focusId: "kartoffel",
-      foodIds: ["kartoffel"],
+      foodIds: ["kartoffel", "karotte"],
       baseFoodIds: ["kartoffel"],
       sampleFoodIds: [],
       optionalAddons: [],
-      inventoryFoodIds: [],
+      inventoryFoodIds: ["kartoffel"],
       recipeName: "",
       recipeInventoryId: "",
       type: "bekannt kombinieren",
@@ -94,6 +86,7 @@ async function seedTodayMeal(page) {
       manualAdded: false,
       active: true,
       mode: "auto",
+      plannerTrackingSnapshot: true,
       planId: "ui-unified-today",
       createdAt: new Date().toISOString(),
     };
@@ -171,7 +164,10 @@ try {
 
   assert.equal(await homeMeal.locator(".homeLog").count(), 0, "Heute verwendet keinen separaten Home-Kartenpfad mehr");
   assert.equal(await homeMeal.locator(":scope > .logMeal").count(), 1, "Essen eintragen bleibt direkte Primary-Aktion");
-  assert.equal(await homeMeal.locator(".meal-type-text").first().innerText(), "Mittag", "Normale Mahlzeiten wiederholen nicht mehr das Wort Mahlzeit");
+  assert.ok(
+    ["Mittag", "Rezept · Mittag"].includes(await homeMeal.locator(".meal-type-text").first().innerText()),
+    "Normale Mahlzeiten und Rezepte wiederholen nicht mehr das Wort Mahlzeit",
+  );
   assert.deepEqual(
     await directActionLabels(homeMeal),
     ["Plan ändern", "Essen eintragen"],
@@ -184,7 +180,12 @@ try {
   assert.equal(await homeMeal.locator(".meal-plan-actions .moveMeal").count(), 1);
   assert.equal(await homeMeal.locator(".meal-plan-actions .removePlannedMeal").count(), 1);
 
-  await homeMeal.locator(".meal-lock.locked").waitFor();
+  await homeMeal.locator(".meal-lock.unlocked").waitFor();
+  assert.equal(
+    await homeMeal.locator(".meal-lock").getAttribute("aria-label"),
+    "Mahlzeit bei automatischer Neuplanung behalten",
+    "Ein neu bewerteter Auto-Plan bleibt änderbar und kann bewusst geschützt werden",
+  );
   assert.equal(await homeMeal.locator(".lock-label").count(), 0, "Auto-Lock zeigt keine redundante Fest-eingeplant-Zeile");
   assert.doesNotMatch(await homeMeal.innerText(), /Fest eingeplant/);
   const homeLock = await lockPresentation(homeMeal);
@@ -193,6 +194,11 @@ try {
   assert.equal(homeLock.backgroundColor, "rgba(0, 0, 0, 0)", "Schloss erhält keine hervorgehobene Buttonfläche mehr");
 
   const homeStockBadge = homeMeal.locator(".stock-chip");
+  const stockDiagnostics = await page.evaluate((date) => ({
+    lock: window.__beikostTest.getState().planLocks[`${date}|lunch`] || null,
+    meal: planDisplayDays(date, 1).flatMap((day) => day.meals || []).find((meal) => meal.meal === "lunch") || null,
+  }), today);
+  assert.equal(await homeStockBadge.count(), 1, `Vorratsbadge fehlt: ${JSON.stringify(stockDiagnostics)}`);
   assert.equal(await homeStockBadge.innerText(), "Vorrat: Kartoffel");
   assert.doesNotMatch(await homeStockBadge.innerText(), /❄/);
   assert.equal(await homeStockBadge.getAttribute("aria-label"), "Aus Vorrat: Kartoffel");
@@ -234,7 +240,7 @@ try {
     has: page.locator(`.replaceMeal[data-date="${today}"][data-meal="lunch"]`),
   });
   await planMeal.waitFor();
-  await planMeal.locator(".meal-lock.locked").waitFor();
+  await planMeal.locator(".meal-lock.unlocked").waitFor();
   assert.equal(await planMeal.locator(".lock-label").count(), 0);
   assert.equal(await planMeal.locator(".meal-type-text").first().innerText(), "Mittag");
   assert.deepEqual(await directActionLabels(planMeal), await directActionLabels(homeMeal), "Heute und Plan verwenden dieselbe direkte Aktionshierarchie");
@@ -331,10 +337,8 @@ try {
   });
   assert.deepEqual(multiFoodResult, { ingredientNames: 2, details: 0, actualContained: false }, "Mehrere Lebensmittel behalten ihre aussagekräftigen Einzelzeilen");
 
-  await context.close();
 } finally {
-  await browser.close();
-  await new Promise((resolve) => server.close(resolve));
+  await closeBrowserApp({ context: typeof context !== "undefined" ? context : null, browser, server });
 }
 
 console.log("meal-card-unification-webkit: ok");

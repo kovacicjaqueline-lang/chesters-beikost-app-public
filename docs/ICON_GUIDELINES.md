@@ -34,7 +34,7 @@ Diese Asset-Regel ist Teil der allgemeinen Aufnahmebedingung aus `AGENTS.md`: Ne
 Für Recipe-V2 gelten zusätzlich die verbindlichen Master-Gefäße aus [`RECIPE_V2_MASTER_VESSELS.md`](RECIPE_V2_MASTER_VESSELS.md):
 
 - **Master-Teller:** `assets/illustrations-v2/recipes/omelettstreifen.svg`
-- **Master-Schale:** `assets/illustrations-v2/recipes/obst-haferbrei.svg`
+- **Master-Schale:** `assets/illustrations-v2/recipe-masters/recipe-master-bowl.svg`
 - **Master-Topf:** `assets/illustrations-v2/recipes/arroz-caldo-inspiriert.svg`
 
 Verbindlich ist jeweils **nur das Gefäß**, nicht der Rezeptinhalt der Referenz. Form, Farbe, Materialwirkung, Rand, Perspektive, Ansicht und Gefäßbeleuchtung sind aus dem jeweiligen Referenz-Asset zu übernehmen. Insbesondere darf die Kameraposition bzw. Ansicht nicht frei neu interpretiert werden.

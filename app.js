@@ -74,6 +74,7 @@ function foodPolicyMonthsOld(on, birthDate) {
 function automaticFoodEligibility(foodRecord, on, settings = {}) {
   if (!foodRecord) return false;
   if (foodRecord.autoPlan === false) return false;
+  if (typeof isFoodUnavailable === "function" && isFoodUnavailable(foodRecord.id)) return false;
 
   if (foodRecord.minPhase) {
     let current = FOOD_PHASE_ORDER.indexOf(settings.phaseSelected || "kennenlernen");
@@ -167,15 +168,42 @@ function plannerAutomaticLockRoleViolation(lock, foods = []) {
 function plannerRecipeSuitableForMeal(recipe, meal) {
   let excludedMeals = Array.isArray(recipe?.excludeMeals) ? recipe.excludeMeals : [];
   if (excludedMeals.includes(meal)) return false;
+  if (meal === "lunch" && recipe?.breakfastStyle === true) return false;
   let category = String(recipe?.category || "");
   let hasSnackTag = (recipe?.tags || []).some(
     (tag) => String(tag || "").trim().toLowerCase() === "snack",
   );
   if (meal === "snack") return hasSnackTag;
-  if (meal === "breakfast") return ["porridge", "pancakes", "baking"].includes(category);
+  if (meal === "breakfast") {
+    return ["porridge", "pancakes", "baking"].includes(category) &&
+      plannerRecipeBreakfastHasBase(recipe);
+  }
   if (meal === "dinner")
     return !["philippines"].includes(category) || Number(recipe?.stage || 1) <= 3;
   return true;
+}
+
+function plannerRecipeBreakfastHasBase(recipe) {
+  if (recipe?.breakfastBase === false) return false;
+  let names = [
+    ...(recipe?.requires || []),
+    ...(recipe?.alternatives || []).flat(),
+    ...(recipe?.oneOf || []),
+    ...(recipe?.milkChoices || []),
+  ].filter(Boolean);
+  let foods = typeof FOOD_DB !== "undefined" && Array.isArray(FOOD_DB) ? FOOD_DB : [];
+  if (foods.length) {
+    return names.some((name) => {
+      let item = foods.find((food) => food?.name === name);
+      return ["Getreide/Stärke", "Milchprodukt"].includes(item?.category) &&
+        plannerFoodCanBeBase(item) &&
+        item.id !== "kuhmilch";
+    });
+  }
+
+  // Node-side policy tests load app.js without the browser's FOOD_DB script.
+  // Keep the same contract for the canonical grain/dairy names in that case.
+  return names.some((name) => /hafer|hirse|polenta|reis|quinoa|buchweizen|weizen|dinkel|grieß|griess|naturjoghurt|joghurt|buttermilch|quark|skyr/i.test(String(name)));
 }
 
 function plannerRecipeByStoredName(name, recipes = []) {
@@ -278,7 +306,9 @@ function applyFoodPolicyData(foodDb, idAliases = {}) {
   }
   idAliases["mais-polenta"] = "mais";
   let mais = byId.get("mais");
-  if (mais) mais.foodFamily = "mais";
+  if (mais) {
+    mais.foodFamily = "mais";
+  }
   let polenta = byId.get("polenta");
   if (polenta) polenta.foodFamily = "mais";
 
@@ -301,6 +331,12 @@ function applyFoodPolicyData(foodDb, idAliases = {}) {
   for (let id of FOOD_POLICY_DATA.componentOnlyFoods) {
     let item = byId.get(id);
     if (item) item.plannerRole = "component";
+  }
+
+  // Kräuter und Gewürze werden ausschließlich als kleine Bestandteile
+  // eines geeigneten Lebensmittels verwendet, nie als automatische Hauptbasis.
+  for (let item of foodDb) {
+    if (item?.category === "Kraut/Gewürz") item.plannerRole = "component";
   }
 
   // Der ausdrücklich freigegebene gemeinsame Milch-Allergenstamm.
@@ -377,12 +413,76 @@ function relatedFamilyFoodIds(foodRecord, foods) {
 function familySuccessfulExposureCount(foodRecord, foods, logs, outcomeForFoodFn) {
   let ids = new Set(relatedFamilyFoodIds(foodRecord, foods));
   if (!ids.size) ids.add(foodRecord?.id);
+  if (typeof logIndexFor === "function") {
+    let exposureKeys = new Set();
+    let relevantLogs = new Set();
+    let index = logIndexFor(logs);
+    for (let id of ids) {
+      for (let log of index.byFoodId.get(id) || []) relevantLogs.add(log);
+    }
+    for (let log of relevantLogs) {
+      for (let id of new Set(log.foodIds || [])) {
+        if (!ids.has(id) || outcomeForFoodFn(log, id) !== "eaten") continue;
+        if (typeof logExposureKey === "function") exposureKeys.add(logExposureKey(log));
+        else {
+          let hasMeal = log?.entryType !== "sample" && ["breakfast", "snack", "lunch", "dinner"].includes(String(log?.meal || ""));
+          exposureKeys.add(hasMeal
+            ? `${log?.date || ""}|${log.meal}`
+            : `${log?.date || ""}|entry:${log?.id || log?.createdAt || log?.updatedAt || "free"}`);
+        }
+      }
+    }
+    return exposureKeys.size;
+  }
   return new Set(
     (logs || [])
       .flatMap((log) => (log.foodIds || [])
         .filter((id) => ids.has(id) && outcomeForFoodFn(log, id) === "eaten")
         .map(() => typeof logExposureKey === "function" ? logExposureKey(log) : `${log.date}|${log.meal}`)),
   ).size;
+}
+
+function allergenIntroductionTargetKey(foodRecord) {
+  if (!foodRecord?.allergenGroup) return "";
+  if (foodRecord.allergenFamily) return `family:${foodRecord.allergenFamily}`;
+  return `group:${foodRecord.allergenGroup}`;
+}
+
+function allergenIntroductionFoodIds(foodRecord, foods) {
+  let targetKey = allergenIntroductionTargetKey(foodRecord);
+  if (!targetKey || !Array.isArray(foods)) return [];
+  return foods
+    .filter((candidate) => candidate?.id && candidate.plannerIntroductionMode !== "none" && allergenIntroductionTargetKey(candidate) === targetKey)
+    .map((candidate) => candidate.id);
+}
+
+function allergenIntroductionSuccessfulExposureCount(foodRecord, foods, logs, outcomeForFoodFn) {
+  let targetKey = allergenIntroductionTargetKey(foodRecord);
+  let ids = new Set((foods || [])
+    .filter((candidate) => candidate?.id && allergenIntroductionTargetKey(candidate) === targetKey)
+    .map((candidate) => candidate.id));
+  if (!ids.size) return 0;
+  let exposures = new Set();
+  for (let log of logs || []) {
+    for (let id of log.foodIds || []) {
+      if (!ids.has(id) || outcomeForFoodFn(log, id) !== "eaten") continue;
+      exposures.add(typeof logExposureKey === "function"
+        ? logExposureKey(log)
+        : `${log.date || ""}|${log.meal || log.id || "entry"}`);
+    }
+  }
+  return exposures.size;
+}
+
+function foodSpecificSuccessfulExposureCount(foodId, logs, outcomeForFoodFn = outcomeForFood) {
+  let exposures = new Set();
+  for (let log of logs || []) {
+    if (!(log.foodIds || []).includes(foodId) || outcomeForFoodFn(log, foodId) !== "eaten") continue;
+    exposures.add(typeof logExposureKey === "function"
+      ? logExposureKey(log)
+      : `${log.date || ""}|${log.meal || log.id || "entry"}`);
+  }
+  return exposures.size;
 }
 
 function familyPlanningRank(foodRecord, foods, logs, outcomeForFoodFn, concreteRank) {
@@ -457,6 +557,11 @@ function installFoodPolicyRuntime() {
     let concrete = originalRank(f);
     if (!autoPlanningDepth || !f) return concrete;
     let familyRank = familyPlanningRank(f, state.foods, state.logs, outcomeForFood, concrete);
+    if (f.allergenGroup && f.plannerIntroductionMode !== "none" && !f.allergenFamily) {
+      let groupExposures = allergenIntroductionSuccessfulExposureCount(f, state.foods, state.logs, outcomeForFood);
+      if (groupExposures >= 2) familyRank = Math.max(familyRank, 2);
+      else if (groupExposures >= 1) familyRank = Math.max(familyRank, 1);
+    }
     let explicitOverride = plannerExplicitOverrideForFood(
       state.overrides,
       autoPlanningDate,
@@ -559,6 +664,7 @@ function installFoodPolicyRuntime() {
   function autoRecipeIngredientReady(name, on) {
     let f = state.foods.find((item) => item.name === name);
     if (!f || !policyEligible(f, on) || status(f) === "Pausiert") return false;
+    if (typeof isFoodUnavailable === "function" && isFoodUnavailable(f.id)) return false;
     return originalRank(f) >= 2 || familySuccessfulExposureCount(f, state.foods, state.logs, outcomeForFood) >= 1;
   }
 
@@ -629,7 +735,60 @@ function installFoodPolicyRuntime() {
       let day = originalBuildDay(date, index, ctx);
       for (let meal of day?.meals || []) {
         if (meal?.manualAdded || meal?.lockedMode === "manual") continue;
-        meal.optionalAddons = (meal.optionalAddons || []).filter((id) => policyEligible(food(id), date));
+
+        const isUnavailable = (id) =>
+          !!id &&
+          typeof isFoodUnavailable === "function" &&
+          isFoodUnavailable(id);
+        meal.optionalAddons = (meal.optionalAddons || []).filter(
+          (id) => !isUnavailable(id) && policyEligible(food(id), date),
+        );
+
+        const unavailableIds = new Set((meal.foodIds || []).filter(isUnavailable));
+        if (!unavailableIds.size) continue;
+
+        // Alle automatischen Planner-Pfade müssen dieselbe Verfügbarkeitsregel
+        // einhalten. Dieser letzte Guard verhindert, dass nachgelagerte Recipe-
+        // oder Composition-Decoratoren eine fehlende Zutat wieder eintragen.
+        if (!isUnavailable(meal.focusId)) {
+          meal.foodIds = (meal.foodIds || []).filter((id) => !unavailableIds.has(id));
+          meal.baseFoodIds = (meal.baseFoodIds || []).filter((id) => !unavailableIds.has(id));
+          meal.sampleFoodIds = (meal.sampleFoodIds || []).filter((id) => !unavailableIds.has(id));
+          meal.foodRoles = Object.fromEntries(
+            Object.entries(meal.foodRoles || {}).filter(([id]) => !unavailableIds.has(id)),
+          );
+          continue;
+        }
+
+        const fallback = (state.foods || [])
+          .filter((candidate) =>
+            !isUnavailable(candidate.id) &&
+            eligible(candidate, meal.meal, date) &&
+            (typeof plannerFoodCanBeAutomaticFocus !== "function" ||
+              plannerFoodCanBeAutomaticFocus(candidate)),
+          )
+          .sort((a, b) => (Number(a.priority) || 9999) - (Number(b.priority) || 9999))[0];
+
+        if (!fallback) {
+          meal.empty = true;
+          meal.focusId = "";
+          meal.foodIds = [];
+          meal.baseFoodIds = [];
+          meal.sampleFoodIds = [];
+          meal.foodRoles = {};
+          meal.recipeName = "";
+          continue;
+        }
+
+        meal.empty = false;
+        meal.focusId = fallback.id;
+        meal.foodIds = [fallback.id];
+        meal.baseFoodIds = [fallback.id];
+        meal.sampleFoodIds = [];
+        meal.foodRoles = { [fallback.id]: "base" };
+        meal.recipeName = "";
+        meal.recipeInventoryId = "";
+        if (typeof applyPlannedMealAmounts === "function") applyPlannedMealAmounts(meal);
       }
       return day;
     } finally {
@@ -690,10 +849,12 @@ function pruneIneligibleAutomaticPlanState(currentState, recipes = typeof RECIPE
     if (lock?.mode !== "auto") continue;
     let date = key.split("|")[0];
     let automaticIds = [...new Set([...(lock.foodIds || []), ...(lock.optionalAddons || [])])];
-    let blocked = automaticIds.some((id) => {
-      let f = currentState.foods?.find((item) => item.id === id);
-      return f && !automaticFoodEligibility(f, date, currentState.settings || {});
-    }) ||
+    let knownIds = new Set((currentState.foods || []).map((item) => item.id));
+    let blocked = automaticIds.some((id) => !knownIds.has(id)) ||
+      automaticIds.some((id) => {
+        let f = currentState.foods?.find((item) => item.id === id);
+        return f && !automaticFoodEligibility(f, date, currentState.settings || {});
+      }) ||
       plannerAutomaticLockRoleViolation(lock, currentState.foods) ||
       plannerAutomaticRecipeLockMealViolation(key, lock, recipes);
     if (!blocked) continue;
@@ -707,7 +868,6 @@ function pruneIneligibleAutomaticPlanState(currentState, recipes = typeof RECIPE
   }
   return changed;
 }
-
 function startBeikostApp() {
   installFoodPolicyRuntime();
 
@@ -717,14 +877,16 @@ function startBeikostApp() {
 
   window.__beikostTest = {
     getState: () => clone(state),
-    setState: (next) => { state = migrateState(next); if (!state.settings.planFrom) state.settings.planFrom = today(); pruneIneligibleAutomaticPlanState(state); save(); renderAll(); return clone(state); },
-    reset: () => { state = migrateState(clone(DEFAULT)); state.backupMeta.chesterContextSeeded = true; state.settings.planFrom = today(); save(); renderAll(); return clone(state); },
+    setState: (next) => { state = migrateState(next); if (!state.settings.planFrom) state.settings.planFrom = today(); pruneIneligibleAutomaticPlanState(state); save({ replaceLogs: true }); renderAll(); return clone(state); },
+    reset: () => { state = migrateState(clone(DEFAULT)); state.backupMeta.chesterContextSeeded = true; state.settings.planFrom = today(); save({ replaceLogs: true }); renderAll(); return clone(state); },
     buildDays: (from = today(), count = 7) => clone(buildDays(from, count)),
     scheduleFollowUp: (...args) => { let result = scheduleFollowUp(...args); save(); renderAll(); return clone(result); },
     followUpEntries: () => clone(followUpEntries()),
     displayStatus: (id) => displayStatus(food(id)),
     automaticFoodEligibility: (id, on = today()) => automaticFoodEligibility(food(id), on, state.settings),
     familySuccessfulExposureCount: (id) => familySuccessfulExposureCount(food(id), state.foods, state.logs, outcomeForFood),
+    allergenIntroductionSuccessfulExposureCount: (id) => allergenIntroductionSuccessfulExposureCount(food(id), state.foods, state.logs, outcomeForFood),
+    foodSpecificSuccessfulExposureCount: (id) => foodSpecificSuccessfulExposureCount(id, state.logs, outcomeForFood),
     recipeStates: () => clone(recipeStates()),
     recipeSuitableForMeal: (name, meal) => plannerRecipeSuitableForMeal(recipeByName(name), meal),
     plannerRole: (id) => plannerRole(food(id)),
@@ -773,7 +935,10 @@ function startBeikostApp() {
 
   bind();
   renderCurrentView();
-  bootstrapStorage();
+  Promise.resolve(bootstrapStorage()).then(
+    () => window.AppReadiness?.markReady(),
+    () => window.AppReadiness?.markReady(),
+  );
   if (navigator.serviceWorker && location.protocol.startsWith("http"))
     window.addEventListener("load", () =>
       navigator.serviceWorker.register("./sw.js").then((r) => r.update()).catch(() => {}),
@@ -805,6 +970,10 @@ if (typeof module !== "undefined" && module.exports) {
     applyFoodPolicyData,
     relatedFamilyFoodIds,
     familySuccessfulExposureCount,
+    allergenIntroductionTargetKey,
+    allergenIntroductionFoodIds,
+    allergenIntroductionSuccessfulExposureCount,
+    foodSpecificSuccessfulExposureCount,
     familyPlanningRank,
     pruneIneligibleAutomaticPlanState,
   };

@@ -73,6 +73,46 @@ test("Rotation erfasst alle FOOD-Rollen und exakte Paare, nicht nur focusId", ()
   assert.equal(state.qualityPairUse.get("gurke+huhn"), 1);
 });
 
+test("Nicht verschieben zählt die Vortagsplanung für die Rotation, aber nicht als Nutzung", () => {
+  const data = {
+    planLocks: {
+      "2026-08-20|breakfast": {
+        planId: "yesterday-plan",
+        date: "2026-08-20",
+        meal: "breakfast",
+        focusId: "bulgur",
+        foodIds: ["bulgur", "brombeere"],
+      },
+      "2026-08-20|lunch": {
+        planId: "shifted-plan",
+        date: "2026-08-20",
+        meal: "lunch",
+        focusId: "apfel",
+        foodIds: ["apfel"],
+      },
+    },
+    backupMeta: {
+      plannerLinking: {
+        rolloverHandled: {
+          "yesterday-plan": { action: "keep", at: "2026-08-21T07:00:00.000Z" },
+          "shifted-plan": { action: "shift", at: "2026-08-21T07:00:00.000Z" },
+        },
+      },
+    },
+    logs: [],
+  };
+  const context = ctx();
+
+  quality.plannerQualitySeedKeptPlans(context, "2026-08-21", data);
+
+  assert.equal(context.qualityLastFoodUse.get("bulgur"), "2026-08-20");
+  assert.equal(context.qualityLastFoodUse.get("brombeere"), "2026-08-20");
+  assert.equal(context.qualityPairUse.get("brombeere+bulgur"), 1);
+  assert.equal(context.lastFocus.get("bulgur"), "2026-08-20");
+  assert.equal(context.qualityLastFoodUse.has("apfel"), false);
+  assert.deepEqual(data.logs, [], "Nicht verschieben darf keinen gegessenen/protokollierten Eintrag erzeugen");
+});
+
 test("bei gleich zulässigen Kandidaten schlägt neue Kombination eine wiederholte", () => {
   const state = ctx();
   state.qualityFoodUse.set("gurke", 2);
@@ -91,6 +131,345 @@ test("bei gleich zulässigen Kandidaten schlägt neue Kombination eine wiederhol
     "kartoffel",
   );
   assert.equal(chosen.f.id, "zucchini");
+});
+
+test("Frühstücks-Begleiter wechseln bei vorhandener Alternative statt täglich zu wiederholen", () => {
+  const state = ctx();
+  state.qualityLastFoodUse.set("brombeere", "2026-08-20");
+  const results = [
+    { f: { id: "brombeere" } },
+    { f: { id: "apfel" } },
+  ];
+  const filtered = quality.plannerQualityBreakfastCompanionResults(
+    results,
+    state,
+    "2026-08-21",
+    (a, b) => Math.round((Date.parse(`${a}T00:00:00Z`) - Date.parse(`${b}T00:00:00Z`)) / 86400000),
+  );
+  assert.deepEqual(filtered.map((entry) => entry.f.id), ["apfel"]);
+});
+
+test("Frühstücks-Rotation fällt auf den vorhandenen Begleiter zurück, wenn es keine Alternative gibt", () => {
+  const state = ctx();
+  state.qualityLastFoodUse.set("brombeere", "2026-08-20");
+  const results = [{ f: { id: "brombeere" } }];
+  assert.deepEqual(
+    quality.plannerQualityBreakfastCompanionResults(
+      results,
+      state,
+      "2026-08-21",
+      (a, b) => Math.round((Date.parse(`${a}T00:00:00Z`) - Date.parse(`${b}T00:00:00Z`)) / 86400000),
+    ),
+    results,
+  );
+});
+
+test("Begleiter-Rotation gilt über mehrere Tage auch für Mittagessen", () => {
+  const state = ctx();
+  state.qualityLastFoodUse.set("brombeere", "2026-08-20");
+  const results = [
+    { f: { id: "brombeere" } },
+    { f: { id: "apfel" } },
+  ];
+  const diffDays = (a, b) => Math.round(
+    (Date.parse(`${a}T00:00:00Z`) - Date.parse(`${b}T00:00:00Z`)) / 86400000,
+  );
+
+  assert.equal(
+    quality.plannerQualityChooseResult(
+      quality.plannerQualityCompanionResults(results, state, "2026-08-21", diffDays),
+      state,
+      "2026-08-21",
+      diffDays,
+      "hafer",
+    ).f.id,
+    "apfel",
+  );
+  quality.plannerQualityRecordMeal(
+    { active: true, foodIds: ["hafer", "apfel"] },
+    "2026-08-21",
+    state,
+  );
+  assert.equal(
+    quality.plannerQualityChooseResult(
+      quality.plannerQualityCompanionResults(results, state, "2026-08-22", diffDays),
+      state,
+      "2026-08-22",
+      diffDays,
+      "hafer",
+    ).f.id,
+    "brombeere",
+    "die Rotation darf den aktuellen Favoriten nicht künstlich sperren, wenn die Alternative erst am Vortag verwendet wurde",
+  );
+});
+
+test("Runtime rotiert Begleiter für Frühstück und Mittag über mehrere Tage", () => {
+  const names = [
+    "buildDay", "freshPlanContext", "introductionCandidate", "knownCandidate", "companionFor",
+    "planQualityIssues", "manualMealFor", "lockedMeal", "dueAllergen", "knownBase", "food",
+    "isTrustedBase", "diffDays", "lastDate", "activeMeal", "rank", "state",
+    "relatedFamilyFoodIds", "plannerAutomaticPairPreferencePenalty",
+  ];
+  const previous = Object.fromEntries(names.map((name) => [name, global[name]]));
+  const previousFlag = global.__plannerQualityRotationRuntimeInstalled;
+
+  try {
+    delete global.__plannerQualityRotationRuntimeInstalled;
+    const foods = [
+      { id: "hafer", name: "Hafer", allergenGroup: "", meals: ["breakfast", "lunch"], priority: 1 },
+      { id: "brombeere", name: "Brombeere", allergenGroup: "", meals: ["breakfast", "lunch"], priority: 2 },
+      { id: "apfel", name: "Apfel", allergenGroup: "", meals: ["breakfast", "lunch"], priority: 3 },
+    ];
+    global.state = {
+      foods,
+      settings: {},
+      deferred: {},
+      planLocks: {},
+      overrides: {},
+    };
+    global.food = (id) => global.state.foods.find((item) => item.id === id);
+    global.isTrustedBase = (item) => item?.id === "hafer";
+    global.dueAllergen = () => false;
+    global.knownBase = () => global.food("hafer");
+    global.lastDate = () => "";
+    global.diffDays = (a, b) => Math.round((Date.parse(`${a}T00:00:00Z`) - Date.parse(`${b}T00:00:00Z`)) / 86400000);
+    global.activeMeal = (meal) => ["breakfast", "lunch"].includes(meal);
+    global.rank = () => 2;
+    global.relatedFamilyFoodIds = (item) => [item.id];
+    global.plannerAutomaticPairPreferencePenalty = () => 0;
+    global.manualMealFor = () => null;
+    global.lockedMeal = () => null;
+    global.freshPlanContext = () => ({
+      reserved: new Set(),
+      introduced: [],
+      plannedUse: new Map(),
+      lastFocus: new Map(),
+      inventoryReserved: new Map(),
+      recipeReserved: new Map(),
+      recipePlannedUse: new Map(),
+      fullMilkDates: new Set(),
+    });
+    global.introductionCandidate = () => null;
+    global.knownCandidate = () => ({ f: global.food("hafer"), type: "bekannt" });
+    global.companionFor = (focus, meal) => global.state.foods.find(
+      (item) => item.id !== focus?.id && item.meals.includes(meal),
+    ) || null;
+    global.planQualityIssues = () => [];
+    global.buildDay = (date, index, context) => {
+      const focus = global.food("hafer");
+      const meals = ["breakfast", "lunch"].map((meal) => {
+        const companion = global.companionFor(focus, meal, date, "bekannt");
+        return {
+          meal,
+          active: true,
+          focusId: focus.id,
+          foodIds: [focus.id, companion.id],
+          baseFoodIds: [focus.id, companion.id],
+          sampleFoodIds: [],
+          type: "bekannt",
+        };
+      });
+      return {
+        date,
+        index,
+        meals,
+      };
+    };
+
+    assert.equal(quality.installPlannerQualityRotationRuntime(), true);
+    const context = global.freshPlanContext();
+    const first = global.buildDay("2026-08-20", 0, context);
+    const second = global.buildDay("2026-08-21", 1, context);
+    const third = global.buildDay("2026-08-22", 2, context);
+    assert.deepEqual(first.meals.map((meal) => meal.foodIds[1]), ["brombeere", "brombeere"]);
+    assert.deepEqual(second.meals.map((meal) => meal.foodIds[1]), ["apfel", "apfel"]);
+    assert.deepEqual(third.meals.map((meal) => meal.foodIds[1]), ["brombeere", "brombeere"]);
+  } finally {
+    for (const [name, value] of Object.entries(previous)) {
+      if (value === undefined) delete global[name];
+      else global[name] = value;
+    }
+    if (previousFlag === undefined) delete global.__plannerQualityRotationRuntimeInstalled;
+    else global.__plannerQualityRotationRuntimeInstalled = previousFlag;
+  }
+});
+
+test("später Ersatz nutzt den aktiven Planungskontext für die Begleiter-Rotation", () => {
+  const names = [
+    "buildDay", "freshPlanContext", "introductionCandidate", "knownCandidate", "companionFor",
+    "planQualityIssues", "manualMealFor", "lockedMeal", "dueAllergen", "knownBase", "food",
+    "isTrustedBase", "diffDays", "lastDate", "activeMeal", "rank", "state",
+    "relatedFamilyFoodIds", "plannerAutomaticPairPreferencePenalty", "usageCount", "effectivePriority",
+  ];
+  const previous = Object.fromEntries(names.map((name) => [name, global[name]]));
+  const previousFlag = global.__plannerQualityRotationRuntimeInstalled;
+
+  try {
+    delete global.__plannerQualityRotationRuntimeInstalled;
+    const foods = [
+      { id: "polenta", name: "Polenta", allergenGroup: "", meals: ["lunch"], priority: 1 },
+      { id: "zucchini", name: "Zucchini", allergenGroup: "", meals: ["lunch"], priority: 2 },
+      { id: "karotte", name: "Karotte", allergenGroup: "", meals: ["lunch"], priority: 3 },
+    ];
+    global.state = { foods, settings: {}, deferred: {}, planLocks: {}, overrides: {} };
+    global.food = (id) => global.state.foods.find((item) => item.id === id);
+    global.isTrustedBase = () => false;
+    global.dueAllergen = () => false;
+    global.knownBase = () => global.food("polenta");
+    global.lastDate = () => "";
+    global.diffDays = (a, b) => Math.round((Date.parse(`${a}T00:00:00Z`) - Date.parse(`${b}T00:00:00Z`)) / 86400000);
+    global.activeMeal = (meal) => meal === "lunch";
+    global.rank = () => 2;
+    global.relatedFamilyFoodIds = (item) => [item.id];
+    global.plannerAutomaticPairPreferencePenalty = () => 0;
+    global.usageCount = () => 0;
+    global.effectivePriority = () => 0;
+    global.manualMealFor = () => null;
+    global.lockedMeal = () => null;
+    global.freshPlanContext = () => ({
+      reserved: new Set(), introduced: [], plannedUse: new Map(), lastFocus: new Map(),
+      inventoryReserved: new Map(), recipeReserved: new Map(), recipePlannedUse: new Map(), fullMilkDates: new Set(),
+    });
+    global.introductionCandidate = () => null;
+    global.knownCandidate = (_meal, _date, _ctx, exclude = []) => exclude.includes("polenta")
+      ? null
+      : ({ f: global.food("polenta"), type: "bekannt" });
+    global.companionFor = (focus) => global.state.foods.find((item) => item.id !== focus?.id) || null;
+    global.planQualityIssues = () => [];
+    global.buildDay = () => ({ meals: [] });
+
+    assert.equal(quality.installPlannerQualityRotationRuntime(), true);
+    const context = global.freshPlanContext();
+    quality.plannerQualityRecordMeal(
+      { active: true, foodIds: ["polenta", "zucchini"] },
+      "2026-08-20",
+      context,
+    );
+
+    const replacement = global.plannerQualityWithActiveContext(context, () => {
+      const candidate = global.knownCandidate("lunch", "2026-08-21", context, []);
+      const companion = global.companionFor(candidate.f, "lunch", "2026-08-21", candidate.type);
+      return { candidate, companion };
+    });
+
+    assert.equal(replacement.candidate.f.id, "polenta");
+    assert.equal(replacement.companion.id, "karotte", "der bereits verwendete Zucchini-Partner soll bei verfügbarer Alternative rotieren");
+    assert.equal(
+      global.companionFor(global.food("polenta"), "lunch", "2026-08-21", "bekannt").id,
+      "zucchini",
+      "außerhalb des späten Ersatzpfads bleibt die unveränderte Basis-Auswahl aktiv",
+    );
+  } finally {
+    for (const [name, value] of Object.entries(previous)) {
+      if (value === undefined) delete global[name];
+      else global[name] = value;
+    }
+    if (previousFlag === undefined) delete global.__plannerQualityRotationRuntimeInstalled;
+    else global.__plannerQualityRotationRuntimeInstalled = previousFlag;
+  }
+});
+
+test("Runtime rotiert eine per Nicht verschieben quittierte Vortagsplanung am Folgetag", () => {
+  const names = [
+    "buildDay", "freshPlanContext", "introductionCandidate", "knownCandidate", "companionFor",
+    "planQualityIssues", "manualMealFor", "lockedMeal", "dueAllergen", "knownBase", "food",
+    "isTrustedBase", "diffDays", "lastDate", "activeMeal", "rank", "state",
+    "relatedFamilyFoodIds", "plannerAutomaticPairPreferencePenalty",
+  ];
+  const previous = Object.fromEntries(names.map((name) => [name, global[name]]));
+  const previousFlag = global.__plannerQualityRotationRuntimeInstalled;
+
+  try {
+    delete global.__plannerQualityRotationRuntimeInstalled;
+    const foods = [
+      { id: "bulgur", name: "Bulgur", allergenGroup: "", meals: ["breakfast"], priority: 1 },
+      { id: "brombeere", name: "Brombeere", allergenGroup: "", meals: ["breakfast"], priority: 2 },
+      { id: "apfel", name: "Apfel", allergenGroup: "", meals: ["breakfast"], priority: 3 },
+    ];
+    global.state = {
+      foods,
+      settings: {},
+      deferred: {},
+      planLocks: {
+        "2026-08-20|breakfast": {
+          planId: "yesterday-plan",
+          date: "2026-08-20",
+          meal: "breakfast",
+          focusId: "bulgur",
+          foodIds: ["bulgur", "brombeere"],
+        },
+      },
+      manualMeals: {},
+      overrides: {},
+      logs: [],
+      backupMeta: {
+        plannerLinking: {
+          rolloverHandled: {
+            "yesterday-plan": { action: "keep", at: "2026-08-21T07:00:00.000Z" },
+          },
+        },
+      },
+    };
+    global.food = (id) => global.state.foods.find((item) => item.id === id);
+    global.isTrustedBase = (item) => item?.id === "bulgur";
+    global.dueAllergen = () => false;
+    global.knownBase = () => global.food("bulgur");
+    global.lastDate = () => "";
+    global.diffDays = (a, b) => Math.round((Date.parse(`${a}T00:00:00Z`) - Date.parse(`${b}T00:00:00Z`)) / 86400000);
+    global.activeMeal = (meal) => meal === "breakfast";
+    global.rank = () => 2;
+    global.relatedFamilyFoodIds = (item) => [item.id];
+    global.plannerAutomaticPairPreferencePenalty = () => 0;
+    global.manualMealFor = () => null;
+    global.lockedMeal = () => null;
+    global.freshPlanContext = () => ({
+      reserved: new Set(),
+      introduced: [],
+      plannedUse: new Map(),
+      lastFocus: new Map(),
+      inventoryReserved: new Map(),
+      recipeReserved: new Map(),
+      recipePlannedUse: new Map(),
+      fullMilkDates: new Set(),
+    });
+    global.introductionCandidate = () => null;
+    global.knownCandidate = () => ({ f: global.food("bulgur"), type: "bekannt" });
+    global.companionFor = (focus) => global.state.foods.find(
+      (item) => item.id !== focus?.id && item.meals.includes("breakfast"),
+    ) || null;
+    global.planQualityIssues = () => [];
+    global.buildDay = (date, index, context) => {
+      const focus = global.food("bulgur");
+      const companion = global.companionFor(focus, "breakfast", date, "bekannt");
+      return {
+        date,
+        index,
+        meals: [{
+          meal: "breakfast",
+          active: true,
+          focusId: focus.id,
+          foodIds: [focus.id, companion.id],
+          baseFoodIds: [focus.id, companion.id],
+          sampleFoodIds: [],
+          type: "bekannt",
+        }],
+      };
+    };
+
+    assert.equal(quality.installPlannerQualityRotationRuntime(), true);
+    const context = global.freshPlanContext();
+    const day = global.buildDay("2026-08-21", 0, context);
+
+    assert.equal(day.meals[0].foodIds[1], "apfel");
+    assert.deepEqual(global.state.logs, [], "Rotation darf keinen Nutzungs-/Essenseintrag erzeugen");
+  } finally {
+    for (const [name, value] of Object.entries(previous)) {
+      if (value === undefined) delete global[name];
+      else global[name] = value;
+    }
+    if (previousFlag === undefined) delete global.__plannerQualityRotationRuntimeInstalled;
+    else global.__plannerQualityRotationRuntimeInstalled = previousFlag;
+  }
 });
 
 test("fällige Allergen-Warnung erklärt den fehlenden freien Slot statt nur 'fällig' zu melden", () => {

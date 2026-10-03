@@ -112,6 +112,12 @@
     const from = state.settings?.planFrom || (typeof today === "function" ? today() : "");
     if (!from || typeof addDays !== "function") return;
     clearReplannablePlanState(state, from, 7, addDays);
+    // Repeated explicit replans should explore equally suitable candidates.
+    // Stored choices and the underlying suitability gates remain unchanged.
+    if (state.settings) {
+      state.settings.planRebuildGeneration =
+        (Math.max(0, Number(state.settings.planRebuildGeneration) || 0) + 1) % 10000;
+    }
     if (typeof save === "function") save();
     if (typeof renderAll === "function") renderAll();
   }

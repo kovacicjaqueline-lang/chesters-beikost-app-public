@@ -39,6 +39,19 @@ test("Icon-Rendergrößen: FOOD-Detail bleibt 96px", () => {
   );
 });
 
+test("Icon-Rendergrößen: Recipe-Detailhero bleibt quadratisch 96px", () => {
+  assert.match(
+    styles,
+    /\.catalog-detail-hero-icon \.recipe-illustration\{\s*width:96px;\s*height:96px;\s*flex-basis:96px;\s*\}/,
+    "Recipe-Detailhero darf durch das geerbte Flex-Basis-Token nicht schmal werden",
+  );
+  assert.match(
+    styles,
+    /\.catalog-detail-hero-icon \.recipe-illustration\{\s*width:78px;\s*height:78px;\s*flex-basis:78px;\s*\}/,
+    "mobiler Recipe-Detailhero muss ebenfalls quadratisch bleiben",
+  );
+});
+
 test("Icon-Rendergrößen: Recipe-Karten bleiben 44px bzw. 40px schmal", () => {
   assert.match(
     styles,

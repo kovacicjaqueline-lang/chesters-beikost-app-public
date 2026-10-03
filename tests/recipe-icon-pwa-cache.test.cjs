@@ -8,6 +8,7 @@ const path = require("node:path");
 const ROOT = path.resolve(__dirname, "..");
 const index = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
 const worker = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
+const core = fs.readFileSync(path.join(ROOT, "sw-core.js"), "utf8");
 const icons = fs.readFileSync(path.join(ROOT, "js/icons.js"), "utf8");
 const recipeCss = fs.readFileSync(path.join(ROOT, "ui-meal-editor-footer.css"), "utf8");
 const plannedRecipeDetails = fs.readFileSync(
@@ -42,6 +43,49 @@ test("graded-bite-Wraps haben eigene Recipe-V2-Assets und werden beim ersten Off
     assert.ok(worker.includes(`"./${asset}"`), `${name}: PWA-Precache fehlt`);
   }
   assert.notEqual(expected["Pizza Wrap"], expected["Chicken Fajita Wrap"]);
+});
+
+
+test("Bulgur- und Quinoa-Rezepte haben eigene Recipe-V2-Assets, Mapping und PWA-Precache", () => {
+  const expected = {
+    "Quinoa-Huhn-Süßkartoffel-Finger": "assets/illustrations-v2/recipes/quinoa-huhn-suesskartoffel-finger.svg",
+    "Quinoa-Linsen-Gemüse-Khichdi": "assets/illustrations-v2/recipes/quinoa-linsen-gemuese-khichdi.svg",
+    "Quinoa-Gemüse-Puffer": "assets/illustrations-v2/recipes/quinoa-gemuese-puffer.svg",
+    "Bulgur-Zucchini-Ei": "assets/illustrations-v2/recipes/bulgur-zucchini-ei.svg",
+    "Bulgur-Gemüse-Köfte": "assets/illustrations-v2/recipes/bulgur-gemuese-koefte.svg",
+    "Bulgur-Linsen-Suppe": "assets/illustrations-v2/recipes/bulgur-linsen-suppe.svg",
+  };
+  for (const [name, asset] of Object.entries(expected)) {
+    assert.ok(fs.existsSync(path.join(ROOT, asset)), name + ": eigenes Recipe-V2-Asset fehlt");
+    assert.ok(icons.includes('"' + name + '": "' + asset + '"'), name + ": Runtime-Mapping fehlt");
+    assert.ok(worker.includes('"./' + asset + '"'), name + ": PWA-Precache fehlt");
+  }
+});
+
+test("Fischküchlein haben eigene Recipe-V2-Assets, Mapping und PWA-Precache", () => {
+  const expected = {
+    "Forelle-Kartoffel-Bällchen": "assets/illustrations-v2/recipes/forelle-kartoffel-baellchen.svg",
+    "Kabeljau-Süßkartoffel-Fischküchlein": "assets/illustrations-v2/recipes/kabeljau-suesskartoffel-fischkuechlein.svg",
+  };
+  for (const [name, asset] of Object.entries(expected)) {
+    assert.ok(fs.existsSync(path.join(ROOT, asset)), name + ": eigenes Recipe-V2-Asset fehlt");
+    assert.ok(icons.includes('"' + name + '": "' + asset + '"'), name + ": Runtime-Mapping fehlt");
+    assert.ok(worker.includes('"./' + asset + '"'), name + ": PWA-Precache fehlt");
+  }
+});
+
+test("Hirsotto hat ein eigenes Recipe-V2-Asset, Mapping und Core-Precache", () => {
+  const asset = "assets/illustrations-v2/recipes/hirsotto.svg";
+  assert.ok(fs.existsSync(path.join(ROOT, asset)), "Hirsotto: eigenes Recipe-V2-Asset fehlt");
+  assert.ok(icons.includes(`"Hirsotto": "${asset}"`), "Hirsotto: kanonisches Mapping fehlt");
+  assert.ok(core.includes(`"./${asset}"`), "Hirsotto: Core-Precache fehlt");
+});
+
+test("Herzhafte Hirseschnitten haben ein eigenes Recipe-V2-Asset, Mapping und Runtime-Precache", () => {
+  const asset = "assets/illustrations-v2/recipes/herzhafte-hirseschnitten.svg";
+  assert.ok(fs.existsSync(path.join(ROOT, asset)), "Hirseschnitten: eigenes Recipe-V2-Asset fehlt");
+  assert.ok(icons.includes(`"Herzhafte Hirseschnitten": "${asset}"`), "Hirseschnitten: kanonisches Mapping fehlt");
+  assert.ok(worker.includes(`"./${asset}"`), "Hirseschnitten: Runtime-Precache fehlt");
 });
 
 test("der frisch gecachte Stylesheet enthält die zentrierte Recipe-V2-Brei-Normalisierung", () => {

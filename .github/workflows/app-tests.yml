@@ -2,38 +2,26 @@ name: App regression tests
 
 on:
   push:
-    branches: [main]
-    paths:
-      - 'index.html'
-      - '**/*.css'
-      - 'sw.js'
-      - 'sw-core.js'
-      - 'app.js'
-      - 'js/**'
-      - 'data/**'
-      - 'assets/illustrations-v2/**'
-      - 'tests/**'
-      - 'browser-tests/**'
-      - 'scripts/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - '.github/workflows/app-tests.yml'
+    branches:
+      - main
+      - test/audit-selective-runner
+    paths-ignore:
+      - 'docs/**'
+      - 'README*'
+      - 'AGENTS.md'
+      - 'VERSION.json'
+      - 'wrangler.jsonc'
+      - 'js/wrangler.jsonc'
+      - '.gitignore'
   pull_request:
-    paths:
-      - 'index.html'
-      - '**/*.css'
-      - 'sw.js'
-      - 'sw-core.js'
-      - 'app.js'
-      - 'js/**'
-      - 'data/**'
-      - 'assets/illustrations-v2/**'
-      - 'tests/**'
-      - 'browser-tests/**'
-      - 'scripts/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - '.github/workflows/app-tests.yml'
+    paths-ignore:
+      - 'docs/**'
+      - 'README*'
+      - 'AGENTS.md'
+      - 'VERSION.json'
+      - 'wrangler.jsonc'
+      - 'js/wrangler.jsonc'
+      - '.gitignore'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -79,7 +67,20 @@ jobs:
         run: npm ci
 
       - name: Run icon verification gate
-        run: npm run verify:icons
+        shell: bash
+        run: |
+          mkdir -p artifacts/ci-logs
+          set -o pipefail
+          npm run verify:icons 2>&1 | tee artifacts/ci-logs/test-output.log
+
+      - name: Upload test output
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-output-${{ github.run_id }}-icons
+          path: artifacts/ci-logs/test-output.log
+          if-no-files-found: warn
+          retention-days: 7
 
   scope:
     if: ${{ github.event_name == 'push' || !startsWith(github.head_ref, 'icons/') }}
@@ -143,7 +144,20 @@ jobs:
         run: npm ci
 
       - name: Run fast verification gate
-        run: npm run verify:fast
+        shell: bash
+        run: |
+          mkdir -p artifacts/ci-logs
+          set -o pipefail
+          npm run verify:fast 2>&1 | tee artifacts/ci-logs/test-output.log
+
+      - name: Upload test output
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-output-${{ github.run_id }}-fast
+          path: artifacts/ci-logs/test-output.log
+          if-no-files-found: warn
+          retention-days: 7
 
   test:
     needs: scope
@@ -161,6 +175,7 @@ jobs:
           - shard: 2
             run_fast: true
     env:
+      BROWSER_TEST_CONCURRENCY: 1
       BROWSER_TEST_SHARD: ${{ matrix.shard }}/2
     steps:
       - name: Checkout repository
@@ -178,11 +193,28 @@ jobs:
 
       - name: Run fast verification gate
         if: ${{ matrix.run_fast }}
-        run: npm run verify:fast
+        shell: bash
+        run: |
+          mkdir -p artifacts/ci-logs
+          set -o pipefail
+          npm run verify:fast 2>&1 | tee artifacts/ci-logs/test-output.log
 
       - name: Run browser regression shard
         if: ${{ !cancelled() }}
-        run: npm run test:browser
+        shell: bash
+        run: |
+          mkdir -p artifacts/ci-logs
+          set -o pipefail
+          npm run test:browser:standard 2>&1 | tee -a artifacts/ci-logs/test-output.log
+
+      - name: Upload test output
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-output-${{ github.run_id }}-shard-${{ matrix.shard }}
+          path: artifacts/ci-logs/test-output.log
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Capture mobile CI screenshots
         if: ${{ !cancelled() && matrix.shard == 1 }}
@@ -195,6 +227,15 @@ jobs:
           name: mobile-ui-screenshots-${{ github.run_id }}
           path: artifacts/ci-mobile-screenshots/
           if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload app resume metrics
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-resume-metrics-${{ github.run_id }}-shard-${{ matrix.shard }}
+          path: artifacts/browser-tests/app-resume/
+          if-no-files-found: ignore
           retention-days: 7
 
       - name: Upload plan checks UX screenshots
@@ -211,6 +252,55 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: browser-regression-diagnostics-${{ github.run_id }}-shard-${{ matrix.shard }}
+          path: artifacts/browser-tests/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # Keep slow measurement regressions outside the normal browser shards.
+  browser-performance:
+    needs: scope
+    if: ${{ needs.scope.outputs.browser_required == 'true' }}
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
+    timeout-minutes: 20
+    env:
+      BROWSER_TEST_CONCURRENCY: 1
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run browser performance regressions
+        shell: bash
+        run: |
+          mkdir -p artifacts/ci-logs
+          set -o pipefail
+          npm run test:browser:performance 2>&1 | tee artifacts/ci-logs/test-output.log
+
+      - name: Upload test output
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-output-${{ github.run_id }}-performance
+          path: artifacts/ci-logs/test-output.log
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Upload browser performance diagnostics
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-performance-diagnostics-${{ github.run_id }}
           path: artifacts/browser-tests/
           if-no-files-found: ignore
           retention-days: 7

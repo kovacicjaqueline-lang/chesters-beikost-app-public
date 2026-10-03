@@ -89,7 +89,7 @@ try {
         createdAt: `${window.__beikostTest.addDays(current, -1)}T08:00:00.000Z`,
       },
     ];
-    state.settings.phaseSelected = "aufbau";
+    state.settings.phaseSelected = "drei";
     state.settings.planFrom = current;
     state.shoppingHints = {};
     state.followUps = {};
@@ -107,6 +107,14 @@ try {
     for (const id of ["hafer", "banane", "apfel", "birne"]) {
       const item = state.foods.find((food) => food.id === id);
       if (item) item.manualStatus = "Regelmäßig";
+    }
+    for (const item of state.foods) {
+      if (item.allergenGroup) {
+        item.active = false;
+        item.manualStatus = "auto";
+      } else if (item.active && item.category !== "Fett" && item.category !== "Kraut/Gewürz" && item.manualStatus === "auto") {
+        item.manualStatus = "Verträgliche Basis";
+      }
     }
 
     const currentKey = `${current}|breakfast`;
@@ -165,9 +173,12 @@ try {
     return { current, future, currentKey, futureKey, carriedPlanId, initialLogCount: state.logs.length };
   });
 
-  const actions = page.locator("#todayCard details.meal-plan-actions").filter({
+  await page.locator('nav button[data-view="plan"]').click();
+  const planMissingButton = page.locator(`#blockPlan .missingIngredient[data-missing-date="${setup.current}"][data-missing-meal="breakfast"]`);
+  const actions = page.locator("#blockPlan details.meal-plan-actions").filter({
     has: page.locator(`.missingIngredient[data-missing-date="${setup.current}"][data-missing-meal="breakfast"]`),
   }).first();
+  await actions.waitFor({ state: "visible" });
   await actions.locator(":scope > summary").click();
   const missingButton = actions.locator(".missingIngredient");
   await missingButton.waitFor();
@@ -179,6 +190,27 @@ try {
   assert.equal(await page.locator("#genericTitle").innerText(), "Welche Zutat fehlt?");
   assert.equal(await page.locator('.missingIngredientChoice[data-food="banane"]').count(), 1);
   assert.equal(await page.locator('.missingIngredientChoice[data-food="hafer"]').count(), 1);
+
+  await page.evaluate(({ currentKey }) => {
+    const original = window.showToast;
+    window.__missingIngredientAtToast = null;
+    window.showToast = function captureVisiblePlanAtToast(message, ...args) {
+      if (message.includes("Der Plan wurde angepasst")) {
+        const state = window.__beikostTest.getState();
+        const meal = state.manualMeals?.[currentKey] || state.planLocks?.[currentKey] || null;
+        const missingButton = [...document.querySelectorAll("#blockPlan .missingIngredient")].find((button) =>
+          button.dataset.missingDate === currentKey.split("|")[0] && button.dataset.missingMeal === "breakfast",
+        );
+        window.__missingIngredientAtToast = {
+          activeView: document.querySelector(".view.active")?.id || "",
+          visibleMealText: missingButton?.closest(".mealbox")?.innerText || "",
+          foodIds: [...(meal?.foodIds || [])],
+          foodNames: Object.fromEntries(state.foods.map((item) => [item.id, item.name])),
+        };
+      }
+      return original.call(this, message, ...args);
+    };
+  }, setup);
 
   const screenshotDir = path.join(root, "artifacts", "browser-tests", "plan-checks-ux-webkit");
   fs.mkdirSync(screenshotDir, { recursive: true });
@@ -220,6 +252,14 @@ try {
   assert.equal(after.currentMeal.recipeName, "Obst-Haferbrei");
   assert.equal(after.currentMeal.foodIds.includes("banane"), false);
   assert.ok(after.currentMeal.foodIds.some((id) => ["apfel", "birne"].includes(id)), "fehlendes Obst wird innerhalb der Recipe-V2-Auswahl ersetzt");
+  const visibleAtToast = await page.evaluate(() => window.__missingIngredientAtToast);
+  assert.equal(visibleAtToast?.activeView, "plan", "der echte Auslöser sitzt in der Plan-Ansicht");
+  assert.ok(visibleAtToast?.foodIds.includes("apfel") || visibleAtToast?.foodIds.includes("birne"), "der aktuelle Plan-State enthält vor dem Toast eine verfügbare Rezeptalternative");
+  assert.ok(
+    visibleAtToast.visibleMealText.includes(visibleAtToast.foodNames.apfel) ||
+    visibleAtToast.visibleMealText.includes(visibleAtToast.foodNames.birne),
+    "die alternative Zutat muss im echten Plan-DOM sichtbar sein, bevor der Erfolgshinweis erscheint",
+  );
   assert.equal(after.futureManual, null, "zukünftiger offener manueller Banane-Slot wird freigegeben");
   assert.equal(after.futureLock, null, "freigegebener Zukunftsslot bleibt ohne pauschalen Auto-Lock");
   assert.ok(after.futurePlanned, "freigegebener Zukunftsslot darf dynamisch neu geplant werden");

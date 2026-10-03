@@ -18,9 +18,16 @@ function createHarness({ withAnimationFrame = true } = {}) {
   const events = [];
   const raf = [];
   const timers = [];
+  const documentListeners = {};
   const sandbox = {
     console,
     Promise,
+    document: {
+      readyState: "loading",
+      addEventListener(type, callback) { documentListeners[type] = callback; },
+      querySelector: () => ({ id: "home" }),
+      getElementById: () => null,
+    },
     renderAll: () => events.push("render"),
     renderCurrentView: () => events.push("current"),
     setTimeout: (callback) => { timers.push(callback); return timers.length; },
@@ -28,7 +35,7 @@ function createHarness({ withAnimationFrame = true } = {}) {
   if (withAnimationFrame) sandbox.requestAnimationFrame = (callback) => { raf.push(callback); return raf.length; };
   vm.createContext(sandbox);
   vm.runInContext(source, sandbox, { filename: "js/deferred-render.js" });
-  return { sandbox, events, raf, timers };
+  return { sandbox, events, raf, timers, documentListeners };
 }
 
 {
@@ -67,21 +74,40 @@ function createHarness({ withAnimationFrame = true } = {}) {
   assert.deepEqual(callbacks, ["after-render"]);
 }
 
+
 {
   const h = createHarness();
+  const activeView = { id: "home" };
+  h.sandbox.document = { querySelector: () => activeView };
   const callbacks = [];
   h.sandbox.runWithDeferredCurrentViewRender(() => {
     h.events.push("save");
     h.sandbox.renderAll();
-    h.events.push("toast-ready");
   }, () => callbacks.push("after-current-view"));
 
-  assert.deepEqual(h.events, ["save", "toast-ready"], "Protokoll-Speichern darf keinen synchronen Render auslösen");
-  assert.equal(h.raf.length, 1, "Der gezielte View-Render muss bis nach der nächsten Paint-Gelegenheit warten");
+  assert.deepEqual(h.events, ["save"], "Speichern darf die Navigation nicht durch einen synchronen Render blockieren");
+  h.raf.shift()();
+  assert.deepEqual(h.events, ["save"], "Der gezielte Render muss nach der Paint-Gelegenheit liegen");
+  h.timers.shift()();
+  assert.deepEqual(h.events, ["save", "current"]);
+  assert.deepEqual(callbacks, ["after-current-view"]);
+}
+
+{
+  const h = createHarness();
+  const activeView = { id: "home" };
+  h.sandbox.document = { querySelector: () => activeView };
+  const callbacks = [];
+  h.sandbox.runWithDeferredCurrentViewRender(() => {
+    h.sandbox.renderAll();
+  }, () => callbacks.push("stale-view-callback"));
+
+  activeView.id = "foods";
+  h.events.push("tab:foods");
   h.raf.shift()();
   h.timers.shift()();
-  assert.deepEqual(h.events, ["save", "toast-ready", "current"], "Ein angeforderter Voll-Render muss beim Protokoll auf die aktuelle Ansicht begrenzt werden");
-  assert.deepEqual(callbacks, ["after-current-view"]);
+  assert.deepEqual(h.events, ["tab:foods"], "Ein inzwischen geöffneter Haupttab darf keinen veralteten Save-Render erhalten");
+  assert.deepEqual(callbacks, [], "Save-Nacharbeit darf nach einem Tabwechsel nicht in die neue Ansicht scrollen");
 }
 
 {
@@ -99,10 +125,37 @@ function createHarness({ withAnimationFrame = true } = {}) {
   h.sandbox.renderViewAfterNextPaint("plan", (id) => renderedViews.push(id));
   h.sandbox.renderViewAfterNextPaint("prep", (id) => renderedViews.push(id));
 
-  assert.equal(h.raf.length, 1, "Schnelle Tabwechsel müssen in einer Paint-Gelegenheit gebündelt werden");
+  assert.equal(h.raf.length, 1, "Schnelle Tabwechsel müssen in einer Render-Gelegenheit gebündelt werden");
   h.raf.shift()();
+  assert.deepEqual(renderedViews, [], "Der Prep-Render darf den ersten Paint nicht im Animationsframe blockieren");
+  assert.equal(h.timers.length, 1, "Der vollständige Prep-Render folgt nach der sichtbaren Ladeansicht");
   h.timers.shift()();
-  assert.deepEqual(renderedViews, ["prep"], "Nur der zuletzt angeforderte Tab darf gerendert werden");
+  assert.deepEqual(renderedViews, ["prep"]);
+}
+
+{
+  const h = createHarness();
+  const renderedViews = [];
+  h.sandbox.renderViewAfterNextPaint("plan", (id) => renderedViews.push(id));
+
+  h.raf.shift()();
+  assert.deepEqual(renderedViews, [], "Andere Tabs behalten die sichtbare Paint-Gelegenheit vor der teuren Renderarbeit");
+  assert.equal(h.timers.length, 1);
+  h.timers.shift()();
+  assert.deepEqual(renderedViews, ["plan"]);
+}
+
+{
+  const h = createHarness();
+  const renderedViews = [];
+  h.sandbox.renderViewAfterNextPaint("prep", (id) => renderedViews.push(id));
+
+  h.raf.shift()();
+  assert.deepEqual(renderedViews, [], "Bei schneller Weiternavigation darf Prep den finalen Zieltab nicht vorziehen");
+  assert.equal(h.timers.length, 1);
+  h.sandbox.renderViewAfterNextPaint("foods", (id) => renderedViews.push(id));
+  h.timers.shift()();
+  assert.deepEqual(renderedViews, ["foods"], "Nur der zuletzt angeforderte Tab darf gerendert werden");
 }
 
 {
@@ -117,46 +170,42 @@ function createHarness({ withAnimationFrame = true } = {}) {
 
 {
   const h = createHarness();
-  let undo = null;
-  const toasts = [];
-  h.sandbox.document = {
-    getElementById: () => null,
-    querySelector: () => null,
-  };
-  h.sandbox.state = { logs: [] };
-  h.sandbox.pendingLog = {};
-  h.sandbox.showToast = (message, undoFn = null) => {
-    toasts.push(message);
-    if (typeof undoFn === "function") undo = undoFn;
-  };
-  h.sandbox.saveLog = () => {
-    h.sandbox.state.logs.push({ id: "log-1" });
-    h.sandbox.renderAll();
-    h.sandbox.showToast("Eintrag gespeichert.", () => {
-      h.sandbox.state.logs = [];
-      h.sandbox.renderAll();
-      h.sandbox.showToast("Eintrag rückgängig gemacht.");
-    });
-  };
+  const renderedViews = [];
+  h.sandbox.renderViewAfterNextPaint("prep", (id) => renderedViews.push(id));
+  h.raf.shift()();
+  assert.equal(h.timers.length, 1, "Nach der ersten Paint-Gelegenheit wartet der Prep-Render auf den Task");
+  h.sandbox.cancelDeferredViewRender();
+  h.timers.shift()();
+  assert.deepEqual(renderedViews, [], "Abbruch nach dem Frame muss auch den bereits geplanten Prep-Render verwerfen");
+}
 
-  h.sandbox.installSaveUiLatencyFlows();
-  h.sandbox.saveLog();
+{
+  const h = createHarness();
+  const renderedViews = [];
+  h.sandbox.renderView = (id) => renderedViews.push(id);
+  h.sandbox.save = () => {};
+  h.sandbox.installViewRenderCache();
 
-  assert.equal(h.sandbox.state.logs.length, 1, "State und Persistenzpfad müssen vor dem Render abgeschlossen sein");
-  assert.deepEqual(h.events, [], "Der Log-Save-Wrapper darf den bisherigen renderAll-Aufruf nicht direkt ausführen");
-  assert.deepEqual(toasts, ["Eintrag gespeichert."], "Der sichtbare Speicherhinweis muss ohne Render-Wartezeit erscheinen");
-  assert.equal(typeof undo, "function", "Rückgängig muss erhalten bleiben");
+  // First render establishes the cached signature. A real nav click marks the
+  // following deferred render as navigation-only, so an unchanged view can be
+  // skipped without losing the final tab selection.
+  h.sandbox.renderView("prep");
+  h.documentListeners.click({ target: { closest: () => true } });
+  h.sandbox.renderViewAfterNextPaint("prep", (id) => h.sandbox.renderView(id));
+  h.raf.shift()();
+  h.timers.shift()(); // end the click-scoped navigation marker
+  h.timers.shift()(); // execute the deferred Prep render
+  assert.deepEqual(renderedViews, ["prep"], "Unverändertes Prep darf bei Tabnavigation aus dem View-Render-Cache kommen");
+
+  // Saves invalidate the signature. The same deferred navigation must render
+  // again after state changes instead of incorrectly reusing stale content.
+  h.sandbox.save();
+  h.documentListeners.click({ target: { closest: () => true } });
+  h.sandbox.renderViewAfterNextPaint("prep", (id) => h.sandbox.renderView(id));
   h.raf.shift()();
   h.timers.shift()();
-  assert.deepEqual(h.events, ["current"], "Nach dem Speichern darf nur die aktuell sichtbare Ansicht neu gerendert werden");
-
-  undo();
-  assert.equal(h.sandbox.state.logs.length, 0, "Rückgängig muss den gespeicherten Zustand weiterhin wiederherstellen");
-  assert.deepEqual(h.events, ["current"], "Auch Rückgängig darf keinen synchronen Voll-Render auslösen");
-  assert.deepEqual(toasts, ["Eintrag gespeichert.", "Eintrag rückgängig gemacht."]);
-  h.raf.shift()();
   h.timers.shift()();
-  assert.deepEqual(h.events, ["current", "current"], "Rückgängig muss ebenfalls nur die aktuell sichtbare Ansicht aktualisieren");
+  assert.deepEqual(renderedViews, ["prep", "prep"], "Ein Save muss den View-Cache vor dem nächsten Prep-Render invalidieren");
 }
 
 console.log("Deferred full-render scheduling regression passed.");

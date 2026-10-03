@@ -15,6 +15,8 @@ Es ist **Fachdokumentation**, keine neue Regelquelle. Wo eine Regel nicht fachli
 - ⚠️ **Soll/Ist-Gap** – fachlich bereits beschlossen, aber auf `main` noch nicht vollständig als Produktverhalten nachgewiesen/umgesetzt.
 - 🔴 **offen** – noch fachlich zu entscheiden; nicht stillschweigend implementieren.
 
+Bei Abschnitten, deren Implementierungsstatus sich durch den Merge desselben PRs ändert, kann die Überschrift bewusst ohne statischen Statusmarker bleiben. Maßgeblich ist dann der jeweilige Repository-Stand zusammen mit dem dokumentierten Vertrag.
+
 ---
 
 # 1. Historischer Ausgangspunkt: Phasenmodell-v2
@@ -27,12 +29,12 @@ Alter, gegessene Grammmenge und Konsistenz wechseln die Phase nicht automatisch.
 
 Der Übergang in die nächste Phase ist entwicklungsorientiert zu empfehlen und wird bewusst durch die Nutzerin bestätigt.
 
-## 1.1 Automatische Mahlzeitenslots ✅ main
+## 1.1 Automatische Mahlzeitenslots
 
 | Phase | Automatisch geplante Slots |
 |---|---|
 | 1 – Kennenlernen | Mittagessen |
-| 2 – Mahlzeitenaufbau | Frühstück + Mittagessen |
+| 2 – Mahlzeitenaufbau | Mittagessen + Abendessen |
 | 3 – Drei Hauptmahlzeiten | Frühstück + Mittagessen + Abendessen |
 | 4 – Familienkost | Frühstück + Mittagessen + Snack + Abendessen |
 
@@ -50,7 +52,7 @@ Zusätzlich gilt:
 - Die Texturentwicklung bleibt separat dokumentiert.
 - Historische Texturinformationen dürfen durch spätere Planner-Erweiterungen nicht stillschweigend umgedeutet werden.
 
-## 1.3 PHASE-TRANSITION – entwicklungsorientierte Empfehlung ✅ main
+## 1.3 PHASE-TRANSITION – entwicklungsorientierte Empfehlung
 
 Der Readiness-Core beantwortet **ausschließlich**, ob der Übergang in die nächste Beikostphase empfohlen werden kann. Er verändert `phaseSelected` nicht, ruft keinen Phasenwechsel auf und bleibt vollständig getrennt von der bestehenden bewussten Nutzerbestätigung.
 
@@ -68,8 +70,8 @@ Die Übergänge verwenden dieselbe Kernregel:
 
 | Aktuelle Phase | Nächste Phase | Neuer Auto-Slot | Spezifische Bedeutung von `additionalMealCue` |
 |---|---|---|---|
-| Kennenlernen | Mahlzeitenaufbau | Frühstück | Hunger/Interesse an einer zusätzlichen regelmäßigen Frühstücks-Essensgelegenheit |
-| Mahlzeitenaufbau | Drei Hauptmahlzeiten | Abendessen | Hunger/Interesse an einer zusätzlichen regelmäßigen Abend-Essensgelegenheit |
+| Kennenlernen | Mahlzeitenaufbau | Abendessen | Hunger/Interesse an einer zusätzlichen regelmäßigen Abend-Essensgelegenheit |
+| Mahlzeitenaufbau | Drei Hauptmahlzeiten | Frühstück | Hunger/Interesse an einer zusätzlichen regelmäßigen Frühstücks-Essensgelegenheit |
 | Drei Hauptmahlzeiten | Familienkost | Snack | tatsächlicher regelmäßiger Zusatzbedarf zwischen den drei Hauptmahlzeiten |
 | Familienkost | – | – | terminale Phase; keine weitere Empfehlung |
 
@@ -110,7 +112,7 @@ Für jeden aktiven Mahlzeitenslot gilt fachlich folgende Reihenfolge:
 
 1. **bestehende manuelle/feste Planung respektieren**;
 2. **harte Auto-Eignung prüfen**;
-3. in Frühstück, Mittagessen und Abendessen bei geeigneten offenen Nicht-Allergenen **pro Mahlzeit höchstens eine Kostprobe/Einführung** vor einer rein bekannten Planung bevorzugen; eine Allergen-Einführung oder gezielte Allergen-Wiederholung bleibt dagegen die einzige Lernaufgabe des Tages;
+3. in Frühstück, Mittagessen und Abendessen geeignete neue Lebensmittel (höchstens eine Lernaufgabe pro Tag) und vorhandene Rezept-/FOOD-Planung verwenden;
 4. ansonsten vorhandenen geeigneten Rezeptvorrat bzw. bekannte Planung verwenden;
 5. FOOD-Begleiter nur innerhalb der bestehenden Gates auswählen;
 6. Recipe-first darf eine fachlich passende Rezeptdarstellung herstellen;
@@ -155,6 +157,13 @@ Diese Auto-Eignung gilt nicht nur für den Fokus, sondern auch für:
 
 Custom-FOODs erhalten keine pauschale Frühstück/Mittag/Abend-Eignung, sondern kategoriespezifische Defaults.
 
+Für den automatischen Frühstücksslot gilt zusätzlich ein Struktur-Gate: Ein Frühstück
+benötigt eine geeignete Hauptbasis, typischerweise Getreide/Stärke. Reine Obstangebote
+oder reine Obst-Rezepte sind als Kostprobe beziehungsweise Einführung zulässig, gelten
+aber nicht als Frühstück. Fehlt eine verträgliche Frühstücksbasis, führt der Planner
+zuerst eine passende Basis ein; manuelle Mahlzeiten, Locks und ausdrücklich gesetzte
+Kostproben bleiben davon unberührt.
+
 Referenzfall:
 
 - Banane + Pferdefleisch zum Frühstück war ein Mahlzeiteneignungsfehler, kein Anlass für eine allgemeine Pair-Blacklist.
@@ -180,7 +189,8 @@ Das Bestandsmodell leitet automatische Statuswerte aus protokollierten Gaben ab 
 Wichtig für den Planner:
 
 - ein bereits erfolgreich probiertes FOOD kann als bekannte Komponente kombinierbar sein;
-- ein bloß erfolgreich probiertes FOOD ist **keine Pflicht-Wiederholung** und blockiert keine geeignete neue Nicht-Allergen-Einführung;
+- ein FOOD mit ausschließlich historischen `tried`-Einträgen erhält nach der Migration keinen gezielten Wiederholungsvorrang; eine geeignete offene Nicht-Allergen-Einführung geht vor;
+- ein bereits erfolgreich gegessenes gewöhnliches FOOD ist **keine Pflicht-Wiederholung** und blockiert ebenfalls keine geeignete neue Nicht-Allergen-Einführung;
 - eine **Hauptbasis** benötigt die strengere bestehende Basis-Eignung;
 - `Pausiert` bleibt ein harter Ausschluss im automatischen Pfad.
 
@@ -218,20 +228,19 @@ Die bestehende strenge Editor-Validierung wird nicht gelockert. Der Planner muss
 
 # 5. Einführung neuer Lebensmittel und Wiederholungen
 
-## 5.1 Tägliche Einführung pro Hauptmahlzeit ✅ main
+## 5.1 Begrenzte automatische Einführung gewöhnlicher Lebensmittel
 
-Für **Nicht-Allergene** gilt:
+Für gewöhnliche Nicht-Hauptallergene gilt:
 
-- an jedem Planungstag dürfen geeignete offene FOODs eingeführt werden;
-- Frühstück, Mittagessen und Abendessen dürfen jeweils **höchstens ein** neues bzw. als Kostprobe behandeltes FOOD enthalten;
-- wenn für einen freien automatischen Hauptmahlzeitenslot ein geeignetes offenes Nicht-Allergen vorhanden ist, wird dieses gegenüber einer rein bekannten Mahlzeit bevorzugt;
-- ein bereits erfolgreich probiertes FOOD darf bekannt kombiniert werden, blockiert aber keine neue Einführung und wird nicht allein wegen `Probiert` zur Pflicht-Wiederholung;
-- eine echte Ablehnung (`not_accepted`), ein bewusstes Follow-up oder ein expliziter Override darf weiterhin eine gezielte Wiederholung auslösen;
-- manuelle Mahlzeiten, Locks, protokollierte Mahlzeiten, Overrides und bestehende harte Gates bleiben geschützt.
+- der Planner darf an einem nach `newFoodEvery` fälligen Tag ein geeignetes offenes FOOD als einzige neue Kostprobe des Tages in einem freien Hauptmahlzeitenslot vorschlagen; die Einstellung bedeutet den Mindestabstand in Tagen zwischen solchen automatischen neuen Kostproben;
+- manuelle/feste Kostproben und ausdrücklich überschriebene Einführungen bleiben davon unberührt; fällige Allergenpflege und gezielte Wiederholungen behalten ihre jeweils getrennte Fälligkeit;
+- ein offenes FOOD darf weiterhin über eine manuelle Mahlzeit oder ein passendes Rezept erstmals angeboten werden;
+- ein erfolgreich gegessenes FOOD wird danach normal kombinierbar und erzeugt keine Pflicht-Wiederholung;
+- historische `tried`-Protokolle werden zu `eaten` migriert; neue Protokolle bieten nur „Gegessen“ als positives Ergebnis an;
+- eine echte Ablehnung (`not_accepted`) bleibt als gezieltes bewusstes Follow-up möglich;
+- explizite manuelle Mahlzeiten, Locks, Overrides und harte Eignungs-/Safety-Gates bleiben unverändert geschützt.
 
-Pro Mahlzeit bleibt damit höchstens **ein unbekanntes FOOD** zulässig. Recipe-first darf diesen einen Sample-Pfad darstellen oder mit bekannten geeigneten Zutaten ergänzen, aber kein zweites unbekanntes FOOD hinzufügen.
-
-Für **Allergene** gilt die strengere Tagesregel aus Abschnitt 6: Eine Allergen-Einführung oder gezielte Allergen-Wiederholung ist die einzige automatische Lernaufgabe dieses Tages. Bekannte Mahlzeiten und bekannter Snack bleiben daneben möglich.
+Eine feste Kostprobe oder eine Allergen-Lernaufgabe belegt den einzigen Lernslot des Tages. Die Planung prüft weiterhin die vollständigen Auto-, Safety- und Mahlzeiten-Gates.
 
 ## 5.2 Einführungsarten ✅ main
 
@@ -249,15 +258,11 @@ Eine neue Kostprobe bleibt als `sampleFoodId` erkennbar und wird nicht durch Rec
 
 `bekannt kombinieren` ist dabei ausdrücklich **keine neue Einführung**. Es darf deshalb keinen weiteren freien Hauptmahlzeitenslot desselben Tages als angeblich verbrauchten Lernslot blockieren.
 
-## 5.3 Kein allgemeiner Mehrtages-Takt für Nicht-Allergene ✅ main
+## 5.3 Keine automatische Wiederholungslogik für gewöhnliche Lebensmittel ✅ main
 
-Der frühere `newFoodEvery`-Takt steuert die normale automatische Einführung von Nicht-Allergenen nicht mehr. Geeignete offene Nicht-Allergene können täglich und je freier aktiver Hauptmahlzeit geplant werden.
+Erfolgreich probierte gewöhnliche Lebensmittel lösen keine automatische Pflicht-Wiederholung aus. Das Setting `newFoodEvery` bestimmt ausschließlich den Mindestabstand zwischen automatischen neuen Nicht-Allergen-Kostproben; es erzeugt keine Wiederholungen und steuert nicht die getrennte Allergenpflege.
 
-Das bestehende Setting bleibt ausschließlich aus Daten-/Backup-Kompatibilitätsgründen im State erhalten und wird in der Oberfläche nicht mehr als wirksame Planner-Einstellung angeboten. Es darf nicht stillschweigend wieder als Mindestabstand zwischen normalen Nicht-Allergen-Einführungen verwendet werden.
-
-Allergen-Einführungen und -Wiederholungen behalten ihre eigene strengere Logik und werden nicht aus dieser Lockerung abgeleitet.
-
----
+Allergen-Einführungen, echte gezielte Wiederholungen nach Ablehnung und langfristige Allergenpflege behalten ihre jeweils getrennte Logik.
 
 # 6. Allergene
 
@@ -269,8 +274,12 @@ Neue Allergengruppen müssen durch dieselbe Plannerlogik laufen wie bereits vorh
 
 ## 6.2 Einführung und gezielte Wiederholung ✅ main
 
-- Ein noch offenes Allergen kann nur eingeführt werden, wenn eine geeignete bekannte Basis vorhanden ist.
+- `allergenGroup` beschreibt auch Lebensmittel, die ein Allergen enthalten oder für dessen Pflege zählen; daraus folgt kein eigenes FOOD-Einführungsziel. `plannerIntroductionMode: "none"` im kanonischen FOOD-Stamm schließt ein solches Ziel aus. Brot bleibt manuell anbietbar und kann als bekannte glutenhaltige Quelle zur Pflege beitragen, wird aber nicht selbst als „Brot-Allergen“ eingeführt oder gezielt wiederholt. Die Einführung tatsächlicher Quellen wie Weizen und Ei bleibt davon getrennt.
+- Ein noch offenes Allergen benötigt grundsätzlich eine geeignete bekannte Basis. Fachlich ausdrücklich als eigenständig geeignete Allergene gekennzeichnete FOODs dürfen davon abweichen; aktuell gilt das für Ei (`plannerIntroductionMode: "standalone"`), das als gut durchgegarte eigenständige Speise eingeführt oder gezielt wiederholt werden darf. Andere Allergene bleiben basispflichtig, sofern nicht separat fachlich freigegeben.
 - Eine gezielte Wiederholung bleibt Teil der Lernphase, wenn sie fachlich noch zur Einführung gehört, etwa als bewusstes Follow-up nach einer Einführung oder Reaktion/Ablehnung.
+- Die automatische Einführung zählt erfolgreiche Expositionen je vorhandenem `allergenFamily`-Ziel; fehlt eine feinere Familie, zählt die strukturierte `allergenGroup`. Eine andere geeignete FOOD-Quelle desselben Ziels darf die zweite erfolgreiche Exposition abschließen. Lebensmittel mit `plannerIntroductionMode: "none"` sind weder eigene Einführungsziele noch automatische Kandidaten; eine tatsächlich gegessene manuelle Exposition kann aber zur Zählung desselben Gruppen- oder Familienziels beitragen.
+- Nach der ersten erfolgreichen Exposition bleibt das Ziel eine Allergen-Lernaufgabe und darf nicht als gewöhnliches „bekannt kombinieren“ aus der automatischen Fortsetzung herausgefiltert werden. Auf dem gemeinsamen freien Lernslot haben noch nicht eingeführte Allergene und offene Allergen-Fortsetzungen Vorrang vor gewöhnlichen neuen Nicht-Allergenen; `newFoodEvery` steuert weiterhin nur deren Mindestabstand.
+- Nach zwei erfolgreichen Expositionen des Einführungsziels ist die Einführung abgeschlossen. Ab dann greift die normale, getrennte Allergenpflege über das strukturierte Maintenance-Ziel.
 - Solche Allergen-Wiederholungen dürfen vorhandene harte Mahlzeiten-/Safety-Gates nicht umgehen.
 - Sobald automatisch eine Allergen-Einführung oder tatsächlich noch zur Lernphase gehörende gezielte Allergen-Wiederholung geplant wird, ist sie die **einzige automatische Lernaufgabe dieses Tages**; weitere neue Nicht-Allergene oder andere automatische Lernwiederholungen werden an diesem Tag nicht zusätzlich eingeplant.
 - Eine bereits manuell/fest geplante andere Kostprobe verhindert umgekehrt, dass zusätzlich automatisch ein Allergen als zweite Lernaufgabe desselben Tages eingeschoben wird.
@@ -283,7 +292,7 @@ Für bereits verträgliche Allergene ist die regelmäßige Pflegeexposition fach
 - Langfristige Pflege ist **keine neue FOOD-Einführung, keine Kostprobe und keine Lernaufgabe**. Sie darf daher keinen ansonsten freien FOOD-Einführungsslot verbrauchen und wird als normale bekannte Mahlzeit/Komponente behandelt.
 - Die Fälligkeit wird nicht mehr allein pro FOOD-ID über `lastDate(foodId)` bewertet. Maßgeblich ist ein zentrales Maintenance-Ziel aus dem vorhandenen strukturierten Allergenmodell.
 - Wo eine feinere `allergenFamily` fachlich eine konkrete Allergenquelle trennt, bleibt diese Trennung erhalten. Insbesondere werden unterschiedliche Nussfamilien nicht allein über die breite Gruppe `Schalenfrüchte` gleichgesetzt.
-- Für die ausdrücklich freigegebene **Glutenpflege** gilt dagegen `Glutenhaltiges Getreide` als gemeinsames langfristiges Maintenance-Ziel. Ein bereits geeignetes glutenhaltiges Lebensmittel wie Hafer, Weizen oder Dinkel kann deshalb dasselbe Pflegeziel erfüllen. Das macht diese FOODs **nicht** zu derselben Einführungsfamilie und verändert ihre Einführungs-/Statuslogik nicht.
+- Für die ausdrücklich freigegebene **Glutenpflege** gilt dagegen `Glutenhaltiges Getreide` als gemeinsames langfristiges Maintenance-Ziel. Ein bereits geeignetes glutenhaltiges Lebensmittel wie Hafer, Weizen oder Dinkel kann deshalb dasselbe Pflegeziel erfüllen. Das macht diese FOODs **nicht** zu derselben Einführungsfamilie und verändert ihre Einführungs-/Statuslogik nicht. Hafer ist dafür im FOOD-Stamm über `allergenMaintenanceGroup` zugeordnet; `allergenGroup` bleibt leer, damit Hafer kein eigenes Allergen-Einführungsziel erhält.
 - Ohne feinere Familie wird die bestehende strukturierte `allergenGroup` als langfristiges Pflegeziel verwendet; es wird dafür keine neue medizinische Gruppe erfunden.
 - Ein anderes FOOD darf ein Pflegeziel nur erfüllen, wenn es selbst über den normalen bekannten Planner-Pfad für die konkrete Mahlzeit geeignet ist. `autoPlan`, Mahlzeiteneignung, `minPhase`, Alter, `Pausiert`, Safety, Rollen und weitere harte Gates bleiben vollständig wirksam.
 - Rezepte können ein oder mehrere Pflegeziele über ihre **tatsächlichen kanonischen Zutaten** abdecken. Ein bloßer Rezeptname genügt nicht.
@@ -358,6 +367,26 @@ Ein echtes vorhandenes Rezept kann eine Kombination über seinen eigenen Rezeptv
 ## 8.3 Single-Starch bleibt hart
 
 Automatische freie Kombinationen sollen nicht mehrere konkurrierende Stärkequellen erzwingen. Die bestehende Single-Starch-Schranke bleibt erhalten.
+Ein vorhandenes kuratiertes Rezept ist keine freie FOOD-Kombination: Seine
+kanonischen Zutaten werden nicht allein wegen zweier als Basis klassifizierter
+Zutaten (z. B. Süßkartoffel und Mais im Bohnen-Chili) verworfen.
+
+## 8.4 Kulinarische Mahlzeitenqualität
+
+Automatische Vorschläge werden zusätzlich danach bewertet, ob sie als nachvollziehbares, babygeeignetes Gericht erkennbar sind. Ernährungslogische Einzelpaare reichen für eine freie Hauptmahlzeit nicht aus.
+
+Als bevorzugte Struktur gilt:
+
+- eine sättigende Basis wie Hafer, Kartoffel, Reis, Polenta oder Bulgur;
+- Gemüse oder – insbesondere beim Frühstück – passendes Obst;
+- eine Protein-/Eisenquelle, sofern für die Mahlzeit vorgesehen;
+- eine passende Fettquelle und optional milde Kräuter/Gewürze.
+
+Die kulinarische Kompatibilität ist ein eigenes Auswahlkriterium. Freie Kombinationen ohne nachvollziehbare Struktur, etwa Mais mit Oregano oder Ei mit Polenta ohne Gemüse, werden verworfen bzw. durch passendere Kandidaten ersetzt. Das ist keine pauschale Pair-Blacklist: Ein vorhandenes, fachlich passendes Rezept kann eine reduzierte Zutatenstruktur ausdrücklich legitimieren.
+
+Einzelne Lebensmittel bleiben für bewusst geplante Kostproben und Kennenlernangebote zulässig. Sie werden dabei als `sample`/Lernangebot kenntlich gemacht und nicht als vollwertiges Gericht ausgegeben. Mengen- und Portionslogik bleiben davon getrennt; auch kleine Angebote um etwa 30 g sowie dieselbe Kombination in später größerer Portion bleiben möglich.
+
+Die Auswahlqualität ändert weder die bestehenden Safety-/Allergen-Gates noch den Handlingvertrag. Bei 7–9 Monaten können echte Mahlzeiten deshalb parallel als Brei, löffelbare Struktur oder geeignetes Fingerfood dargestellt werden; Rezeptidentität und Zutatenstruktur bleiben gleich.
 
 ---
 
@@ -372,6 +401,18 @@ Eine bekannte FOOD-Kombination darf zu einem vorhandenen Rezept promoviert werde
 Kein Rezeptname darf nur aus einer optisch ähnlichen Kombination erfunden werden.
 
 ## 9.2 Proaktive Rezeptwahl
+
+Bei einer **bekannten** automatischen Hauptmahlzeit wählt der Planner zuerst
+aus bestehenden, für den Slot geeigneten und mit ausschließlich bekannten,
+automatisch geeigneten Zutaten herstellbaren Rezeptvarianten. Die konkrete
+Variante und alle ihre FOOD-IDs gehören in den Plan; ein zufällig gewähltes
+FOOD-Paar ist keine Voraussetzung mehr. Wiederholung derselben Rezeptidentität
+am selben Tag wird vermieden. Erst ohne geeignetes Rezept wird eine freie
+bekannte Mahlzeit gebildet; zu einer freien Zweierkombination darf eine weitere
+bekannte geeignete Zutat treten, wenn dies die kulinarische Struktur verbessert.
+Eine bewusst geplante Einführung behält ihren Lernslot und die bestehende
+Ein-Rezept-neues-FOOD-Regel. Vorrat ist ein weicher Vorteil zwischen ansonsten
+passenden Rezepten, kein Ersatz für Rezept- oder FOOD-Eignung.
 
 Eine bereits geplante FOOD-Mahlzeit darf um **bekannte und automatisch geeignete** Rezeptzutaten erweitert werden, wenn dadurch eine eindeutige passende Rezeptvariante entsteht.
 
@@ -393,9 +434,18 @@ Technische Auswahlpriorität bei proaktiven Kandidaten:
 
 1. möglichst wenige zusätzliche bekannte Zutaten;
 2. danach geringere `recipePlannedUse`-Nutzung;
-3. bei weiterem Gleichstand keine automatische Auswahl.
+3. danach eindeutig besserer kulinarischer Score;
+4. bei weiterem Gleichstand keine automatische Auswahl.
 
 ## 9.4 Vorrat und Prep
+
+Eine konkret eingefrorene Rezeptcharge kann als **vollständig glatt püriert**
+gekennzeichnet werden. Nur bei einem dafür einzeln freigegebenen Rezept darf
+der Planner dann die ursprüngliche Textur-/Darreichungsstufe für genau diese
+Charge abweichend bewerten. Zutatenbereitschaft, automatische FOOD-Eignung,
+Mindestalter, Mahlzeiteneignung und übrige Safety-Gates bleiben unverändert.
+Fehlende/alte Vorratsangaben oder Freitextnotizen werden niemals stillschweigend
+als püriert interpretiert; das Originalrezept bleibt unverändert.
 
 - echter Rezeptvorrat darf bevorzugt verwendet werden, wenn die Vorratspräferenz aktiv und Bestand vorhanden ist;
 - eine frische Recipe-first-Mahlzeit behält ihre einzelnen Zutatenreservierungen;
@@ -405,6 +455,32 @@ Technische Auswahlpriorität bei proaktiven Kandidaten:
 
 ---
 
+
+## 9.5 Rezept plus einzelnes Lebensmittel ✅ Branch/Integrations-PR
+
+Der Planner darf ein vollständiges, fachlich passendes Rezept mit genau einem zusätzlich geplanten einzelnen Lebensmittel kombinieren. Das zusätzliche Lebensmittel ist keine Rezeptzutat und wird deshalb strukturell getrennt gespeichert.
+
+Verbindliche Datenstruktur:
+
+- `recipeName` bleibt die kanonische Rezeptidentität;
+- `recipeIngredientFoodIds` enthält die konkret gewählte Rezeptvariante;
+- `additionalFoodIds` enthält die separat angebotenen Lebensmittel;
+- `foodIds` enthält die Vereinigungsmenge für Protokollierung und Auswertung;
+- `compositionMode = "recipe-plus-food"` kennzeichnet die Komposition;
+- `foodRoles` und `sampleFoodIds` bleiben nach dem bestehenden Rollenvertrag gültig.
+
+Der Pfad ist bewusst kuratiert. Ein Rezept darf nicht automatisch mit beliebigen Lebensmitteln kombiniert werden. Im ersten integrierten Referenzfall wird `Karotten-Polenta-Brei` mit `Rind` für Mittag- und Abendessen kombiniert.
+
+Harte Grenzen:
+
+- manuelle Mahlzeiten, geschlossene Locks und bestehende Rezeptmahlzeiten bleiben unverändert;
+- höchstens ein zusätzliches einzelnes Lebensmittel;
+- keine zweite Stärke über Rezept und Zusatz zusammen;
+- Rezeptzutaten müssen für die konkrete Mahlzeit geeignet und bereits bereit sein;
+- das zusätzliche Lebensmittel bleibt separat für Vorrat, Einkaufsliste, Protokoll und Ablehnungslogik erfassbar;
+- Rezeptidentität und Rezeptzutaten werden bei einem fehlenden Zusatzlebensmittel nicht in ein anderes Rezept umgeschrieben.
+
+Bei frischer Zubereitung werden Rezeptzutaten und das zusätzliche Lebensmittel einzeln reserviert. Bei einer späteren fertigen Rezeptportion wird die Rezeptportion separat von dem zusätzlichen Lebensmittel reserviert.
 # 10. Automatischer Snack ✅ main
 
 - Kein automatischer Snack in Phase 1–3.
@@ -429,7 +505,7 @@ Verbindliche Grenzen:
 - ein vorhandener Rezept-/FOOD-Vorrat darf nur reserviert werden, wenn er tatsächlich für die geplante Mahlzeit verwendet wird;
 - Neuplanung und Auto-Lock-Rebuild dürfen keine Doppelreservierung erzeugen.
 
-Die konkrete Gewichtung von Vorrat gegenüber anderen gleich geeigneten Kandidaten ist Bestandsverhalten und keine implizite neue Fachregel. Eine geeignete neue Nicht-Allergen-Einführung hat in einem freien Hauptmahlzeitenslot fachlich Vorrang vor einer rein bekannten Planung; innerhalb gleichartiger bekannter Alternativen bleibt die bestehende Vorrats-/Rotationsgewichtung bestehen.
+Eine geeignete neue Nicht-Allergen-Einführung hat in einem freien Hauptmahlzeitenslot Vorrang vor rein bekannter Planung. Bei bekannten Alternativen wird kürzliche Nutzung vor Vorratspräferenz bewertet, damit derselbe Bestand nicht unmittelbar wiederholt wird; innerhalb derselben Rotationsstufe bleibt Vorrat bevorzugt.
 
 ---
 
@@ -478,6 +554,8 @@ Der bestehende Planner kann `ph`/Reisevorbereitung als Priorisierung verwenden. 
 ## 14.1 „Woche neu planen“
 
 Für die sichtbaren sieben Tage gibt es genau eine sichtbare Wochen-Neuplanung: **„Woche neu planen“**. Sie berechnet normale automatische Vorschläge aus dem aktuellen fachlichen Zustand neu.
+
+Jede bewusste Neuplanung rotiert bei fachlich gleichwertigen Kandidaten die technische Reihenfolge. Sind keine weiteren geeigneten Kandidaten verfügbar, darf das Ergebnis gleich bleiben.
 
 Erhalten bleiben insbesondere:
 
@@ -617,7 +695,7 @@ Der gezielte Recheck der 41 zuvor bestehenden zusammenhängenden `finger-graspab
 - 28 × `easy-bite-separate`;
 - 0 × `graded-bite-required`.
 
-Im aktuellen **123er Laufzeitkatalog** kommen zu den bestehenden Karten 18 neue Form-/Texturrezepte sowie zwei einzeln geprüfte graded-bite-Referenzfälle hinzu:
+Im aktuellen **129er Laufzeitkatalog** kommen zu den bestehenden Karten 18 neue Form-/Texturrezepte sowie zwei einzeln geprüfte graded-bite-Referenzfälle hinzu:
 
 - `Pizza Wrap`: `graded-bite-required` + `easy-chew`, verlangt nur `graded-bite`;
 - `Chicken Fajita Wrap`: `graded-bite-required` + `structured-chew-required`, verlangt `graded-bite` und `structured-chew`.
@@ -647,11 +725,11 @@ Aktuell nicht als erledigt behandeln:
 
 Die vollständige österreichische `seasonMonths`-Matrix und die Nuss-/Samen-Rollen- und Toppingregel sind auf `main` integriert und nicht mehr als offene Planner-Blöcke zu behandeln. Die allgemeine Handling-/BLW-Schicht ist **keine offene Fachfrage mehr**. Der Oral-Processing-Contract ist fachlich auf `main` dokumentiert; Review, Einzelmigrationen und eine spätere technische Runtime-Abbildung bleiben ein separater Handling-/Oral-Arbeitsstrang und sind nicht Teil dieses Planner-Statusabgleichs.
 
-## 17.2 PHASE-TRANSITION ✅ main
+## 17.2 PHASE-TRANSITION
 
-Für PHASE-TRANSITION besteht kein offener Soll/Ist-Gap mehr. Der read-only Readiness-Core, seine strukturierte Planner-Einbindung und die sichtbare Phase-Readiness-UX sind auf `main` integriert. Die bestehende bewusste Nutzerbestätigung bleibt der einzige Weg zum tatsächlichen Phasenwechsel; Alter, Grammwerte, Loganzahl, Phasendauer und Textur sind weiterhin keine Readiness-Schwellen.
+Der read-only Readiness-Core, seine strukturierte Planner-Einbindung und die sichtbare Phase-Readiness-UX sind grundsätzlich auf `main` integriert. Die Reihenfolge der neu hinzukommenden Auto-Slots ist nicht separat als statischer Branch-/`main`-Status in der Überschrift codiert; maßgeblich ist der im jeweiligen Repository-Stand implementierte und in Abschnitt 1.1/1.3 dokumentierte Vertrag. Unverändert gilt: Die bewusste Nutzerbestätigung bleibt der einzige Weg zum tatsächlichen Phasenwechsel; Alter, Grammwerte, Loganzahl, Phasendauer und Textur sind weiterhin keine Readiness-Schwellen.
 
-Für den Handling-/Bite-/Oral-Bereich besteht im Integrations-PR keine offene Gruppenmigration mehr: alle **123 Laufzeitrezepte** sind explizit im Contract vertreten. Die 41 zuvor bestehenden zusammenhängenden Fingerfoods bleiben als historische Vergleichsmatrix erhalten; die zwei Wrap-Rezepte und 18 neuen Form-/Texturrezepte sind separat anhand ihrer konkreten Servierform klassifiziert. Neue FOODs/Rezepte benötigen weiterhin ihre eigene explizite Einzelklassifikation gemäß `AGENTS.md`.
+Für den Handling-/Bite-/Oral-Bereich besteht im Integrations-PR keine offene Gruppenmigration mehr: alle **129 Laufzeitrezepte** sind explizit im Contract vertreten. Die 41 zuvor bestehenden zusammenhängenden Fingerfoods bleiben als historische Vergleichsmatrix erhalten; die zwei Wrap-Rezepte und 18 neuen Form-/Texturrezepte sind separat anhand ihrer konkreten Servierform klassifiziert. Neue FOODs/Rezepte benötigen weiterhin ihre eigene explizite Einzelklassifikation gemäß `AGENTS.md`.
 
 Weitere offene FOOD-Datenfragen werden separat im FOOD-Fachregel-Track geklärt und dürfen nicht als implizite Planner-Regel erfunden werden.
 
@@ -663,11 +741,13 @@ Weitere offene FOOD-Datenfragen werden separat im FOOD-Fachregel-Track geklärt 
 
 - Phasenmodell und Mahlzeitenslots;
 - PHASE-TRANSITION: Readiness ist read-only; `recommended` setzt `currentPatternAccepted`, `additionalMealCue` und `routineCompatible` gemeinsam voraus; Alter, Grammwerte, Loganzahl, Phasendauer und Textur verändern die Empfehlung nicht und lösen niemals einen Phasenwechsel aus; fehlende qualitative Signale bleiben explizit `unknown`;
-- tägliche Nicht-Allergen-Einführung mit höchstens einem unbekannten FOOD je Frühstück/Mittag/Abend;
-- ein erfolgreich `Probiert`-FOOD blockiert keine geeignete offene Neueinführung; echte Ablehnung bleibt gezielter Wiederholungspfad;
+- geeignete neue Nicht-Allergene dürfen höchstens eine freie Lernaufgabe des Tages belegen;
+- ein offenes gewöhnliches FOOD bleibt über manuelle Planung oder passende Rezepte erstmals anbietbar;
+- erfolgreiche gewöhnliche FOODs erzeugen keine Pflicht-Wiederholung; echte Ablehnung bleibt als gezieltes Follow-up erhalten;
+- ein FOOD mit historischer `tried`-Exposition blockiert keine geeignete offene Neueinführung; echte Ablehnung bleibt gezielter Wiederholungspfad;
 - Allergen-Einführung oder gezielte Allergen-Wiederholung bleibt die einzige automatische Lernaufgabe des Tages;
 - langfristige Allergenpflege ist keine Lernaufgabe, kein `sample` und verbraucht keinen FOOD-Einführungsslot;
-- Maintenance-Fälligkeit wird pro Pflegeziel statt ausschließlich pro FOOD-ID bewertet; nur `eaten` erfüllt die historische Exposition;
+- Maintenance-Fälligkeit wird pro Pflegeziel statt ausschließlich pro FOOD-ID bewertet; nur `eaten` erfüllt die historische Exposition. Zwei erfolgreiche Expositionen auf unterschiedlichen geeigneten Quellen können das gemeinsame Pflegeziel etablieren;
 - Glutenpflege darf durch eine andere bereits geeignete glutenhaltige Quelle oder ein Rezept mit tatsächlicher kanonischer Gluten-Zutat abgedeckt werden, ohne Hafer/Weizen/Dinkel als Einführungsfamilie gleichzusetzen;
 - feinere vorhandene Allergenfamilien – insbesondere einzelne Nussfamilien – bleiben als getrennte Maintenance-Ziele erhalten;
 - geplante FOODs/Rezepte zählen nur als voraussichtliche Maintenance-Abdeckung; mehrere bekannte Pflegeziele dürfen durch dieselbe normale Mahlzeit abgedeckt werden;
@@ -683,8 +763,10 @@ Weitere offene FOOD-Datenfragen werden separat im FOOD-Fachregel-Track geklärt 
 - keine pauschale automatische Nussmus-Zugabe zu jedem Brei;
 - andere Allergene werden durch die Nuss-/Samen-Rollenregel nicht eingeschränkt;
 - PLAN-08-X1 / kein dritter Eisenfallback;
+- kulinarische Mahlzeitenqualität: freie Hauptmahlzeiten sind als echte Gerichte strukturiert, Einzelzutaten bleiben auf bewusste Kostproben begrenzt, und passende Rezepte dürfen reduzierte Strukturen legitimieren;
 - Single-Starch;
 - Recipe-first einschließlich maximal einem neuen FOOD **pro Mahlzeit**;
+- Recipe-plus-food verwendet nur kuratierte Pairings; `Karotten-Polenta-Brei + Rind` erhält getrennte Rezept- und Zusatzlebensmittel-Identität, Rollen, Mengen und Reservierungen;
 - Rollenstabilität `base/component/sample` Plan → Lock → Reload → Editor;
 - Vorrats-/Recipe-first-Reservierungen;
 - Replan-Semantik;
@@ -697,7 +779,7 @@ Weitere offene FOOD-Datenfragen werden separat im FOOD-Fachregel-Track geklärt 
 - `presentationMode` bleibt additiv und persistiert nur, wenn es strukturiert gesetzt wurde;
 - PLAN-08-Auswahl, Rollen und Rezeptidentität bleiben durch Handling unverändert;
 - Handling-/Bite-/Oral-Contract und -Runtime stehen vor finalem sichtbaren Render sowie beim ersten Offline-Start zur Verfügung;
-- 123 Laufzeitrezepte bleiben 123 expliziten Contract-Einträgen zugeordnet;
+- 129 Laufzeitrezepte bleiben 129 expliziten Contract-Einträgen zugeordnet;
 - 41 zuvor bestehende `finger-graspable`-Rezepte bleiben explizit 13 `low-resistance-separate` / 28 `easy-bite-separate` / 0 `graded-bite-required` zugeordnet;
 - `Pizza Wrap` verlangt `graded-bite` + `easy-chew`, `Chicken Fajita Wrap` verlangt `graded-bite` + `structured-chew`;
 - `graded-bite` bleibt als eigenständige Capability technisch prüfbar und darf nicht aus Alter, Zähnen, Rezeptkategorie oder `structured-chew` abgeleitet werden;
@@ -725,6 +807,9 @@ Aktuelle Kernquellen:
 - `js/planner-iron-preference.js`
 - `js/planner-recipe-first.js`
 - `js/planner-proactive-recipe.js`
+- `js/planner-recipe-food-composition.js`
+- `data/recipe-food-pairings.js`
+- `tests/planner-recipe-food-composition.test.cjs`;
 - `js/planner-food-role-stability.js`
 - `js/planner-quality-rotation.js`
 - `js/planner-introduction-policy.js`

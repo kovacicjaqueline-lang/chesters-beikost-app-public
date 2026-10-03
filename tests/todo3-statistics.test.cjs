@@ -53,7 +53,7 @@ test('TODO3 STAT-01: Planung allein zählt nicht als tatsächliche Gabe', () => 
   assert.equal(result.outcomeCounts.eaten, 0);
 });
 
-test('TODO3 STAT-01: eaten/tried zählen positiv; not_offered/reaction nicht als kennengelernt', () => {
+test('TODO3 STAT-01: gegessene sowie migrierte Probiert-Einträge zählen als gegessen', () => {
   const logs = [
     { date: '2026-08-14', meal: 'lunch', foodIds: ['a'], foodOutcomes: { a: 'eaten' }, amount: 20 },
     { date: '2026-08-15', meal: 'lunch', foodIds: ['b'], foodOutcomes: { b: 'tried' } },
@@ -62,8 +62,8 @@ test('TODO3 STAT-01: eaten/tried zählen positiv; not_offered/reaction nicht als
   ];
   const result = harness(logs).snapshot('all');
   assert.equal(result.varietyCount, 2);
-  assert.equal(result.outcomeCounts.eaten, 1);
-  assert.equal(result.outcomeCounts.tried, 1);
+  assert.equal(result.outcomeCounts.eaten, 2);
+  assert.equal(Object.hasOwn(result.outcomeCounts, 'tried'), false);
   assert.equal(result.outcomeCounts.not_offered, 1);
   assert.equal(result.outcomeCounts.reaction, 1);
 });

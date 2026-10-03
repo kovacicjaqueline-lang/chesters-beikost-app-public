@@ -24,9 +24,9 @@ function loadCatalog() {
   return { before, after, guidance };
 }
 
-test("recipe quantities: runtime catalog has 123 unique recipes after Nockerl split, wrap and form additions", () => {
+test("recipe quantities: runtime catalog has 139 unique recipes after form, fish and Hirseschnitten additions", () => {
   const { after } = loadCatalog();
-  assert.equal(after.length, 123);
+  assert.equal(after.length, 139);
   const names = after.map((recipe) => recipe.name);
   assert.equal(new Set(names).size, names.length);
   assert.equal(names.includes("Gemüse-Fleisch-Nockerl"), false);
@@ -36,6 +36,16 @@ test("recipe quantities: runtime catalog has 123 unique recipes after Nockerl sp
     "Linsen-Süßkartoffel-Nockerl",
     "Pizza Wrap",
     "Chicken Fajita Wrap",
+    "Quinoa-Huhn-Süßkartoffel-Finger",
+    "Quinoa-Linsen-Gemüse-Khichdi",
+    "Quinoa-Gemüse-Puffer",
+    "Bulgur-Zucchini-Ei",
+    "Bulgur-Gemüse-Köfte",
+    "Bulgur-Linsen-Suppe",
+    "Forelle-Kartoffel-Bällchen",
+    "Kabeljau-Süßkartoffel-Fischküchlein",
+    "Bananen-Hirseschnitten",
+    "Herzhafte Hirseschnitten",
   ]) assert.equal(names.includes(name), true, `${name} fehlt`);
 });
 

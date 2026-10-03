@@ -6,6 +6,7 @@
  */
 
 function futurePlanReferences(foodId) {
+  if (typeof plannerViewReady === "function" && !plannerViewReady()) return [];
   let refs = [];
   let days = buildDays(today(), 45, false);
   for (let day of days) {
@@ -54,6 +55,10 @@ function cleanFoodFromFuturePlan(foodId) {
 
 function setFoodActiveWithPlanCheck(f, nextActive) {
   if (!f) return;
+  if (!nextActive && typeof plannerViewReady === "function" && !plannerViewReady()) {
+    showToast("Die Planungsregeln werden noch geladen. Bitte gleich noch einmal versuchen.");
+    return;
+  }
   if (nextActive) {
     f.active = true;
     delete state.inactivePlanKept?.[f.id];
@@ -241,25 +246,28 @@ function toggleFoodReorderMode() {
 
 function foodEmoji(f) { return foodIconSvg(f); }
 
-function showFoodInfoCore(f) {
-  let stock = inventoryPortions(f.id);
+function foodDetailNextUseHtml(foodRecord) {
   let planned = buildDays(today(), 7)
     .flatMap((day) =>
       day.meals
         .filter(
-          (m) =>
-            m.active &&
-            !m.empty &&
-            (m.foodIds || []).includes(f.id) &&
-            !mealIsCompleted(day.date, m.meal),
+          (meal) =>
+            meal.active &&
+            !meal.empty &&
+            (meal.foodIds || []).includes(foodRecord.id) &&
+            !mealIsCompleted(day.date, meal.meal),
         )
-        .map((m) => ({
-          date: day.date,
-          meal: m.meal,
-          dish: dishTitle(m),
-        })),
+        .map((meal) => ({ date: day.date, meal: meal.meal, dish: dishTitle(meal) })),
     )
     .slice(0, 4);
+  return `<b>Nächste Verwendung</b>${planned.length
+    ? planned.map((entry) => `<div class="small">${shortDate(entry.date)} · ${mealName(entry.meal)} · ${esc(entry.dish)}</div>`).join("")
+    : '<div class="small">In den nächsten sieben Tagen nicht eingeplant.</div>'}`;
+}
+
+function showFoodInfoCore(f) {
+  let stock = inventoryPortions(f.id);
+  let plannerReady = typeof plannerViewReady !== "function" || plannerViewReady();
   let recipes = RECIPES.filter((r) =>
     [r.requires, ...(r.alternatives || [])].some((set) =>
       (set || []).some((name) => foodNameMatches(f, name)),
@@ -268,15 +276,17 @@ function showFoodInfoCore(f) {
 
   openGeneric(
     f.name,
-    `<div class="food-detail-hero" style="display:grid;grid-template-columns:minmax(0,1fr) 96px;gap:14px;align-items:start;min-height:96px;margin-bottom:4px">
-      <div class="food-detail-hero-copy">
-        <div class="small food-detail-type">${esc(foodCategoryLabel(f.category))}${f.ph ? " · Philippinen" : ""}${f.ironRich ? " · eisenreich" : ""}${f.allergenGroup ? ` · Allergen: ${esc(f.allergenGroup)}` : ""}</div>
-        <div class="chips food-detail-status"><span class="pill ${!f.active ? "inactive-pill" : ""}">${esc(!f.active ? "Deaktiviert" : status(f))}</span></div>
+    `<div class="catalog-detail-hero">
+      <div class="catalog-detail-hero-copy">
+        <div class="small catalog-detail-type">${esc(foodCategoryLabel(f.category))}${f.ph ? " · Philippinen" : ""}${f.ironRich ? " · eisenreich" : ""}${f.allergenGroup ? ` · Allergen: ${esc(f.allergenGroup)}` : ""}</div>
+        <div class="chips catalog-detail-status"><span class="pill ${!f.active ? "inactive-pill" : ""}">${esc(!f.active ? "Deaktiviert" : status(f))}</span></div>
         ${f.alias ? `<p class="small"><b>Anderer Name:</b> ${esc(f.alias)}</p>` : ""}
       </div>
-      <div class="food-detail-hero-icon" aria-hidden="true" style="--icon-food:96px;width:96px;height:96px;display:flex;align-items:center;justify-content:center;pointer-events:none">${foodIconSvg(f)}</div>
+      <div class="catalog-detail-hero-icon food-detail-hero-icon" aria-hidden="true" style="--icon-food:96px;width:96px;height:96px">${foodIconSvg(f, { loading: "eager", fetchPriority: "high" })}</div>
     </div>
+    <div class="food-detail-preference"></div>
     <div class="food-detail-dynamic"></div>
+    <div class="catalog-detail-primary-actions"><button class="btn full" id="foodCatalogLog" type="button">Protokollieren</button></div>
     <details class="accordion food-detail-settings">
       <summary>Status und Planung</summary>
       <div class="grid2" style="margin-top:10px">
@@ -289,19 +299,9 @@ function showFoodInfoCore(f) {
       <b>Gefriervorrat</b>
       <div class="small">${stock ? `${stock} Portionen vorhanden` : "Kein Vorrat eingetragen"}</div>
     </div>
-    <div class="history">
-      <b>Nächste Verwendung</b>
-      ${
-        planned.length
-          ? planned
-              .map(
-                (p) =>
-                  `<div class="small">${shortDate(p.date)} · ${mealName(p.meal)} · ${esc(p.dish)}</div>`,
-              )
-              .join("")
-          : '<div class="small">In den nächsten sieben Tagen nicht eingeplant.</div>'
-      }
-    </div>
+    <div class="history" data-food-planner-preview="${esc(f.id)}">${plannerReady
+      ? foodDetailNextUseHtml(f)
+      : '<b>Nächste Verwendung</b><div class="small planner-readiness-message">Planungsregeln werden geladen …</div>'}</div>
     <div class="history">
       <b>Passende Rezeptideen</b>
       ${
@@ -336,6 +336,10 @@ function showFoodInfoCore(f) {
 }
 
 function openFollowUpEditor(foodId) {
+  if (typeof plannerViewReady === "function" && !plannerViewReady()) {
+    showToast("Die Planungsregeln werden noch geladen. Bitte gleich noch einmal versuchen.");
+    return;
+  }
   let record = state.followUps?.[foodId];
   let f = food(foodId);
   if (!record || !f) return;
@@ -409,7 +413,9 @@ function followUpCard(record) {
   let alternatives = (record.alternativeBaseIds || []).map((id) => food(id)?.name).filter(Boolean);
   let prepLabel = followUpPreparationOptions(record.foodId).find((option) => option.key === record.preparationKey)?.label || "Sichere Standardform";
   let returnPrompt = record.status === "later" && record.dueDate && record.dueDate <= today();
-  return `<div class="foodcard followup-food-card" data-food="${f.id}"><div class="row"><div class="grow"><div class="foodtitle"><span class="food-emoji">${foodEmoji(f)}</span>${esc(f.name)} <span class="pill ph">${esc(followUpStatusText(record))}</span></div><div class="foodmeta">${record.baseMode === "none" ? "Ohne Basis" : base ? `Mit ${esc(base.name)}` : "Basis automatisch"} · ${record.dueDate ? `fällig ${due}` : "Zutat fehlt"}</div>${alternatives.length ? `<div class="small followup-alternatives">Alternativ: ${alternatives.map(esc).join(" · ")}</div>` : ""}<div class="small followup-preparation">${esc(prepLabel)}</div></div><div class="followup-card-actions"><button class="btn secondary smallbtn followupEdit" data-food="${f.id}">Ändern</button><button class="btn secondary smallbtn foodInfo">Details</button></div></div><div class="notice warn followup-card-error" style="display:none"></div>${returnPrompt ? `<div class="return-prompt"><b>${esc(f.name)} wieder einplanen?</b><div class="inline-actions"><button class="btn smallbtn followupYes" data-food="${f.id}">Ja</button><button class="btn secondary smallbtn followupLater" data-food="${f.id}">Später</button></div></div>` : ""}</div>`;
+  let planningReady = typeof plannerViewReady !== "function" || plannerViewReady();
+  let planningDisabled = planningReady ? "" : ' disabled title="Planungsregeln werden geladen"';
+  return `<div class="foodcard followup-food-card" data-food="${f.id}"><div class="row"><div class="grow"><div class="foodtitle"><span class="food-emoji">${foodEmoji(f)}</span>${esc(f.name)} <span class="pill ph">${esc(followUpStatusText(record))}</span></div><div class="foodmeta">${record.baseMode === "none" ? "Ohne Basis" : base ? `Mit ${esc(base.name)}` : "Basis automatisch"} · ${record.dueDate ? `fällig ${due}` : "Zutat fehlt"}</div>${alternatives.length ? `<div class="small followup-alternatives">Alternativ: ${alternatives.map(esc).join(" · ")}</div>` : ""}<div class="small followup-preparation">${esc(prepLabel)}</div></div><div class="followup-card-actions"><button class="btn secondary smallbtn followupEdit" data-food="${f.id}"${planningDisabled}>Ändern</button><button class="btn smallbtn catalogLogFood" data-food="${f.id}" type="button">Protokollieren</button><button class="btn secondary smallbtn foodInfo" type="button">Details</button></div></div><div class="notice warn followup-card-error" style="display:none"></div>${returnPrompt ? `<div class="return-prompt"><b>${esc(f.name)} wieder einplanen?</b><div class="inline-actions"><button class="btn smallbtn followupYes" data-food="${f.id}"${planningDisabled}>Ja</button><button class="btn secondary smallbtn followupLater" data-food="${f.id}">Später</button></div></div>` : ""}</div>`;
 }
 function renderFoods() {
   document.querySelectorAll("#foodFilters button").forEach((button) => button.classList.toggle("active", button.dataset.filter === foodFilter));
@@ -442,7 +448,7 @@ function renderFoods() {
   document.getElementById("foodCountText").textContent = `${arr.length + followups.length} angezeigt · ${activeCount} aktiv · ${inactiveCount} deaktiviert`;
   let renderFoodCard = (f) => {
     let raw = status(f), statusClass = raw === "Offen" ? "status-open" : raw === "Probiert" ? "status-tried" : raw === "Bekannt" ? "status-tolerated" : "status-paused";
-    return `<div class="foodcard ${statusClass} ${f.active ? "" : "inactive"} ${foodReorderMode && f.active ? "reorderable" : ""}" data-food="${f.id}"><div class="row">${foodReorderMode && f.active ? `<div class="food-sort-actions"><button class="food-jump jumpTop" aria-label="Ganz nach oben">⇧</button><button class="drag-handle" aria-label="Lebensmittel verschieben">⠿</button><button class="food-jump jumpBottom" aria-label="Ganz nach unten">⇩</button></div>` : ""}<div class="grow"><div class="foodtitle"><span class="food-emoji">${foodEmoji(f)}</span>${esc(f.name)} ${!f.active ? '<span class="pill inactive-pill">Deaktiviert</span>' : ""}</div><div class="foodmeta">${esc(f.alias || f.category)} · <span class="food-status-text">${esc(displayStatus(f))}</span></div>${!f.active ? '<div class="inactive-note">Nicht in neuen Planungen, Rezeptvorschlägen oder Prep.</div>' : ""}</div><button class="btn secondary smallbtn foodInfo">Details</button></div></div>`;
+    return `<div class="foodcard ${statusClass} ${f.active ? "" : "inactive"} ${foodReorderMode && f.active ? "reorderable" : ""}" data-food="${f.id}"><div class="row">${foodReorderMode && f.active ? `<div class="food-sort-actions"><button class="food-jump jumpTop" aria-label="Ganz nach oben">⇧</button><button class="drag-handle" aria-label="Lebensmittel verschieben">⠿</button><button class="food-jump jumpBottom" aria-label="Ganz nach unten">⇩</button></div>` : ""}<div class="grow"><div class="foodtitle"><span class="food-emoji">${foodEmoji(f)}</span>${esc(f.name)} ${!f.active ? '<span class="pill inactive-pill">Deaktiviert</span>' : ""}</div><div class="foodmeta">${esc(f.alias || f.category)} · <span class="food-status-text">${esc(displayStatus(f))}</span></div>${!f.active ? '<div class="inactive-note">Nicht in neuen Planungen, Rezeptvorschlägen oder Prep.</div>' : ""}</div><div class="catalog-card-actions"><button class="btn smallbtn catalogLogFood" data-food="${f.id}" type="button">Protokollieren</button><button class="btn secondary smallbtn foodInfo" type="button">Details</button></div></div></div>`;
   };
   let sections = [];
   if (followups.length) sections.push(`<section class="followup-section"><div class="followup-section-head"><h3>Wieder anbieten</h3><div class="small">Planbare Lebensmittel zuerst, danach nach Fälligkeit.</div></div>${followups.map(followUpCard).join("")}</section>`);
@@ -468,8 +474,14 @@ function renderFoods() {
   document.querySelectorAll(".jumpTop").forEach((button) => button.onclick = () => jumpFoodInVisibleOrder(button.closest("[data-food]").dataset.food, "top"));
   document.querySelectorAll(".jumpBottom").forEach((button) => button.onclick = () => jumpFoodInVisibleOrder(button.closest("[data-food]").dataset.food, "bottom"));
   document.querySelectorAll(".foodcard").forEach((card) => { let f = food(card.dataset.food); let info = card.querySelector(".foodInfo"); if (info) info.onclick = () => showFoodInfo(f); });
+  document.querySelectorAll(".catalogLogFood").forEach((button) => {
+    button.onclick = () => {
+      if (typeof openCatalogFoodLog === "function") openCatalogFoodLog(button.dataset.food);
+    };
+  });
   document.querySelectorAll(".followupEdit").forEach((button) => button.onclick = () => openFollowUpEditor(button.dataset.food));
   document.querySelectorAll(".followupYes").forEach((button) => button.onclick = () => {
+    if (typeof plannerViewReady === "function" && !plannerViewReady()) return;
     let record = state.followUps[button.dataset.food];
     if (!record) return;
     record.status = "scheduled";
@@ -497,6 +509,25 @@ function renderFoods() {
 
 function showFoodInfo(f) {
   showFoodInfoCore(f);
+  let genericBody = document.getElementById("genericBody");
+  if (genericBody) genericBody.dataset.foodPlannerPreview = f.id;
+  let readiness = globalThis.PlannerReadiness;
+  if (!plannerViewReady() && readiness?.whenReady) {
+    readiness.whenReady().then((result) => {
+      let currentBody = document.getElementById("genericBody");
+      if (result?.state === "ready" && currentBody?.dataset.foodPlannerPreview === f.id) {
+        let preview = currentBody.querySelector("[data-food-planner-preview]");
+        if (preview) preview.innerHTML = foodDetailNextUseHtml(f);
+      } else if (result?.state === "failed" && currentBody?.dataset.foodPlannerPreview === f.id) {
+        let preview = currentBody.querySelector("[data-food-planner-preview]");
+        if (preview) preview.innerHTML = '<b>Nächste Verwendung</b><div class="small">Planungsregeln konnten nicht geladen werden.</div>';
+      }
+    });
+  }
+  document.getElementById("foodCatalogLog")?.addEventListener("click", () => {
+    closeGeneric();
+    if (typeof openCatalogFoodLog === "function") openCatalogFoodLog(f.id);
+  });
   let raw = status(f), count = offeredCount(f.id);
   let modal = document.getElementById("genericBody");
   let dynamic = modal?.querySelector(".food-detail-dynamic");

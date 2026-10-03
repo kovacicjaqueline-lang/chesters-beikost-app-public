@@ -10,16 +10,32 @@
 <link rel="manifest" href="manifest.webmanifest?v=10.1.26">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=10.1.26">
 <title>Beikost-App</title>
-<!-- Diese Dateien bilden den sichtbarkeitskritischen Planner-Boot. Der Loader
-     installiert sie weiterhin in seiner fachlich erforderlichen Reihenfolge;
-     Preload holt sie nur parallel, damit daraus kein Netzwerk-Wasserfall wird. -->
+<style>
+html,body{min-height:100%;background:#f5f1e9}
+#appResumeScreen{position:fixed;inset:0;z-index:2147483647;display:none;place-items:center;padding:env(safe-area-inset-top) 24px env(safe-area-inset-bottom);background:#f5f1e9;color:#333a2c;font:600 16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+#appResumeScreen .resume-screen-content{display:grid;justify-items:center;gap:14px}
+#appResumeScreen .resume-screen-mark{width:48px;height:48px;display:grid;place-items:center;border-radius:17px;background:linear-gradient(145deg,#68764d,#8b916d);color:#fff;font-size:24px;font-weight:800;box-shadow:0 5px 14px rgba(83,96,60,.18)}
+#appResumeScreen .resume-screen-spinner{width:24px;height:24px;border:3px solid rgba(104,118,77,.22);border-top-color:#68764d;border-radius:50%;animation:resume-screen-spin .8s linear infinite}
+html:not(.app-ready) #appResumeScreen,html.app-resume-cover #appResumeScreen{display:grid}
+@keyframes resume-screen-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){#appResumeScreen .resume-screen-spinner{animation-duration:2s}}
+</style>
+<script>
+try{if(("standalone" in navigator&&navigator.standalone)||matchMedia("(display-mode: standalone)").matches)document.documentElement.classList.add("app-standalone")}catch(_){ }
+</script>
+<!-- Diese Dateien werden für den Planner-Boot parallel vorgeladen. Der Loader
+     installiert sie in ihrer fachlich erforderlichen Reihenfolge; nur
+     plannerabhängige Ansichten warten auf den Abschluss dieser Kette. -->
 <link rel="preload" as="script" href="js/planner-meal-eligibility.js?v=10.1.26">
 <link rel="preload" as="script" href="js/planner-milk-policy.js?v=10.1.26">
 <link rel="preload" as="script" href="js/planner-iron-preference.js?v=10.1.26">
+<link rel="preload" as="script" href="js/planner-culinary-quality.js?v=10.1.26">
 <link rel="preload" as="script" href="data/food-presentation.js?v=10.1.26">
 <link rel="preload" as="script" href="js/planner-meal-presentation.js?v=10.1.26">
 <link rel="preload" as="script" href="js/planner-recipe-first.js?v=10.1.26">
 <link rel="preload" as="script" href="js/planner-proactive-recipe.js?v=10.1.26">
+<link rel="preload" as="script" href="data/recipe-food-pairings.js?v=10.1.26">
+<link rel="preload" as="script" href="js/planner-recipe-food-composition.js?v=10.1.26">
 <link rel="preload" as="script" href="js/planner-food-role-stability.js?v=10.1.26">
 <link rel="preload" as="script" href="js/planner-quality-rotation.js?v=10.1.26">
 <link rel="preload" as="script" href="js/planner-introduction-policy.js?v=10.1.26">
@@ -28,13 +44,15 @@
 <link rel="preload" as="script" href="js/handling-readiness.js?v=10.1.26">
 <link rel="stylesheet" href="styles.css?v=10.1.26">
 <link rel="stylesheet" href="ui-meal-editor-footer.css?v=10.1.26-circle-r2">
-<link rel="stylesheet" href="flow-dialog-ui.css?v=10.1.26">
+<link rel="stylesheet" href="flow-dialog-ui.css?v=10.1.26-compact-r1">
 <link rel="stylesheet" href="catalog-navigation.css?v=10.1.26">
 <link rel="stylesheet" href="prep-mobile.css?v=10.1.26">
 <link rel="stylesheet" href="mobile-beikost-more.css?v=10.1.26">
 <link rel="stylesheet" href="plan-checks-ui.css?v=10.1.26">
 </head>
 <body>
+<div id="appResumeScreen" role="status" aria-live="polite" aria-hidden="true"><div class="resume-screen-content"><span class="resume-screen-mark" aria-hidden="true">B</span><span>Beikost wird geladen</span><span class="resume-screen-spinner" aria-hidden="true"></span></div></div>
+<script src="js/app-resume-screen.js?v=10.1.26"></script>
 <header class="app-header"><div class="brand-orb" aria-hidden="true">B</div><div class="brand-copy"><h1>Beikost</h1><p>Planen · vorbereiten · entspannt anbieten</p></div></header>
 <main>
 <section id="home" class="view active">
@@ -121,10 +139,20 @@
  </div>
  <div class="card recipes-card catalog-recipes-card" id="recipesSection" hidden>
   <details class="panel-details" id="recipesDetails" open>
-   <summary><span><b>Rezepte & Fingerfood</b><small id="recipeCount">Passend zu Status und Konsistenz.</small></span></summary>
+   <summary><span><b>Rezepte</b><small id="recipeCount">Rezepte</small></span></summary>
    <div class="panel-body">
     <div class="field recipe-search"><label>Rezept suchen</label><input type="search" id="recipeSearch" placeholder="z. B. Lachs, Zucchini, Pancakes"></div>
-    <div class="field recipe-filter-field"><label>Kategorie</label><div class="seg recipe-filters" id="recipeFilter" role="group" aria-label="Rezeptkategorie"><button class="active" type="button" data-recipe-filter="available">Jetzt passend</button><button type="button" data-recipe-filter="almost">Fast passend</button><button type="button" data-recipe-filter="all">Alle</button><button type="button" data-recipe-filter="pantry">Mit Vorrat</button><button type="button" data-recipe-filter="freezer">Einfrierbar</button><button type="button" data-recipe-filter="porridge">Brei & Löffelgerichte</button><button type="button" data-recipe-filter="pancakes">Pancakes</button><button type="button" data-recipe-filter="balls">Bällchen, Taler & Fingerfood</button><button type="button" data-recipe-filter="family">Familiengerichte</button><button type="button" data-recipe-filter="philippines">Philippinen</button><button type="button" data-recipe-filter="baking">Backen</button><button type="button" data-recipe-filter="snack">Snack</button></div></div>
+    <div class="field recipe-filter-field"><label>Passend</label><div class="seg recipe-filters" id="recipeFilter" role="group" aria-label="Rezeptverfügbarkeit"><button type="button" data-recipe-filter="available">Jetzt passend</button><button class="active" type="button" data-recipe-filter="almost">Fast passend</button><button type="button" data-recipe-filter="pantry">Mit Vorrat</button><button type="button" data-recipe-filter="freezer">Einfrierbar</button><button type="button" data-recipe-filter="all">Alle</button></div></div>
+    <button class="btn secondary recipe-more-filter-button" id="recipeMoreFilters" type="button">Filter</button>
+    <div class="recipe-filter-sheet" id="recipeFilterSheet" hidden>
+      <button class="recipe-filter-sheet-backdrop" type="button" data-recipe-filter-close aria-label="Filter schließen"></button>
+      <div class="recipe-filter-sheet-panel" role="dialog" aria-modal="true" aria-labelledby="recipeFilterSheetTitle">
+        <div class="recipe-filter-sheet-head"><h2 id="recipeFilterSheetTitle">Weitere Filter</h2><button class="btn secondary smallbtn" type="button" data-recipe-filter-close>Schließen</button></div>
+        <div class="recipe-filter-sheet-group"><h3>Eigenschaften</h3><div class="seg recipe-extra-filter-list"><button type="button" data-recipe-extra-filter="freezer">Einfrierbar</button></div></div>
+        <div class="recipe-filter-sheet-group"><h3>Rezeptart</h3><div class="seg recipe-extra-filter-list"><button type="button" data-recipe-extra-filter="porridge">Brei &amp; Löffelgerichte</button><button type="button" data-recipe-extra-filter="pancakes">Pancakes</button><button type="button" data-recipe-extra-filter="balls">Bällchen, Taler &amp; Fingerfood</button><button type="button" data-recipe-extra-filter="family">Familiengerichte</button><button type="button" data-recipe-extra-filter="baking">Backen</button></div></div>
+        <div class="recipe-filter-sheet-actions"><button class="btn secondary" id="recipeFilterReset" type="button">Zurücksetzen</button><button class="btn" id="recipeFilterApply" type="button">Rezepte anzeigen</button></div>
+      </div>
+    </div>
     <div id="recipeList"></div>
    </div>
   </details>
@@ -203,7 +231,7 @@
      <summary>Neue Lebensmittel eintragen</summary>
      <div class="small">
       <p>Neue Lebensmittel und Wiederholungen werden im selben Protokolleintrag wie jedes andere Essen erfasst. Die interne Einführungsrolle bleibt dabei erhalten.</p>
-      <p>Bei freien Einträgen ist keine Mahlzeitenauswahl nötig. Bei „Probiert“ oder „Gegessen“ wird die tatsächlich angebotene Konsistenz dokumentiert. Bei Ablehnung, Reaktion oder „Nicht angeboten“ ist sie optional; alte Einträge ohne bekannte Konsistenz bleiben unverändert.</p>
+      <p>Bei freien Einträgen ist keine Mahlzeitenauswahl nötig. Bei „Gegessen“ wird die tatsächlich angebotene Konsistenz dokumentiert. Bei Ablehnung, Reaktion oder „Nicht angeboten“ ist sie optional; alte Einträge ohne bekannte Konsistenz bleiben unverändert.</p>
      </div>
     </details>
     <details class="help-topic">
@@ -216,7 +244,7 @@
     <details class="help-topic">
      <summary>Phase, Mengenorientierung und Konsistenz</summary>
      <div class="small">
-      <p>Die Beikostphase steuert nur die vorgesehenen Mahlzeitenslots: Kennenlernen = Mittag; Mahlzeitenaufbau = Frühstück + Mittag; Drei Hauptmahlzeiten = Frühstück + Mittag + Abend; Familienkost = drei Hauptmahlzeiten + automatisch geplanter Snack.</p>
+      <p>Die Beikostphase steuert nur die vorgesehenen Mahlzeitenslots: Kennenlernen = Mittag; Mahlzeitenaufbau = Mittag + Abendessen; Drei Hauptmahlzeiten = Frühstück + Mittag + Abend; Familienkost = drei Hauptmahlzeiten + automatisch geplanter Snack.</p>
       <p>Die Mengenorientierung bleibt davon getrennt. Hunger- und Sättigungssignale sind wichtiger als starre Grammvorgaben.</p>
       <p>Die Konsistenzstufe ist ebenfalls unabhängig. Der Coach zeigt nur eine Orientierung und ändert die Stufe niemals automatisch.</p>
      </div>
@@ -272,6 +300,7 @@
  <!-- Version 10.1.26: Recipe-V2 R01–R10 (100 freigegebene Rezeptillustrationen) integriert; Joghurt-Zutatenwürfel entfernt; Food-V2 164/164 sowie Funktionalität unverändert. -->
 <script src="data/foods.js?v=10.1.26"></script>
 <script src="data/recipes.js?v=10.1.26"></script>
+<script src="data/recipe-food-pairings.js?v=10.1.26"></script>
 <script src="js/icons.js?v=10.1.26"></script>
 <script src="js/state.js?v=10.1.26"></script>
 <script src="js/utils.js?v=10.1.26"></script>
@@ -283,6 +312,7 @@
 <script src="js/model.js?v=10.1.26"></script>
 <script src="js/phase-readiness.js?v=10.1.26"></script>
 <script src="js/planning.js?v=10.1.26"></script>
+<script src="js/planner-recipe-food-composition.js?v=10.1.26"></script>
 <script src="js/log.js?v=10.1.26"></script>
 <script src="js/foods.js?v=10.1.26"></script>
 <script src="js/recipes.js?v=10.1.26"></script>
@@ -290,15 +320,18 @@
 <script src="js/prep-mobile.js?v=10.1.26"></script>
 <script src="js/recipe-frozen-ingredient-stock.js?v=10.1.26"></script>
 <script src="js/food-status-preferences.js?v=10.1.26"></script>
+<script src="js/planner-culinary-quality.js?v=10.1.26"></script>
 <script src="js/statistics.js?v=10.1.26"></script>
 <script src="js/ui.js?v=10.1.26"></script>
+<script src="js/planner-week-cache.js?v=10.1.26&planner-cache=5"></script>
 <script src="js/planner-log-rollover.js?v=10.1.26"></script>
 <script src="js/planner-log-rollover-cascade.js?v=10.1.26"></script>
 <script src="js/plan-checks.js?v=10.1.26"></script>
 <script src="js/planned-recipe-details.js?v=10.1.26"></script>
-<script src="js/product-allergens.js?v=10.1.26"></script>
-<script src="js/product-allergens-guards.js?v=10.1.26"></script>
+<script src="js/recipe-inventory-ingredients.js?v=10.1.26"></script>
 <script src="js/catalog-navigation.js?v=10.1.26"></script>
+<script src="js/catalog-performance.js?v=10.1.26"></script>
+<script src="js/app-focus-mode.js?v=10.1.26"></script>
 <script src="js/mobile-beikost-more.js?v=10.1.26"></script>
 <script src="js/flow-dialog-ui.js?v=10.1.26"></script>
 <script src="js/recipe-v2-component-options.js?v=10.1.26"></script>

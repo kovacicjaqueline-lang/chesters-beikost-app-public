@@ -1,48 +1,10 @@
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { webkit } from "playwright";
+import { closeBrowserApp, startStaticServer } from "./helpers/app-harness.mjs";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const mimeTypes = {
-  ".html": "text/html; charset=utf-8",
-  ".js": "text/javascript; charset=utf-8",
-  ".css": "text/css; charset=utf-8",
-  ".json": "application/json; charset=utf-8",
-  ".webmanifest": "application/manifest+json; charset=utf-8",
-  ".svg": "image/svg+xml",
-  ".png": "image/png",
-  ".webp": "image/webp",
-};
 
-function startStaticServer() {
-  const server = http.createServer((request, response) => {
-    const url = new URL(request.url || "/", "http://127.0.0.1");
-    const pathname = decodeURIComponent(url.pathname === "/" ? "/index.html" : url.pathname);
-    const filePath = path.resolve(root, `.${pathname}`);
-    if (filePath !== path.join(root, "index.html") && !filePath.startsWith(`${root}${path.sep}`)) {
-      response.writeHead(403).end("Forbidden");
-      return;
-    }
-    fs.stat(filePath, (error, stat) => {
-      if (error || !stat.isFile()) {
-        response.writeHead(404).end("Not found");
-        return;
-      }
-      response.writeHead(200, {
-        "content-type": mimeTypes[path.extname(filePath)] || "application/octet-stream",
-        "cache-control": "no-store",
-      });
-      fs.createReadStream(filePath).pipe(response);
-    });
-  });
-  return new Promise((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(0, "127.0.0.1", () => resolve(server));
-  });
-}
 
 async function waitForApp(page) {
   await page.waitForFunction(() =>
@@ -111,6 +73,15 @@ try {
   assert.equal(await visibleDayCards.count(), 1, "Nur der ausgewählte Tag wird vollständig dargestellt");
   assert.equal(await visibleDayCards.first().getAttribute("data-plan-date"), today);
 
+  await page.evaluate(() => {
+    window.__plannerBuildCalls = 0;
+    window.__plannerOriginalBuildDays = window.buildDays;
+    window.buildDays = function plannerBuildProbe(...args) {
+      window.__plannerBuildCalls += 1;
+      return window.__plannerOriginalBuildDays.apply(this, args);
+    };
+  });
+
   const secondary = page.locator("#plan .plan-secondary-actions");
   const secondaryToggle = secondary.locator(":scope > .plan-secondary-toggle");
   assert.equal(await secondary.getAttribute("open"), null, "Sekundäre Planaktionen sind standardmäßig geschlossen");
@@ -145,6 +116,7 @@ try {
   assert.equal(await days.nth(1).getAttribute("aria-pressed"), "true");
   assert.equal(await visibleDayCards.count(), 1);
   assert.equal(await visibleDayCards.first().getAttribute("data-plan-date"), secondDate, "Direkte Tagesauswahl wechselt das Tagesdetail");
+  assert.equal(await page.evaluate(() => window.__plannerBuildCalls), 0, "Tageskachel-Auswahl löst keine erneute Planberechnung aus");
 
   await page.locator("#planToday").click();
   await page.waitForFunction((date) =>
@@ -159,6 +131,59 @@ try {
   await days.nth(1).click();
   assert.equal(await days.nth(1).getAttribute("aria-pressed"), "true", "Nach dem Heute-Sprung bleibt direkte Tagesauswahl möglich");
 
+  const swipeTarget = page.locator("#blockPlan > .day-card:not([hidden]), #blockPlan > .completed-day:not([hidden])").first();
+  const selectedBeforeSwipe = await swipeTarget.getAttribute("data-plan-date");
+  const nextDate = await page.evaluate((date) => window.__beikostTest.addDays(date, 1), selectedBeforeSwipe);
+  await swipeTarget.evaluate((node) => {
+    node.dispatchEvent(new PointerEvent("pointerdown", {
+      bubbles: true,
+      pointerId: 42,
+      pointerType: "touch",
+      clientX: 280,
+      clientY: 260,
+      button: 0,
+    }));
+    node.dispatchEvent(new PointerEvent("pointerup", {
+      bubbles: true,
+      pointerId: 42,
+      pointerType: "touch",
+      clientX: 120,
+      clientY: 266,
+      button: 0,
+    }));
+  });
+  await page.waitForFunction((date) =>
+    document.querySelector(`#planWeekOverview .plan-week-day[data-plan-date="${date}"]`)?.getAttribute("aria-pressed") === "true",
+  nextDate);
+  assert.equal(await swipeTarget.getAttribute("data-plan-date"), nextDate, "Wisch nach links zeigt den nächsten Tag");
+
+  await page.locator("#blockPlan > .day-card:not([hidden]), #blockPlan > .completed-day:not([hidden])").first().evaluate((node) => {
+    node.dispatchEvent(new PointerEvent("pointerdown", {
+      bubbles: true,
+      pointerId: 43,
+      pointerType: "touch",
+      clientX: 120,
+      clientY: 260,
+      button: 0,
+    }));
+    node.dispatchEvent(new PointerEvent("pointerup", {
+      bubbles: true,
+      pointerId: 43,
+      pointerType: "touch",
+      clientX: 280,
+      clientY: 266,
+      button: 0,
+    }));
+  });
+  await page.waitForFunction((date) =>
+    document.querySelector(`#planWeekOverview .plan-week-day[data-plan-date="${date}"]`)?.getAttribute("aria-pressed") === "true",
+  selectedBeforeSwipe);
+  assert.equal(
+    await page.locator("#blockPlan > .day-card:not([hidden]), #blockPlan > .completed-day:not([hidden])").first().getAttribute("data-plan-date"),
+    selectedBeforeSwipe,
+    "Wisch nach rechts zeigt den vorherigen Tag",
+  );
+
   await page.evaluate(() => {
     window.__mobilePlanRenderAllCalls = 0;
     window.__mobilePlanOriginalRenderAll = window.renderAll;
@@ -168,11 +193,17 @@ try {
     };
   });
   const fromBefore = await page.evaluate(() => window.__beikostTest.getState().settings.planFrom);
+  const expected = await page.evaluate((date) => window.__beikostTest.addDays(date, 7), fromBefore);
+  await page.evaluate((date) => window.planDisplayDays(date, 7), expected);
+  await page.evaluate(() => { window.__plannerBuildCalls = 0; });
   await page.locator("#plan .plan-week-step[data-week-step='7']").click();
   await page.waitForFunction((previous) => window.__beikostTest.getState().settings.planFrom !== previous, fromBefore);
   const fromAfter = await page.evaluate(() => window.__beikostTest.getState().settings.planFrom);
-  const expected = await page.evaluate((date) => window.__beikostTest.addDays(date, 7), fromBefore);
   assert.equal(fromAfter, expected, "Nächste Woche verschiebt den sichtbaren Plan um sieben Tage");
+  assert.ok(
+    await page.evaluate(() => window.__plannerBuildCalls) <= 1,
+    "Wochenwechsel berechnet höchstens einmal und verwendet die Render-Memoisierung für weitere Ansichten",
+  );
   assert.equal(await page.locator("#planWeekOverview .plan-week-day").count(), 7);
   assert.equal(
     await page.evaluate(() => window.__mobilePlanRenderAllCalls),
@@ -180,6 +211,9 @@ try {
     "Wochenwechsel rendert nur den Plan statt alle versteckten App-Bereiche",
   );
   await page.evaluate(() => {
+    window.buildDays = window.__plannerOriginalBuildDays;
+    delete window.__plannerOriginalBuildDays;
+    delete window.__plannerBuildCalls;
     window.renderAll = window.__mobilePlanOriginalRenderAll;
     delete window.__mobilePlanOriginalRenderAll;
     delete window.__mobilePlanRenderAllCalls;
@@ -201,8 +235,6 @@ try {
   assert.ok(narrowStrip.scrollWidth > narrowStrip.clientWidth, "Auf sehr schmalen Geräten darf die Tagesleiste horizontal scrollen");
   assert.equal(narrowStrip.overflowX, "auto", "Die schmale Tagesleiste nutzt explizites horizontales Scrolling");
 
-  await context.close();
 } finally {
-  await browser.close();
-  await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+  await closeBrowserApp({ context: typeof context !== "undefined" ? context : null, browser, server });
 }

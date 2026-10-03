@@ -34,6 +34,14 @@ test('browser runner splits ordered tests deterministically across shards', asyn
   assert.deepEqual(selectBrowserTestShard(files, null), files);
   assert.deepEqual(selectBrowserTestShard(files, { index: 1, total: 2 }), ['a.mjs', 'c.mjs', 'e.mjs']);
   assert.deepEqual(selectBrowserTestShard(files, { index: 2, total: 2 }), ['b.mjs', 'd.mjs']);
+  assert.deepEqual(
+    selectBrowserTestShard(files.slice(0, 4), { index: 1, total: 2 }, { 'a.mjs': 90, 'b.mjs': 80, 'c.mjs': 70, 'd.mjs': 20 }),
+    ['a.mjs', 'd.mjs'],
+  );
+  assert.deepEqual(
+    selectBrowserTestShard(files.slice(0, 4), { index: 2, total: 2 }, { 'a.mjs': 90, 'b.mjs': 80, 'c.mjs': 70, 'd.mjs': 20 }),
+    ['b.mjs', 'c.mjs'],
+  );
   assert.throws(() => resolveBrowserTestShard('0/2'), /Invalid BROWSER_TEST_SHARD/);
   assert.throws(() => resolveBrowserTestShard('3/2'), /Invalid BROWSER_TEST_SHARD/);
   assert.throws(() => resolveBrowserTestShard('broken'), /Invalid BROWSER_TEST_SHARD/);
@@ -102,6 +110,48 @@ test('runBrowserTests writes deterministic summaries while two fake regressions 
     ]);
     assert.equal(fs.existsSync(path.join(artifactDir, 'summary.json')), true);
     assert.equal(fs.existsSync(path.join(artifactDir, 'summary.md')), true);
+  } finally {
+    fs.rmSync(rootDir, { recursive: true, force: true });
+  }
+});
+
+test('browser runner applies and validates the browser process timeout', async () => {
+  const {
+    DEFAULT_BROWSER_TEST_PROCESS_TIMEOUT_MS,
+    resolveBrowserTestProcessTimeout,
+  } = await runnerModule;
+
+  assert.equal(DEFAULT_BROWSER_TEST_PROCESS_TIMEOUT_MS, 300000);
+  assert.equal(resolveBrowserTestProcessTimeout(undefined), 300000);
+  assert.equal(resolveBrowserTestProcessTimeout('45000'), 45000);
+  assert.equal(resolveBrowserTestProcessTimeout('0'), 300000);
+  assert.equal(resolveBrowserTestProcessTimeout('invalid'), 300000);
+});
+
+test('runBrowserTests kills and reports a browser test that exceeds its process timeout', async () => {
+  const { runBrowserTests } = await runnerModule;
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), 'beikost-browser-timeout-'));
+  const artifactDir = path.join(rootDir, 'artifacts', 'browser-tests');
+  const testFile = path.join(rootDir, 'hang-webkit.test.mjs');
+  fs.writeFileSync(testFile, 'setInterval(() => {}, 1000);\n');
+
+  try {
+    const summary = await runBrowserTests({
+      rootDir,
+      artifactDir,
+      testFiles: [testFile],
+      childEnv: { BROWSER_TEST_PROCESS_TIMEOUT_MS: '250' },
+      forwardOutput: false,
+      concurrency: 1,
+    });
+
+    assert.equal(summary.failed, 1);
+    assert.equal(summary.results[0].status, 'failed');
+    assert.match(summary.results[0].error, /exceeded 250 ms/);
+    assert.match(
+      fs.readFileSync(path.join(rootDir, summary.results[0].log), 'utf8'),
+      /Runner timeout: browser test exceeded 250 ms/,
+    );
   } finally {
     fs.rmSync(rootDir, { recursive: true, force: true });
   }

@@ -1,48 +1,10 @@
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { webkit } from "playwright";
+import { closeBrowserApp, startStaticServer } from "./helpers/app-harness.mjs";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const mimeTypes = {
-  ".html": "text/html; charset=utf-8",
-  ".js": "text/javascript; charset=utf-8",
-  ".css": "text/css; charset=utf-8",
-  ".json": "application/json; charset=utf-8",
-  ".webmanifest": "application/manifest+json; charset=utf-8",
-  ".svg": "image/svg+xml",
-  ".png": "image/png",
-  ".webp": "image/webp",
-};
 
-function startStaticServer() {
-  const server = http.createServer((request, response) => {
-    const url = new URL(request.url || "/", "http://127.0.0.1");
-    const pathname = decodeURIComponent(url.pathname === "/" ? "/index.html" : url.pathname);
-    const filePath = path.resolve(root, `.${pathname}`);
-    if (filePath !== path.join(root, "index.html") && !filePath.startsWith(`${root}${path.sep}`)) {
-      response.writeHead(403).end("Forbidden");
-      return;
-    }
-    fs.stat(filePath, (error, stat) => {
-      if (error || !stat.isFile()) {
-        response.writeHead(404).end("Not found");
-        return;
-      }
-      response.writeHead(200, {
-        "content-type": mimeTypes[path.extname(filePath)] || "application/octet-stream",
-        "cache-control": "no-store",
-      });
-      fs.createReadStream(filePath).pipe(response);
-    });
-  });
-  return new Promise((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(0, "127.0.0.1", () => resolve(server));
-  });
-}
 
 const server = await startStaticServer();
 const { port } = server.address();
@@ -54,10 +16,19 @@ try {
     deviceScaleFactor: 2,
     isMobile: true,
     hasTouch: true,
+    // This regression tests plan-check caching, not PWA behavior. Block the
+    // app's production service worker so its large async precache cannot race
+    // this test's deliberate reloads and storage-denial simulation.
+    serviceWorkers: "block",
   });
   const page = await context.newPage();
   const pageErrors = [];
-  page.on("pageerror", (error) => pageErrors.push(error.message));
+  const failedRequests = [];
+  page.on("pageerror", (error) => pageErrors.push({ message: error.message, stack: error.stack || "" }));
+  page.on("requestfailed", (request) => failedRequests.push({
+    url: request.url(),
+    error: request.failure()?.errorText || "",
+  }));
 
   const diagnosticSnapshot = async (label) => {
     const snapshot = await page.evaluate((snapshotLabel) => {
@@ -98,8 +69,8 @@ try {
     seed.inactivePlanKept = {};
 
     // Bekannte Nicht-Allergene bleiben als echte Planbasis aktiv; konkurrierende
-    // Allergene werden deaktiviert. Brot bleibt für die erste Planerzeugung ebenfalls
-    // deaktiviert, damit die später abgeschlossenen Plan-Slots garantiert brotfrei sind.
+    // Allergene werden deaktiviert. Ei bleibt für die erste Planerzeugung ebenfalls
+    // deaktiviert, damit die später abgeschlossenen Plan-Slots garantiert eifrei sind.
     for (const record of seed.foods) {
       if (record.allergenGroup) {
         record.active = false;
@@ -109,27 +80,27 @@ try {
       }
     }
 
-    const bread = seed.foods.find((record) => record.id === "brot");
-    if (!bread) throw new Error("Brot-FOOD fehlt");
-    bread.active = false;
-    bread.manualStatus = "auto";
+    const egg = seed.foods.find((record) => record.id === "ei");
+    if (!egg) throw new Error("Ei-FOOD fehlt");
+    egg.active = false;
+    egg.manualStatus = "auto";
 
     const exposureDate = api.addDays(on, -1);
     seed.logs = [{
-      id: "no-solution-bread",
+      id: "no-solution-egg",
       date: exposureDate,
       meal: "lunch",
       entryType: "meal",
-      focusId: bread.id,
-      foodIds: [bread.id],
-      baseFoodIds: [bread.id],
+      focusId: egg.id,
+      foodIds: [egg.id],
+      baseFoodIds: [egg.id],
       sampleFoodIds: [],
       outcome: "eaten",
-      foodOutcomes: { [bread.id]: "eaten" },
+      foodOutcomes: { [egg.id]: "eaten" },
       createdAt: `${exposureDate}T12:00:00.000Z`,
     }];
 
-    // Stufe 1: einen echten brotfreien Wochenplan erzeugen. buildDays() liefert die
+    // Stufe 1: einen echten eifreien Wochenplan erzeugen. buildDays() liefert die
     // vollständigen Mahlzeitenobjekte samt den von der Produktionslogik vergebenen IDs.
     api.setState(seed);
     const plannedSlots = api.buildDays(on, 7)
@@ -149,22 +120,22 @@ try {
       throw new Error(`Die Testlage muss 21 sichtbare Hauptmahlzeiten erzeugen, erhalten: ${plannedSlots.length}`);
     }
     if (plannedSlots.some((slot) => !slot.planId)) throw new Error("Jeder sichtbare Test-Slot braucht eine echte planId");
-    if (plannedSlots.some((slot) => (slot.plan.foodIds || []).includes(bread.id))) {
-      throw new Error("Der brotfreie Ausgangsplan darf Brot nicht enthalten");
+    if (plannedSlots.some((slot) => (slot.plan.foodIds || []).includes(egg.id))) {
+      throw new Error("Der eifreie Ausgangsplan darf Ei nicht enthalten");
     }
 
     // Stufe 2: alle sieben Tage als ausdrücklich manuelle Planinstanzen persistieren.
     // Anders als Auto-Locks dürfen diese auch jenseits der Drei-Tage-Fixierung bestehen.
-    // Brot wird erst danach reaktiviert; Abschlusslogs referenzieren die realen planIds.
+    // Ei wird erst danach reaktiviert; Abschlusslogs referenzieren die realen planIds.
     const linked = api.getState();
     linked.settings.planCheckEvaluationRevision = 7002;
     linked.logs ||= [];
     linked.manualMeals ||= {};
     linked.planLocks ||= {};
-    const linkedBread = linked.foods.find((record) => record.id === bread.id);
-    if (!linkedBread) throw new Error("Brot-FOOD fehlt nach dem ersten State-Roundtrip");
-    linkedBread.active = true;
-    linkedBread.manualStatus = "auto";
+    const linkedEgg = linked.foods.find((record) => record.id === egg.id);
+    if (!linkedEgg) throw new Error("Ei-FOOD fehlt nach dem ersten State-Roundtrip");
+    linkedEgg.active = true;
+    linkedEgg.manualStatus = "auto";
 
     plannedSlots.forEach((slot, index) => {
       if (typeof mealSnapshot !== "function") throw new Error("mealSnapshot fehlt");
@@ -187,7 +158,7 @@ try {
 
       const actualFoodIds = [...new Set(slot.plan.foodIds || [])].filter(Boolean);
       if (!actualFoodIds.length) throw new Error(`Plan-Slot ohne FOODs: ${slot.date}|${slot.meal}`);
-      if (actualFoodIds.includes(bread.id)) throw new Error("Brot darf nicht in einem Abschlusslog vorkommen");
+      if (actualFoodIds.includes(egg.id)) throw new Error("Ei darf nicht in einem Abschlusslog vorkommen");
       linked.logs.push({
         id: `completed-${index}`,
         date: slot.date,
@@ -212,6 +183,36 @@ try {
     }, 50);
 
     api.setState(linked);
+    const openEggGoal = api.planCheckOpenGoals().find((item) => item.code === "ALLERGEN_INTRODUCTION_CONTINUE");
+    if (!openEggGoal) throw new Error("Das offene Ei-Einführungsziel fehlt für die Cache-Migration");
+    const currentDays = typeof planDisplayDays === "function"
+      ? planDisplayDays(visiblePlanStart(), 7)
+      : buildDays(visiblePlanStart(), 7);
+    const legacyGoalSnapshot = {
+      code: openEggGoal.code || "",
+      refs: openEggGoal.refs || {},
+      details: openEggGoal.details || {},
+    };
+    const legacyEvaluationKey = window.PlannerPlanCheckSolutions.evaluationKey(currentDays);
+    const legacyEntryKey = `v1|${legacyEvaluationKey}|${window.PlannerPlanCheckSolutions.goalKey(openEggGoal)}|${window.PlannerPlanCheckSolutions.hashText(window.PlannerPlanCheckSolutions.stableStringify(legacyGoalSnapshot))}`;
+    const currentCacheKey = `beikost-plan-check-none-v2-f${window.PlannerPlanCheckSolutions.FEATURE_VERSION}`;
+    const now = Date.now();
+    localStorage.setItem("beikost-plan-check-none-v1", JSON.stringify([{
+      key: legacyEntryKey,
+      savedAt: now,
+    }]));
+    // Ein passender, aber abgelaufener Treffer darf nicht sofort "none" vortäuschen.
+    // 32 frische, nicht passende Treffer prüfen zugleich das Limit nach dem neuen Ergebnis.
+    localStorage.setItem(currentCacheKey, JSON.stringify([
+      ...Array.from({ length: 32 }, (_, index) => ({
+        key: `seeded-none-${index}`,
+        savedAt: now,
+      })),
+      {
+        key: legacyEntryKey,
+        savedAt: now - 15 * 24 * 60 * 60 * 1000,
+      },
+    ]));
     renderAll();
     const completedSlots = plannedSlots.map((slot) => ({
       date: slot.date,
@@ -234,7 +235,7 @@ try {
   );
   assert.ok(
     pendingSnapshot.goals.some((item) => item.code === "ALLERGEN_INTRODUCTION_CONTINUE"),
-    "Die Testlage muss ein offenes Brot-Einführungsziel erzeugen",
+    "Die Testlage muss ein offenes Ei-Einführungsziel erzeugen",
   );
   assert.ok(
     pendingSnapshot.states.some((entry) => entry.status === "pending"),
@@ -274,12 +275,135 @@ try {
   const planQuality = page.locator("#planQuality");
   assert.match(await planQuality.textContent(), /keine passende Möglichkeit/i);
   assert.equal(await page.locator("#openPlanGoalSolution").count(), 0, "Ohne Lösung darf Lösung ansehen nicht gerendert werden");
+  const versionedCache = await page.evaluate(() => {
+    const key = `beikost-plan-check-none-v2-f${window.PlannerPlanCheckSolutions.FEATURE_VERSION}`;
+    return { key, rows: JSON.parse(localStorage.getItem(key) || "[]") };
+  });
+  assert.equal(
+    versionedCache.rows.length,
+    32,
+    `Der persistierte None-Cache muss auf 32 Einträge begrenzt bleiben (${versionedCache.key})`,
+  );
+  assert.equal(
+    versionedCache.rows.some((row) => row.key === "seeded-none-0"),
+    false,
+    "Beim Einfügen des neuen Ergebnisses muss der älteste Cache-Eintrag entfernt werden",
+  );
+  assert.ok(
+    versionedCache.rows.some((row) => row.key.startsWith("v1|")),
+    "Das aktuelle abgeschlossene Ergebnis muss trotz Cache-Limit gespeichert sein",
+  );
+
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.waitForFunction(() => !!window.__beikostTest?.setState);
+  await page.waitForFunction(() => window.__planCheckSolutionPrecomputeInstalled === true);
+  await page.locator('nav button[data-view="plan"]').click();
+  await page.waitForFunction(() => window.__beikostTest.planCheckSolutionPrecompute()
+    .some((entry) => entry.status === "none"), null, { timeout: 3000 });
+  const resumedCopy = await page.locator("#planQuality").textContent();
+  assert.match(resumedCopy, /keine passende Möglichkeit/i);
+  assert.doesNotMatch(resumedCopy, /wird geprüft/i, "Ein gespeichertes Ergebnis darf beim App-Neustart nicht erneut auf pending springen");
+  assert.equal(await page.locator("#openPlanGoalSolution").count(), 0, "Ohne Lösung darf nach dem Neustart kein CTA erscheinen");
+
+  // Browser Storage kann abgewiesen werden (z.B. Privacy-Modus). Der eigentliche
+  // Plan-Check muss dann weiterhin bis zum fachlichen Ergebnis durchlaufen.
+  await page.addInitScript(() => {
+    const isNoneCacheKey = (key) => /^beikost-plan-check-none-/.test(String(key));
+    const originalGetItem = Storage.prototype.getItem;
+    const originalSetItem = Storage.prototype.setItem;
+    Storage.prototype.getItem = function (key) {
+      if (isNoneCacheKey(key)) throw new DOMException("Storage denied", "SecurityError");
+      return originalGetItem.call(this, key);
+    };
+    Storage.prototype.setItem = function (key, value) {
+      if (isNoneCacheKey(key)) throw new DOMException("Storage denied", "SecurityError");
+      return originalSetItem.call(this, key, value);
+    };
+  });
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.waitForFunction(() => !!window.__beikostTest?.setState);
+  await page.waitForFunction(() => window.__planCheckSolutionPrecomputeInstalled === true);
+  await page.locator('nav button[data-view="plan"]').click();
+  await page.waitForFunction(() => window.__beikostTest.planCheckSolutionPrecompute()
+    .some((entry) => entry.status === "none"), null, { timeout: 30000 });
+  const storageFallback = await page.evaluate(() => {
+    const key = `beikost-plan-check-none-v2-f${window.PlannerPlanCheckSolutions.FEATURE_VERSION}`;
+    let readBlocked = false;
+    let writeBlocked = false;
+    try { localStorage.getItem(key); } catch { readBlocked = true; }
+    try { localStorage.setItem(key, "[]"); } catch { writeBlocked = true; }
+    return { readBlocked, writeBlocked, copy: document.getElementById("planQuality")?.textContent || "" };
+  });
+  assert.deepEqual(
+    { readBlocked: storageFallback.readBlocked, writeBlocked: storageFallback.writeBlocked },
+    { readBlocked: true, writeBlocked: true },
+    "Der Test muss sowohl abgewiesene Cache-Lese- als auch Schreibzugriffe simulieren",
+  );
+  assert.match(storageFallback.copy, /keine passende Möglichkeit/i, "Ohne Storage muss der Plan-Check fachlich weiterarbeiten");
+
   await page.locator("#leavePlanGoalDirect").click();
   await page.waitForFunction(() => !document.getElementById("planQuality")?.offsetParent);
 
-  assert.deepEqual(pageErrors, [], `Keine Page-Errors erwartet: ${pageErrors.join(" | ")}`);
-  await context.close();
+  const glutenReport = await page.evaluate(() => {
+    const api = window.__beikostTest;
+    api.reset();
+    const snapshot = api.getState();
+    snapshot.settings.planFrom = api.today();
+    snapshot.logs = [
+      ...[
+        "2026-07-17", "2026-07-19", "2026-07-20", "2026-07-22",
+        "2026-07-27", "2026-08-01", "2026-08-14", "2026-08-27",
+        "2026-09-16",
+      ].map((date, index) => ({
+        id: `known-oat-${index}`,
+        date,
+        meal: index % 2 ? "lunch" : "breakfast",
+        entryType: "meal",
+        foodIds: ["hafer"],
+        outcome: "eaten",
+        foodOutcomes: { hafer: "eaten" },
+        createdAt: `${date}T12:00:00.000Z`,
+      })),
+      {
+        id: "known-bread",
+        date: "2026-08-16",
+        meal: "breakfast",
+        entryType: "food",
+        foodIds: ["brot"],
+        outcome: "eaten",
+        foodOutcomes: { brot: "eaten" },
+        createdAt: "2026-08-16T12:00:00.000Z",
+      },
+      {
+        id: "single-wheat-semolina",
+        date: "2026-09-18",
+        meal: "breakfast",
+        entryType: "food",
+        foodIds: ["weizengriess"],
+        outcome: "eaten",
+        foodOutcomes: { weizengriess: "eaten" },
+        createdAt: "2026-09-18T12:00:00.000Z",
+      },
+    ];
+    snapshot.manualMeals = {};
+    snapshot.planLocks = {};
+    snapshot.overrides = {};
+    api.setState(snapshot);
+    return api.planCheckReport().items
+      .filter((item) => item.code === "ALLERGEN_INTRODUCTION_CONTINUE")
+      .map((item) => item.details?.representativeFoodId || "");
+  });
+  assert.equal(
+    glutenReport.includes("weizengriess"),
+    false,
+    `Bei etablierter Glutenpflege darf keine Weizengrieß-Einführung fortgesetzt werden: ${glutenReport.join(", ")}`,
+  );
+
+  assert.deepEqual(
+    pageErrors,
+    [],
+    `Keine Page-Errors erwartet; Request-Fehler: ${JSON.stringify(failedRequests)}; Page-Errors: ${JSON.stringify(pageErrors)}`,
+  );
 } finally {
-  await browser.close();
-  await new Promise((resolve) => server.close(resolve));
+  await closeBrowserApp({ context: typeof context !== "undefined" ? context : null, browser, server });
 }

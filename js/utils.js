@@ -145,13 +145,26 @@ function food(id) {
   return foodLookupFor(state.foods).byId.get(id);
 }
 
-// Planner-Mahlzeiteneignung wird als eigene Policy-Schicht nach app.js geladen.
-// Die App bleibt während der Policy-Kette verborgen; sichtbar wird sie erst nach
-// Installation der vollständigen Planner-Regeln und einem erneuten Render der
-// aktuell sichtbaren Ansicht.
+// Planner-Regeln werden nach dem App-Shell-Start installiert. Nur plannerabhängige
+// Ansichten warten auf diese Readiness-Grenze; Einstellungen, Protokoll und andere
+// Bereiche können nach dem Laden ihrer Daten bereits verwendet werden.
 if (typeof window !== "undefined" && typeof document !== "undefined") {
-  let plannerPolicyBody = document.body;
-  if (plannerPolicyBody) plannerPolicyBody.style.visibility = "hidden";
+  let plannerReadinessState = "loading";
+  let resolvePlannerReadiness;
+  const plannerReadinessPromise = new Promise((resolve) => {
+    resolvePlannerReadiness = resolve;
+  });
+  window.PlannerReadiness = Object.freeze({
+    get state() { return plannerReadinessState; },
+    get ready() { return plannerReadinessState === "ready"; },
+    whenReady() { return plannerReadinessPromise; },
+  });
+
+  let settlePlannerReadiness = (state, error = null) => {
+    if (plannerReadinessState !== "loading") return;
+    plannerReadinessState = state;
+    resolvePlannerReadiness({ state, error: error?.message || String(error || "") });
+  };
   window.__plannerPoliciesReady = false;
   window.__handlingReadinessReady = false;
   let plannerPoliciesFinished = false;
@@ -161,8 +174,8 @@ if (typeof window !== "undefined" && typeof document !== "undefined") {
     if (plannerPoliciesFinished) return;
     plannerPoliciesFinished = true;
     window.__plannerPoliciesReady = true;
+    settlePlannerReadiness("ready");
     if (typeof renderCurrentView === "function") renderCurrentView();
-    if (plannerPolicyBody) plannerPolicyBody.style.visibility = "";
   };
 
   let finishPlannerPolicies = () => {
@@ -228,8 +241,8 @@ if (typeof window !== "undefined" && typeof document !== "undefined") {
     plannerPoliciesFinished = true;
     window.__plannerPoliciesReady = false;
     console.error("Planner-Policy konnte nicht vollständig geladen werden.", event?.error || event || "");
-    if (typeof renderAll === "function") renderAll();
-    if (plannerPolicyBody) plannerPolicyBody.style.visibility = "";
+    settlePlannerReadiness("failed", event?.error || event);
+    if (typeof renderCurrentView === "function") renderCurrentView();
   };
 
   let attachPlannerLoadError = (script) => {
@@ -300,6 +313,32 @@ if (typeof window !== "undefined" && typeof document !== "undefined") {
                 document.head.appendChild(maintenanceScript);
               };
 
+              let loadFinalQualityPolicy = () => {
+                let existingFinalQuality = document.querySelector('script[data-planner-final-quality="planner-final-quality"]');
+                let installFinalQualityAndContinue = () => {
+                  if (typeof installPlannerFinalQualityRuntime !== "function") {
+                    failPlannerPolicies(new Error("Planner-Final-Quality-Policy fehlt."));
+                    return;
+                  }
+                  installPlannerFinalQualityRuntime();
+                  loadMaintenancePolicy();
+                };
+                if (existingFinalQuality) {
+                  if (typeof installPlannerFinalQualityRuntime === "function") installFinalQualityAndContinue();
+                  else {
+                    existingFinalQuality.addEventListener("load", installFinalQualityAndContinue, { once: true });
+                    attachPlannerLoadError(existingFinalQuality);
+                  }
+                  return;
+                }
+                let finalQualityScript = document.createElement("script");
+                finalQualityScript.src = "js/planner-final-quality.js?v=10.1.26";
+                finalQualityScript.dataset.plannerFinalQuality = "planner-final-quality";
+                finalQualityScript.addEventListener("load", installFinalQualityAndContinue, { once: true });
+                attachPlannerLoadError(finalQualityScript);
+                document.head.appendChild(finalQualityScript);
+              };
+
               let existingIntroduction = document.querySelector('script[data-planner-introduction-policy="daily-food-introductions"]');
               let installIntroductionAndContinue = () => {
                 if (typeof installPlannerIntroductionPolicyRuntime !== "function") {
@@ -307,7 +346,7 @@ if (typeof window !== "undefined" && typeof document !== "undefined") {
                   return;
                 }
                 installPlannerIntroductionPolicyRuntime();
-                loadMaintenancePolicy();
+                loadFinalQualityPolicy();
               };
               if (existingIntroduction) {
                 if (typeof installPlannerIntroductionPolicyRuntime === "function") installIntroductionAndContinue();

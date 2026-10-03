@@ -1,48 +1,10 @@
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { webkit } from "playwright";
+import { closeBrowserApp, startStaticServer } from "./helpers/app-harness.mjs";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const mimeTypes = {
-  ".html": "text/html; charset=utf-8",
-  ".js": "text/javascript; charset=utf-8",
-  ".css": "text/css; charset=utf-8",
-  ".json": "application/json; charset=utf-8",
-  ".webmanifest": "application/manifest+json; charset=utf-8",
-  ".svg": "image/svg+xml",
-  ".png": "image/png",
-  ".webp": "image/webp",
-};
 
-function startStaticServer() {
-  const server = http.createServer((request, response) => {
-    const url = new URL(request.url || "/", "http://127.0.0.1");
-    const pathname = decodeURIComponent(url.pathname === "/" ? "/index.html" : url.pathname);
-    const filePath = path.resolve(root, `.${pathname}`);
-    if (filePath !== path.join(root, "index.html") && !filePath.startsWith(`${root}${path.sep}`)) {
-      response.writeHead(403).end("Forbidden");
-      return;
-    }
-    fs.stat(filePath, (error, stat) => {
-      if (error || !stat.isFile()) {
-        response.writeHead(404).end("Not found");
-        return;
-      }
-      response.writeHead(200, {
-        "content-type": mimeTypes[path.extname(filePath)] || "application/octet-stream",
-        "cache-control": "no-store",
-      });
-      fs.createReadStream(filePath).pipe(response);
-    });
-  });
-  return new Promise((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(0, "127.0.0.1", () => resolve(server));
-  });
-}
 
 const server = await startStaticServer();
 const { port } = server.address();
@@ -133,14 +95,40 @@ try {
     return result;
   });
 
-  assert.equal(recipeSize.sizeToken, "76px", "mobiler Recipe-Wrapper muss den sichtbaren 76px-Override erben");
-  assert.equal(recipeSize.wrapperWidth, 76, "mobiler Recipe-Wrapper darf das 76px-Asset nicht auf das kompakte Token beschneiden");
-  assert.equal(recipeSize.wrapperHeight, 76, "mobiler Recipe-Wrapper muss 76px hoch rendern");
-  assert.equal(recipeSize.assetWidth, 76, "mobiles Recipe-Asset muss tatsächlich 76px breit rendern");
-  assert.equal(recipeSize.assetHeight, 76, "mobiles Recipe-Asset muss tatsächlich 76px hoch rendern");
+  assert.equal(recipeSize.sizeToken, "52px", "mobiler Recipe-Wrapper muss den sichtbaren 52px-Override erben");
+  assert.equal(recipeSize.wrapperWidth, 52, "mobiler Recipe-Wrapper darf das 52px-Asset nicht auf das kompakte Token beschneiden");
+  assert.equal(recipeSize.wrapperHeight, 52, "mobiler Recipe-Wrapper muss 52px hoch rendern");
+  assert.equal(recipeSize.assetWidth, 52, "mobiles Recipe-Asset muss tatsächlich 52px breit rendern");
+  assert.equal(recipeSize.assetHeight, 52, "mobiles Recipe-Asset muss tatsächlich 52px hoch rendern");
 
-  await context.close();
+
+  await page.evaluate(() => window.showFoodInfo(window.food("karotte")));
+  const foodPreference = page.locator(".food-detail-preference .toggleline");
+  await foodPreference.waitFor({ state: "visible" });
+  assert.equal(
+    await foodPreference.locator("#foodDetailsLiked").count(),
+    1,
+    "❤️-Schalter muss direkt in der sichtbaren Lebensmittel-Detailansicht liegen",
+  );
+  assert.match(await foodPreference.textContent(), /Wird gern gegessen/);
+  assert.equal(
+    await page.locator(".food-detail-settings #foodDetailsLiked").count(),
+    0,
+    "❤️-Schalter darf nicht im eingeklappten Bereich Status und Planung verborgen sein",
+  );
+
+  const detailIcon = page.locator(".food-detail-hero-icon .illustration-icon__asset");
+  await detailIcon.waitFor({ state: "attached" });
+  const detailLoading = await detailIcon.evaluate((img) => ({
+    loading: img.loading,
+    fetchPriority: img.fetchPriority,
+  }));
+  assert.deepEqual(
+    detailLoading,
+    { loading: "eager", fetchPriority: "high" },
+    "FOOD-Detailicon muss beim Öffnen sofort und mit hoher Priorität geladen werden",
+  );
+
 } finally {
-  await browser.close();
-  await new Promise((resolve) => server.close(resolve));
+  await closeBrowserApp({ context: typeof context !== "undefined" ? context : null, browser, server });
 }

@@ -9,8 +9,9 @@ const KEY = "chester-beikost-pwa-v6";
 const APP_VERSION = "10.1.26";
 const SCHEMA_VERSION = 5;
 const DB_NAME = "chester-beikost-db";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const DB_STORE = "app";
+const DB_LOGS_STORE = "logs";
 const STATE_RECORD = "state";
 const SNAPSHOT_RECORD = "snapshots";
 const LEGACY_KEYS = [
@@ -49,7 +50,7 @@ const AMOUNT_LEVELS = {
 };
 const PHASES = {
   kennenlernen: { label: "Kennenlernen", rank: 0, meals: ["lunch"] },
-  aufbau: { label: "Mahlzeitenaufbau", rank: 1, meals: ["breakfast", "lunch"] },
+  aufbau: { label: "Mahlzeitenaufbau", rank: 1, meals: ["lunch", "dinner"] },
   drei: { label: "Drei Hauptmahlzeiten", rank: 2, meals: ["breakfast", "lunch", "dinner"] },
   familie: { label: "Familienkost", rank: 3, meals: ["breakfast", "lunch", "snack", "dinner"] },
 };
@@ -422,6 +423,7 @@ const DEFAULT = {
     targetFoods: 100,
     newFoodEvery: 2,
     preferInventoryInPlan: true,
+    appFocusMode: "planning-documentation",
   },
   foods: FOOD_DB,
   logs: [],
@@ -432,6 +434,7 @@ const DEFAULT = {
   planLocks: {},
   autoLockExcluded: {},
   manualMeals: {},
+  dayClosures: {},
   inactivePlanKept: {},
   combinationPauses: {},
   followUps: {},
@@ -440,7 +443,9 @@ const DEFAULT = {
 };
 let state = null;
 let foodFilter = "open";
-let recipeFilter = "available";
+let recipeFilter = "almost";
+let recipeMealFilter = "";
+let recipeExtraFilters = new Set();
 let recipeQuery = "";
 let logVisibleCount = 8;
 let logMonthFilter = "all";

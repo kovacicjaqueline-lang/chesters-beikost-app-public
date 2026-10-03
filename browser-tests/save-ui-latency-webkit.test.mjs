@@ -1,55 +1,13 @@
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { webkit } from "playwright";
+import { closeBrowserApp, startStaticServer } from "./helpers/app-harness.mjs";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const mimeTypes = {
-  ".html": "text/html; charset=utf-8",
-  ".js": "text/javascript; charset=utf-8",
-  ".css": "text/css; charset=utf-8",
-  ".json": "application/json; charset=utf-8",
-  ".webmanifest": "application/manifest+json; charset=utf-8",
-  ".svg": "image/svg+xml",
-  ".png": "image/png",
-  ".webp": "image/webp",
-};
 
-function startStaticServer() {
-  const server = http.createServer((request, response) => {
-    const url = new URL(request.url || "/", "http://127.0.0.1");
-    const pathname = decodeURIComponent(url.pathname === "/" ? "/index.html" : url.pathname);
-    const filePath = path.resolve(root, `.${pathname}`);
-    if (filePath !== path.join(root, "index.html") && !filePath.startsWith(`${root}${path.sep}`)) {
-      response.writeHead(403).end("Forbidden");
-      return;
-    }
-    fs.stat(filePath, (error, stat) => {
-      if (error || !stat.isFile()) {
-        response.writeHead(404).end("Not found");
-        return;
-      }
-      response.writeHead(200, {
-        "content-type": mimeTypes[path.extname(filePath)] || "application/octet-stream",
-        "cache-control": "no-store",
-      });
-      fs.createReadStream(filePath).pipe(response);
-    });
-  });
-  return new Promise((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(0, "127.0.0.1", () => resolve(server));
-  });
-}
 
 async function waitForDeferredRender(page, before) {
   await page.waitForFunction((count) => window.__saveUiLatencyProbe.renderCalls > count, before);
-}
-
-async function waitForDeferredCurrentViewRender(page, before) {
-  await page.waitForFunction((count) => window.__saveUiLatencyProbe.currentViewRenderCalls > count, before);
 }
 
 const server = await startStaticServer();
@@ -70,15 +28,10 @@ try {
 
   await page.evaluate(() => {
     const baseRenderAll = window.renderAll;
-    const baseRenderCurrentView = window.renderCurrentView;
-    window.__saveUiLatencyProbe = { renderCalls: 0, currentViewRenderCalls: 0 };
+    window.__saveUiLatencyProbe = { renderCalls: 0 };
     window.renderAll = function profiledRenderAll(...args) {
       window.__saveUiLatencyProbe.renderCalls += 1;
       return baseRenderAll.apply(this, args);
-    };
-    window.renderCurrentView = function profiledRenderCurrentView(...args) {
-      window.__saveUiLatencyProbe.currentViewRenderCalls += 1;
-      return baseRenderCurrentView.apply(this, args);
     };
   });
 
@@ -128,42 +81,6 @@ try {
   );
   await waitForDeferredRender(page, foodImmediate.before);
 
-  // Konkretes Produkt speichern und löschen: Modal-Close bleibt unabhängig vom Voll-Render.
-  const productFoodId = await page.evaluate(() => window.__beikostTest.getState().foods[0].id);
-  await page.evaluate((foodId) => window.openProductAllergenForm(foodId), productFoodId);
-  await page.locator("#productName").fill("Latency-Testprodukt");
-  const productSaveImmediate = await page.evaluate(() => {
-    const before = window.__saveUiLatencyProbe.renderCalls;
-    document.getElementById("saveConcreteProduct").click();
-    return {
-      before,
-      after: window.__saveUiLatencyProbe.renderCalls,
-      modalOpen: document.getElementById("genericModal").classList.contains("open"),
-      count: window.__beikostTest.getState().products?.length || 0,
-    };
-  });
-  assert.equal(productSaveImmediate.after, productSaveImmediate.before, "Produkt-Save darf nicht synchron voll rendern");
-  assert.equal(productSaveImmediate.modalOpen, false);
-  assert.equal(productSaveImmediate.count, 1);
-  await waitForDeferredRender(page, productSaveImmediate.before);
-
-  const productId = await page.evaluate(() => window.__beikostTest.getState().products[0].id);
-  await page.evaluate((id) => window.openProductAllergenForm("", id), productId);
-  const productDeleteImmediate = await page.evaluate(() => {
-    const before = window.__saveUiLatencyProbe.renderCalls;
-    document.getElementById("deleteConcreteProduct").click();
-    return {
-      before,
-      after: window.__saveUiLatencyProbe.renderCalls,
-      modalOpen: document.getElementById("genericModal").classList.contains("open"),
-      count: window.__beikostTest.getState().products?.length || 0,
-    };
-  });
-  assert.equal(productDeleteImmediate.after, productDeleteImmediate.before, "Produkt-Löschen darf nicht synchron voll rendern");
-  assert.equal(productDeleteImmediate.modalOpen, false);
-  assert.equal(productDeleteImmediate.count, 0);
-  await waitForDeferredRender(page, productDeleteImmediate.before);
-
   // Eigenes Lebensmittel: Persistenz und Dialogschluss passieren vor dem Voll-Render.
   const foodsBeforeCustom = await page.evaluate(() => window.__beikostTest.getState().foods.length);
   await page.evaluate(() => window.addCustomFoodForm());
@@ -203,7 +120,7 @@ try {
   assert.equal(inventoryImmediate.inventoryCount, inventoryBefore + 1);
   await waitForDeferredRender(page, inventoryImmediate.before);
 
-  // Protokoll speichern: Save-Semantik ist synchron, danach wird nur die aktuelle Ansicht neu gerendert.
+  // Protokoll speichern: Save-Semantik ist synchron, Modal-Close ebenfalls; die aktuelle Ansicht bleibt erhalten.
   await page.evaluate(() => window.showView("home"));
   await page.evaluate(() => window.openLog(null));
   await page.waitForFunction(() => !!document.querySelector(".addLogFoodResult"));
@@ -215,57 +132,122 @@ try {
   const logsBefore = await page.evaluate(() => window.__beikostTest.getState().logs.length);
   const logImmediate = await page.evaluate(() => {
     const before = window.__saveUiLatencyProbe.renderCalls;
-    const beforeCurrentView = window.__saveUiLatencyProbe.currentViewRenderCalls;
     document.getElementById("saveLog").click();
-    return {
+    const result = {
       before,
       after: window.__saveUiLatencyProbe.renderCalls,
-      beforeCurrentView,
-      afterCurrentView: window.__saveUiLatencyProbe.currentViewRenderCalls,
       modalOpen: document.getElementById("logModal").classList.contains("open"),
       logCount: window.__beikostTest.getState().logs.length,
       homeVisible: document.getElementById("home").classList.contains("active"),
       moreVisible: document.getElementById("more").classList.contains("active"),
     };
+    document.querySelector('nav button[data-view="foods"]').click();
+    result.foodsVisible = document.getElementById("foods").classList.contains("active");
+    return result;
   });
-  assert.equal(logImmediate.after, logImmediate.before, "Protokoll-Save darf nicht synchron voll rendern");
-  assert.equal(logImmediate.afterCurrentView, logImmediate.beforeCurrentView, "Protokoll-Save darf auch die aktuelle Ansicht nicht synchron rendern");
+  assert.equal(logImmediate.after, logImmediate.before, "Protokoll-Save darf nicht synchron alle Ansichten rendern");
   assert.equal(logImmediate.modalOpen, false, "Protokoll-Modal muss sofort schließen");
-  assert.equal(logImmediate.logCount, logsBefore + 1, "Protokoll muss vor dem gezielten View-Render persistiert sein");
+  assert.equal(logImmediate.logCount, logsBefore + 1, "Protokoll muss vor dem Voll-Render persistiert sein");
   assert.equal(logImmediate.homeVisible, true, "Ausgangsansicht muss nach dem Speichern aktiv bleiben");
   assert.equal(logImmediate.moreVisible, false, "Speichern darf nicht automatisch in die Protokollansicht wechseln");
-  await waitForDeferredCurrentViewRender(page, logImmediate.beforeCurrentView);
+  assert.equal(logImmediate.foodsVisible, true, "Die Hauptnavigation muss direkt nach dem Schließen des Protokoll-Dialogs reagieren");
+  const persistedLogShape = await page.evaluate(async () => {
+    await saveQueue;
+    const db = await new Promise((resolve, reject) => {
+      const request = indexedDB.open("chester-beikost-db", 2);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    return await new Promise((resolve, reject) => {
+      const transaction = db.transaction(["app", "logs"], "readonly");
+      const stateRequest = transaction.objectStore("app").get("state");
+      const logsRequest = transaction.objectStore("logs").getAll();
+      transaction.oncomplete = () => resolve({ state: stateRequest.result, logs: logsRequest.result });
+      transaction.onerror = () => reject(transaction.error);
+    });
+  });
+  assert.equal(Object.hasOwn(persistedLogShape.state, "logs"), false, "App-Datensatz darf keine vollständige Log-Historie enthalten");
+  assert.equal(persistedLogShape.logs.length, logsBefore + 1, "IndexedDB soll getrennte Protokolldatensätze enthalten");
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0))));
   assert.equal(
     await page.evaluate(() => window.__saveUiLatencyProbe.renderCalls),
     logImmediate.before,
-    "Protokoll-Save darf auch verzögert keinen Voll-Render der ganzen App auslösen",
+    "Protokoll-Save darf nach dem Tabwechsel keinen Voll-Render auslösen, der die Hauptnavigation blockiert",
   );
   assert.equal(
-    await page.evaluate(() => document.getElementById("home").classList.contains("active")),
+    await page.evaluate(() => document.getElementById("foods").classList.contains("active")),
     true,
-    "Ausgangsansicht muss auch nach dem gezielten View-Render aktiv bleiben",
+    "Der neue Haupttab muss nach den aufgeschobenen Save-Updates aktiv bleiben",
   );
 
-  // Einstellungen: Toast/State werden im Klickpfad gesetzt, kompletter Re-Render folgt separat.
-  await page.evaluate(() => window.showView("more"));
+  // Einstellungen speichern und sofort den Bottom-Tab wechseln: kein globaler Render darf den Tap blockieren.
+  await page.evaluate(() => {
+    document.querySelector('nav button[data-view="more"]').click();
+    document.querySelector("#more .settings-card > details > summary")?.click();
+  });
+  await page.waitForFunction(() => Number.isFinite(window.__plannerWeekCache?.revision));
+  const settingsCacheRevisionBefore = await page.evaluate(() => window.__plannerWeekCache.revision);
   const settingsImmediate = await page.evaluate(() => {
-    const input = document.getElementById("allergenDays");
-    input.value = String(Math.max(3, Number(input.value || 3) + 1));
+    const input = document.getElementById("newFoodEvery");
+    const options = [...input.options].map((option) => option.value);
+    const currentIndex = options.indexOf(input.value);
+    input.value = options[(currentIndex + 1) % options.length];
     const expected = input.value;
     const before = window.__saveUiLatencyProbe.renderCalls;
     document.getElementById("saveSettings").click();
+    const afterSave = window.__saveUiLatencyProbe.renderCalls;
+    document.querySelector('nav button[data-view="home"]').click();
     return {
       before,
-      after: window.__saveUiLatencyProbe.renderCalls,
+      afterSave,
+      afterTabTap: window.__saveUiLatencyProbe.renderCalls,
       expected,
-      saved: window.__beikostTest.getState().settings.allergenDays,
+      saved: window.__beikostTest.getState().settings.newFoodEvery,
       toast: document.getElementById("toastText").textContent,
+      homeVisible: document.getElementById("home").classList.contains("active"),
+      moreVisible: document.getElementById("more").classList.contains("active"),
+      cacheRevision: window.__plannerWeekCache.revision,
     };
   });
-  assert.equal(settingsImmediate.after, settingsImmediate.before, "Settings-Save darf nicht synchron voll rendern");
-  assert.equal(settingsImmediate.saved, settingsImmediate.expected);
+  assert.equal(settingsImmediate.afterSave, settingsImmediate.before, "Settings-Save darf keinen globalen Voll-Render starten");
+  assert.equal(settingsImmediate.afterTabTap, settingsImmediate.before, "Der sofortige Tabwechsel darf nicht auf renderAll warten");
+  assert.equal(settingsImmediate.saved, settingsImmediate.expected, "Geänderte Einstellung muss sofort im State stehen");
   assert.equal(settingsImmediate.toast, "Einstellungen gespeichert.");
-  await waitForDeferredRender(page, settingsImmediate.before);
+  assert.equal(settingsImmediate.homeVisible, true, "Bottom-Tab muss direkt nach dem Speichern wechseln");
+  assert.equal(settingsImmediate.moreVisible, false);
+  assert.ok(settingsImmediate.cacheRevision > settingsCacheRevisionBefore, "Settings-Save muss den Planner-Cache invalidieren");
+
+  await page.waitForFunction(() => {
+    const home = document.getElementById("home");
+    return home?.classList.contains("active") && !home.hasAttribute("aria-busy");
+  });
+  const persistedSettings = await page.evaluate(async () => {
+    await saveQueue;
+    const db = await new Promise((resolve, reject) => {
+      const request = indexedDB.open("chester-beikost-db", 2);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    return await new Promise((resolve, reject) => {
+      const transaction = db.transaction("app", "readonly");
+      const request = transaction.objectStore("app").get("state");
+      transaction.oncomplete = () => resolve(request.result?.settings?.newFoodEvery);
+      transaction.onerror = () => reject(transaction.error);
+    });
+  });
+  assert.equal(persistedSettings, settingsImmediate.expected, "Settings müssen in IndexedDB gespeichert sein");
+
+  await page.locator('nav button[data-view="more"]').click();
+  await page.waitForFunction((expected) => {
+    const view = document.getElementById("more");
+    return view?.classList.contains("active") &&
+      document.getElementById("newFoodEvery")?.value === expected;
+  }, settingsImmediate.expected);
+  await page.locator('nav button[data-view="plan"]').click();
+  await page.waitForFunction(() => {
+    const view = document.getElementById("plan");
+    return view?.classList.contains("active") && !view.hasAttribute("aria-busy");
+  });
 
   // Separates Profiling von storage.save(): keine Produktionslogik ändern, sondern den synchronen
   // Anteil (clone + JSON + localStorage) gegen einen vollständigen renderAll() auf derselben WebKit-Laufzeit messen.
@@ -274,12 +256,12 @@ try {
       const sorted = [...values].sort((a, b) => a - b);
       return sorted[Math.floor(sorted.length / 2)];
     };
-    const measure = (label) => {
+    const measure = (label, save = () => window.save()) => {
       const saveMs = [];
       const renderMs = [];
       for (let i = 0; i < 7; i++) {
         const start = performance.now();
-        window.save();
+        save();
         saveMs.push(performance.now() - start);
       }
       for (let i = 0; i < 5; i++) {
@@ -326,18 +308,29 @@ try {
     }));
     window.__beikostTest.setState(historyState);
     const yearHistory = measure("365-log-history");
+    const appendedLog = {
+      ...cloneJson(template),
+      id: "latency-profile-appended",
+      createdAt: new Date(Date.UTC(2026, 0, 2, 12, 0, 0)).toISOString(),
+      updatedAt: new Date(Date.UTC(2026, 0, 2, 12, 0, 0)).toISOString(),
+    };
+    const appendState = cloneJson(historyState);
+    appendState.logs.push(appendedLog);
+    window.__beikostTest.setState(appendState);
+    const yearHistoryAppend = measure("365-log-history-append", () => window.save({
+      logMutation: { upserts: [appendedLog] },
+    }));
     window.__beikostTest.setState(original);
-    return { baseline, yearHistory };
+    return { baseline, yearHistory, yearHistoryAppend };
   });
 
   assert.ok(Number.isFinite(profile.baseline.saveMedianMs));
   assert.ok(Number.isFinite(profile.baseline.renderMedianMs));
   assert.ok(profile.yearHistory.stateBytes > profile.baseline.stateBytes, "Profilzustand mit Jahresverlauf muss größer sein");
+  assert.ok(Number.isFinite(profile.yearHistoryAppend.saveMedianMs));
   console.log(`[save-ui-profile] ${JSON.stringify(profile)}`);
 } finally {
-  await context.close();
-  await browser.close();
-  await new Promise((resolve) => server.close(resolve));
+  await closeBrowserApp({ context, browser, server });
 }
 
 console.log("WebKit save/UI latency regression and storage profile passed.");

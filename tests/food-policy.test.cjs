@@ -9,6 +9,7 @@ const {
   familySuccessfulExposureCount,
   familyPlanningRank,
   pruneIneligibleAutomaticPlanState,
+  plannerFoodCanBeAutomaticFocus,
 } = require('../app.js');
 
 function baseFoods() {
@@ -24,6 +25,7 @@ function baseFoods() {
     { id: 'kefir', name: 'Kefir', category: 'Milchprodukt', priority: 9, active: true, allergenGroup: 'Milch', meals: ['breakfast','lunch','dinner'], count100: true, manualStatus: 'auto' },
     { id: 'lachs', name: 'Lachs', category: 'Fisch', priority: 10, active: true, allergenGroup: 'Fisch', meals: ['lunch','dinner'], count100: true, manualStatus: 'auto' },
     { id: 'banane', name: 'Banane', category: 'Obst', priority: 11, active: true, allergenGroup: '', meals: ['breakfast','lunch','dinner'], count100: true, manualStatus: 'auto' },
+    { id: 'oregano', name: 'Oregano', category: 'Kraut/Gewürz', priority: 12, active: true, allergenGroup: '', meals: ['breakfast','lunch','dinner'], count100: true, manualStatus: 'auto' },
   ];
 }
 
@@ -123,6 +125,29 @@ test('Mais-Einführung gilt im Planner für Polenta, konkrete Lebensmittel bleib
   assert.equal(familySuccessfulExposureCount(polenta, foods, logs, outcome), 1);
   assert.equal(familyPlanningRank(polenta, foods, logs, outcome, 0), 1);
   assert.equal(logs[0].foodIds.includes('polenta'), false);
+});
+
+test('Kräuter und Gewürze bleiben Planner-Komponenten und alte ungültige Auto-Locks werden entfernt', () => {
+  const foods = baseFoods(); applyFoodPolicyData(foods, {});
+  const oregano = foods.find(f => f.id === 'oregano');
+  assert.equal(oregano.plannerRole, 'component');
+  assert.equal(plannerFoodCanBeAutomaticFocus(oregano), false);
+
+  const s = {
+    settings: settings('familie'),
+    foods,
+    overrides: {},
+    planLocks: {
+      '2026-08-20|breakfast': {
+        mode: 'auto',
+        focusId: 'mais-polenta',
+        foodIds: ['mais-polenta', 'oregano'],
+      },
+    },
+    followUps: {},
+  };
+  assert.equal(pruneIneligibleAutomaticPlanState(s), true);
+  assert.equal(s.planLocks['2026-08-20|breakfast'], undefined);
 });
 
 test('Sesam und Tahin teilen Lebensmittel- und Allergenstamm', () => {

@@ -22,6 +22,21 @@ const RECIPE_CATALOG_ADDITIONS = Object.freeze([
     skillRequirement: "Nur weich und gut greifbar anbieten. Das Stück muss zwischen zwei Fingern leicht zerdrückbar sein; nur aufrecht sitzend und direkt beaufsichtigt anbieten.",
   }),
   Object.freeze({
+    name: "Bananen-Hirseschnitten",
+    category: "baking",
+    requires: Object.freeze(["Hirse", "Banane", "Mandel"]),
+    milkChoices: Object.freeze(["Haferdrink"]),
+    stage: 2,
+    batch: "8–10 weiche Schnitten",
+    ingredients: "100 g Hirse, 300 ml ungesüßter Haferdrink, 1 reife Banane, 15 g weißes Mandelmus, optional 1 Prise Ceylon-Zimt",
+    note: "Hirse heiß abspülen und nach Packungsangabe beziehungsweise nach Einweichen im Haferdrink sehr weich und dick kochen. Kurz quellen lassen. Banane fein zerdrücken und mit dem glatten Mandelmus vollständig unterrühren. Die Masse flach in eine kleine Form streichen, vollständig auskühlen lassen und in breite, gut greifbare Schnitten schneiden. Nur weich und feucht anbieten; keine ganzen oder gehackten Nüsse.",
+    freezable: true,
+    freezerNote: "Einzeln vorfrieren und portionsweise auftauen; danach auf eine weiche, feuchte und leicht zerdrückbare Konsistenz prüfen.",
+    tags: Object.freeze(["Frühstück", "Fingerfood", "einfrierbar"]),
+    searchAliases: Object.freeze(["Hirse-Bananen-Schnitten", "Bananen-Hirse-Schnitten"]),
+    skillRequirement: "Als breite, sehr weiche Schnitten anbieten. Die Hirse muss vollständig weich sein und die Schnitte zwischen zwei Fingern leicht zerdrückbar bleiben; nur aufrecht sitzend und direkt beaufsichtigt anbieten.",
+  }),
+  Object.freeze({
     name: "Pizza Wrap",
     category: "family",
     requires: Object.freeze(["Weizen", "Tomate", "Käse"]),
@@ -224,8 +239,8 @@ const RECIPE_CATALOG_ADDITIONS = Object.freeze([
     requires: Object.freeze(["Rote Linsen", "Kartoffel", "Karotte", "Erbsen (TK möglich)", "Tomate"]),
     stage: 3,
     batch: "3–4 Familienportionen",
-    ingredients: "80 g rote Linsen, 250 g Kartoffeln, 80 g Karotte, 60 g Erbsen, 120 g Tomate",
-    note: "Linsen, Gemüse und Tomate sehr weich garen. In eine Form geben, mit weichem Kartoffelstampf bedecken und ohne harte Kruste backen. Babyportion als weiche Schichten löffelbar anbieten.",
+    ingredients: "80 g rote Linsen, 250 g Kartoffeln, 80 g Karotte, 60 g Erbsen, 120 g Tomate, 20 g mild gegarte Zwiebel, 1 TL Thymian oder Petersilie, 1 TL Rapsöl",
+    note: "Zwiebel in Rapsöl mild weich dünsten. Linsen, Gemüse und Tomate mit Thymian oder Petersilie sehr weich garen. In eine Form geben, mit weichem Kartoffelstampf bedecken und ohne harte Kruste backen. Babyportion als weiche Schichten löffelbar anbieten.",
     freezable: true,
     freezerNote: "Portionsweise einfrieren und langsam vollständig erwärmen.",
     tags: Object.freeze(["Familiengericht", "Auflauf"]),
@@ -238,8 +253,8 @@ const RECIPE_CATALOG_ADDITIONS = Object.freeze([
     requires: Object.freeze(["Nudeln", "Spinat", "Zucchini", "Tomate", "Frischkäse", "Mozzarella"]),
     stage: 4,
     batch: "4 Familienportionen",
-    ingredients: "6 kleine Lasagneblätter, 120 g Spinat, 150 g Zucchini, 180 g Tomate, 80 g Frischkäse, 40 g Mozzarella",
-    note: "Gemüse weich dünsten und mit Frischkäse zu einer feuchten Sauce verrühren. Mit sehr weich gegarten Lasagneblättern schichten, dünn mit Mozzarella bedecken und ohne harte Kruste backen. Babyportion klein schneiden.",
+    ingredients: "6 kleine Lasagneblätter, 120 g Spinat, 150 g Zucchini, 180 g Tomate, 80 g Frischkäse, 40 g Mozzarella, 20 g mild gegarte Zwiebel, 1 TL Basilikum oder Oregano, 1 TL Rapsöl",
+    note: "Zwiebel in Rapsöl mild weich dünsten. Gemüse mit Zwiebel, Basilikum oder Oregano weich dünsten und mit Frischkäse zu einer feuchten Sauce verrühren. Mit sehr weich gegarten Lasagneblättern schichten, dünn mit Mozzarella bedecken und ohne harte Kruste backen. Babyportion klein schneiden.",
     freezable: true,
     freezerNote: "Portionsweise einfrieren; nach dem Erwärmen auf weiche Blätter und kurze Käsefäden prüfen.",
     tags: Object.freeze(["Familiengericht", "Lasagne"]),
@@ -252,8 +267,8 @@ const RECIPE_CATALOG_ADDITIONS = Object.freeze([
     requires: Object.freeze(["Huhn", "Spinat", "Quinoa", "Zucchini", "Frischkäse"]),
     stage: 4,
     batch: "4 Familienportionen",
-    ingredients: "120 g Huhn, 70 g Quinoa, 100 g Spinat, 120 g Zucchini, 80 g Frischkäse",
-    note: "Quinoa weich kochen, Huhn vollständig garen und fein zerkleinern. Mit weich gegartem Gemüse und Frischkäse mischen, feucht in eine Form geben und ohne harte Kruste backen.",
+    ingredients: "120 g Huhn, 70 g Quinoa, 100 g Spinat, 120 g Zucchini, 80 g Frischkäse, 20 g mild gegarte Zwiebel, 1 TL Petersilie, 1 TL Rapsöl oder Butter",
+    note: "Zwiebel in Rapsöl oder Butter mild weich dünsten. Quinoa weich kochen, Huhn vollständig garen und fein zerkleinern. Mit weich gegartem Gemüse, Zwiebel, Petersilie und Frischkäse mischen, feucht in eine Form geben und ohne harte Kruste backen.",
     freezable: true,
     freezerNote: "Portionsweise einfrieren und beim Erwärmen mit etwas Wasser lockern.",
     tags: Object.freeze(["Familiengericht", "Auflauf"]),
@@ -266,8 +281,8 @@ const RECIPE_CATALOG_ADDITIONS = Object.freeze([
     requires: Object.freeze(["Lachs", "Brokkoli", "Kartoffel", "Frischkäse"]),
     stage: 4,
     batch: "4 Familienportionen",
-    ingredients: "100 g grätenfreier Lachs, 180 g Kartoffeln, 100 g Brokkoli, 70 g Frischkäse",
-    note: "Lachs vollständig garen und sorgfältig auf Gräten prüfen. Kartoffeln und Brokkoli weich garen, alles mit Frischkäse feucht mischen und ohne harte Kruste überbacken.",
+    ingredients: "100 g grätenfreier Lachs, 180 g Kartoffeln, 100 g Brokkoli, 70 g Frischkäse, 1 TL Butter, 1 TL Dill",
+    note: "Lachs vollständig garen und sorgfältig auf Gräten prüfen. Kartoffeln und Brokkoli weich garen, mit Butter, Dill und Frischkäse feucht mischen und ohne harte Kruste überbacken.",
     freezable: true,
     freezerNote: "Portionsweise einfrieren; nach dem Erwärmen erneut sorgfältig auf Gräten prüfen.",
     tags: Object.freeze(["Familiengericht", "Auflauf", "Fisch"]),
@@ -277,11 +292,12 @@ const RECIPE_CATALOG_ADDITIONS = Object.freeze([
   Object.freeze({
     name: "Mildes Bohnen-Süßkartoffel-Chili",
     category: "family",
+    smoothBatchAllowed: true,
     requires: Object.freeze(["Weiße Bohnen", "Süßkartoffel", "Tomate", "Mais"]),
     stage: 4,
     batch: "4 Familienportionen",
-    ingredients: "180 g sehr weiche weiße Bohnen, 220 g Süßkartoffel, 180 g Tomate, 60 g Mais",
-    note: "Süßkartoffel, Tomate und Mais sehr weich garen. Bohnen zerdrücken oder halbieren und alles ohne Chili, Salz oder Brühe zu einem milden, feuchten Eintopf köcheln.",
+    ingredients: "180 g sehr weiche weiße Bohnen, 220 g Süßkartoffel, 180 g Tomate, 60 g Mais, 20 g mild gegarte Zwiebel, ¼ TL milder Kreuzkümmel und ½ TL mildes Paprikapulver",
+    note: "Zwiebel mild weich dünsten und mit Kreuzkümmel sowie mildem Paprikapulver aromatisieren. Süßkartoffel, Tomate und Mais sehr weich garen. Bohnen zerdrücken oder halbieren und alles ohne scharfes Chili, Salz oder Brühe zu einem milden, feuchten Eintopf köcheln.",
     freezable: true,
     freezerNote: "Portionsweise einfrieren und beim Erwärmen mit Wasser lockern.",
     tags: Object.freeze(["Familiengericht", "Eintopf"]),
@@ -294,13 +310,189 @@ const RECIPE_CATALOG_ADDITIONS = Object.freeze([
     requires: Object.freeze(["Paprika", "Reis", "Rote Linsen", "Tomate"]),
     stage: 4,
     batch: "4 weiche Paprikahälften",
-    ingredients: "2 große Paprika, 70 g Reis, 50 g rote Linsen, 150 g Tomate",
-    note: "Paprika häuten oder sehr weich garen. Reis und Linsen weich kochen, mit Tomate mischen und in die Paprikahälften füllen. Ohne harte Haut servieren; Babyportion in kleine weiche Stücke teilen.",
+    ingredients: "2 große Paprika, 70 g Reis, 50 g rote Linsen, 150 g Tomate, 20 g mild gegarte Zwiebel, 1 TL Basilikum oder Oregano, 1 TL Rapsöl",
+    note: "Zwiebel in Rapsöl mild weich dünsten. Paprika häuten oder sehr weich garen. Reis und Linsen weich kochen, mit Tomate, Zwiebel und Basilikum oder Oregano mischen und in die Paprikahälften füllen. Ohne harte Haut servieren; Babyportion in kleine weiche Stücke teilen.",
     freezable: true,
     freezerNote: "Gefüllt portionsweise einfrieren; nach dem Erwärmen Haut und Textur erneut prüfen.",
     tags: Object.freeze(["Familiengericht", "gefüllt"]),
     searchAliases: Object.freeze(["Paprika mit Linsenreis"]),
     skillRequirement: "Sehr weiche gefüllte Stücke; Paprikahaut vollständig entfernen oder so weich garen, dass sie leicht zerfällt.",
+  }),
+  Object.freeze({
+    name: "Apfel-Pflaumen-Kompott",
+    category: "porridge",
+    requires: Object.freeze(["Apfel", "Pflaume"]),
+    stage: 1,
+    batch: "4 kleine Portionen",
+    ingredients: "Apfel, Pflaume, wenig Wasser",
+    note: "Apfel und Pflaume schälen, entsteinen und mit wenig Wasser sehr weich dünsten. Fein pürieren oder passend zur aktuellen Konsistenz zerdrücken. Ohne Zucker, Honig und Salz servieren.",
+    freezable: true,
+    freezerNote: "Portionsweise rasch abkühlen, einfrieren und vollständig auftauen beziehungsweise sanft erwärmen.",
+    tags: Object.freeze(["Grundrezept", "Obst", "Vorrat"]),
+    searchAliases: Object.freeze(["Pflaumen-Apfel-Kompott"]),
+  }),
+  Object.freeze({
+    name: "Birne-Pfirsich-Kompott",
+    category: "porridge",
+    requires: Object.freeze(["Birne", "Pfirsich"]),
+    stage: 1,
+    batch: "4 kleine Portionen",
+    ingredients: "Birne, Pfirsich, wenig Wasser",
+    note: "Birne und Pfirsich schälen, entsteinen und mit wenig Wasser sehr weich dünsten. Fein pürieren oder passend zur aktuellen Konsistenz zerdrücken. Ohne Zucker, Honig und Salz servieren.",
+    freezable: true,
+    freezerNote: "Portionsweise rasch abkühlen, einfrieren und vollständig auftauen beziehungsweise sanft erwärmen.",
+    tags: Object.freeze(["Grundrezept", "Obst", "Vorrat"]),
+    searchAliases: Object.freeze(["Pfirsich-Birnen-Kompott"]),
+  }),
+  Object.freeze({
+    name: "Mango-Bananen-Creme",
+    category: "porridge",
+    requires: Object.freeze(["Mango", "Banane"]),
+    stage: 1,
+    batch: "3–4 kleine Portionen",
+    ingredients: "reife Mango, reife Banane",
+    note: "Mango schälen und das Fruchtfleisch vom Kern lösen. Banane schälen, beides fein pürieren oder sehr glatt zerdrücken und frisch anbieten. Keine zusätzlichen Süßungsmittel; bei nicht sofortigem Servieren gekühlt aufbewahren.",
+    freezable: false,
+    tags: Object.freeze(["Grundrezept", "Obst", "Frisch"]),
+    searchAliases: Object.freeze(["Mango-Bananen-Mus"]),
+  }),
+  Object.freeze({
+    name: "Kartoffel-Karotten-Stampf",
+    category: "porridge",
+    requires: Object.freeze(["Kartoffel", "Karotte"]),
+    stage: 1,
+    batch: "4–6 kleine Portionen",
+    ingredients: "Kartoffel, Karotte, Wasser, optional 1 TL Rapsöl pro Portion",
+    note: "Kartoffel und Karotte schälen, in Stücke schneiden und sehr weich dämpfen oder in wenig Wasser garen. Mit etwas Garwasser fein pürieren oder passend zur aktuellen Konsistenz zerdrücken. Rapsöl erst in die servierte Portion geben; keine Brühe und kein Salz.",
+    freezable: true,
+    freezerNote: "Portionsweise einfrieren, vollständig auftauen und mit etwas Wasser gleichmäßig erwärmen.",
+    tags: Object.freeze(["Grundrezept", "Löffelgericht", "Vorrat"]),
+    searchAliases: Object.freeze(["Kartoffel-Karotten-Brei"]),
+  }),
+  Object.freeze({
+    name: "Gemüse-Reis-Brei",
+    category: "porridge",
+    requires: Object.freeze(["Reis", "Zucchini", "Karotte"]),
+    stage: 1,
+    batch: "4–6 kleine Portionen",
+    ingredients: "Reis, Zucchini, Karotte, Wasser, optional 1 TL Rapsöl pro Portion",
+    note: "Reis mit ausreichend Wasser sehr weich und breiig kochen. Zucchini und Karotte separat sehr weich garen, fein pürieren und unter den Reis rühren. Je nach aktueller Konsistenz glatt pürieren oder weich zerdrücken. Keine gesalzene Brühe verwenden; Rapsöl erst in die servierte Portion geben.",
+    freezable: true,
+    freezerNote: "Portionsweise rasch abkühlen, einfrieren, vollständig auftauen und mit etwas Wasser sanft erwärmen.",
+    tags: Object.freeze(["Grundrezept", "Löffelgericht", "Vorrat"]),
+    searchAliases: Object.freeze(["Reis-Gemüse-Brei"]),
+  }),
+
+  Object.freeze({
+    name: "Quinoa-Huhn-Süßkartoffel-Finger",
+    category: "balls",
+    requires: Object.freeze(["Huhn", "Quinoa", "Süßkartoffel"]),
+    stage: 3,
+    batch: "8–10 weiche Finger",
+    ingredients: "100 g Huhn, 70 g Quinoa, 160 g Süßkartoffel, 1 TL Rapsöl, 1 TL Petersilie",
+    note: "Süßkartoffel weich garen und zerdrücken. Quinoa gründlich waschen und sehr weich kochen. Huhn vollständig durchgaren, sehr fein zerkleinern und mit Quinoa, Süßkartoffel und Petersilie vermengen. Flache, fingerlange Stücke formen, mit etwas Rapsöl bestreichen und nur so lange backen, bis sie halten; keine harte Kruste. Auf Handwärme abkühlen lassen und vor dem Servieren prüfen, dass sie zwischen zwei Fingern leicht zerdrückbar sind.",
+    freezable: true,
+    freezerNote: "Gegarte Finger einzeln vorfrieren, portionsweise verpacken und nach dem Auftauen vollständig erwärmen.",
+    tags: Object.freeze(["Quinoa", "Fingerfood", "Huhn"]),
+    searchAliases: Object.freeze(["Huhn-Quinoa-Süßkartoffel-Finger", "Quinoa-Huhn-Finger"]),
+    skillRequirement: "Nur flach, weich und fingerlang anbieten; das Stück muss zwischen zwei Fingern leicht zerdrückbar sein. Nur aufrecht sitzend und direkt beaufsichtigt anbieten.",
+  }),
+  Object.freeze({
+    name: "Quinoa-Linsen-Gemüse-Khichdi",
+    category: "porridge",
+    requires: Object.freeze(["Quinoa", "Rote Linsen", "Karotte", "Zucchini"]),
+    stage: 2,
+    batch: "4 kleine Portionen",
+    ingredients: "60 g Quinoa, 60 g rote Linsen, 120 g Karotte, 100 g Zucchini, 450 ml Wasser, 1 TL Rapsöl, 1 TL Petersilie",
+    note: "Quinoa gründlich waschen. Quinoa und rote Linsen mit Wasser aufkochen und sehr weich kochen lassen. Karotte und Zucchini fein würfeln, mitgaren und so lange weiterkochen, bis alles weich zerfällt. Mit Petersilie verrühren und je nach aktueller Konsistenz weich zerdrücken; Rapsöl erst in die servierte Portion geben. Keine gesalzene Brühe verwenden.",
+    freezable: true,
+    freezerNote: "Portionsweise rasch abkühlen, einfrieren, vollständig auftauen und mit etwas Wasser sanft erwärmen.",
+    tags: Object.freeze(["Quinoa", "Linsen", "Löffelgericht"]),
+    searchAliases: Object.freeze(["Quinoa-Linsen-Brei", "Quinoa-Khichdi"]),
+  }),
+  Object.freeze({
+    name: "Quinoa-Gemüse-Puffer",
+    category: "balls",
+    requires: Object.freeze(["Quinoa", "Zucchini", "Karotte", "Ei"]),
+    stage: 3,
+    batch: "8 kleine Puffer",
+    ingredients: "70 g Quinoa, 120 g Zucchini, 100 g Karotte, 1 Ei, 1 TL Rapsöl, 1 TL Petersilie",
+    note: "Quinoa gründlich waschen und sehr weich kochen. Zucchini fein reiben, gut ausdrücken und kurz weich dünsten. Karotte weich garen und fein zerdrücken. Alles mit Ei und Petersilie verrühren, kleine flache Puffer formen und bei niedriger Hitze vollständig durchgaren; nur leicht setzen lassen und keine harte Kruste entstehen lassen. Auf Handwärme abkühlen lassen.",
+    freezable: true,
+    freezerNote: "Puffer einzeln vorfrieren, portionsweise verpacken und nach dem Auftauen vollständig erwärmen.",
+    tags: Object.freeze(["Quinoa", "Fingerfood", "Gemüse"]),
+    searchAliases: Object.freeze(["Quinoa-Puffer", "Quinoa-Gemüse-Taler"]),
+    skillRequirement: "Als sehr weiche, flache Stücke anbieten; sie müssen zwischen zwei Fingern leicht zerdrückbar sein. Nur aufrecht sitzend und direkt beaufsichtigt anbieten.",
+  }),
+  Object.freeze({
+    name: "Bulgur-Zucchini-Ei",
+    category: "porridge",
+    requires: Object.freeze(["Bulgur", "Zucchini", "Ei"]),
+    stage: 2,
+    batch: "3 kleine Portionen",
+    ingredients: "60 g Bulgur, 160 g Zucchini, 1 Ei, 250 ml Wasser, 1 TL Rapsöl, 1 TL Petersilie",
+    note: "Bulgur mit Wasser aufkochen und deutlich weicher als für Erwachsene garen. Zucchini fein würfeln und mitgaren, bis sie zerfällt. Das Ei einrühren und vollständig stocken lassen, Petersilie untermischen und die Masse bei Bedarf weich zerdrücken. Feucht vom Löffel anbieten; Rapsöl erst in die servierte Portion geben. Kein Salz und keine harte, trockene Oberfläche.",
+    freezable: true,
+    freezerNote: "Portionsweise einfrieren und beim Erwärmen mit etwas Wasser wieder weich rühren.",
+    tags: Object.freeze(["Bulgur", "Ei", "Löffelgericht"]),
+  "Forelle-Kartoffel-Bällchen": Object.freeze(["80 g vollständig gegarte, sorgfältig entgrätete Forelle, 150 g sehr weiche Kartoffel, 1 Ei, 20 g feine Haferflocken, 1 TL Rapsöl, 1 TL Petersilie", 7]),
+  "Kabeljau-Süßkartoffel-Fischküchlein": Object.freeze(["80 g vollständig gegarter, sorgfältig entgräteter Kabeljau, 160 g Süßkartoffel, 1 Ei, 25 g feine Haferflocken, 1 TL Rapsöl, 1 TL Petersilie", 7]),
+    searchAliases: Object.freeze(["Bulgur mit Zucchini und Ei", "Bulgur-Ei-Gemüse"]),
+  }),
+  Object.freeze({
+    name: "Bulgur-Gemüse-Köfte",
+    category: "balls",
+    requires: Object.freeze(["Bulgur", "Rote Linsen", "Karotte", "Zucchini"]),
+    stage: 3,
+    batch: "8 kleine flache Köfte",
+    ingredients: "70 g Bulgur, 100 g rote Linsen, 120 g Karotte, 80 g Zucchini, 1 TL Rapsöl, 1 TL Petersilie, ¼ TL milder Kreuzkümmel",
+    note: "Bulgur und rote Linsen getrennt sehr weich kochen. Karotte und Zucchini weich garen, fein zerdrücken und mit Bulgur, Linsen, Petersilie und mildem Kreuzkümmel vermengen. Kleine flache, ovale Köfte formen und im Ofen oder in einer beschichteten Pfanne vollständig durchwärmen; keine harte Kruste und keine trockene, kompakte Mitte. Auf Handwärme abkühlen lassen.",
+    freezable: true,
+    freezerNote: "Köfte einzeln vorfrieren, portionsweise verpacken und nach dem Auftauen vollständig erwärmen.",
+    tags: Object.freeze(["Bulgur", "Fingerfood", "Linsen"]),
+    searchAliases: Object.freeze(["Bulgur-Köfte", "Bulgur-Linsen-Köfte"]),
+    skillRequirement: "Nur flach und sehr weich anbieten; das Stück muss zwischen zwei Fingern leicht zerdrückbar sein. Keine festen runden Kugeln. Nur aufrecht sitzend und direkt beaufsichtigt anbieten.",
+  }),
+  Object.freeze({
+    name: "Bulgur-Linsen-Suppe",
+    category: "porridge",
+    requires: Object.freeze(["Bulgur", "Rote Linsen", "Tomate", "Karotte"]),
+    stage: 2,
+    batch: "4 kleine Portionen",
+    ingredients: "50 g Bulgur, 60 g rote Linsen, 150 g Tomate, 120 g Karotte, 450 ml Wasser, 1 TL Rapsöl, 1 TL Petersilie",
+    note: "Tomate und Karotte fein würfeln. Mit Bulgur, roten Linsen und Wasser aufkochen und sehr weich köcheln lassen, bis die Körner und Linsen vollständig weich sind. Einen Teil fein zerdrücken, damit eine sämige Suppe ohne lose harte Körner entsteht, und Petersilie einrühren. Rapsöl erst in die servierte Portion geben. Keine gesalzene Brühe verwenden.",
+    freezable: true,
+    freezerNote: "Portionsweise rasch abkühlen, einfrieren, vollständig auftauen und mit etwas Wasser sanft erwärmen.",
+    tags: Object.freeze(["Bulgur", "Linsen", "Suppe"]),
+    searchAliases: Object.freeze(["Bulgur-Linsensuppe", "Bulgur-Ezogelin-inspiriert"]),
+  }),
+  Object.freeze({
+    name: "Forelle-Kartoffel-Bällchen",
+    category: "balls",
+    requires: Object.freeze(["Forelle", "Kartoffel"]),
+    stage: 3,
+    batch: "8 kleine weiche Fischbällchen",
+    ingredients: "80 g vollständig gegarte, sorgfältig entgrätete Forelle, 150 g sehr weiche Kartoffel, 1 Ei, 20 g feine Haferflocken, 1 TL Rapsöl, 1 TL Petersilie",
+    note: "Forelle vollständig garen und sehr sorgfältig auf Gräten prüfen. Kartoffel weich garen und fein zerdrücken. Fisch fein zerpflücken und mit Kartoffel, Ei, Haferflocken und Petersilie zu einer feuchten Masse vermengen. Kleine flache oder längliche Bällchen statt fester runder Kugeln formen, mit wenig Rapsöl bestreichen und bei niedriger Hitze vollständig durchgaren. Keine harte Kruste; vor dem Servieren auf weiche, zwischen zwei Fingern leicht zerdrückbare Konsistenz prüfen. Ohne Salz anbieten.",
+    freezable: true,
+    freezerNote: "Gegarte Bällchen einzeln vorfrieren, portionsweise verpacken und nach dem Auftauen vollständig erwärmen; vor dem Servieren erneut auf Gräten prüfen.",
+    tags: Object.freeze(["Fisch", "Fingerfood", "Forelle"]),
+    searchAliases: Object.freeze(["Forellen-Kartoffel-Bällchen", "Forellen-Fischküchlein"]),
+    skillRequirement: "Nur vollständig gegart, sorgfältig entgrätet und sehr weich anbieten. Flach oder länglich formen; keine festen runden Kugeln und keine harte Kruste. Nur aufrecht sitzend und direkt beaufsichtigt anbieten.",
+  }),
+  Object.freeze({
+    name: "Kabeljau-Süßkartoffel-Fischküchlein",
+    category: "balls",
+    requires: Object.freeze(["Kabeljau", "Süßkartoffel"]),
+    stage: 3,
+    batch: "8 kleine weiche Fischküchlein",
+    ingredients: "80 g vollständig gegarter, sorgfältig entgräteter Kabeljau, 160 g Süßkartoffel, 1 Ei, 25 g feine Haferflocken, 1 TL Rapsöl, 1 TL Petersilie",
+    note: "Kabeljau vollständig garen und sorgfältig auf Gräten prüfen. Süßkartoffel weich garen und fein zerdrücken. Fisch fein zerpflücken und mit Süßkartoffel, Ei, Haferflocken und Petersilie vermengen. Kleine flache Küchlein formen und bei niedriger Hitze vollständig durchgaren; die Oberfläche darf nicht hart und die Mitte nicht trocken oder kompakt werden. Vor dem Servieren prüfen, dass das Küchlein zwischen zwei Fingern leicht zerdrückbar ist. Ohne Salz anbieten.",
+    freezable: true,
+    freezerNote: "Gegarte Küchlein einzeln vorfrieren, portionsweise verpacken und nach dem Auftauen vollständig erwärmen; vor dem Servieren erneut auf Gräten prüfen.",
+    tags: Object.freeze(["Fisch", "Fingerfood", "Kabeljau"]),
+    searchAliases: Object.freeze(["Kabeljau-Fischküchlein", "Kabeljau-Süßkartoffel-Taler"]),
+    skillRequirement: "Nur vollständig gegart, sorgfältig entgrätet und sehr weich anbieten. Als flache Küchlein ohne harte Kruste servieren; der Bissen muss leicht zerdrückbar sein. Nur aufrecht sitzend und direkt beaufsichtigt anbieten.",
   }),
 ]);
 
@@ -321,19 +513,26 @@ const RECIPE_RESEARCH_GUIDANCE = Object.freeze({
   "Gemüse-Hafer-Pancakes": Object.freeze(["40 g feine Haferflocken, 60 g sehr weich gegarter Kürbis oder Süßkartoffel, 1 Ei", 6]),
   "Zucchini-Hafer-Pancakes": Object.freeze(["30 g fein geriebene und gut ausgedrückte Zucchini, 20 g Haferflocken, 1 Ei", 6]),
   "Ube-Bananen-Pancakes": Object.freeze(["30 g vollständig gegarte Ube, 30 g reife Banane, 20 g Haferflocken, 1 Ei", 6]),
-  "Rind-Hafer-Bällchen": Object.freeze(["100 g mageres Faschiertes vom Rind, 20 g feine Haferflocken, 1 Ei", 6]),
-  "Geflügel-Gemüse-Hafer-Bällchen": Object.freeze(["100 g Hühnerfaschiertes, 60 g fein geriebene und gut ausgedrückte Zucchini, 20 g feine Haferflocken; alternativ 100 g Putenfaschiertes, 60 g sehr weich gegarte fein zerdrückte Karotte und 20 g feine Haferflocken", 6]),
-  "Lachs-Kartoffel-Bällchen": Object.freeze(["50 g vollständig gegarter grätenfreier Lachs, 100 g sehr weiche Kartoffel", 6]),
-  "Rote-Linsen-Gemüsebällchen": Object.freeze(["80 g sehr weich gekochte rote Linsen, 40 g Karottenpüree, 10 g feine Haferflocken", 6]),
-  "Tofu-Brokkoli-Bällchen": Object.freeze(["80 g Naturtofu, 45 g sehr weicher Brokkoli, 10 g feine Haferflocken", 6]),
-  "Brokkoli-Kartoffel-Taler": Object.freeze(["100 g sehr weicher Brokkoli, 100 g sehr weiche Kartoffel", 6]),
-  "Zucchini-Hafer-Puffer": Object.freeze(["45 g fein geriebene Zucchini, 20 g Haferflocken, 1 Ei", 6]),
-  "Kichererbsen-Kürbis-Taler": Object.freeze(["80 g sehr weiche Kichererbsen, 60 g Kürbispüree, bei Bedarf 10 g feine Haferflocken als Binder", 6]),
-  "Rote-Linsen-Bratlinge": Object.freeze(["100 g sehr weich gekochte rote Linsen, 15 g feine Haferflocken", 6]),
-  "Polenta-Zucchini-Sticks": Object.freeze(["40 g feine Polenta, 160 ml Wasser, 60 g fein geriebene und weich gegarte Zucchini", 6]),
+  "Rind-Hafer-Bällchen": Object.freeze(["100 g mageres Faschiertes vom Rind, 20 g feine Haferflocken, 1 Ei, 1–2 EL mild gegarte fein gehackte Zwiebel, 1 TL Petersilie", 6]),
+  "Geflügel-Gemüse-Hafer-Bällchen": Object.freeze(["100 g Hühnerfaschiertes, 60 g fein geriebene und gut ausgedrückte Zucchini, 20 g feine Haferflocken, 1–2 EL mild gegarte Zwiebel, 1 TL Petersilie; alternativ 100 g Putenfaschiertes, 60 g sehr weich gegarte fein zerdrückte Karotte und 20 g feine Haferflocken", 6]),
+  "Lachs-Kartoffel-Bällchen": Object.freeze(["50 g vollständig gegarter grätenfreier Lachs, 100 g sehr weiche Kartoffel, 1 TL Butter, 1 TL Dill oder Petersilie", 6]),
+  "Rote-Linsen-Gemüsebällchen": Object.freeze(["80 g sehr weich gekochte rote Linsen, 40 g Karottenpüree, 10 g feine Haferflocken, 1 TL Petersilie oder ¼ TL milder Kreuzkümmel", 6]),
+  "Tofu-Brokkoli-Bällchen": Object.freeze(["80 g Naturtofu, 45 g sehr weicher Brokkoli, 10 g feine Haferflocken, 1 TL Petersilie, optional ein Hauch mild gegarter Knoblauch", 6]),
+  "Brokkoli-Kartoffel-Taler": Object.freeze(["100 g sehr weicher Brokkoli, 100 g sehr weiche Kartoffel, 1 TL Butter, 1 TL Petersilie", 6]),
+  "Zucchini-Hafer-Puffer": Object.freeze(["45 g fein geriebene Zucchini, 20 g Haferflocken, 1 Ei, 1 TL Petersilie oder Schnittlauch", 6]),
+  "Kichererbsen-Kürbis-Taler": Object.freeze(["80 g sehr weiche Kichererbsen, 60 g Kürbispüree, ¼ TL milder Kreuzkümmel, bei Bedarf 10 g feine Haferflocken als Binder", 6]),
+  "Rote-Linsen-Bratlinge": Object.freeze(["100 g sehr weich gekochte rote Linsen, 15 g feine Haferflocken, ¼ TL milder Kreuzkümmel, 1 TL Petersilie", 6]),
+  "Polenta-Zucchini-Sticks": Object.freeze(["40 g feine Polenta, 160 ml Wasser, 60 g fein geriebene und weich gegarte Zucchini, 1 TL Butter oder Rapsöl, 1 TL Petersilie", 6]),
   "Süßkartoffel-Hirse-Sticks": Object.freeze(["150 g Süßkartoffelpüree, 60 g sehr weich gekochte Hirse", 7]),
-  "Omelettstreifen": Object.freeze(["1 Ei, 15 ml Wasser", 6]),
-  "Zucchini-Omelett": Object.freeze(["1 Ei, 30 g fein geriebene Zucchini", 6]),
+  "Herzhafte Hirseschnitten": Object.freeze(["120 g Goldhirse, 1 kleine Karotte, 1 kleine Zucchini, 2 Eier, 2 EL Frischkäse, 2 EL Rapsöl", null]),
+  "Omelettstreifen": Object.freeze(["1 Ei, 15 ml Wasser, 1 TL Butter, 1 TL Petersilie oder Schnittlauch", 6]),
+  "Quinoa-Huhn-Süßkartoffel-Finger": Object.freeze(["100 g Huhn, 70 g Quinoa, 160 g Süßkartoffel, 1 TL Rapsöl, 1 TL Petersilie", 8]),
+  "Quinoa-Linsen-Gemüse-Khichdi": Object.freeze(["60 g Quinoa, 60 g rote Linsen, 120 g Karotte, 100 g Zucchini, 450 ml Wasser, 1 TL Rapsöl, 1 TL Petersilie", 7]),
+  "Quinoa-Gemüse-Puffer": Object.freeze(["70 g Quinoa, 120 g Zucchini, 100 g Karotte, 1 Ei, 1 TL Rapsöl, 1 TL Petersilie", 8]),
+  "Bulgur-Zucchini-Ei": Object.freeze(["60 g Bulgur, 160 g Zucchini, 1 Ei, 250 ml Wasser, 1 TL Rapsöl, 1 TL Petersilie", 7]),
+  "Bulgur-Gemüse-Köfte": Object.freeze(["70 g Bulgur, 100 g rote Linsen, 120 g Karotte, 80 g Zucchini, 1 TL Rapsöl, 1 TL Petersilie, ¼ TL milder Kreuzkümmel", 8]),
+  "Bulgur-Linsen-Suppe": Object.freeze(["50 g Bulgur, 60 g rote Linsen, 150 g Tomate, 120 g Karotte, 450 ml Wasser, 1 TL Rapsöl, 1 TL Petersilie", 7]),
+  "Zucchini-Omelett": Object.freeze(["1 Ei, 30 g fein geriebene Zucchini, 1 TL Butter, 1 TL Petersilie oder Schnittlauch", 6]),
   "Obst-Haferbrei": Object.freeze(["20 g feine Haferflocken, 120 ml Wasser, 40 g weiches bekanntes Obst nach Auswahl", 6]),
   "Obst-Hirsebrei": Object.freeze(["20 g Hirseflocken, 120 ml Wasser, 40 g weiches bekanntes Obst nach Auswahl", 6]),
   "Obst-Polentabrei": Object.freeze(["20 g feine Polenta, 120 ml Wasser, 40 g weiches bekanntes Obst nach Auswahl", 6]),
@@ -344,16 +543,17 @@ const RECIPE_RESEARCH_GUIDANCE = Object.freeze({
   "Milch-Getreide-Brei": Object.freeze(["20 g bekannte Getreideflocken oder feiner Grieß, 100 ml Wasser; nach Einführung zusätzlich entweder 100 ml pasteurisierte Vollmilch oder 80 g Naturjoghurt oder 100 ml ungesüßte Buttermilch", 6]),
   "Baby-Bananenbrot": Object.freeze(["240 g sehr reife Banane (etwa 2 mittelgroße), 2 Eier, 150 g fein gemahlene Haferflocken oder Dinkel-/Weizenmehl, optional 15 ml Rapsöl", 7]),
   "Kürbis-Hafer-Brei": Object.freeze(["100 g Kürbispüree, 15 g feine Haferflocken, 100 ml Wasser", 6]),
-  "Gemüse-Nudel-Sauce": Object.freeze(["120 g Zucchini, 150 g geschälte gegarte Tomate, 60 g trockene kleine Nudeln, 100 ml Wasser", 7]),
-  "Baby-Linsen-Bolognese": Object.freeze(["30 g trockene rote Linsen, 150 g gegarte Tomate, 60 g trockene kleine Nudeln, 150 ml Wasser", 7]),
-  "Lugaw-Basis": Object.freeze(["50 g Reis, 400 ml Wasser, 80 g vollständig gegartes fein zerkleinertes Huhn", 6]),
+  "Gemüse-Nudel-Sauce": Object.freeze(["120 g Zucchini, 150 g geschälte gegarte Tomate, 60 g trockene kleine Nudeln, 100 ml Wasser, 20 g mild gegarte Zwiebel, 1 TL Basilikum, 1 TL Rapsöl", 7]),
+  "Baby-Linsen-Bolognese": Object.freeze(["30 g trockene rote Linsen, 150 g gegarte Tomate, 60 g trockene kleine Nudeln, 150 ml Wasser, 20 g mild gegarte Zwiebel, 1 TL Basilikum oder Oregano, 1 TL Rapsöl", 7]),
+  "Lugaw-Basis": Object.freeze(["50 g Reis, 400 ml Wasser, 80 g vollständig gegartes fein zerkleinertes Huhn, wenig frischer Ingwer, optional 20 g mild gegarte Zwiebel oder Knoblauch", 6]),
   "Kürbis-Lugaw": Object.freeze(["50 g Reis, 400 ml Wasser, 120 g Kürbis", 6]),
-  "Monggo-Kalabasa-Brei": Object.freeze(["40 g trockene Mungbohnen, 150 g Kürbis, 300 ml Wasser", 6]),
-  "Tinola-inspiriert": Object.freeze(["100 g Huhn, 150 g Sayote, 5 g Malunggay-Blätter, 400 ml Wasser", 7]),
-  "Arroz-caldo-inspiriert": Object.freeze(["50 g Reis, 100 g Huhn, 500 ml Wasser, 2 g frischer Ingwer", 7]),
+  "Monggo-Kalabasa-Brei": Object.freeze(["40 g trockene Mungbohnen, 150 g Kürbis, 300 ml Wasser, 20 g mild gegarte Zwiebel, optional ein Hauch Knoblauch", 6]),
+  "Tinola-inspiriert": Object.freeze(["100 g Huhn, 150 g Sayote, 5 g Malunggay-Blätter, 400 ml Wasser, wenig frischer Ingwer, optional 20 g mild gegarte Zwiebel", 7]),
+  "Arroz-caldo-inspiriert": Object.freeze(["50 g Reis, 100 g Huhn, 500 ml Wasser, 2 g frischer Ingwer, mild gegarte Zwiebel oder Knoblauch", 7]),
+  "Hirsotto": Object.freeze(["60 g Goldhirse, 20 g rote Linsen, 100 g gegarter und pürierter Kürbis, 350 ml salzfreie Gemüsebrühe, 1 TL Rapsöl oder Pflanzenöl, 1 TL fein gehackte Petersilie, 1 TL Butter", 7]),
   "Kalabasa mit Kokos": Object.freeze(["200 g Kürbis, 50 ml ungesüßte Kokosmilch, 50 ml Wasser", 6]),
   "Tilapia-Reis-Brei": Object.freeze(["60 g vollständig gegarter grätenfreier Tilapia, 30 g Reis, 200 ml Wasser", 7]),
-  "Bangus-Kartoffel-Taler": Object.freeze(["60 g vollständig gegarter und äußerst sorgfältig entgräteter Bangus, 120 g sehr weiche Kartoffel", 7]),
+  "Bangus-Kartoffel-Taler": Object.freeze(["60 g vollständig gegarter und äußerst sorgfältig entgräteter Bangus, 120 g sehr weiche Kartoffel, 1 TL Petersilie oder Dill", 7]),
   "Obst-Hafer-Muffins": Object.freeze(["120 g sehr weiches Obst oder Obstpüree nach Auswahl, 80 g fein gemahlene Haferflocken, 1 Ei", 7]),
   "Gemüse-Hafer-Muffins": Object.freeze(["100 g sehr fein vorbereitetes weiches Gemüse nach Auswahl, 80 g fein gemahlene Haferflocken, 1 Ei", 7]),
   "Kürbis-Hirse-Muffins": Object.freeze(["120 g Kürbispüree, 70 g Hirseflocken, 1 Ei", 7]),
@@ -370,32 +570,32 @@ const RECIPE_RESEARCH_GUIDANCE = Object.freeze({
   "Karfiol-Kartoffel-Stampf": Object.freeze(["120 g Karfiol, 180 g Kartoffel, 60 ml Wasser zum Lockern", 6]),
   "Zucchini-Kartoffel-Brei": Object.freeze(["150 g Zucchini, 180 g Kartoffel, 50 ml Wasser zum Pürieren", 6]),
   "Erbsen-Kartoffel-Stampf": Object.freeze(["100 g Erbsen, 180 g Kartoffel, 80 ml Wasser zum Lockern", 6]),
-  "Kürbis-Linsen-Suppe": Object.freeze(["300 g Kürbis, 50 g trockene rote Linsen, 500 ml Wasser", 7]),
-  "Mildes Rote-Linsen-Dhal": Object.freeze(["80 g trockene rote Linsen, 300 ml Wasser, optional 0,5 g Kurkuma (etwa ¼ TL)", 6]),
-  "Huhn-Karotte-Nudel-Topf": Object.freeze(["125 g Hühnerbrust, 30 g Karotte, 60 g trockene kleine Nudeln, 235 ml Wasser", 7]),
-  "Huhn-Lauch-Kartoffel-Topf": Object.freeze(["120 g Hühnerbrust, 100 g Lauch, 200 g Kartoffel, 300 ml Wasser", 7]),
-  "Huhn-Brokkoli-Reis": Object.freeze(["120 g Hühnerbrust, 100 g Brokkoli, 80 g Reis, 400 ml Wasser", 7]),
-  "Rind-Gemüse-Bolognese": Object.freeze(["120 g mageres Rindfaschiertes, 100 g Karotte, 300 g Tomate, 150 ml Wasser", 7]),
-  "Tomaten-Linsen-Sauce": Object.freeze(["300 g Tomate, 60 g trockene rote Linsen, 250 ml Wasser", 7]),
-  "Brokkoli-Linsen-Pasta": Object.freeze(["120 g Brokkoli, 50 g trockene rote Linsen, 80 g trockene kleine Nudeln, 300 ml Wasser", 7]),
-  "Gemüse-Pasta mit Zucchini und Tomate": Object.freeze(["150 g Zucchini, 200 g Tomate, 80 g trockene kleine Nudeln, 100 ml Wasser", 7]),
-  "Lachs-Reis-Erbsen": Object.freeze(["80 g Lachs, 50 g Reis, 60 g Erbsen, 300 ml Wasser", 7]),
-  "Lachs-Süßkartoffel-Stampf": Object.freeze(["80 g vollständig gegarter grätenfreier Lachs, 200 g sehr weiche Süßkartoffel", 7]),
-  "Kabeljau-Tomaten-Gemüse": Object.freeze(["90 g Kabeljau, 120 g Tomate, 120 g Zucchini, 50 ml Wasser", 7]),
-  "Weiches Rührei": Object.freeze(["1 Ei, 15 ml Wasser oder bereits eingeführte Vollmilch", 6]),
+  "Kürbis-Linsen-Suppe": Object.freeze(["300 g Kürbis, 50 g trockene rote Linsen, 500 ml Wasser, 1 TL Petersilie, optional ¼ TL milder Kreuzkümmel und 1 TL Rapsöl", 7]),
+  "Mildes Rote-Linsen-Dhal": Object.freeze(["80 g trockene rote Linsen, 300 ml Wasser, optional 0,5 g Kurkuma (etwa ¼ TL), mild gegarte Zwiebel und ein Hauch Knoblauch", 6]),
+  "Huhn-Karotte-Nudel-Topf": Object.freeze(["125 g Hühnerbrust, 30 g Karotte, 60 g trockene kleine Nudeln, 235 ml Wasser, 20 g mild gegarte Zwiebel, 1 TL Petersilie", 7]),
+  "Huhn-Lauch-Kartoffel-Topf": Object.freeze(["120 g Hühnerbrust, 100 g Lauch, 200 g Kartoffel, 300 ml Wasser, 1 TL Petersilie, optional 1 TL Butter", 7]),
+  "Huhn-Brokkoli-Reis": Object.freeze(["120 g Hühnerbrust, 100 g Brokkoli, 80 g Reis, 400 ml Wasser, 20 g mild gegarte Zwiebel, 1 TL Petersilie, 1 TL Rapsöl", 7]),
+  "Rind-Gemüse-Bolognese": Object.freeze(["120 g mageres Rindfaschiertes, 100 g Karotte, 300 g Tomate, 150 ml Wasser, 20 g mild gegarte Zwiebel, optional wenig Knoblauch, 1 TL Basilikum, ½ TL Oregano, 1 TL Oliven- oder Rapsöl", 7]),
+  "Tomaten-Linsen-Sauce": Object.freeze(["300 g Tomate, 60 g trockene rote Linsen, 250 ml Wasser, 20 g mild gegarte Zwiebel, optional wenig Knoblauch und 1 TL Basilikum, 1 TL Rapsöl", 7]),
+  "Brokkoli-Linsen-Pasta": Object.freeze(["120 g Brokkoli, 50 g trockene rote Linsen, 80 g trockene kleine Nudeln, 300 ml Wasser, 1 TL Rapsöl, 1 TL Petersilie oder Basilikum", 7]),
+  "Gemüse-Pasta mit Zucchini und Tomate": Object.freeze(["150 g Zucchini, 200 g Tomate, 80 g trockene kleine Nudeln, 100 ml Wasser, 20 g mild gegarte Zwiebel, 1 TL Basilikum, 1 TL Rapsöl", 7]),
+  "Lachs-Reis-Erbsen": Object.freeze(["80 g Lachs, 50 g Reis, 60 g Erbsen, 300 ml Wasser, 1 TL Butter, 1 TL Dill", 7]),
+  "Lachs-Süßkartoffel-Stampf": Object.freeze(["80 g vollständig gegarter grätenfreier Lachs, 200 g sehr weiche Süßkartoffel, 1 TL Butter, 1 TL Dill oder Petersilie", 7]),
+  "Kabeljau-Tomaten-Gemüse": Object.freeze(["90 g Kabeljau, 120 g Tomate, 120 g Zucchini, 50 ml Wasser, 1 TL Rapsöl, 1 TL Petersilie oder Dill", 7]),
+  "Weiches Rührei": Object.freeze(["1 Ei, 1 TL Butter, 1 TL Petersilie oder Schnittlauch, 15 ml Wasser oder bereits eingeführte Vollmilch", 6]),
   "Eier-Finger": Object.freeze(["1 Ei", 6]),
-  "Paprika-Omelettstreifen": Object.freeze(["1 Ei, 30 g sehr fein geschnittene weich gegarte Paprika", 6]),
-  "Ei-Champignon-Cups": Object.freeze(["3 Eier, 75 g fein gehackte weich gegarte Champignons", 7]),
+  "Paprika-Omelettstreifen": Object.freeze(["1 Ei, 30 g sehr fein geschnittene weich gegarte Paprika, 1 TL Butter und 1 TL Petersilie", 6]),
+  "Ei-Champignon-Cups": Object.freeze(["3 Eier, 75 g fein gehackte weich gegarte Champignons, 1 TL Butter und 1 TL Schnittlauch oder Petersilie", 7]),
   "Hummus mit weichen Gemüsesticks": Object.freeze(["120 g sehr weiche Kichererbsen, optional 10 g Tahin, 45 ml Wasser, 150 g Gurke beziehungsweise Gemüsesticks in der jeweils hinterlegten sicheren Servierform", 6]),
-  "Kürbis-Kichererbsen-Creme": Object.freeze(["200 g Kürbis, 120 g sehr weiche Kichererbsen, 100 ml Wasser", 6]),
+  "Kürbis-Kichererbsen-Creme": Object.freeze(["200 g Kürbis, 120 g sehr weiche Kichererbsen, 100 ml Wasser, ¼ TL milder Kreuzkümmel, 1 TL Rapsöl", 6]),
   "Avocado-Bananen-Creme": Object.freeze(["70 g reife Avocado, 60 g reife Banane", 6]),
   "Buchweizen-Bananen-Pancakes": Object.freeze(["40 g Buchweizenflocken oder Buchweizenmehl, 60 g reife Banane, 1 Ei", 6]),
   "Süßkartoffel-Linsen-Taler": Object.freeze(["150 g Süßkartoffelpüree, 100 g sehr weich gekochte rote Linsen", 6]),
-  "Tofu-Zucchini-Reis": Object.freeze(["120 g Naturtofu, 150 g Zucchini, 80 g Reis, 400 ml Wasser", 7]),
+  "Tofu-Zucchini-Reis": Object.freeze(["120 g Naturtofu, 150 g Zucchini, 80 g Reis, 400 ml Wasser, 1 TL Petersilie, optional ein Hauch mild gegarter Knoblauch, 1 TL Rapsöl", 7]),
   "Gebackene Saba-Banane": Object.freeze(["1 reife Saba-Banane (etwa 120 g essbarer Anteil)", 6]),
-  "Huhn-Lugaw": Object.freeze(["60 g Reis, 120 g Huhn, 480 ml Wasser, optional 1 g frischer Ingwer", 7]),
-  "Sayote-Huhn-Reis": Object.freeze(["100 g Sayote, 100 g Huhn, 60 g Reis, 450 ml Wasser", 7]),
-  "Monggo-Süßkartoffel-Brei": Object.freeze(["50 g trockene Mungbohnen, 250 g Süßkartoffel, 500 ml Wasser", 6]),
+  "Huhn-Lugaw": Object.freeze(["60 g Reis, 120 g Huhn, 480 ml Wasser, 1 g frischer Ingwer, optional mild gegarte Zwiebel oder Knoblauch", 7]),
+  "Sayote-Huhn-Reis": Object.freeze(["100 g Sayote, 100 g Huhn, 60 g Reis, 450 ml Wasser, wenig Ingwer, optional mild gegarte Zwiebel", 7]),
+  "Monggo-Süßkartoffel-Brei": Object.freeze(["50 g trockene Mungbohnen, 250 g Süßkartoffel, 500 ml Wasser, mild gegarte Zwiebel, optional ein Hauch Knoblauch", 6]),
   "Ube-Hafer-Brei": Object.freeze(["200 g vollständig gegarte Ube, 40 g feine Haferflocken, 300 ml Wasser", 6]),
   "Obst-Joghurt": Object.freeze(["80 g pasteurisierter ungesüßter Naturjoghurt, 50 g weiches Obst nach Auswahl", 6]),
   "Obst-Hafer-Joghurt": Object.freeze(["20 g feine Haferflocken, 100 ml Wasser, 80 g Naturjoghurt, 50 g weiches Obst nach Auswahl", 6]),
@@ -410,12 +610,13 @@ const RECIPE_RESEARCH_GUIDANCE = Object.freeze({
   "Zucchini-Joghurt-Hafer-Bites": Object.freeze(["80 g fein geriebene Zucchini, 80 g Naturjoghurt, 50 g feine Haferflocken, 1 Ei", 7]),
   "Joghurt-Hafer-Waffeln": Object.freeze(["100 g Naturjoghurt, 60 g fein gemahlene Haferflocken, 1 Ei, 40 ml Wasser", 7]),
   "Weiche Joghurt-Fladen": Object.freeze(["100 g Naturjoghurt, 80 g Weizenmehl oder feiner Weizengrieß, 1 Ei", 7]),
-  "Gemüse-Joghurt-Mini-Muffins": Object.freeze(["100 g Naturjoghurt, 80 g fein gemahlene Haferflocken, 1 Ei, 100 g sehr fein vorbereitetes weiches Gemüse nach Auswahl", 7]),
-  "Huhn-Gemüse-Muffins": Object.freeze(["80 g vollständig gegartes fein zerkleinertes Huhn, 80 g sehr weich gegartes Gemüse nach Auswahl, 60 g fein gemahlene Haferflocken, 1 Ei", 7]),
-  "Süßkartoffel-Linsen-Muffins": Object.freeze(["120 g Süßkartoffelpüree, 100 g sehr weich gekochte rote Linsen, 50 g fein gemahlene Haferflocken", 7]),
-  "Fleisch-Gemüse-Bällchen": Object.freeze(["Rind-Variante: 100 g mageres Rindfaschiertes, 60 g Karottenpüree, 80 g sehr weiche Kartoffel; Puten-Variante: 100 g Putenfaschiertes, 120 g Süßkartoffelpüree", 7]),
+  "Gemüse-Joghurt-Mini-Muffins": Object.freeze(["100 g Naturjoghurt, 80 g fein gemahlene Haferflocken, 1 Ei, 100 g sehr fein vorbereitetes weiches Gemüse nach Auswahl, 1 TL Petersilie oder Schnittlauch", 7]),
+  "Huhn-Gemüse-Muffins": Object.freeze(["80 g vollständig gegartes fein zerkleinertes Huhn, 80 g sehr weich gegartes Gemüse nach Auswahl, 60 g fein gemahlene Haferflocken, 1 Ei, 1 TL Petersilie, 20 g mild gegarte Zwiebel", 7]),
+  "Süßkartoffel-Linsen-Muffins": Object.freeze(["120 g Süßkartoffelpüree, 100 g sehr weich gekochte rote Linsen, 50 g fein gemahlene Haferflocken, ¼ TL milder Kreuzkümmel, 1 TL Petersilie", 7]),
+  "Fleisch-Gemüse-Bällchen": Object.freeze(["Rind-Variante: 100 g mageres Rindfaschiertes, 60 g Karottenpüree, 80 g sehr weiche Kartoffel; Puten-Variante: 100 g Putenfaschiertes, 120 g Süßkartoffelpüree; jeweils mild gegarte Zwiebel und Petersilie", 7]),
   "Bohnen-Kartoffel-Stampf": Object.freeze(["200 g Kartoffel, 150 g sehr weich gegarte weiße oder schwarze Bohnen, 80 ml Wasser, optional 5 ml Rapsöl", 6]),
   "Bananen-Ei-Pancakes": Object.freeze(["1 sehr reife Banane (etwa 120 g essbarer Anteil), 1 Ei", 6]),
+  "Bananen-Hirseschnitten": Object.freeze(["100 g Hirse, 300 ml ungesüßter Haferdrink, 1 reife Banane, 15 g weißes Mandelmus, optional 1 Prise Ceylon-Zimt", 7]),
   "Huhn-Zucchini-Nockerl": Object.freeze(["60 g vollständig gegartes fein zerkleinertes Huhn, 80 g sehr weich gegarte und gut ausgedrückte Zucchini, 1 Ei, 45 g Weizenmehl oder feiner Weizengrieß, 5 ml Rapsöl, bei Bedarf bis zu 15 ml Wasser", 7]),
   "Rind-Karotten-Nockerl": Object.freeze(["60 g vollständig gegartes fein zerkleinertes Rind, 80 g sehr weich gegarte Karotte oder Karottenpüree, 1 Ei, 45 g Weizenmehl oder feiner Weizengrieß, 5 ml Rapsöl, bei Bedarf bis zu 15 ml Wasser", 7]),
   "Linsen-Süßkartoffel-Nockerl": Object.freeze(["100 g sehr weich gekochte rote Linsen, 100 g Süßkartoffelpüree, 1 Ei, 40 g Weizenmehl oder feiner Weizengrieß, 5 ml Rapsöl", 7]),
@@ -433,12 +634,19 @@ const RECIPE_RESEARCH_GUIDANCE = Object.freeze({
   "Gemüse-Couscous-Schnitten": Object.freeze(["60 g Couscous, 1 Ei, 80 g Zucchini, 60 g Karotte", 9]),
   "Bunte Gemüse-Nuggets": Object.freeze(["60 g Brokkoli, 60 g Karotte, 50 g Erbsen, 40 g Mais, 1 Ei, 25 g feine Haferflocken", 9]),
   "Weiche Gemüse-Reis-Finger": Object.freeze(["70 g Reis, 70 g Zucchini, 50 g Karotte, 1 TL Rapsöl", 9]),
-  "Rote-Linsen-Gemüse-Shepherd’s-Pie": Object.freeze(["80 g rote Linsen, 250 g Kartoffeln, 80 g Karotte, 60 g Erbsen, 120 g Tomate", 9]),
-  "Spinat-Zucchini-Lasagne": Object.freeze(["6 kleine Lasagneblätter, 120 g Spinat, 150 g Zucchini, 180 g Tomate, 80 g Frischkäse, 40 g Mozzarella", 10]),
-  "Huhn-Spinat-Quinoa-Auflauf": Object.freeze(["120 g Huhn, 70 g Quinoa, 100 g Spinat, 120 g Zucchini, 80 g Frischkäse", 10]),
-  "Lachs-Brokkoli-Kartoffel-Auflauf": Object.freeze(["100 g grätenfreier Lachs, 180 g Kartoffeln, 100 g Brokkoli, 70 g Frischkäse", 10]),
-  "Mildes Bohnen-Süßkartoffel-Chili": Object.freeze(["180 g sehr weiche weiße Bohnen, 220 g Süßkartoffel, 180 g Tomate, 60 g Mais", 10]),
-  "Gefüllte Paprika mit Linsenreis": Object.freeze(["2 große Paprika, 70 g Reis, 50 g rote Linsen, 150 g Tomate", 10]),
+  "Rote-Linsen-Gemüse-Shepherd’s-Pie": Object.freeze(["80 g rote Linsen, 250 g Kartoffeln, 80 g Karotte, 60 g Erbsen, 120 g Tomate, 20 g mild gegarte Zwiebel, 1 TL Thymian oder Petersilie, 1 TL Rapsöl", 9]),
+  "Spinat-Zucchini-Lasagne": Object.freeze(["6 kleine Lasagneblätter, 120 g Spinat, 150 g Zucchini, 180 g Tomate, 80 g Frischkäse, 40 g Mozzarella, 20 g mild gegarte Zwiebel, 1 TL Basilikum oder Oregano, 1 TL Rapsöl", 10]),
+  "Huhn-Spinat-Quinoa-Auflauf": Object.freeze(["120 g Huhn, 70 g Quinoa, 100 g Spinat, 120 g Zucchini, 80 g Frischkäse, 20 g mild gegarte Zwiebel, 1 TL Petersilie, 1 TL Rapsöl oder Butter", 10]),
+  "Lachs-Brokkoli-Kartoffel-Auflauf": Object.freeze(["100 g grätenfreier Lachs, 180 g Kartoffeln, 100 g Brokkoli, 70 g Frischkäse, 1 TL Butter, 1 TL Dill", 10]),
+  "Mildes Bohnen-Süßkartoffel-Chili": Object.freeze(["180 g sehr weiche weiße Bohnen, 220 g Süßkartoffel, 180 g Tomate, 60 g Mais, 20 g mild gegarte Zwiebel, ¼ TL milder Kreuzkümmel und ½ TL mildes Paprikapulver", 10]),
+  "Gefüllte Paprika mit Linsenreis": Object.freeze(["2 große Paprika, 70 g Reis, 50 g rote Linsen, 150 g Tomate, 20 g mild gegarte Zwiebel, 1 TL Basilikum oder Oregano, 1 TL Rapsöl", 10]),
+  "Apfel-Pflaumen-Kompott": Object.freeze(["120 g Apfel, 80 g entsteinte Pflaume, 1–2 EL Wasser", 6]),
+  "Birne-Pfirsich-Kompott": Object.freeze(["120 g Birne, 80 g entsteinter Pfirsich, 1–2 EL Wasser", 6]),
+  "Mango-Bananen-Creme": Object.freeze(["80 g reife Mango, 60 g reife Banane", 6]),
+  "Kartoffel-Karotten-Stampf": Object.freeze(["100 g Kartoffel, 80 g Karotte, 1 TL Rapsöl pro Portion nach Bedarf", 6]),
+  "Forelle-Kartoffel-Bällchen": Object.freeze(["80 g vollständig gegarte, sorgfältig entgrätete Forelle, 150 g sehr weiche Kartoffel, 1 Ei, 20 g feine Haferflocken, 1 TL Rapsöl, 1 TL Petersilie", 8]),
+  "Kabeljau-Süßkartoffel-Fischküchlein": Object.freeze(["80 g vollständig gegarter, sorgfältig entgräteter Kabeljau, 160 g Süßkartoffel, 1 Ei, 25 g feine Haferflocken, 1 TL Rapsöl, 1 TL Petersilie", 8]),
+  "Gemüse-Reis-Brei": Object.freeze(["30 g Reis, 80 g Zucchini, 60 g Karotte, 1 TL Rapsöl pro Portion nach Bedarf", 6]),
 });
 
 const RECIPE_NOCKERL_SPLIT = Object.freeze([
@@ -448,7 +656,7 @@ const RECIPE_NOCKERL_SPLIT = Object.freeze([
     requires: Object.freeze(["Huhn", "Zucchini", "Weizen", "Ei", "Rapsöl"]),
     stage: 3,
     batch: "12–16 kleine weiche Nockerl",
-    note: "Huhn vollständig garen und sehr fein zerkleinern, Zucchini sehr weich garen und gut ausdrücken. Mit Ei, Weizen und Rapsöl zu einem weichen, nicht festen Teig verrühren. Kleine längliche Nockerl in siedendem Wasser vollständig garen. Vor dem Servieren ein Nockerl aufschneiden: es muss durchgegart, weich, nicht gummiartig und unter leichtem Druck gut zerdrückbar sein.",
+    note: "Zwiebel mild weich dünsten. Huhn vollständig garen und sehr fein zerkleinern, Zucchini sehr weich garen und gut ausdrücken. Mit Ei, Weizen, Rapsöl, Zwiebel und Petersilie zu einem weichen, nicht festen Teig verrühren. Kleine längliche Nockerl in siedendem Wasser vollständig garen. Vor dem Servieren ein Nockerl aufschneiden: es muss durchgegart, weich, nicht gummiartig und unter leichtem Druck gut zerdrückbar sein.",
     freezable: true,
     freezerNote: "Gegarte Nockerl einzeln vorfrieren, portionsweise verpacken und nach dem Auftauen vollständig erwärmen.",
     tags: Object.freeze(["Fingerfood", "Familiengericht", "einfrierbar"]),
@@ -462,7 +670,7 @@ const RECIPE_NOCKERL_SPLIT = Object.freeze([
     requires: Object.freeze(["Rind", "Karotte", "Weizen", "Ei", "Rapsöl"]),
     stage: 3,
     batch: "12–16 kleine weiche Nockerl",
-    note: "Rind vollständig garen und sehr fein zerkleinern, Karotte sehr weich garen und fein zerdrücken. Mit Ei, Weizen und Rapsöl zu einem weichen, nicht festen Teig verrühren. Kleine längliche Nockerl in siedendem Wasser vollständig garen. Vor dem Servieren ein Nockerl aufschneiden: es muss durchgegart, weich, nicht gummiartig und unter leichtem Druck gut zerdrückbar sein.",
+    note: "Zwiebel mild weich dünsten. Rind vollständig garen und sehr fein zerkleinern, Karotte sehr weich garen und fein zerdrücken. Mit Ei, Weizen, Rapsöl, Zwiebel und Petersilie zu einem weichen, nicht festen Teig verrühren. Kleine längliche Nockerl in siedendem Wasser vollständig garen. Vor dem Servieren ein Nockerl aufschneiden: es muss durchgegart, weich, nicht gummiartig und unter leichtem Druck gut zerdrückbar sein.",
     freezable: true,
     freezerNote: "Gegarte Nockerl einzeln vorfrieren, portionsweise verpacken und nach dem Auftauen vollständig erwärmen.",
     tags: Object.freeze(["Fingerfood", "Familiengericht", "einfrierbar"]),
@@ -475,7 +683,7 @@ const RECIPE_NOCKERL_SPLIT = Object.freeze([
     requires: Object.freeze(["Rote Linsen", "Süßkartoffel", "Weizen", "Ei", "Rapsöl"]),
     stage: 3,
     batch: "12–16 kleine weiche Nockerl",
-    note: "Linsen sehr weich kochen und Süßkartoffel vollständig weich garen. Beides fein zerdrücken und mit Ei, Weizen und Rapsöl nur so weit verrühren, dass ein weicher formbarer Teig entsteht. Kleine längliche Nockerl in siedendem Wasser vollständig garen. Vor dem Servieren ein Nockerl aufschneiden: es muss weich, nicht klebrig-gummiartig und unter leichtem Druck gut zerdrückbar sein.",
+    note: "Linsen sehr weich kochen und Süßkartoffel vollständig weich garen. Beides fein zerdrücken und mit Ei, Weizen, Rapsöl, Petersilie und einem Hauch mildem Kreuzkümmel nur so weit verrühren, dass ein weicher formbarer Teig entsteht. Kleine längliche Nockerl in siedendem Wasser vollständig garen. Vor dem Servieren ein Nockerl aufschneiden: es muss weich, nicht klebrig-gummiartig und unter leichtem Druck gut zerdrückbar sein.",
     freezable: true,
     freezerNote: "Gegarte Nockerl einzeln vorfrieren, portionsweise verpacken und nach dem Auftauen vollständig erwärmen.",
     tags: Object.freeze(["Fingerfood", "Familiengericht", "einfrierbar"]),
@@ -671,6 +879,10 @@ function openAllergenSchedule(foodId) {
 }
 
 function renderAllergenModule() {
+  if (typeof plannerViewReady === "function" && !plannerViewReady()) {
+    renderPlannerReadinessPlaceholder("allergen");
+    return;
+  }
   let on=today();
   let allergenFoods=state.foods.filter((f)=>f.active&&f.allergenGroup).sort((a,b)=>a.allergenGroup.localeCompare(b.allergenGroup,"de")||a.priority-b.priority);
   let groups=[...new Set(allergenFoods.map((f)=>f.allergenGroup))];
@@ -693,13 +905,8 @@ function recipeStates() {
     ? memoizeViewRenderValue("recipeStates", computeRecipeStates)
     : computeRecipeStates();
 }
-function renderRecipeCard(r) {
-  let optionParts = [];
-  if (r.selectedVariantLabel) optionParts.push(`<div><b>Variante:</b> ${esc(r.selectedVariantLabel)}${(r.selectedVariantRequirements || []).every(recipeIngredientReady) ? "" : " · noch offen"}</div>`);
-  if (r.selectedOption || r.availableOptions?.length) optionParts.push(`<div><b>${r.oneOf?.length && r.name === "Milch-Getreide-Brei" ? "Getreide" : r.selectedOption ? "Vorausgewählt" : "Jetzt mögliche Auswahl"}:</b> ${r.selectedOption ? `${esc(r.selectedOption)}${r.selectedOptionReady ? "" : " · noch offen"}` : r.availableOptions.map(esc).join(", ")}</div>`);
-  if (r.milkChoices?.length) optionParts.push(`<div><b>Milchprodukt:</b> ${r.selectedMilkOption ? `${esc(r.selectedMilkOption)}${r.selectedMilkOptionReady ? "" : " · noch offen"}` : "noch keines gegessen"}</div>`);
-  let variants = optionParts.length ? optionParts.join("") : '<div class="small">Keine zusätzliche Variante nötig.</div>';
-  let type = ({
+function recipeCatalogTypeLabel(r) {
+  return ({
     porridge: "Brei & Löffelgericht",
     pancakes: "Pancake",
     balls: "Fingerfood",
@@ -707,33 +914,193 @@ function renderRecipeCard(r) {
     philippines: "Philippinen-Rezept",
     baking: "Backrezept",
   })[r.category] || ((r.tags || []).some((tag) => /fingerfood/i.test(String(tag))) ? "Fingerfood" : "Rezept");
-  let statusBadge = !r.unlocked
-    ? '<span class="pill warn">Noch nicht passend</span>'
-    : r.freezable
-      ? '<span class="pill ok">Einfrierbar</span>'
+}
+
+function recipeCatalogStatusBadge(r) {
+  if (!r.unlocked) return '<span class="pill warn">Noch nicht passend</span>';
+  if (r.freezable) return '<span class="pill ok">Einfrierbar</span>';
+  return '<span class="pill ok">Jetzt passend</span>';
+}
+
+function recipeDetailIngredientItems(r) {
+  let source = String(r.ingredients || (r.requires || []).join(", ") || "").trim();
+  if (!source) return [];
+  return source
+    .split(/,\s+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function recipeDetailStructuredFoods(r) {
+  let labels = [
+    ...(r.requires || []),
+    ...((r.alternatives || []).flat()),
+    ...(r.oneOf || []),
+    ...(r.milkChoices || []),
+  ];
+  let resolved = labels
+    .map((label) => typeof recipeFoodFromStructuredLabel === "function"
+      ? recipeFoodFromStructuredLabel(label, typeof FOOD_DB !== "undefined" ? FOOD_DB : [])
+      : null)
+    .filter(Boolean);
+  return [...new Map(resolved.map((item) => [item.id, item])).values()];
+}
+
+function recipeDetailHandlingLabel(mode) {
+  return ({
+    "spoon-smooth": "Fein und glatt vom Löffel",
+    "spoon-mashed": "Weich zerdrückt",
+    "spoon-soft-lumpy": "Weich stückig",
+    "finger-graspable": "Weiches Fingerfood",
+    "finger-small-soft": "Kleine weiche Stücke",
+  })[mode] || mode;
+}
+
+function recipeDetailBiteLabel(profile) {
+  return ({
+    "low-resistance-separate": "Bissen lässt sich mit wenig Widerstand abtrennen",
+    "easy-bite-separate": "Bissen lässt sich leicht abtrennen",
+    "graded-bite-required": "Gezieltes Abtrennen eines passenden Bissens erforderlich",
+  })[profile] || "";
+}
+
+function recipeDetailOralLabel(profile) {
+  return ({
+    "soft-breakdown": "weicht sehr leicht im Mund auf",
+    "easy-chew": "leichtes Kauen",
+    "structured-chew-required": "strukturiertes Kauen erforderlich",
+  })[profile] || "";
+}
+
+function recipeDetailAgeText(r) {
+  let parts = [];
+  if (r.hardMinMonths) parts.push(`frühestens ab etwa ${r.hardMinMonths} Monaten`);
+  if (r.minMonths && Number(r.minMonths) > Number(r.hardMinMonths || 0)) {
+    parts.push(`Orientierung ab etwa ${r.minMonths} Monaten`);
+  }
+  return parts.join(" · ") || "Altersorientierung nach bestehender Rezeptfreigabe";
+}
+
+function recipeDetailVariantBody(r) {
+  let rows = [];
+  if (r.selectedVariantLabel) {
+    let readiness = (r.selectedVariantRequirements || []).every(recipeIngredientReady) ? "" : " · noch offen";
+    rows.push(`<div class="recipe-detail-choice selected"><b>Variante:</b><span>${esc(r.selectedVariantLabel)}${readiness}</span></div>`);
+  }
+  if (r.selectedOption) {
+    rows.push(`<div class="recipe-detail-choice selected"><b>${r.name === "Milch-Getreide-Brei" ? "Aktuell ausgewähltes Getreide:" : "Vorausgewählt:"}</b><span>${esc(r.selectedOption)}${r.selectedOptionReady ? "" : " · noch offen"}</span></div>`);
+  }
+  if (r.selectedMilkOption) {
+    rows.push(`<div class="recipe-detail-choice selected"><b>Aktuell ausgewähltes Milchprodukt</b><span>${esc(r.selectedMilkOption)}${r.selectedMilkOptionReady ? "" : " · noch offen"}</span></div>`);
+  }
+  let sets = [r.requires || [], ...(r.alternatives || [])];
+  sets.forEach((set, index) => {
+    if (!set.length) return;
+    let label = r.variantLabels?.[index] || (index === 0 ? "Standardvariante" : `Alternative ${index}`);
+    rows.push(`<div class="recipe-detail-choice"><b>${esc(label)}</b><span>${set.map(esc).join(" · ")}</span></div>`);
+  });
+  if (r.oneOf?.length) {
+    let label = r.name === "Milch-Getreide-Brei" ? "Getreide-Auswahl" : "Eine Auswahl davon";
+    rows.push(`<div class="recipe-detail-choice"><b>${esc(label)}</b><span>${r.oneOf.map(esc).join(" · ")}</span></div>`);
+  }
+  if (r.milkChoices?.length) {
+    rows.push(`<div class="recipe-detail-choice"><b>Milchprodukt nach Auswahl</b><span>${r.milkChoices.map(esc).join(" · ")}</span></div>`);
+  }
+  if (!rows.length) return '<div class="small">Keine zusätzliche Variante nötig.</div>';
+  return rows.join("");
+}
+
+function recipeCatalogDetailBody(r) {
+  let ingredients = recipeDetailIngredientItems(r);
+  let structuredFoods = recipeDetailStructuredFoods(r);
+  let allergenFoods = structuredFoods.filter((item) => item.allergenGroup);
+  let allergens = [...new Set(allergenFoods.map((item) => item.allergenGroup))];
+  let handlingModes = [...new Set(r.preferredHandlingModes?.length ? r.preferredHandlingModes : (r.handlingModes || []))];
+  let hasFingerfood = handlingModes.some((mode) => String(mode).startsWith("finger-")) ||
+    (r.tags || []).some((tag) => /fingerfood/i.test(String(tag)));
+  let handlingText = handlingModes.length
+    ? handlingModes.map(recipeDetailHandlingLabel).join(" · ")
+    : "Darreichungsform nach dem hinterlegten Sicherheitshinweis";
+  let biteText = recipeDetailBiteLabel(r.biteSeparation);
+  let oralText = recipeDetailOralLabel(r.oralProcessing);
+  let familyText = r.familyLabel ? " · " + esc(r.familyLabel) : "";
+  let tags = (r.tags || []).map((tag) => `<span class="pill">${esc(tag)}</span>`).join("");
+  let ageText = recipeDetailAgeText(r);
+  let statusText = r.unlocked ? "Jetzt passend" : `Noch offen · ${recipeMissingSummary(r)}`;
+  let milkHint = r.milkMeal === "full"
+    ? "Als volle Milchmahlzeit zählen; keine zweite volle Milchmahlzeit am selben Tag einplanen und nicht mit Fleisch oder Fisch kombinieren."
+    : r.milkMeal === "small"
+      ? "Kleine Milchproduktmenge; sie zählt nicht automatisch als volle Milchmahlzeit."
       : "";
-  let familyText = r.familyLabel ? ` · ${esc(r.familyLabel)}` : "";
-  let importantHints = `${r.skillRequirement ? `<div class="notice"><b>Sicher anbieten:</b> ${esc(r.skillRequirement)}</div>` : ""}${r.unlocked ? "" : `<div class="recipe-missing"><b>Noch offen:</b> ${esc(recipeMissingSummary(r))}</div>`}${r.milkMeal === "full" ? '<div class="notice olive"><b>Milchmahlzeit:</b> Als volle Milchmahlzeit zählen; keine zweite volle Milchmahlzeit am selben Tag einplanen und nicht mit Fleisch oder Fisch kombinieren.</div>' : ""}`;
-  let hints = `${r.ageHint ? `<div class="small recipe-age-hint">${esc(r.ageHint)}</div>` : ""}${r.milkMeal === "small" ? '<div class="small">Kleine Milchproduktmenge; sie zählt nicht automatisch als volle Milchmahlzeit.</div>' : ""}` || '<div class="small">Keine zusätzlichen Hinweise.</div>';
   let storage = r.freezable
-    ? `<div class="small">${esc(r.freezerNote || "Portionsweise einfrieren und vollständig auftauen beziehungsweise erwärmen.")}</div><button class="btn secondary full" style="margin-top:9px" data-add-recipe-stock="${encodeURIComponent(r.name)}">Als Vorrat eintragen</button>`
+    ? '<div class="small">' + esc(r.freezerNote || "Portionsweise einfrieren und vollständig auftauen beziehungsweise erwärmen.") + '</div><button class="btn secondary full" style="margin-top:9px" data-add-recipe-stock="' + encodeURIComponent(r.name) + '">Als Vorrat eintragen</button>'
     : '<div class="small">Am besten frisch zubereiten.</div>';
-  return `<details class="recipe-card-v2">
-    <summary>
-      <div class="recipe-summary-grid">
-        <div class="recipe-heading-with-icon">${recipeIconSvg(r)}<div><b>${esc(r.name)}</b><div class="small recipe-type-text">${esc(type)}</div><div class="tiny recipe-tech-text">${esc(r.batch || "kleine Portion")}${familyText}</div></div></div>
-        <div class="recipe-summary-end">${statusBadge}<span class="recipe-chevron" aria-hidden="true">⌄</span></div>
-      </div>
-    </summary>
-    <div class="recipe-body-v2">
-      <section class="recipe-open-section"><h3>Zutaten</h3><p class="small">${esc(r.ingredients || (r.requires || []).join(", "))}</p></section>
-      <section class="recipe-open-section"><h3>Zubereitung</h3><p class="small">${esc(r.note)}</p></section>
-      ${importantHints}
-      <details class="recipe-subsection"><summary>Varianten</summary><div class="recipe-subsection-body recipe-option-list">${variants}</div></details>
-      <details class="recipe-subsection"><summary>Aufbewahrung</summary><div class="recipe-subsection-body">${storage}</div></details>
-      <details class="recipe-subsection"><summary>Hinweise</summary><div class="recipe-subsection-body">${hints}</div></details>
-    </div>
-  </details>`;
+
+  return '<div class="catalog-detail-hero">' +
+    '<div class="catalog-detail-hero-copy">' +
+      '<div class="small catalog-detail-type">' + esc(recipeCatalogTypeLabel(r)) + familyText + "</div>" +
+      '<div class="chips catalog-detail-status">' + recipeCatalogStatusBadge(r) + "</div>" +
+      (tags ? '<div class="recipe-detail-tags">' + tags + "</div>" : "") +
+    "</div>" +
+    '<div class="catalog-detail-hero-icon" aria-hidden="true">' + recipeIconSvg(r) + "</div>" +
+  "</div>" +
+  '<div class="catalog-detail-primary-actions"><button class="btn full" id="recipeCatalogLog" type="button">Protokollieren</button></div>' +
+  '<section class="catalog-detail-section recipe-detail-facts" aria-label="Rezept-Einordnung">' +
+    `<div class="recipe-detail-fact"><span>Eignung</span><b>${esc(statusText)}</b></div>` +
+    `<div class="recipe-detail-fact"><span>Alter</span><b>${esc(ageText)}</b></div>` +
+    `<div class="recipe-detail-fact"><span>Konsistenz</span><b>${esc(typeof textureName === "function" ? textureName(r.stage) : `Stufe ${r.stage || 1}`)}</b></div>` +
+    `<div class="recipe-detail-fact"><span>Ergibt</span><b>${esc(r.batch || "kleine Portion")}</b></div>` +
+  "</section>" +
+  '<section class="catalog-detail-section"><h3>Zutaten mit Mengen</h3><ul class="recipe-detail-list">' +
+    (ingredients.length ? ingredients.map((item) => `<li>${esc(item)}</li>`).join("") : '<li>Keine Mengenangabe hinterlegt.</li>') +
+  "</ul></section>" +
+  '<section class="catalog-detail-section"><h3>Zubereitung</h3><p class="small recipe-detail-preparation">' + esc(r.note || "Keine Zubereitungsangabe hinterlegt.") + "</p></section>" +
+  '<section class="catalog-detail-section"><h3>Konsistenz &amp; Servierform</h3>' +
+    `<div class="recipe-detail-fact"><span>Darreichungsform</span><b>${esc(handlingText)}</b></div>` +
+    (r.skillRequirement ? `<div class="notice recipe-detail-callout"><b>Sicher anbieten:</b> ${esc(r.skillRequirement)}</div>` : "") +
+  "</section>" +
+  (hasFingerfood ? '<section class="catalog-detail-section"><h3>Fingerfood &amp; Handling</h3>' +
+    (biteText ? `<p class="small"><b>Bissabtrennung:</b> ${esc(biteText)}</p>` : "") +
+    (oralText ? `<p class="small"><b>Orale Verarbeitung:</b> ${esc(oralText)}</p>` : "") +
+    (r.skillRequirement ? `<p class="small"><b>Praktischer Hinweis:</b> ${esc(r.skillRequirement)}</p>` : "") +
+  "</section>" : "") +
+  '<section class="catalog-detail-section"><h3>Allergene &amp; Sicherheit</h3>' +
+    (allergens.length
+      ? `<div class="recipe-detail-allergens">${allergens.map((item) => `<span class="pill warn">${esc(item)}</span>`).join("")}</div><p class="small">Hinterlegte Allergenquellen: ${allergenFoods.map((item) => esc(item.name)).join(" · ")}.</p>`
+      : '<p class="small">Keine strukturiert hinterlegte Allergenquelle in den Rezeptzutaten.</p>') +
+    (milkHint ? `<div class="notice olive recipe-detail-callout"><b>Milchhinweis:</b> ${esc(milkHint)}</div>` : "") +
+  "</section>" +
+  '<details class="accordion recipe-subsection"><summary>Varianten &amp; Alternativen</summary><div class="recipe-detail-choice-list recipe-option-list" style="margin-top:10px">' + recipeDetailVariantBody(r) + "</div></details>" +
+  '<details class="accordion"><summary>Aufbewahrung</summary><div style="margin-top:10px">' + storage + "</div></details>";
+}
+
+function showRecipeInfo(r) {
+  if (!r || typeof openGeneric !== "function") return;
+  openGeneric(r.name, recipeCatalogDetailBody(r));
+  document.getElementById("recipeCatalogLog")?.addEventListener("click", () => {
+    closeGeneric();
+    if (typeof openCatalogRecipeLog === "function") openCatalogRecipeLog(r.name);
+  });
+  if (typeof bindRecipeStockButtons === "function") bindRecipeStockButtons();
+}
+globalThis.showRecipeInfo = showRecipeInfo;
+
+function renderRecipeCard(r, { priorityImage = false, showDetails = true } = {}) {
+  let type = recipeCatalogTypeLabel(r);
+  let familyText = r.familyLabel ? " · " + esc(r.familyLabel) : "";
+  let encodedName = encodeURIComponent(r.name);
+  return '<details class="recipe-card-v2" open data-recipe="' + encodedName + '">' +
+    "<summary>" +
+      '<div class="recipe-summary-grid">' +
+        '<div class="recipe-heading-with-icon">' +
+          recipeIconSvg(r, priorityImage ? { loading: "eager", fetchPriority: "high" } : undefined) +
+          '<div><b>' + esc(r.name) + '</b><div class="small recipe-type-text">' + esc(type) + '</div><div class="tiny recipe-tech-text">' + esc(r.batch || "kleine Portion") + familyText + "</div></div>" +
+        "</div>" +
+        '<div class="recipe-summary-end">' + recipeCatalogStatusBadge(r) + '<span class="recipe-row-chevron" aria-hidden="true">›</span></div>' +
+      "</div>" +
+    "</summary>" +
+    (showDetails ? recipeCatalogDetailBody(r) : "") +
+  "</details>";
 }
 
 if (typeof module !== "undefined" && module.exports) {

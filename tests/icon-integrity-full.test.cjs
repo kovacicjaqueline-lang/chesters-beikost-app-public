@@ -5,7 +5,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
-const { assertV2Asset } = require("./helpers/icon-integrity-png.cjs");
+const { assertV2Asset, measureV2Asset } = require("./helpers/icon-integrity-png.cjs");
 const {
   clonePlain,
   duplicateGroups,
@@ -18,6 +18,23 @@ const {
 
 const ROOT = path.resolve(__dirname, "..");
 const KNOWN_RUNTIME_FOOD_V2_GAPS = Object.freeze([]);
+const CHECKERBOARD_REPAIRED_RECIPE_ASSETS = Object.freeze([
+  "apfel-bananen-baked-oatmeal",
+  "apfel-milchreisschnitten",
+  "bananen-french-toast-finger",
+  "bunte-gemuese-nuggets",
+  "gefuellte-paprika-mit-linsenreis",
+  "gemuese-couscous-schnitten",
+  "griessschnitten-ohne-panade",
+  "huhn-spinat-quinoa-auflauf",
+  "karotten-linsen-aufstrich",
+  "lachs-brokkoli-kartoffel-auflauf",
+  "rote-linsen-gemuese-shepherds-pie",
+  "spinat-zucchini-lasagne",
+  "weiche-apfel-hafer-riegel",
+  "weiche-gemuese-reis-finger",
+  "weisse-bohnen-paprika-aufstrich",
+].map((name) => `assets/illustrations-v2/recipes/${name}.svg`));
 
 function read(relativePath) {
   return fs.readFileSync(path.join(ROOT, relativePath), "utf8");
@@ -181,17 +198,33 @@ test("V2-Mappings, Dateibestand und Service-Worker-Precache sind exakt deckungsg
     .sort();
   assert.deepEqual(precached, allAssets, "V2-Precache enthält fehlende, doppelte oder veraltete Assetpfade");
   assert.deepEqual(runtimeRecipePrecache.sort(), [
+    "assets/illustrations-v2/recipes/herzhafte-hirseschnitten.svg",
     "assets/illustrations-v2/recipes/chicken-fajita-wrap.svg",
+    "assets/illustrations-v2/recipes/bulgur-gemuese-koefte.svg",
+    "assets/illustrations-v2/recipes/bulgur-linsen-suppe.svg",
+    "assets/illustrations-v2/recipes/bulgur-zucchini-ei.svg",
+    "assets/illustrations-v2/recipes/quinoa-gemuese-puffer.svg",
+    "assets/illustrations-v2/recipes/quinoa-huhn-suesskartoffel-finger.svg",
+    "assets/illustrations-v2/recipes/quinoa-linsen-gemuese-khichdi.svg",
+
     "assets/illustrations-v2/recipes/apfel-bananen-baked-oatmeal.svg",
     "assets/illustrations-v2/recipes/apfel-milchreisschnitten.svg",
     "assets/illustrations-v2/recipes/bananen-french-toast-finger.svg",
+    "assets/illustrations-v2/recipes/bananen-hirseschnitten.svg",
     "assets/illustrations-v2/recipes/bunte-gemuese-nuggets.svg",
     "assets/illustrations-v2/recipes/erbsen-basilikum-pesto-ohne-salz.svg",
+    "assets/illustrations-v2/recipes/forelle-kartoffel-baellchen.svg",
     "assets/illustrations-v2/recipes/gefuellte-paprika-mit-linsenreis.svg",
+  "assets/illustrations-v2/recipes/apfel-pflaumen-kompott.svg",
+  "assets/illustrations-v2/recipes/birne-pfirsich-kompott.svg",
+  "assets/illustrations-v2/recipes/gemuese-reis-brei.svg",
+  "assets/illustrations-v2/recipes/kartoffel-karotten-stampf.svg",
+  "assets/illustrations-v2/recipes/mango-bananen-creme.svg",
     "assets/illustrations-v2/recipes/gemuese-couscous-schnitten.svg",
     "assets/illustrations-v2/recipes/gemuese-kichererbsen-couscous.svg",
     "assets/illustrations-v2/recipes/griessschnitten-ohne-panade.svg",
     "assets/illustrations-v2/recipes/huhn-spinat-quinoa-auflauf.svg",
+    "assets/illustrations-v2/recipes/kabeljau-suesskartoffel-fischkuechlein.svg",
     "assets/illustrations-v2/recipes/karotten-linsen-aufstrich.svg",
     "assets/illustrations-v2/recipes/lachs-brokkoli-kartoffel-auflauf.svg",
     "assets/illustrations-v2/recipes/mildes-bohnen-suesskartoffel-chili.svg",
@@ -206,4 +239,14 @@ test("V2-Mappings, Dateibestand und Service-Worker-Precache sind exakt deckungsg
 
 test("sämtliche Food-/Recipe-V2-SVGs erfüllen 128×128, PNG-CRC/Decode und Alpha-Integrität", () => {
   for (const relativePath of allAssets) assertV2Asset(ROOT, relativePath);
+});
+
+test("bereinigte Recipe-V2-Assets behalten echten transparenten Sicherheitsrand statt Checkerboard", () => {
+  for (const relativePath of CHECKERBOARD_REPAIRED_RECIPE_ASSETS) {
+    const geometry = measureV2Asset(ROOT, relativePath);
+    assert.ok(
+      geometry.minMargin >= 7,
+      `${relativePath}: Motivrand muss mindestens 7 Wrapper-Pixel betragen; eingebrannter Checkerboard-Hintergrund würde diesen Rand belegen`,
+    );
+  }
 });

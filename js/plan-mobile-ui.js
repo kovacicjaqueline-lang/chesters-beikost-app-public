@@ -30,18 +30,21 @@
     isCompleted = () => false,
     isAllergenFood = () => false,
     prepDates = new Set(),
+    closedDays = {},
   ) {
     const planned = (day?.meals || []).filter((meal) => meal?.active);
     const open = planned.filter((meal) => !isCompleted(day.date, meal.meal));
+    const closed = !!closedDays?.[day?.date];
     const allFoodIds = open.flatMap((meal) => meal.foodIds || []);
     const hasAllergenType = open.some((meal) => /allergen/i.test(String(meal.type || "")));
     return {
       newFood: open.some((meal) => ["neu", "Allergen einführen"].includes(meal.type)),
       allergen: hasAllergenType || allFoodIds.some((id) => isAllergenFood(id)),
       prep: prepDates.has(day?.date),
-      incomplete: open.some((meal) => meal?.empty || !meal?.focusId),
+      incomplete: !closed && open.some((meal) => meal?.empty || !meal?.focusId),
       locked: open.some((meal) => planLocks[`${day.date}|${meal.meal}`]?.mode === "manual"),
-      done: planned.length > 0 && open.length === 0 && planned.every((meal) => !meal?.empty && !!meal?.focusId),
+      ...(closed ? { closed: true } : {}),
+      done: closed || (planned.length > 0 && open.length === 0 && planned.every((meal) => !meal?.empty && !!meal?.focusId)),
       plannedCount: planned.length,
       completedCount: planned.filter((meal) => !meal?.empty && !!meal?.focusId && isCompleted(day.date, meal.meal)).length,
     };
@@ -61,7 +64,8 @@
     if (status.prep) labels.push("Prep");
     if (status.incomplete) labels.push("Unvollständig");
     if (status.locked) labels.push("Geschützt");
-    if (status.done) labels.push("Erledigt");
+    if (status.closed) labels.push("Abgeschlossen");
+    else if (status.done) labels.push("Erledigt");
     return labels;
   }
 
@@ -69,9 +73,18 @@
     const title = String(currentTitle || "");
     const base = title.replace(/\s+(?:teilweise\s+)?erledigt\s*$/i, "").trim();
     if (!base) return title;
+    if (status.closed) return `${base} abgeschlossen`;
     if (status.done) return `${base} erledigt`;
     if (status.completedCount > 0 && status.incomplete) return `${base} teilweise erledigt`;
     return title;
+  }
+
+  function mobilePlanSwipeDirection(startX, startY, endX, endY, threshold = 48) {
+    const deltaX = Number(endX) - Number(startX);
+    const deltaY = Number(endY) - Number(startY);
+    if (!Number.isFinite(deltaX) || !Number.isFinite(deltaY)) return 0;
+    if (Math.abs(deltaX) < threshold || Math.abs(deltaX) <= Math.abs(deltaY) + 10) return 0;
+    return deltaX < 0 ? 1 : -1;
   }
   /* MOBILE-PLAN-HELPERS END */
 
@@ -204,12 +217,13 @@
     nav.querySelectorAll(".plan-week-step").forEach((button) => {
       button.onclick = () => {
         const delta = Number(button.dataset.weekStep) || 0;
-        const days = planDisplayDays(from, 7);
-        const selectedIndex = Math.max(0, days.findIndex((day) => day.date === selectedDate));
+        const selectedIndex = Math.max(0, Math.min(6, Math.round(
+          (parsePlanDate(selectedDate).getTime() - parsePlanDate(from).getTime()) / 86400000,
+        )));
         const nextFrom = addDays(from, delta);
         globalThis.__mobilePlanSelectedDate = addDays(nextFrom, selectedIndex);
         state.settings.planFrom = nextFrom;
-        save();
+        save({ preservePlanCache: true });
         renderPlan();
       };
     });
@@ -226,7 +240,8 @@
     if (status.prep) markers.push(statusDotHtml("prep", "Prep notwendig"));
     if (status.incomplete) markers.push(statusDotHtml("incomplete", "Tag unvollständig"));
     if (status.locked) markers.push(statusDotHtml("locked", "Geschützte Mahlzeit"));
-    if (status.done) markers.push(statusDotHtml("done", "Tag erledigt"));
+    if (status.closed) markers.push(statusDotHtml("done", "Tag abgeschlossen"));
+    else if (status.done) markers.push(statusDotHtml("done", "Tag erledigt"));
     return markers.join("");
   }
 
@@ -279,15 +294,39 @@
       <div class="plan-week-legend" aria-label="Status der Woche">${legendHtml(statuses)}</div>
     `;
 
-    overview.querySelectorAll(".plan-week-day").forEach((button) => {
+    const dayNodes = [...block.children].filter(
+      (node) => node.classList.contains("day-card") || node.classList.contains("completed-day"),
+    );
+    const dayNodesByDate = new Map(days.map((day, index) => [day.date, dayNodes[index]]));
+    const dayButtons = [...overview.querySelectorAll(".plan-week-day")];
+    const dayButtonsByDate = new Map(dayButtons.map((button) => [button.dataset.planDate, button]));
+    let activeDate = selectedDate;
+
+    dayButtons.forEach((button) => {
       button.onclick = () => {
-        globalThis.__mobilePlanSelectedDate = button.dataset.planDate;
-        applySelectedDay(block, days, button.dataset.planDate, statuses);
-        overview.querySelectorAll(".plan-week-day").forEach((item) => {
-          const active = item.dataset.planDate === button.dataset.planDate;
-          item.classList.toggle("selected", active);
-          item.setAttribute("aria-pressed", active ? "true" : "false");
-        });
+        const nextDate = button.dataset.planDate;
+        if (!nextDate || nextDate === activeDate) return;
+
+        const previousNode = dayNodesByDate.get(activeDate);
+        const nextNode = dayNodesByDate.get(nextDate);
+        if (!nextNode) return;
+
+        if (previousNode && previousNode !== nextNode) {
+          previousNode.hidden = true;
+          previousNode.classList.remove("plan-selected-day");
+        }
+        nextNode.hidden = false;
+        nextNode.classList.add("plan-selected-day");
+        if (nextNode.matches("details.completed-day")) nextNode.open = true;
+
+        const previousButton = dayButtonsByDate.get(activeDate);
+        previousButton?.classList.remove("selected");
+        previousButton?.setAttribute("aria-pressed", "false");
+        button.classList.add("selected");
+        button.setAttribute("aria-pressed", "true");
+
+        activeDate = nextDate;
+        globalThis.__mobilePlanSelectedDate = nextDate;
       };
     });
   }
@@ -317,13 +356,75 @@
     });
   }
 
+  function bindDayCardSwipe(block) {
+    if (!block || block.dataset.mobilePlanSwipeBound === "true") return;
+
+    let gesture = null;
+    const interactiveSelector = "button, a, input, select, textarea, summary, [contenteditable=\"true\"]";
+
+    block.addEventListener("pointerdown", (event) => {
+      if (event.pointerType === "mouse" || event.button !== 0) return;
+      if (event.target.closest(interactiveSelector)) return;
+      gesture = {
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+      };
+    }, { passive: true });
+
+    block.addEventListener("pointerup", (event) => {
+      if (!gesture || event.pointerId !== gesture.pointerId) return;
+      const direction = mobilePlanSwipeDirection(
+        gesture.startX,
+        gesture.startY,
+        event.clientX,
+        event.clientY,
+      );
+      gesture = null;
+      if (!direction) return;
+
+      const from = visiblePlanStart();
+      const days = planDisplayDays(from, 7);
+      const selectedDate = mobilePlanSelectedDate(
+        days,
+        globalThis.__mobilePlanSelectedDate || "",
+        today(),
+      );
+      const selectedIndex = days.findIndex((day) => day.date === selectedDate);
+      if (selectedIndex < 0) return;
+
+      const nextIndex = selectedIndex + direction;
+      if (nextIndex >= 0 && nextIndex < days.length) {
+        const nextButton = [...document.querySelectorAll("#planWeekOverview .plan-week-day")]
+          .find((button) => button.dataset.planDate === days[nextIndex].date);
+        nextButton?.click();
+        return;
+      }
+
+      const nextFrom = addDays(from, direction > 0 ? 7 : -7);
+      globalThis.__mobilePlanSelectedDate = direction > 0
+        ? addDays(nextFrom, 0)
+        : addDays(nextFrom, 6);
+      state.settings.planFrom = nextFrom;
+      save({ preservePlanCache: true });
+      renderPlan();
+    }, { passive: true });
+
+    block.addEventListener("pointercancel", () => {
+      gesture = null;
+    }, { passive: true });
+    block.dataset.mobilePlanSwipeBound = "true";
+  }
+
   function enhanceMobilePlan() {
     const toolbar = document.querySelector("#plan > .plan-toolbar");
     const block = document.getElementById("blockPlan");
     if (!toolbar || !block) return;
 
     const from = visiblePlanStart();
-    const days = planDisplayDays(from, 7);
+    const days = typeof viewRenderPlanDays === "function"
+      ? viewRenderPlanDays(from, 7)
+      : planDisplayDays(from, 7);
     const selectedDate = mobilePlanSelectedDate(
       days,
       globalThis.__mobilePlanSelectedDate || "",
@@ -339,6 +440,7 @@
         mealIsCompleted,
         (id) => !!food(id)?.allergenGroup,
         prepDates,
+        state.dayClosures || {},
       ),
     );
 
@@ -347,6 +449,7 @@
     ensureWeekNavigation(toolbar, from, selectedDate);
     ensureWeekOverview(toolbar, block, days, selectedDate, statuses);
     applySelectedDay(block, days, selectedDate, statuses);
+    bindDayCardSwipe(block);
   }
 
   globalThis.MobileUiLifecycle.onRender("plan", enhanceMobilePlan);
@@ -356,6 +459,7 @@
     mobilePlanSelectedDate,
     mobilePlanStatusLabels,
     mobilePlanCompletionTitle,
+    mobilePlanSwipeDirection,
     enhance: enhanceMobilePlan,
   };
 

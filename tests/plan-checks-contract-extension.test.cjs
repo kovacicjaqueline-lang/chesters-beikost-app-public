@@ -86,6 +86,27 @@ test("AP3 markiert laufende Einführung bei sichtbarer Abdeckung projected-cover
   assert.equal(projected.refs.meals[0].planId, "plan-ei");
 });
 
+test("AP3 zählt eine Brot-Exposition für die fortsetzbare Gluten-Gruppe, nicht als eigenes Ziel", () => {
+  const foodsContext = {};
+  vm.createContext(foodsContext);
+  vm.runInContext(fs.readFileSync(path.join(root, "data", "foods.js"), "utf8") +
+    "\nthis.foods = FOOD_DB;", foodsContext);
+  const ids = ["brot", "ei", "weizen"];
+  const foods = ids.map((id) => JSON.parse(JSON.stringify(
+    foodsContext.foods.find((item) => item.id === id),
+  )));
+  const logs = ids.filter((id) => id !== "weizen").map((id, index) => ({
+    date: `2026-08-${20 + index}`, meal: "lunch", foodIds: [id], foodOutcomes: { [id]: "eaten" },
+  }));
+  const harness = createHarness({ foods, logs });
+  const report = harness.context.PlannerPlanChecks.report(harness.days);
+  const keys = report.domainStates.allergenIntroduction.openKeys;
+  assert.equal(keys.includes("group:Glutenhaltiges Getreide"), true);
+  assert.equal(keys.includes("group:Ei"), true);
+  const glutenGoal = report.items.find((entry) => entry.details.allergenIntroductionKey === "group:Glutenhaltiges Getreide");
+  assert.deepEqual(glutenGoal.refs.foodIds, ["weizen"]);
+});
+
 test("Required Action reaktiviert FOOD zentral ohne Expositionshistorie zu verändern", () => {
   const harness = createHarness({
     foods: [{ id: "ei", name: "Ei", active: false, allergenGroup: "Ei" }],

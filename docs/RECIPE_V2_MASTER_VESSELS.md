@@ -2,7 +2,7 @@
 
 Dieses Dokument legt die kanonischen Master-Gefäße für Recipe-V2 verbindlich fest.
 
-Es definiert **keine neuen Rezept-Icons** und keine zusätzlichen Gefäßfamilien. Maßgeblich ist jeweils das bereits fachlich freigegebene Referenz-Asset selbst. Die textliche Beschreibung in diesem Dokument dient nur dazu festzulegen, **welche Merkmale unverändert aus der Referenz übernommen werden müssen**; sie ersetzt die visuelle Referenz nicht.
+Es definiert **keine zusätzlichen Gefäßfamilien**. Für die Master-Schale wird das bisher aus einem Rezept-Icon abgeleitete Gefäß durch ein eigenes neutrales Referenz-Asset ersetzt. Maßgeblich ist jeweils das fachlich freigegebene Referenz-Asset selbst. Die textliche Beschreibung in diesem Dokument dient nur dazu festzulegen, **welche Merkmale unverändert aus der Referenz übernommen werden müssen**; sie ersetzt die visuelle Referenz nicht.
 
 ## Verbindliche Referenzzuordnung
 
@@ -11,12 +11,12 @@ Ausgangsstand dieser Festlegung ist `main` bei Commit `e580c66f08fdb0ce7853f491b
 | Master-Gefäß | Referenzrezept | Verbindliches Referenz-Asset | Referenz-Blob auf dem Ausgangsstand |
 | --- | --- | --- | --- |
 | **Master-Teller** | Omelettstreifen | `assets/illustrations-v2/recipes/omelettstreifen.svg` | `ea67bef6bd6e66f70d77e48c3064e2b02a2857c8` |
-| **Master-Schale** | Obst-Haferbrei | `assets/illustrations-v2/recipes/obst-haferbrei.svg` | `7d42e25d743f6b5e5bb452d2616583cbcd1ae226` |
+| **Master-Schale** | neutrales Schüssel-Referenz-Asset | `assets/illustrations-v2/recipe-masters/recipe-master-bowl.svg` | neu erzeugtes, freigegebenes Asset dieses Arbeitsstands |
 | **Master-Topf** | Arroz-caldo-inspiriert | `assets/illustrations-v2/recipes/arroz-caldo-inspiriert.svg` | `7c3152f48329de4eb761468b641d4e8768ebe844` |
 
 `Arroz-caldo-inspiriert` ist dabei ausdrücklich und bewusst die Referenz für den **Master-Topf**; der Topf ist keine bloße Bestandsausnahme.
 
-Die Blob-SHAs halten den bei dieser Festlegung geprüften Ausgangszustand fest. Für die laufende Arbeit wird über den Asset-Pfad auf die Referenz zugegriffen. Wird eines dieser Referenz-Assets später verändert, darf sich der Master dadurch nicht stillschweigend mitverändern: Die Master-Festlegung muss dann ausdrücklich mitgeprüft und bei Bedarf aktualisiert werden.
+Die Blob-SHAs halten für Teller und Topf den bei dieser Festlegung geprüften Ausgangszustand fest. Für die laufende Arbeit wird über den Asset-Pfad auf die Referenz zugegriffen. Wird eines dieser Referenz-Assets später verändert, darf sich der Master dadurch nicht stillschweigend mitverändern: Die Master-Festlegung muss dann ausdrücklich mitgeprüft und bei Bedarf aktualisiert werden. Das neutrale Schüssel-Asset ist unabhängig von einzelnen Rezeptinhalten und darf deshalb nicht als Laufzeit-Icon eines Rezepts verwendet werden.
 
 ## Was vom Gefäß verbindlich übernommen wird
 

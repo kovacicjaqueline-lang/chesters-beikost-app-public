@@ -1,51 +1,10 @@
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { webkit } from "playwright";
+import { closeBrowserApp, startStaticServer } from "./helpers/app-harness.mjs";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const mimeTypes = {
-  ".html": "text/html; charset=utf-8",
-  ".js": "text/javascript; charset=utf-8",
-  ".css": "text/css; charset=utf-8",
-  ".json": "application/json; charset=utf-8",
-  ".webmanifest": "application/manifest+json; charset=utf-8",
-  ".svg": "image/svg+xml",
-  ".png": "image/png",
-  ".webp": "image/webp",
-};
 
-function startStaticServer() {
-  const server = http.createServer((request, response) => {
-    const url = new URL(request.url || "/", "http://127.0.0.1");
-    const pathname = decodeURIComponent(url.pathname === "/" ? "/index.html" : url.pathname);
-    const filePath = path.resolve(root, `.${pathname}`);
-
-    if (filePath !== path.join(root, "index.html") && !filePath.startsWith(`${root}${path.sep}`)) {
-      response.writeHead(403).end("Forbidden");
-      return;
-    }
-
-    fs.stat(filePath, (statError, stat) => {
-      if (statError || !stat.isFile()) {
-        response.writeHead(404).end("Not found");
-        return;
-      }
-      response.writeHead(200, {
-        "content-type": mimeTypes[path.extname(filePath)] || "application/octet-stream",
-        "cache-control": "no-store",
-      });
-      fs.createReadStream(filePath).pipe(response);
-    });
-  });
-
-  return new Promise((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(0, "127.0.0.1", () => resolve(server));
-  });
-}
 
 const server = await startStaticServer();
 const { port } = server.address();
@@ -69,14 +28,86 @@ try {
 
   await page.locator('nav button[data-view="foods"]').click();
   await page.locator('#catalogSwitch [data-catalog-mode="recipes"]').click();
-  await page.locator('[data-recipe-filter="all"]').click();
-
   const search = page.locator("#recipeSearch");
   const recipeNames = () => page.locator("#recipeList .recipe-card-v2 summary b").allTextContents();
+  assert.equal(await page.locator('[data-recipe-filter="almost"]').evaluate((button) => button.classList.contains("active")), true, "Fast passend soll der Standardfilter sein");
+  const fastDefaultMatchesAvailability = await page.evaluate(() => {
+    const states = viewRenderRecipeStates();
+    const visible = new Set([...document.querySelectorAll("#recipeList .recipe-card-v2 summary b")].map((node) => node.textContent.trim()));
+    return states.every((recipe) => visible.has(recipe.name) === (!!recipe.unlocked || !!recipe.almost));
+  });
+  assert.equal(fastDefaultMatchesAvailability, true, "Fast passend muss passende und fast passende Rezepte einschließen");
+
+  await page.locator(".recipe-match-select > summary").click();
+  await page.locator('[data-recipe-filter="all"]').click({ force: true });
   const beforeSearch = await recipeNames();
   assert.ok(beforeSearch.includes("Obst-Hafer-Pancakes"), "Ei-Rezept muss vor der Suche im Alle-Filter vorhanden sein");
   assert.ok(beforeSearch.includes("Milch-Getreide-Brei"), "Kontrollrezept muss vor der Suche im Alle-Filter vorhanden sein");
 
+  assert.equal(
+    await page.locator(".recipe-meal-filter-field > label").textContent(),
+    "Mahlzeit",
+    "Die drei Mahlzeitenfilter brauchen eine eigene mobile Filterzeile",
+  );
+  assert.equal(
+    await page.locator(".recipe-filter-field > label").textContent(),
+    "Passend",
+    "Die Verfügbarkeitsfilter brauchen eine eigene Zeile",
+  );
+  await page.locator(".recipe-meal-select > summary").click();
+  assert.equal(await page.locator("#recipeMealFilter").isVisible(), true, "Die Mahlzeitenfilter müssen im Auswahlfeld erreichbar sein");
+  await page.locator(".recipe-meal-select").evaluate((details) => { details.open = false; });
+
+  await page.locator(".recipe-match-select > summary").click();
+  await page.locator(".recipe-match-select").evaluate((details) => { details.open = true; });
+  await page.locator('[data-recipe-filter="all"]').click({ force: true });
+  await page.locator(".recipe-meal-select > summary").click();
+  await page.locator('[data-recipe-meal="breakfast"]').click({ force: true });
+  const breakfastRecipes = await recipeNames();
+  assert.ok(
+    breakfastRecipes.includes("Obst-Hafer-Pancakes"),
+    "Frühstück muss Rezepte mit frühstückstauglichen FOOD-Zutaten enthalten",
+  );
+  assert.ok(
+    breakfastRecipes.includes("Milch-Getreide-Brei"),
+    "Frühstück muss auch variable Rezepte mit mindestens einer frühstückstauglichen Auswahl enthalten",
+  );
+  assert.equal(
+    breakfastRecipes.includes("Rind-Hafer-Bällchen"),
+    false,
+    "Frühstück darf Rezepte mit nicht frühstückstauglicher Pflichtzutat nicht enthalten",
+  );
+  assert.match(await page.locator("#recipeCount").textContent(), /Rezept/);
+
+  await page.locator(".recipe-meal-select > summary").click();
+  await page.locator('[data-recipe-meal="main"]').click({ force: true });
+  const mainMealRecipes = await recipeNames();
+  assert.ok(
+    mainMealRecipes.includes("Rind-Hafer-Bällchen"),
+    "Hauptmahlzeit muss Rezepte enthalten, deren Zutaten für Mittag oder Abend geeignet sind",
+  );
+  assert.ok(
+    mainMealRecipes.includes("Obst-Hafer-Pancakes"),
+    "Hauptmahlzeit bleibt absichtlich nicht exklusiv, wenn die FOOD-Zutaten auch dafür geeignet sind",
+  );
+  assert.match(await page.locator("#recipeCount").textContent(), /Rezept/);
+
+  await page.locator(".recipe-meal-select > summary").click();
+  await page.locator('[data-recipe-meal="snack"]').click({ force: true });
+  const snackRecipes = await recipeNames();
+  assert.ok(
+    snackRecipes.includes("Weiche Apfel-Hafer-Riegel"),
+    "Snack bleibt rezeptgetrieben über den bestehenden Snack-Tag",
+  );
+  assert.equal(
+    snackRecipes.includes("Rind-Hafer-Bällchen"),
+    false,
+    "Snack darf nicht aus FOOD-Mahlzeiteneignung abgeleitet werden",
+  );
+  assert.match(await page.locator("#recipeCount").textContent(), /Rezept/);
+
+  await page.locator(".recipe-match-select > summary").click();
+  await page.locator('[data-recipe-filter="all"]').click({ force: true });
   await search.fill("Ei");
   const afterEggSearch = await recipeNames();
 
@@ -147,6 +178,5 @@ try {
   await context.close();
   console.log("recipe-catalog-ingredient-search-webkit: ok");
 } finally {
-  await browser.close();
-  await new Promise((resolve) => server.close(resolve));
+  await closeBrowserApp({ context: typeof context !== "undefined" ? context : null, browser, server });
 }

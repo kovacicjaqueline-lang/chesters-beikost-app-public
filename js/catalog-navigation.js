@@ -1,13 +1,70 @@
 "use strict";
 
 /* Gemeinsamer Katalog-Tab für Lebensmittel und Rezepte.
- * Rezeptdaten, Planner und direkte Rezeptdetail-Dialoge bleiben unverändert.
+ * Rezeptdaten und Planner bleiben unverändert; Katalogdetails nutzen den gemeinsamen Dialog.
  */
 (function catalogNavigationModule() {
   if (typeof document === "undefined") return;
 
   const MODE_FOODS = "foods";
   const MODE_RECIPES = "recipes";
+
+  function decodeCatalogValue(value) {
+    try { return decodeURIComponent(value || ""); } catch { return value || ""; }
+  }
+
+  function openCatalogFoodLog(foodId) {
+    let item = typeof food === "function" ? food(foodId) : null;
+    if (!item || typeof openLog !== "function") return;
+    let itemRank = typeof rank === "function" ? rank(item) : 0;
+    let learning = itemRank < 2;
+    let outcome = "eaten";
+    openLog({
+      date: today(),
+      meal: "",
+      focusId: item.id,
+      foodIds: [item.id],
+      baseFoodIds: learning ? [] : [item.id],
+      sampleFoodIds: learning ? [item.id] : [],
+      recipeName: "",
+      recipeInventoryId: "",
+      entryType: "food",
+      foodOutcomes: { [item.id]: outcome },
+    });
+  }
+
+  function openCatalogRecipeLog(recipeName) {
+    let recipe = typeof recipeByName === "function" ? recipeByName(recipeName) : null;
+    if (!recipe || typeof openLog !== "function") return;
+    openLog({
+      date: today(),
+      meal: "",
+      focusId: "",
+      foodIds: [],
+      baseFoodIds: [],
+      sampleFoodIds: [],
+      recipeName: recipe.name,
+      recipeInventoryId: "",
+      entryType: "food",
+      foodOutcomes: {},
+    });
+    let choice = typeof logRecipeChoiceState === "function"
+      ? logRecipeChoiceState(recipe)
+      : { variantIndex: 0, oneOfId: "", milkChoiceId: "" };
+    choice.__explicit = {};
+    choice.confirmed = typeof logRecipeNeedsExplicitChoice === "function"
+      ? !logRecipeNeedsExplicitChoice(recipe)
+      : true;
+    pendingLog.__recipeChoice = choice;
+    if (typeof applyLogRecipeChoice === "function") applyLogRecipeChoice(recipe, choice);
+    if (typeof renderLogForm === "function") renderLogForm();
+    if (!choice.confirmed && typeof focusFirstRequiredRecipeChoice === "function") {
+      queueMicrotask(focusFirstRequiredRecipeChoice);
+    }
+  }
+
+  globalThis.openCatalogFoodLog = openCatalogFoodLog;
+  globalThis.openCatalogRecipeLog = openCatalogRecipeLog;
 
   function recipeCatalogStructuredLabels(recipe) {
     return [
@@ -30,49 +87,86 @@
     );
   }
 
+  function recipeCatalogFoodMealEligible(label, meal) {
+    if (typeof FOOD_DB === "undefined" || typeof recipeFoodFromStructuredLabel !== "function") return false;
+    const item = recipeFoodFromStructuredLabel(label, FOOD_DB);
+    return !!item && Array.isArray(item.meals) && item.meals.includes(meal);
+  }
+
+  function recipeCatalogChoiceEligible(labels, meal) {
+    return !labels?.length || labels.some((label) => recipeCatalogFoodMealEligible(label, meal));
+  }
+
+  function recipeCatalogRequirementSetEligible(labels, meal) {
+    return (labels || []).every((label) => recipeCatalogFoodMealEligible(label, meal));
+  }
+
+  function recipeCatalogMealEligible(recipe, meal) {
+    const requirementSets = [
+      recipe?.requires || [],
+      ...(recipe?.alternatives || []),
+    ];
+    if (!requirementSets.some((labels) => recipeCatalogRequirementSetEligible(labels, meal))) return false;
+    if (!recipeCatalogChoiceEligible(recipe?.oneOf || [], meal)) return false;
+    if (!recipeCatalogChoiceEligible(recipe?.milkChoices || [], meal)) return false;
+    return true;
+  }
+
+  function recipeCatalogMainMealEligible(recipe) {
+    return recipeCatalogMealEligible(recipe, "lunch") || recipeCatalogMealEligible(recipe, "dinner");
+  }
+
+  function recipeCatalogPantryMatches(recipe) {
+    const stock = globalThis.__recipeFrozenIngredientStock;
+    if (stock?.recipeMatchesIngredientStock && typeof inventoryPortions === "function") {
+      return stock.recipeMatchesIngredientStock(
+        recipe,
+        state?.foods || [],
+        state?.pantry || {},
+        inventoryPortions,
+      );
+    }
+    return (recipe?.requires || []).every((name) => {
+      const item = state?.foods?.find((foodItem) => foodItem.name === name);
+      if (!item) return false;
+      const portions = typeof inventoryPortions === "function" ? inventoryPortions(item?.id) : 0;
+      return portions > 0 || state?.pantry?.[item.id];
+    });
+  }
+
+  const RECIPE_TYPE_FILTERS = new Set(["porridge", "pancakes", "balls", "family", "baking"]);
+
+  function installRecipeMealFilters() {
+    const categoryField = document.getElementById("recipeFilter")?.closest(".recipe-filter-field");
+    if (!categoryField || document.getElementById("recipeMealFilter")) return;
+    const mealField = document.createElement("div");
+    mealField.className = "field recipe-meal-filter-field";
+    mealField.innerHTML = `<label>Mahlzeit</label><div class="seg recipe-meal-filters" id="recipeMealFilter" role="group" aria-label="Rezeptmahlzeit"><button type="button" data-recipe-meal="breakfast">Frühstück</button><button type="button" data-recipe-meal="main">Hauptmahlzeit</button><button type="button" data-recipe-meal="snack">Snack</button></div>`;
+    categoryField.after(mealField);
+  }
+
   function recipeCatalogSearchTerms(recipe) {
     const aliases = typeof recipeAliasValues === "function" ? recipeAliasValues(recipe) : [];
     const structuredTerms = recipeCatalogStructuredLabels(recipe).flatMap((label) => {
-      if (
-        typeof recipeFoodFromStructuredLabel !== "function" ||
-        typeof FOOD_DB === "undefined" ||
-        typeof foodAliasTerms !== "function"
-      ) return [label];
+      if (typeof recipeFoodFromStructuredLabel !== "function" || typeof FOOD_DB === "undefined" || typeof foodAliasTerms !== "function") return [label];
       const item = recipeFoodFromStructuredLabel(label, FOOD_DB);
       return item ? [item.name, ...foodAliasTerms(item)] : [label];
     });
-    return [
-      recipe?.name || "",
-      ...aliases,
-      ...(recipe?.variantLabels || []),
-      ...structuredTerms,
-    ].filter(Boolean);
+    return [recipe?.name || "", ...aliases, ...(recipe?.variantLabels || []), ...structuredTerms].filter(Boolean);
   }
 
   function recipeCatalogSearchMatches(recipe, query, fullSearchText = "") {
     const normalizedQuery = normalizeName(query || "");
     if (!normalizedQuery) return true;
-
-    // Ist die Eingabe exakt ein bekanntes Lebensmittel (z. B. „Ei“), zählt
-    // ausschließlich die strukturierte Rezept-Zutatenbeziehung. So kann ein
-    // zufälliger Titeltext niemals einen Zutaten-Treffer vortäuschen.
     const exactFood = recipeCatalogExactFood(query);
     if (exactFood) return recipeCatalogContainsFood(recipe, exactFood);
-
     const exactOrPrefixMatch = recipeCatalogSearchTerms(recipe).some((term) => {
       const normalizedTerm = normalizeName(term || "");
       if (!normalizedTerm) return false;
       if (normalizedTerm === normalizedQuery || normalizedTerm.startsWith(normalizedQuery)) return true;
-      return normalizedTerm
-        .split(" ")
-        .filter(Boolean)
-        .some((word) => word === normalizedQuery || word.startsWith(normalizedQuery));
+      return normalizedTerm.split(" ").filter(Boolean).some((word) => word === normalizedQuery || word.startsWith(normalizedQuery));
     });
     if (exactOrPrefixMatch) return true;
-
-    // Sehr kurze Suchbegriffe dürfen nicht irgendwo mitten in einem Wort treffen.
-    // Ab drei Zeichen bleibt die bisherige flexible Volltextsuche inklusive
-    // Zutatenbeschreibung erhalten.
     if (normalizedQuery.length < 3) return false;
     return normalizeName(fullSearchText).includes(normalizedQuery);
   }
@@ -83,107 +177,145 @@
     renderPrep = function renderPrepWithIngredientAwareRecipeSearch(...args) {
       const currentQuery = typeof recipeQuery !== "undefined" ? recipeQuery : "";
       if (!normalizeName(currentQuery)) return baseRenderPrep.apply(this, args);
-
       const baseRecipeSearchText = recipeSearchText;
       recipeSearchText = (recipe) => {
         const fullSearchText = baseRecipeSearchText(recipe);
         return recipeCatalogSearchMatches(recipe, currentQuery, fullSearchText) ? fullSearchText : "";
       };
-      try {
-        return baseRenderPrep.apply(this, args);
-      } finally {
-        recipeSearchText = baseRecipeSearchText;
-      }
+      try { return baseRenderPrep.apply(this, args); }
+      finally { recipeSearchText = baseRecipeSearchText; }
     };
   }
 
-  function recipeCatalogCategoryMatches(recipe) {
-    return recipeFilter === "available"
-      ? recipe.unlocked
-      : recipeFilter === "almost"
-        ? recipe.almost
-        : recipeFilter === "all"
-          ? true
-          : recipeFilter === "pantry"
-            ? (recipe.requires || []).every((name) => {
-                const item = state.foods.find((foodItem) => foodItem.name === name);
-                return item && (inventoryPortions(item.id) > 0 || state.pantry[item.id]);
-              })
-            : recipeFilter === "freezer"
-              ? !!recipe.freezable
-              : recipeFilter === "philippines"
-                ? recipe.ph || recipe.category === "philippines"
-                : recipeFilter === "snack"
-                  ? (recipe.tags || []).some((tag) => normalizeName(tag) === "snack")
-                  : recipe.category === recipeFilter;
+  function recipeCatalogAvailabilityMatches(recipe) {
+    if (recipeFilter === "available") return !!recipe.unlocked;
+    if (recipeFilter === "pantry") return recipeCatalogPantryMatches(recipe);
+    if (recipeFilter === "freezer") return !!recipe.freezable;
+    if (recipeFilter === "all") return true;
+    return !!recipe.unlocked || !!recipe.almost;
+  }
+
+  function recipeCatalogMealMatches(recipe) {
+    if (!recipeMealFilter) return true;
+    if (recipeMealFilter === "breakfast") return recipeCatalogMealEligible(recipe, "breakfast");
+    if (recipeMealFilter === "main") return recipeCatalogMainMealEligible(recipe);
+    return (recipe.tags || []).some((tag) => normalizeName(tag) === "snack");
+  }
+
+  function recipeCatalogExtraMatches(recipe) {
+    if (recipeExtraFilters.has("freezer") && !recipe.freezable) return false;
+    const types = [...recipeExtraFilters].filter((key) => RECIPE_TYPE_FILTERS.has(key));
+    return !types.length || types.includes(recipe.category);
+  }
+
+  function recipeCatalogMatches(recipe) {
+    return recipeCatalogAvailabilityMatches(recipe) && recipeCatalogMealMatches(recipe) && recipeCatalogExtraMatches(recipe);
+  }
+
+  function syncRecipeFilterUi(resultCount = null) {
+    document.querySelectorAll("#recipeFilter [data-recipe-filter]").forEach((button) =>
+      button.classList.toggle("active", button.dataset.recipeFilter === recipeFilter));
+    document.querySelectorAll("#recipeMealFilter [data-recipe-meal]").forEach((button) =>
+      button.classList.toggle("active", button.dataset.recipeMeal === recipeMealFilter));
+    document.querySelectorAll("[data-recipe-extra-filter]").forEach((button) =>
+      button.classList.toggle("active", recipeExtraFilters.has(button.dataset.recipeExtraFilter)));
+    const matchSummary = document.querySelector("[data-recipe-match-summary]");
+    if (matchSummary) {
+      const labels = {
+        available: "Jetzt passend",
+        almost: "Fast passend",
+        pantry: "Mit Vorrat",
+        freezer: "Einfrierbar",
+        all: "Alle",
+      };
+      matchSummary.textContent = labels[recipeFilter] || "Fast passend";
+    }
+    const mealSummary = document.querySelector("[data-recipe-meal-summary]");
+    if (mealSummary) {
+      const labels = { breakfast: "Frühstück", main: "Hauptmahlzeit", snack: "Snack" };
+      mealSummary.textContent = labels[recipeMealFilter] || "Mahlzeit";
+    }
+    const more = document.getElementById("recipeMoreFilters");
+    if (more) more.textContent = recipeExtraFilters.size ? `Filter (${recipeExtraFilters.size})` : "Filter";
+    const apply = document.getElementById("recipeFilterApply");
+    if (apply && Number.isFinite(resultCount)) apply.textContent = `${resultCount} Rezept${resultCount === 1 ? "" : "e"} anzeigen`;
+  }
+
+  function closeRecipeFilterSheet() {
+    const sheet = document.getElementById("recipeFilterSheet");
+    if (sheet) sheet.hidden = true;
+  }
+
+  function bindRecipeFilterControls() {
+    document.querySelectorAll("#recipeFilter [data-recipe-filter]").forEach((button) => {
+      button.onclick = () => {
+        recipeFilter = button.dataset.recipeFilter;
+        button.closest("details")?.removeAttribute("open");
+        renderRecipeCatalog();
+      };
+    });
+    document.querySelectorAll("#recipeMealFilter [data-recipe-meal]").forEach((button) => {
+      button.onclick = () => {
+        recipeMealFilter = recipeMealFilter === button.dataset.recipeMeal ? "" : button.dataset.recipeMeal;
+        button.closest("details")?.removeAttribute("open");
+        renderRecipeCatalog();
+      };
+    });
+    document.getElementById("recipeMoreFilters")?.addEventListener("click", () => {
+      document.getElementById("recipeFilterSheet").hidden = false;
+      syncRecipeFilterUi();
+    });
+    document.querySelectorAll("[data-recipe-filter-close]").forEach((button) => button.onclick = closeRecipeFilterSheet);
+    document.getElementById("recipeFilterApply")?.addEventListener("click", closeRecipeFilterSheet);
+    document.getElementById("recipeFilterReset")?.addEventListener("click", () => {
+      recipeExtraFilters.clear();
+      renderRecipeCatalog();
+    });
+    document.querySelectorAll("[data-recipe-extra-filter]").forEach((button) => {
+      button.onclick = () => {
+        const key = button.dataset.recipeExtraFilter;
+        if (recipeExtraFilters.has(key)) recipeExtraFilters.delete(key);
+        else recipeExtraFilters.add(key);
+        renderRecipeCatalog();
+      };
+    });
   }
 
   function renderRecipeCatalog() {
-    const filterBar = document.getElementById("recipeFilter");
     const search = document.getElementById("recipeSearch");
     if (!document.getElementById("recipeList")) return;
-
-    if (filterBar) {
-      filterBar.querySelectorAll("[data-recipe-filter]").forEach((button) =>
-        button.classList.toggle("active", button.dataset.recipeFilter === recipeFilter),
-      );
-    }
     if (search) search.value = recipeQuery;
-
     const query = normalizeName(recipeQuery);
     const allRecipeStates = typeof viewRenderRecipeStates === "function" ? viewRenderRecipeStates() : recipeStates();
     const recipes = allRecipeStates.filter((recipe) => {
-      if (!recipeCatalogCategoryMatches(recipe)) return false;
+      if (!recipeCatalogMatches(recipe)) return false;
       if (!query) return true;
       const fullSearchText = typeof recipeSearchText === "function" ? recipeSearchText(recipe) : "";
       return recipeCatalogSearchMatches(recipe, recipeQuery, fullSearchText);
     });
-
     const countBox = document.getElementById("recipeCount");
-    if (countBox) {
-      const context = recipeFilter === "almost"
-        ? "es fehlen höchstens zwei Schritte"
-        : recipeFilter === "snack"
-          ? "Snack"
-          : "passend zu Filter und Suche";
-      countBox.textContent = `${recipes.length} Rezept${recipes.length === 1 ? "" : "e"} · ${context}`;
-    }
-
-    const emptyMode = query || recipeFilter !== "available"
-      ? "reset"
-      : allRecipeStates.some((item) => item.almost)
-        ? "almost"
-        : "all";
-    const emptyLabel = emptyMode === "reset"
-      ? "Filter zurücksetzen"
-      : emptyMode === "almost"
-        ? "Fast passende Rezepte anzeigen"
-        : "Alle Rezepte anzeigen";
-
+    if (countBox) countBox.textContent = `${recipes.length} Rezept${recipes.length === 1 ? "" : "e"}`;
+    syncRecipeFilterUi(recipes.length);
     document.getElementById("recipeList").innerHTML = recipes.length
-      ? recipes.map(renderRecipeCard).join("")
-      : `<div class="empty ds-empty"><div>Keine Rezepte für diesen Filter gefunden.</div><button class="btn" id="recipeEmptyAction" type="button">${emptyLabel}</button></div>`;
-
+      ? recipes.map((recipe, index) => renderRecipeCard(recipe, { priorityImage: index < 4, showDetails: false })).join("")
+      : '<div class="empty ds-empty"><div>Keine Rezepte für diese Auswahl gefunden.</div><button class="btn" id="recipeEmptyAction" type="button">Filter zurücksetzen</button></div>';
     document.getElementById("recipeEmptyAction")?.addEventListener("click", () => {
       recipeQuery = "";
-      if (emptyMode === "almost") recipeFilter = "almost";
-      else if (emptyMode === "all") recipeFilter = "all";
-      else recipeFilter = "available";
+      recipeFilter = "almost";
+      recipeMealFilter = "";
+      recipeExtraFilters.clear();
       renderRecipeCatalog();
     });
-    filterBar?.querySelectorAll("[data-recipe-filter]").forEach((button) => {
-      button.onclick = () => {
-        recipeFilter = button.dataset.recipeFilter;
-        renderRecipeCatalog();
+    if (search) search.oninput = (event) => { recipeQuery = event.target.value; renderRecipeCatalog(); };
+    if (typeof bindRecipeStockButtons === "function") bindRecipeStockButtons();
+    const recipeByCatalogName = new Map(recipes.map((recipe) => [recipe.name, recipe]));
+    document.querySelectorAll(".recipe-card-v2 > summary").forEach((summary) => {
+      summary.onclick = (event) => {
+        event.preventDefault();
+        const recipe = recipeByCatalogName.get(decodeCatalogValue(summary.closest(".recipe-card-v2")?.dataset.recipe));
+        if (recipe && typeof showRecipeInfo === "function") showRecipeInfo(recipe);
       };
     });
-    if (search) {
-      search.oninput = (event) => {
-        recipeQuery = event.target.value;
-        renderRecipeCatalog();
-      };
-    }
-    if (typeof bindRecipeStockButtons === "function") bindRecipeStockButtons();
     globalThis.MobileUiLifecycle?.afterRender("foods", { source: "recipe-catalog" });
   }
 
@@ -218,9 +350,17 @@
   }
 
   function openRecipeCatalog(filter = "") {
-    if (filter && typeof recipeFilter !== "undefined") recipeFilter = filter;
+    if (filter === "freezer") {
+      recipeExtraFilters.clear();
+      recipeExtraFilters.add("freezer");
+      recipeFilter = "all";
+      recipeMealFilter = "";
+    } else if (filter && typeof recipeFilter !== "undefined") {
+      recipeFilter = filter;
+    }
     setCatalogMode(MODE_RECIPES);
     showView("foods");
+    renderRecipeCatalog();
     requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
   }
 
@@ -241,6 +381,8 @@
     auditRow.innerHTML = `<span class="statusdot ${ok ? "good" : "warn"}"></span><div><b>${ok ? "Geprüft" : "Prüfen"}:</b> Protokoll liegt unter Mehr; Rezepte liegen im gemeinsamen Lebensmittel-Tab</div>`;
   }
 
+  installRecipeMealFilters();
+  bindRecipeFilterControls();
   installIngredientAwareRecipeSearch();
   installCatalogAwareViewRenderer();
 
@@ -284,8 +426,11 @@
     }
   }, true);
 
-  const observer = new MutationObserver(() => fixLegacyNavigationCopy());
-  observer.observe(document.body, { childList: true, subtree: true });
+  // Die Korrekturen betreffen ausschließlich Inhalte, die nach einem Prep- oder
+  // Mehr-Render entstehen. Ein globaler body/subtree-Observer lief dagegen bei
+  // jeder Katalog-Mutation mit und machte Suche und Filter unnötig teuer.
+  globalThis.MobileUiLifecycle?.onRender?.("prep", fixLegacyNavigationCopy);
+  globalThis.MobileUiLifecycle?.onRender?.("more", fixLegacyNavigationCopy);
 
   setCatalogMode(MODE_FOODS);
   fixLegacyNavigationCopy();
@@ -336,6 +481,10 @@
     style.textContent = `
 body.mobile-foundation nav button {
   min-height: 44px;
+}
+body.mobile-foundation #todayCard {
+  touch-action: pan-y;
+  overscroll-behavior-x: contain;
 }
 body.mobile-foundation #todayCard .today-focus-meal > .mealbox {
   margin: 0 !important;
@@ -450,7 +599,10 @@ body.mobile-foundation #genericModal .sheet {
   installMealEditorSearchScrollGuard();
   updateAppBar("home");
 
-  root.MobileUiLifecycle.onViewChange(({ viewId }) => updateAppBar(viewId));
+  root.MobileUiLifecycle.onViewChange(({ viewId }) => {
+    updateAppBar(viewId);
+    if (viewId === "home") root.__mobileTodaySelectedDate = today();
+  });
 
   function bindRenderedMealActions(container) {
     if (!container?.querySelectorAll) return;
@@ -573,13 +725,153 @@ body.mobile-foundation #genericModal .sheet {
     return `<div class="today-timeline-row ${stateClass}"><span class="timeline-marker" aria-hidden="true">${marker}</span><div class="today-timeline-copy"><b>${esc(mealName(meal.meal))}</b><span>${esc(title)}</span></div><div class="today-timeline-state"><span>${statusText}</span></div>${compatibility.logAnchorHtml}${actions}</div>`;
   }
 
+  function isEverydayRecipesMode() {
+    return root.AppFocusMode?.current?.() === root.AppFocusMode?.MODE_EVERYDAY;
+  }
+
+  function everydayMealTaskHtml(meal) {
+    const type = String(meal?.type || "");
+    const taskIds = [...(meal?.sampleFoodIds || [])];
+    if (!taskIds.length && meal?.focusId && /neu|allergen/i.test(type)) taskIds.push(meal.focusId);
+    const samples = taskIds.map((id) => food(id)).filter(Boolean);
+    if (!samples.length) return "";
+
+    const allergen = /allergen/i.test(type) || samples.some((item) => item.allergenGroup);
+    const repeat = /wiederholen|repeat/i.test(type);
+    const action = repeat ? "wiederholen" : "einführen";
+    return `<div class="everyday-task-hint ${allergen ? "allergen" : "new-food"}"><span>${allergen ? "Allergen-Aufgabe" : "Neue Kostprobe"}</span><b>${esc(samples.map((item) => item.name).join(" · "))}</b><small>${allergen ? `Heute ${action}` : "Neu"}</small></div>`;
+  }
+
+  function decorateEverydayMeal(mealBox, meal) {
+    if (!mealBox) return;
+    const title = mealBox.querySelector(".meal-summary-main, .manual-meal-title")?.closest?.(".grow") ||
+      mealBox.querySelector(".meal-summary-main, .manual-meal-title")?.parentElement;
+    if (!title) return;
+
+    const row = title.closest(".meal-summary-row, summary .row");
+    const recipe = meal?.recipeName && typeof recipeByName === "function"
+      ? recipeByName(meal.recipeName)
+      : null;
+    if (recipe && row && !row.querySelector(".everyday-recipe-visual")) {
+      const visual = document.createElement("span");
+      visual.className = "everyday-recipe-visual";
+      visual.innerHTML = recipeIconSvg(recipe, { loading: "eager", fetchPriority: "high" });
+      row.classList.add("has-recipe-visual");
+      row.insertBefore(visual, title);
+      mealBox.classList.add("has-planned-recipe");
+      visual.setAttribute("role", "button");
+      visual.setAttribute("tabindex", "0");
+      visual.setAttribute("aria-label", `Rezept ${recipe.name} öffnen`);
+      const openRecipe = (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        root.__plannedRecipeDetails?.openPlannedRecipeDetails?.(meal.recipeName, meal.foodIds || []);
+      };
+      visual.addEventListener("click", openRecipe);
+      visual.addEventListener("keydown", (event) => {
+        if (!["Enter", " "].includes(event.key)) return;
+        openRecipe(event);
+      });
+    }
+
+    if (!title.querySelector(".everyday-task-hint")) {
+      const task = everydayMealTaskHtml(meal);
+      if (task) title.insertAdjacentHTML("beforeend", task);
+    }
+
+  }
+
+  function mobileTodaySwipeDirection(startX, startY, endX, endY, threshold = 48) {
+    const deltaX = Number(endX) - Number(startX);
+    const deltaY = Number(endY) - Number(startY);
+    if (!Number.isFinite(deltaX) || !Number.isFinite(deltaY)) return 0;
+    if (Math.abs(deltaX) < threshold || Math.abs(deltaX) <= Math.abs(deltaY) + 10) return 0;
+    return deltaX < 0 ? 1 : -1;
+  }
+
+  function todayResetButtonHtml(viewingToday) {
+    return viewingToday ? "" : '<button class="btn secondary smallbtn" id="homeToday" type="button">Heute</button>';
+  }
+
+  function bindTodayReset(card) {
+    const button = card?.querySelector("#homeToday");
+    if (!button) return;
+    button.onclick = () => {
+      root.__mobileTodaySelectedDate = today();
+      renderHome();
+    };
+  }
+
+  function bindTodayCardSwipe(card) {
+    if (!card || card.dataset.mobileTodaySwipeBound === "true") return;
+
+    let gesture = null;
+    const interactiveSelector = "button, a, input, select, textarea, summary, [contenteditable=\"true\"]";
+
+    card.addEventListener("pointerdown", (event) => {
+      if (event.pointerType === "mouse" || event.button !== 0) return;
+      if (event.target.closest(interactiveSelector)) return;
+      gesture = {
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+      };
+    }, { passive: true });
+
+    card.addEventListener("pointerup", (event) => {
+      if (!gesture || event.pointerId !== gesture.pointerId) return;
+      const direction = mobileTodaySwipeDirection(
+        gesture.startX,
+        gesture.startY,
+        event.clientX,
+        event.clientY,
+      );
+      gesture = null;
+      if (!direction) return;
+
+      const current = root.__mobileTodaySelectedDate || today();
+      root.__mobileTodaySelectedDate = addDays(current, direction);
+      renderHome();
+    }, { passive: true });
+
+    card.addEventListener("pointercancel", () => {
+      gesture = null;
+    }, { passive: true });
+    card.dataset.mobileTodaySwipeBound = "true";
+  }
+
+  function mobileTodayPlanDay(on) {
+    const current = today();
+    const buildOne = () =>
+      (typeof viewRenderBuildDays === "function" ? viewRenderBuildDays : buildDays)(on, 1)[0];
+
+    if (on === current) return buildOne();
+
+    const displayDays = typeof viewRenderPlanDays === "function"
+      ? viewRenderPlanDays
+      : typeof planDisplayDays === "function"
+        ? planDisplayDays
+        : null;
+    if (!displayDays) return buildOne();
+    if (on < current) return displayDays(on, 1)[0] || buildOne();
+
+    let weekFrom = current;
+    while (on >= addDays(weekFrom, 7)) weekFrom = addDays(weekFrom, 7);
+    const week = displayDays(weekFrom, 7);
+    return week.find((day) => day.date === on) || buildOne();
+  }
+
   function renderTodayFocus() {
     const card = document.getElementById("todayCard");
     if (!card) return { focusMeal: null, active: [] };
 
-    const on = today();
+    const on = root.__mobileTodaySelectedDate || today();
+    const viewingToday = on === today();
+    const dateLabel = viewingToday ? "Heute" : nice(on, true);
+    const resetButton = todayResetButtonHtml(viewingToday);
     const age = monthsOld(on);
-    const day = (typeof viewRenderBuildDays === "function" ? viewRenderBuildDays : buildDays)(on, 1)[0];
+    const day = mobileTodayPlanDay(on);
+    card.dataset.todayDate = on;
     const active = day.meals.filter((meal) => meal.active && meal.focusId);
     const openMeals = active.filter((meal) => !mealIsCompleted(on, meal.meal));
     const focusMeal = openMeals[0] || null;
@@ -596,21 +888,39 @@ body.mobile-foundation #genericModal .sheet {
       }
     }
 
-    card.className = "card today-card today-focus-card";
+    const everydayMode = isEverydayRecipesMode();
+    card.className = `card today-card today-focus-card${everydayMode ? " today-everyday-card" : ""}`;
     if (!active.length) {
-      card.innerHTML = `<div class="row"><div class="grow"><span class="today-section-kicker">Heute</span><h2>Nichts geplant</h2><div class="small">${nice(on, true)} · ${age} Monate</div></div></div><div class="today-focus-empty"><p>Für heute ist keine Mahlzeit geplant.</p>${nextPlanned ? `<div class="small">Nächster geplanter Tag: ${nice(nextPlanned, true)}</div>` : ""}</div><button class="btn full" id="homeFreeLog">Essen eintragen</button>`;
+      card.innerHTML = `<div class="row"><div class="grow"><span class="today-section-kicker">${esc(dateLabel)}</span><h2>Nichts geplant</h2><div class="small">${nice(on, true)} · ${age} Monate</div></div>${resetButton}</div><div class="today-focus-empty"><p>Für ${viewingToday ? "heute" : "diesen Tag"} ist keine Mahlzeit geplant.</p>${nextPlanned ? `<div class="small">Nächster geplanter Tag: ${nice(nextPlanned, true)}</div>` : ""}</div><button class="btn full" id="homeFreeLog">Essen eintragen</button>`;
       document.getElementById("homeFreeLog")?.addEventListener("click", () => openLog(null));
+      bindTodayReset(card);
       return { focusMeal, active };
     }
 
-    const heading = focusMeal ? "Als Nächstes" : "Heute erledigt";
+    if (everydayMode) {
+      const heading = viewingToday ? (openMeals.length ? "Heute geplant" : "Heute erledigt") : (openMeals.length ? "Geplant" : "Erledigt");
+      const everydayMeals = active.map((meal) => `<div class="today-everyday-meal" data-meal="${esc(meal.meal)}">${renderMeal(day, meal)}</div>`).join("");
+      card.innerHTML = `<div class="row today-focus-head"><div class="grow"><span class="today-section-kicker">${heading}</span><h2>Geplante Mahlzeiten</h2><div class="small">${nice(on, true)} · ${active.length} ${active.length === 1 ? "Mahlzeit" : "Mahlzeiten"}</div></div>${resetButton}</div><div class="today-everyday-meals">${everydayMeals}</div><div class="add-meal-row"><button class="btn secondary smallbtn" id="homeAddEntry">Weiteres Essen eintragen</button></div>`;
+      bindRenderedMealActions(card);
+      card.querySelectorAll(".today-everyday-meal").forEach((mealNode, index) => {
+        const meal = active[index];
+        decorateEverydayMeal(mealNode, meal);
+        ensureRenderedRandomSwapAction(mealNode, on, meal);
+      });
+      root.__plannedRecipeDetails?.decorateHomeRecipeTitles?.();
+      document.getElementById("homeAddEntry")?.addEventListener("click", () => openLog(null));
+      bindTodayReset(card);
+      return { focusMeal, active };
+    }
+
+    const heading = viewingToday ? (focusMeal ? "Als Nächstes" : "Heute erledigt") : (focusMeal ? "Geplant" : "Tagesübersicht");
     const mealHeading = focusMeal ? mealName(focusMeal.meal) : "Alles eingetragen";
     const focusHtml = focusMeal
       ? `<div class="today-focus-meal">${renderMeal(day, focusMeal)}</div>`
       : '<div class="today-done-summary"><b>Alle geplanten Mahlzeiten sind eingetragen.</b><span class="small">Der Tagesüberblick bleibt unten sichtbar.</span></div>';
     const timeline = active.map((meal) => timelineRow(day, meal, focusMeal)).join("");
 
-    card.innerHTML = `<div class="row today-focus-head"><div class="grow"><span class="today-section-kicker">${heading}</span><h2>${esc(mealHeading)}</h2><div class="small">${nice(on, true)} · ${age} Monate</div></div></div>${focusHtml}<div class="today-timeline" aria-label="Tages-Timeline"><div class="today-timeline-heading"><b>Heute</b><span class="small">${active.length} ${active.length === 1 ? "Mahlzeit" : "Mahlzeiten"}</span></div>${timeline}</div><div class="add-meal-row"><button class="btn secondary smallbtn" id="homeAddEntry">Weiteres Essen eintragen</button></div>`;
+    card.innerHTML = `<div class="row today-focus-head"><div class="grow"><span class="today-section-kicker">${heading}</span><h2>${esc(mealHeading)}</h2><div class="small">${nice(on, true)} · ${age} Monate</div></div>${resetButton}</div>${focusHtml}<div class="today-timeline" aria-label="Tages-Timeline"><div class="today-timeline-heading"><b>${esc(dateLabel)}</b><span class="small">${active.length} ${active.length === 1 ? "Mahlzeit" : "Mahlzeiten"}</span></div>${timeline}</div><div class="add-meal-row"><button class="btn secondary smallbtn" id="homeAddEntry">Weiteres Essen eintragen</button></div>`;
 
     bindRenderedMealActions(card);
     ensureRenderedRandomSwapAction(card.querySelector(".today-focus-meal"), on, focusMeal);
@@ -620,6 +930,7 @@ body.mobile-foundation #genericModal .sheet {
       button.onclick = () => editLogEntry(button.dataset.log);
     });
     document.getElementById("homeAddEntry")?.addEventListener("click", () => openLog(null));
+    bindTodayReset(card);
     return { focusMeal, active };
   }
 
@@ -703,12 +1014,17 @@ body.mobile-foundation #genericModal .sheet {
     const progress = document.getElementById("progressCard");
     const recipe = document.getElementById("recipePreviewCard");
     if (!home || !phase || !today || !recommendation || !progress || !recipe) return;
-    [phase, today, recommendation, progress, recipe].forEach((node) => home.appendChild(node));
+    home.classList.toggle("everyday-recipes-home", isEverydayRecipesMode());
+    const order = isEverydayRecipesMode()
+      ? [today, recommendation, phase, progress, recipe]
+      : [phase, today, recommendation, progress, recipe];
+    order.forEach((node) => home.appendChild(node));
   }
 
   function renderMobileToday() {
     renderDayContext();
     const { focusMeal } = renderTodayFocus();
+    bindTodayCardSwipe(document.getElementById("todayCard"));
     renderContextRecommendation();
     renderCompactProgress();
     renderContextRecipe(focusMeal);

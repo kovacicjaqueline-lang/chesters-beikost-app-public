@@ -341,7 +341,7 @@
 
   function availabilityAwareRecipeFoodIds(recipe, originalRecipeFoodIds) {
     if (!recipe || typeof originalRecipeFoodIds !== "function") return [];
-    if (isPreparedStockRecipe(recipe)) return originalRecipeFoodIds(recipe);
+    if (isPreparedStockRecipe(recipe)) return recipe.__preparedFoodIds || originalRecipeFoodIds(recipe);
 
     const lookup = (name) => typeof foodByName === "function" ? foodByName(name, state?.foods || []) : null;
     const hasUnavailable = structuredRecipeNames(recipe).some((name) => {
@@ -422,9 +422,44 @@
 
     if (typeof recipeStockCandidate === "function" && !recipeStockCandidate.__missingIngredientAware) {
       const original = recipeStockCandidate;
-      const wrapped = function missingIngredientAwareRecipeStockCandidate(...args) {
-        const candidate = withPlanMissingFoodsAvailable(() => original(...args));
-        return markPreparedStockRecipe(candidate);
+      const wrapped = function missingIngredientAwareRecipeStockCandidate(meal, on, ctx, ...args) {
+        const candidate = withPlanMissingFoodsAvailable(() => original(meal, on, ctx, ...args));
+        const preparedIdsFor = (recipe) => uniqueIds([
+          ...(recipe?.requires || []),
+          ...((recipe?.alternatives || [])[0] || []),
+          ...((recipe?.oneOf || []).slice(0, 1)),
+          ...((recipe?.milkChoices || []).slice(0, 1)),
+        ].map((name) => {
+          if (typeof foodByName === "function") {
+            const fromState = foodByName(name, state?.foods || []);
+            if (fromState?.id) return fromState.id;
+            const fromCatalog = foodByName(name, typeof FOOD_DB !== "undefined" ? FOOD_DB : []);
+            if (fromCatalog?.id) return fromCatalog.id;
+          }
+          return "";
+        }));
+        if (candidate) return {
+          ...markPreparedStockRecipe(candidate),
+          __preparedFoodIds: preparedIdsFor(candidate),
+        };
+
+        const stocked = (state?.inventory || [])
+          .filter((item) =>
+            item?.kind === "recipe" &&
+            Number(item.portions) > 0 &&
+            typeof recipeNameMatches === "function" &&
+            (typeof recipeByName === "function" ? recipeByName(item.recipeName) : null),
+          )
+          .sort((a, b) => String(a.frozenDate || "").localeCompare(String(b.frozenDate || "")))[0];
+        if (!stocked || typeof recipeByName !== "function") return null;
+        const recipe = recipeByName(stocked.recipeName);
+        if (!recipe || recipe.freezable === false) return null;
+        if (typeof plannerRecipeSuitableForMeal === "function" && !plannerRecipeSuitableForMeal(recipe, meal)) return null;
+        const available = Number(stocked.portions) - Number(ctx?.recipeReserved?.get?.(recipe.name) || 0);
+        if (available <= 0) return null;
+        const preparedRecipe = markPreparedStockRecipe({ ...recipe, unlocked: true, missing: [], ingredientMissing: [], requirementMissing: [] });
+        const preparedFoodIds = preparedIdsFor(recipe);
+        return { ...preparedRecipe, __preparedFoodIds: preparedFoodIds };
       };
       wrapped.__missingIngredientAware = true;
       recipeStockCandidate = wrapped;
@@ -465,7 +500,9 @@
     const original = load;
     const wrapped = function missingIngredientAwareLoad(...args) {
       installAvailabilityPolicies();
-      return original(...args);
+      const result = original(...args);
+      installAvailabilityPolicies();
+      return result;
     };
     wrapped.__missingIngredientAware = true;
     load = wrapped;
@@ -513,6 +550,18 @@
     if (typeof renderAll === "function") renderAll();
   }
 
+  function renderMissingIngredientView() {
+    if (typeof renderCurrentView === "function") {
+      renderCurrentView();
+      return;
+    }
+    if (typeof renderAll === "function") {
+      renderAll();
+      return;
+    }
+    requestFullRender();
+  }
+
   function markFoodUnavailable(foodId, context = {}) {
     const item = typeof food === "function" ? food(foodId) : null;
     if (!item) return { ok: false, reason: "food" };
@@ -534,6 +583,7 @@
       now,
     );
     state.pantry[foodId] = false;
+    installAvailabilityPolicies();
     state.followUps[foodId] = awaitingStockFollowUp(
       previousFollowUp,
       foodId,
@@ -558,10 +608,13 @@
     );
 
     if (typeof save === "function") save();
+    if (typeof globalScope.invalidateDayPlanRuntimeCache === "function") {
+      globalScope.invalidateDayPlanRuntimeCache();
+    }
+    renderMissingIngredientView();
     if (typeof showToast === "function") {
       showToast(`${item.name} fehlt und steht auf der Einkaufsliste. Der Plan wurde angepasst.`);
     }
-    requestFullRender();
     return { ok: true, foodId, ...cleanup };
   }
 
@@ -584,6 +637,9 @@
       );
     }
     if (typeof save === "function") save();
+    if (typeof globalScope.invalidateDayPlanRuntimeCache === "function") {
+      globalScope.invalidateDayPlanRuntimeCache();
+    }
     if (typeof showToast === "function") {
       showToast(`${typeof food === "function" ? food(foodId)?.name || "Zutat" : "Zutat"} ist vorhanden und wird wieder eingeplant.`);
     }

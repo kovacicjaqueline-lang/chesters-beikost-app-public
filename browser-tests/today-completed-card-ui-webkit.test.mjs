@@ -1,48 +1,10 @@
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { webkit } from "playwright";
+import { closeBrowserApp, startStaticServer } from "./helpers/app-harness.mjs";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const mimeTypes = {
-  ".html": "text/html; charset=utf-8",
-  ".js": "text/javascript; charset=utf-8",
-  ".css": "text/css; charset=utf-8",
-  ".json": "application/json; charset=utf-8",
-  ".webmanifest": "application/manifest+json; charset=utf-8",
-  ".svg": "image/svg+xml",
-  ".png": "image/png",
-  ".webp": "image/webp",
-};
 
-function startStaticServer() {
-  const server = http.createServer((request, response) => {
-    const url = new URL(request.url || "/", "http://127.0.0.1");
-    const pathname = decodeURIComponent(url.pathname === "/" ? "/index.html" : url.pathname);
-    const filePath = path.resolve(root, `.${pathname}`);
-    if (filePath !== path.join(root, "index.html") && !filePath.startsWith(`${root}${path.sep}`)) {
-      response.writeHead(403).end("Forbidden");
-      return;
-    }
-    fs.stat(filePath, (error, stat) => {
-      if (error || !stat.isFile()) {
-        response.writeHead(404).end("Not found");
-        return;
-      }
-      response.writeHead(200, {
-        "content-type": mimeTypes[path.extname(filePath)] || "application/octet-stream",
-        "cache-control": "no-store",
-      });
-      fs.createReadStream(filePath).pipe(response);
-    });
-  });
-  return new Promise((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(0, "127.0.0.1", () => resolve(server));
-  });
-}
 
 async function waitForApp(page) {
   await page.waitForFunction(() =>
@@ -136,6 +98,7 @@ try {
     return true;
   });
   assert.equal(seeded, true, "Testzutaten müssen im aktuellen FOOD-Stamm vorhanden sein");
+  const today = await page.evaluate(() => window.__beikostTest.today());
 
   assert.equal(await page.locator("#appBarTitle").innerText(), "Heute");
   assert.equal(await page.locator(".app-header .brand-orb").count(), 0, "Der große Marken-Orb entfällt im App-Alltag");
@@ -176,6 +139,109 @@ try {
   assert.match((await timeline.nth(2).innerText()).replace(/\s+/g, " "), /Abendessen .* Später/);
   assert.equal(await timeline.nth(0).locator(".timeline-marker").innerText(), "✓");
 
+  assert.equal(await todayCard.getAttribute("data-today-date"), today);
+  const nextDate = await page.evaluate((date) => window.__beikostTest.addDays(date, 1), today);
+  await page.evaluate(() => {
+    window.__todaySwipeOriginalBuildDays = window.buildDays;
+    window.__todaySwipeBuildCalls = [];
+    window.buildDays = function todaySwipeBuildProbe(...args) {
+      window.__todaySwipeBuildCalls.push([args[0], args[1]]);
+      return window.__todaySwipeOriginalBuildDays.apply(this, args);
+    };
+    window.invalidatePlannerWeekCache?.("today-swipe-browser-test");
+    window.invalidateDayPlanRuntimeCache?.();
+  });
+  await todayCard.evaluate((node) => {
+    node.dispatchEvent(new PointerEvent("pointerdown", {
+      bubbles: true,
+      pointerId: 52,
+      pointerType: "touch",
+      clientX: 280,
+      clientY: 260,
+      button: 0,
+    }));
+    node.dispatchEvent(new PointerEvent("pointerup", {
+      bubbles: true,
+      pointerId: 52,
+      pointerType: "touch",
+      clientX: 120,
+      clientY: 266,
+      button: 0,
+    }));
+  });
+  await page.waitForFunction((date) => document.getElementById("todayCard")?.dataset.todayDate === date, nextDate);
+  assert.equal(await todayCard.getAttribute("data-today-date"), nextDate, "Wisch nach links zeigt den nächsten Tag");
+  const swipeBuildCalls = await page.evaluate(() => window.__todaySwipeBuildCalls);
+  assert.ok(
+    swipeBuildCalls.some(([from, count]) => from === today && count === 7),
+    "Der morgige Swipe löst den zusammenhängenden 7-Tage-Plan ab heute auf",
+  );
+  assert.equal(
+    swipeBuildCalls.some(([from, count]) => from === nextDate && count === 1),
+    false,
+    "Der morgige Swipe darf morgen nicht als isolierten 1-Tages-Plan neu berechnen",
+  );
+  const renderedTomorrowPlan = JSON.parse(decodeURIComponent(
+    await todayCard.locator(".today-focus-meal .logMeal[data-plan]").first().getAttribute("data-plan"),
+  ));
+  const expectedTomorrowFocus = await page.evaluate(({ today, nextDate }) => {
+    const day = window.planDisplayDays(today, 7).find((item) => item.date === nextDate);
+    return day?.meals.find((meal) => meal.active && meal.focusId)?.focusId || "";
+  }, { today, nextDate });
+  assert.equal(
+    renderedTomorrowPlan.focusId,
+    expectedTomorrowFocus,
+    "Die Swipe-Karte zeigt dieselbe morgige Fokusmahlzeit wie der zusammenhängende Wochenplan",
+  );
+  await page.evaluate(() => {
+    window.buildDays = window.__todaySwipeOriginalBuildDays;
+    delete window.__todaySwipeOriginalBuildDays;
+    delete window.__todaySwipeBuildCalls;
+  });
+
+  await todayCard.evaluate((node) => {
+    node.dispatchEvent(new PointerEvent("pointerdown", {
+      bubbles: true,
+      pointerId: 53,
+      pointerType: "touch",
+      clientX: 120,
+      clientY: 260,
+      button: 0,
+    }));
+    node.dispatchEvent(new PointerEvent("pointerup", {
+      bubbles: true,
+      pointerId: 53,
+      pointerType: "touch",
+      clientX: 280,
+      clientY: 266,
+      button: 0,
+    }));
+  });
+  await page.waitForFunction((date) => document.getElementById("todayCard")?.dataset.todayDate === date, today);
+  assert.equal(await todayCard.getAttribute("data-today-date"), today, "Wisch nach rechts zeigt den vorherigen Tag");
+
+  await todayCard.evaluate((node) => {
+    node.dispatchEvent(new PointerEvent("pointerdown", {
+      bubbles: true,
+      pointerId: 54,
+      pointerType: "touch",
+      clientX: 280,
+      clientY: 260,
+      button: 0,
+    }));
+    node.dispatchEvent(new PointerEvent("pointerup", {
+      bubbles: true,
+      pointerId: 54,
+      pointerType: "touch",
+      clientX: 120,
+      clientY: 266,
+      button: 0,
+    }));
+  });
+  await page.waitForFunction((date) => document.getElementById("todayCard")?.dataset.todayDate === date, nextDate);
+  await page.locator("#homeToday").click();
+  await page.waitForFunction((date) => document.getElementById("todayCard")?.dataset.todayDate === date, today);
+
   const edit = timeline.nth(0).locator(".timeline-edit");
   await edit.waitFor();
   assert.ok(await edit.evaluate((node) => node.getBoundingClientRect().height) >= 44, "Erledigte Mahlzeiten bleiben direkt bearbeitbar");
@@ -190,6 +256,7 @@ try {
   assert.equal(await page.locator("#appBarTitle").innerText(), "Plan");
   await page.locator('nav button[data-view="home"]').click();
   assert.equal(await page.locator("#appBarTitle").innerText(), "Heute");
+  assert.equal(await todayCard.getAttribute("data-today-date"), today, "Der Heute-Tab setzt die Tageskarte zurück");
 
   const mainOverflow = await page.locator("main").evaluate((node) => ({
     scrollWidth: node.scrollWidth,
@@ -201,6 +268,5 @@ try {
   await context.close();
   console.log("today-completed-card-ui-webkit: ok");
 } finally {
-  await browser.close();
-  await new Promise((resolve) => server.close(resolve));
+  await closeBrowserApp({ context: typeof context !== "undefined" ? context : null, browser, server });
 }

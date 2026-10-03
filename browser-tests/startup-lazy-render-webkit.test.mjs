@@ -1,48 +1,10 @@
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { webkit } from "playwright";
+import { closeBrowserApp, startStaticServer } from "./helpers/app-harness.mjs";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const mimeTypes = {
-  ".html": "text/html; charset=utf-8",
-  ".js": "text/javascript; charset=utf-8",
-  ".css": "text/css; charset=utf-8",
-  ".json": "application/json; charset=utf-8",
-  ".webmanifest": "application/manifest+json",
-  ".svg": "image/svg+xml",
-  ".png": "image/png",
-  ".webp": "image/webp",
-};
 
-function startStaticServer() {
-  const server = http.createServer((request, response) => {
-    const url = new URL(request.url || "/", "http://127.0.0.1");
-    const pathname = decodeURIComponent(url.pathname === "/" ? "/index.html" : url.pathname);
-    const filePath = path.resolve(root, `.${pathname}`);
-    if (filePath !== path.join(root, "index.html") && !filePath.startsWith(`${root}${path.sep}`)) {
-      response.writeHead(403).end("Forbidden");
-      return;
-    }
-    fs.stat(filePath, (error, stat) => {
-      if (error || !stat.isFile()) {
-        response.writeHead(404).end("Not found");
-        return;
-      }
-      response.writeHead(200, {
-        "content-type": mimeTypes[path.extname(filePath)] || "application/octet-stream",
-        "cache-control": "no-store",
-      });
-      fs.createReadStream(filePath).pipe(response);
-    });
-  });
-  return new Promise((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(0, "127.0.0.1", () => resolve(server));
-  });
-}
 
 const server = await startStaticServer();
 const { port } = server.address();
@@ -125,6 +87,114 @@ try {
   assert.equal(await page.locator("#planWeekOverview .plan-week-day").count(), 7, "Der erste Plan-Render baut die Mobile-Woche auf");
   assert.equal(await page.locator("#prepNow > *").count(), 0, "Plan-Navigation darf den versteckten Prep-Bereich nicht mitrendern");
 
+  const prepTransition = await page.evaluate(async () => {
+    const profiledFunctions = [
+      "populateBatchCalculator",
+      "prepItems",
+      "prepDemand",
+      "computePrepDemand",
+      "viewRenderPrepPlanDays",
+      "viewRenderPlanDays",
+      "planDisplayDays",
+      "viewRenderRecipeStates",
+      "recipeStates",
+      "recipeStatesCore",
+      "shoppingItems",
+    ];
+    const prepFrom = state.settings.planFrom && state.settings.planFrom >= today()
+      ? state.settings.planFrom
+      : today();
+    window.__prepWeekCacheHitBefore = !!globalThis.__plannerWeekCache?.has(prepFrom, 7);
+    window.__prepStageProfile = {};
+    window.__prepStageOriginals = {};
+    for (const name of profiledFunctions) {
+      const original = window[name];
+      if (typeof original !== "function") continue;
+      window.__prepStageOriginals[name] = original;
+      window[name] = function profilePrepStage(...args) {
+        const startedAt = performance.now();
+        try {
+          return original.apply(this, args);
+        } finally {
+          window.__prepStageProfile[name] = (window.__prepStageProfile[name] || 0) + performance.now() - startedAt;
+        }
+      };
+    }
+    const originalRenderPrep = renderPrep;
+    window.__prepRenderCalls = 0;
+    renderPrep = function measuredRenderPrep(...args) {
+      window.__prepRenderCalls += 1;
+      const startedAt = performance.now();
+      const result = originalRenderPrep.apply(this, args);
+      window.__prepRenderDurationMs = performance.now() - startedAt;
+      return result;
+    };
+    window.__restoreMeasuredRenderPrep = () => { renderPrep = originalRenderPrep; };
+    const beforeRenderOpportunity = new Promise((resolve) => {
+      requestAnimationFrame(() => resolve({
+        active: document.getElementById("prep")?.classList.contains("active") || false,
+        busy: document.getElementById("prep")?.getAttribute("aria-busy"),
+        loadingText: document.querySelector("#prep > .prep-render-loading")?.textContent || "",
+        loadingVisible: (() => {
+          const loading = document.querySelector("#prep > .prep-render-loading");
+          return !!loading && getComputedStyle(loading).display !== "none" && loading.getClientRects().length > 0;
+        })(),
+        prepShellDisplay: getComputedStyle(document.querySelector("#prep > .prep-mobile-head")).display,
+        renderCalls: window.__prepRenderCalls,
+      }));
+    });
+    document.querySelector('nav button[data-view="prep"]')?.click();
+    return {
+      immediate: {
+        active: document.getElementById("prep")?.classList.contains("active") || false,
+        busy: document.getElementById("prep")?.getAttribute("aria-busy"),
+        loadingText: document.querySelector("#prep > .prep-render-loading")?.textContent || "",
+        loadingVisible: (() => {
+          const loading = document.querySelector("#prep > .prep-render-loading");
+          return !!loading && getComputedStyle(loading).display !== "none" && loading.getClientRects().length > 0;
+        })(),
+        prepShellDisplay: getComputedStyle(document.querySelector("#prep > .prep-mobile-head")).display,
+        renderCalls: window.__prepRenderCalls,
+      },
+      beforeRenderOpportunity: await beforeRenderOpportunity,
+    };
+  });
+  const expectedPrepLoading = {
+    active: true,
+    busy: "true",
+    loadingText: "Vorbereitung wird geladen …",
+    loadingVisible: true,
+    prepShellDisplay: "none",
+    renderCalls: 0,
+  };
+  assert.deepEqual(prepTransition.immediate, expectedPrepLoading, "Prep zeigt einen Ladezustand statt veralteter Inhalte");
+  assert.deepEqual(prepTransition.beforeRenderOpportunity, expectedPrepLoading, "Der Browser erhält eine Paint-Gelegenheit mit Ladehinweis vor dem synchronen Prep-Render");
+  await page.waitForFunction(() =>
+    document.querySelectorAll("#prepSummary > span").length === 3 &&
+    !document.getElementById("prep")?.hasAttribute("aria-busy"),
+  );
+  assert.equal(await page.evaluate(() => window.__prepRenderCalls), 1, "Prep wird nach der Ladeansicht genau einmal gerendert");
+  assert.equal(
+    await page.locator("#recipeList > *").count(),
+    0,
+    "Der Prep-Render darf den vollständigen Rezeptkatalog nicht vorzeitig aufbauen",
+  );
+  const prepRenderDurationMs = await page.evaluate(() => window.__prepRenderDurationMs);
+  assert.equal(
+    await page.evaluate(() => window.__prepWeekCacheHitBefore),
+    true,
+    "Der sichtbare Planner-Snapshot muss nach dem Persistieren der Auto-Locks für Prep wiederverwendbar sein",
+  );
+  assert.ok(
+    prepRenderDurationMs < 100,
+    `Der synchrone Prep-Render soll keinen langen Main-Thread-Block verursachen (gemessen: ${prepRenderDurationMs.toFixed(1)} ms; Phasen: ${JSON.stringify(await page.evaluate(() => window.__prepStageProfile))})`,
+  );
+  console.log(`[prep-render-profile] ${JSON.stringify({ totalMs: Number(prepRenderDurationMs.toFixed(1)), weekCacheHitBefore: await page.evaluate(() => window.__prepWeekCacheHitBefore), stages: await page.evaluate(() => window.__prepStageProfile) })}`);
+  assert.equal(await page.locator("#prep > .prep-render-loading").count(), 0, "Nach dem Render darf der Ladehinweis nicht stehen bleiben");
+  const renderedPrepChildren = await page.locator("#prepNow > *").count();
+  await page.evaluate(() => window.__restoreMeasuredRenderPrep?.());
+  await page.evaluate(() => Object.entries(window.__prepStageOriginals || {}).forEach(([name, original]) => { window[name] = original; }));
+
   const rapidTransition = await page.evaluate(() => {
     const originalRenderPrep = renderPrep;
     const originalRenderFoods = renderFoods;
@@ -141,18 +211,26 @@ try {
       renderPrep = originalRenderPrep;
       renderFoods = originalRenderFoods;
     };
+    const prepChildrenBefore = document.getElementById("prepNow")?.childElementCount || 0;
     document.querySelector('nav button[data-view="prep"]')?.click();
     document.querySelector('nav button[data-view="foods"]')?.click();
     return {
       active: document.getElementById("foods")?.classList.contains("active") || false,
+      prepChildrenBefore,
       prepChildren: document.getElementById("prepNow")?.childElementCount || 0,
+      prepBusy: document.getElementById("prep")?.getAttribute("aria-busy"),
+      prepLoadingCount: document.querySelectorAll("#prep > .prep-render-loading").length,
     };
   });
-  assert.deepEqual(
-    rapidTransition,
-    { active: true, prepChildren: 0 },
-    "Ein überholter Zwischentab darf weder sichtbar bleiben noch synchron gerendert werden",
+  assert.equal(rapidTransition.active, true, "Der letzte Zieltab muss sichtbar bleiben");
+  assert.equal(rapidTransition.prepChildrenBefore, renderedPrepChildren);
+  assert.equal(
+    rapidTransition.prepChildren,
+    rapidTransition.prepChildrenBefore,
+    "Ein überholter Zwischentab darf weder synchron gerendert noch geleert werden",
   );
+  assert.equal(rapidTransition.prepBusy, null);
+  assert.equal(rapidTransition.prepLoadingCount, 0);
   await page.waitForFunction(() =>
     (document.getElementById("foodList")?.childElementCount || 0) > 0 &&
     !document.getElementById("foods")?.hasAttribute("aria-busy"),
@@ -164,12 +242,12 @@ try {
   );
   await page.evaluate(() => window.__restoreRapidTabRenders?.());
   assert.ok(await page.locator("#foods.view.active").count(), "Lebensmittel muss nach Navigation aktiv sein");
-  assert.equal(await page.locator("#prepNow > *").count(), 0, "Lebensmittel-Navigation darf den versteckten Prep-Bereich nicht mitrendern");
+  assert.equal(await page.locator("#prepNow > *").count(), renderedPrepChildren, "Lebensmittel-Navigation darf den Prep-Inhalt nicht verändern");
 
   await page.locator('[data-catalog-mode="recipes"]').click();
   await page.waitForFunction(() => (document.getElementById("recipeList")?.childElementCount || 0) > 0);
   assert.ok(await page.locator("#recipesSection:not([hidden])").count(), "Der Rezeptkatalog muss nach dem Umschalten vollständig gerendert werden");
-  assert.equal(await page.locator("#prepNow > *").count(), 0, "Rezept-Navigation darf den versteckten Prep-Bereich nicht mitrendern");
+  assert.equal(await page.locator("#prepNow > *").count(), renderedPrepChildren, "Rezept-Navigation darf den Prep-Inhalt nicht verändern");
 
   await page.evaluate(() => {
     const list = document.getElementById("recipeList");
@@ -182,19 +260,17 @@ try {
   );
   assert.equal(
     await page.locator("#prepNow > *").count(),
-    0,
+    renderedPrepChildren,
     "Ein späterer Current-View-Render muss nur den sichtbaren Rezeptkatalog aktualisieren",
   );
 
   await page.locator('nav button[data-view="more"]').click();
   await page.waitForFunction(() => (document.getElementById("statisticsBody")?.childElementCount || 0) > 0);
   assert.ok(await page.locator("#more.view.active").count(), "Mehr muss nach Navigation aktiv und gerendert sein");
-  assert.ok(await page.locator("#productAllergenCard").count(), "Mehr muss die Produktkennzeichnung beim ersten Lazy-Render mit aufbauen");
+  assert.equal(await page.locator("#productAllergenCard").count(), 0, "Die entfernte Produktkennzeichnung darf nicht mehr gerendert werden");
 
   assert.deepEqual(pageErrors, [], `Beim Start und Lazy-Render dürfen keine JavaScript-Fehler auftreten: ${pageErrors.join(" | ")}`);
 
-  await context.close();
 } finally {
-  await browser.close();
-  await new Promise((resolve) => server.close(resolve));
+  await closeBrowserApp({ context: typeof context !== "undefined" ? context : null, browser, server });
 }

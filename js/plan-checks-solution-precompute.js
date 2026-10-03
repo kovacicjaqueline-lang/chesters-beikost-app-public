@@ -28,6 +28,11 @@
 
     const cache = new Map();
     const batches = new Map();
+    const cachedEvaluations = new Map();
+    const MAX_CACHED_EVALUATIONS = 8;
+    const PERSISTED_NONE_KEY = `beikost-plan-check-none-v2-f${solutions.FEATURE_VERSION}`;
+    const PERSISTED_NONE_LIMIT = 32;
+    const PERSISTED_NONE_TTL_MS = 14 * 24 * 60 * 60 * 1000;
     let activeEvaluationKey = "";
     let activeGoalFlow = null;
 
@@ -49,8 +54,7 @@
     function targetLabel(item) {
       const target = item?.refs?.allergenTargets?.[0];
       const representative = item?.details?.representativeFoodId || target?.representativeFoodId || item?.refs?.foodIds?.[0];
-      if ([solutions.INTRO_OPEN_CODE, solutions.INTRO_PROJECTED_CODE].includes(item?.code)) return foodName(representative);
-      return target?.value || target?.allergenGroup || foodName(representative) || "Allergen";
+      return target?.allergenGroup || target?.value || foodName(representative) || "Allergen";
     }
 
     function mealTitle(meal) {
@@ -76,11 +80,72 @@
       return `${evaluationKey}|${solutions.goalKey(item)}`;
     }
 
-    function activateEvaluation(evaluationKey) {
-      if (activeEvaluationKey === evaluationKey) return;
-      activeEvaluationKey = evaluationKey;
+    function persistedNoneKey(evaluationKey, item) {
+      const goalSnapshot = {
+        code: item?.code || "",
+        refs: item?.refs || {},
+        details: item?.details || {},
+      };
+      return `v1|${cacheKey(evaluationKey, item)}|${solutions.hashText(solutions.stableStringify(goalSnapshot))}`;
+    }
+
+    function readPersistedNoneResults() {
+      try {
+        const rows = JSON.parse(globalScope.localStorage?.getItem(PERSISTED_NONE_KEY) || "[]");
+        if (!Array.isArray(rows)) return [];
+        const now = Date.now();
+        return rows.filter((entry) =>
+          entry &&
+          typeof entry.key === "string" &&
+          Number.isFinite(entry.savedAt) &&
+          now - entry.savedAt <= PERSISTED_NONE_TTL_MS
+        ).slice(-PERSISTED_NONE_LIMIT);
+      } catch (_) {
+        return [];
+      }
+    }
+
+    function hasPersistedNoneResult(key) {
+      return readPersistedNoneResults().some((entry) => entry.key === key);
+    }
+
+    function persistNoneResult(key) {
+      try {
+        const rows = readPersistedNoneResults().filter((entry) => entry.key !== key);
+        rows.push({ key, savedAt: Date.now() });
+        globalScope.localStorage?.setItem(
+          PERSISTED_NONE_KEY,
+          JSON.stringify(rows.slice(-PERSISTED_NONE_LIMIT)),
+        );
+      } catch (_) {
+        // Der Plan-Check bleibt funktionsfähig, wenn Web Storage nicht verfügbar ist.
+      }
+    }
+
+    function evictEvaluation(evaluationKey) {
+      const prefix = `${evaluationKey}|`;
       for (const key of cache.keys()) {
-        if (!key.startsWith(`${evaluationKey}|`)) cache.delete(key);
+        if (key.startsWith(prefix)) cache.delete(key);
+      }
+      cachedEvaluations.delete(evaluationKey);
+    }
+
+    function activateEvaluation(evaluationKey) {
+      if (activeEvaluationKey && activeEvaluationKey !== evaluationKey) {
+        const previousPrefix = `${activeEvaluationKey}|`;
+        for (const [key, entry] of cache) {
+          if (
+            key.startsWith(previousPrefix) &&
+            (entry?.status === "pending" || entry?.status === "error")
+          ) cache.delete(key);
+        }
+      }
+
+      activeEvaluationKey = evaluationKey;
+      cachedEvaluations.delete(evaluationKey);
+      cachedEvaluations.set(evaluationKey, true);
+      while (cachedEvaluations.size > MAX_CACHED_EVALUATIONS) {
+        evictEvaluation(cachedEvaluations.keys().next().value);
       }
     }
 
@@ -115,7 +180,15 @@
       if (!goals.length) return;
       const evaluationKey = solutions.evaluationKey(days);
       activateEvaluation(evaluationKey);
-      const missing = goals.filter((item) => !cache.has(cacheKey(evaluationKey, item)));
+      const missing = goals.filter((item) => {
+        const key = cacheKey(evaluationKey, item);
+        if (cache.has(key)) return false;
+        if (hasPersistedNoneResult(persistedNoneKey(evaluationKey, item))) {
+          cache.set(key, { status: "none", solution: null });
+          return false;
+        }
+        return true;
+      });
       if (!missing.length) return;
 
       for (const item of missing) {
@@ -138,6 +211,7 @@
             : solutions.findSolution(item, snapshot);
           if (!evaluationStillCurrent(evaluationKey)) return { stale: true };
           cache.set(key, { status: solution ? "ready" : "none", solution: solution || null });
+          if (!solution) persistNoneResult(persistedNoneKey(evaluationKey, item));
           result = { stale: false, goalKey: solutions.goalKey(item), found: !!solution };
         } catch (error) {
           if (evaluationStillCurrent(evaluationKey)) cache.set(key, { status: "error", solution: null });
@@ -156,7 +230,11 @@
     function goalState(days, item) {
       const evaluationKey = solutions.evaluationKey(days);
       activateEvaluation(evaluationKey);
-      return cache.get(cacheKey(evaluationKey, item)) || null;
+      const key = cacheKey(evaluationKey, item);
+      if (!cache.has(key) && hasPersistedNoneResult(persistedNoneKey(evaluationKey, item))) {
+        cache.set(key, { status: "none", solution: null });
+      }
+      return cache.get(key) || null;
     }
 
     function goalTitleMarkup(item, maintenanceItems = []) {
@@ -222,6 +300,11 @@
         return;
       }
 
+      if (activeGoalFlow) {
+        baseRenderPlanQuality(days);
+        return;
+      }
+
       scheduleGoalBatch(days, goals);
       const introductions = goals.filter((item) => item.code === solutions.INTRO_OPEN_CODE);
       if (introductions.length) {
@@ -241,7 +324,10 @@
       const updated = !!activeGoalFlow?.appliedAny;
       activeGoalFlow = null;
       closeGeneric();
-      if (updated) showToast("Plan aktualisiert");
+      if (updated) {
+        renderAll();
+        showToast("Plan aktualisiert");
+      }
     }
 
     function nextFlowGoal(preferredKey = "") {
@@ -263,11 +349,18 @@
 
       const key = solutions.goalKey(item);
       const rejected = activeGoalFlow.rejectedByGoal.get(key) || new Set();
+      const rejectedSlots = activeGoalFlow.rejectedSlotsByGoal.get(key) || new Set();
       activeGoalFlow.rejectedByGoal.set(key, rejected);
-      const preparedMatches = preparedSolution && preparedSolution.goalKey === key && !rejected.has(preparedSolution.id);
+      activeGoalFlow.rejectedSlotsByGoal.set(key, rejectedSlots);
+      const preparedMatches = preparedSolution && preparedSolution.goalKey === key &&
+        !rejected.has(preparedSolution.id) &&
+        !rejectedSlots.has(`${preparedSolution.date}|${preparedSolution.meal}`);
       const solution = preparedMatches
         ? preparedSolution
-        : solutions.findSolution(item, days, { rejectedSolutionIds: [...rejected] });
+        : solutions.findSolution(item, days, {
+            rejectedSolutionIds: [...rejected],
+            rejectedSlotKeys: [...rejectedSlots],
+          });
 
       if (!solution) {
         openGeneric(
@@ -298,11 +391,11 @@
         if (!solutions.applySolution(solution)) return;
         activeGoalFlow.appliedAny = true;
         save();
-        renderAll();
         openGoalStep();
       });
       document.getElementById("otherPlanGoalSolution")?.addEventListener("click", () => {
         rejected.add(solution.id);
+        rejectedSlots.add(`${solution.date}|${solution.meal}`);
         openGoalStep(key);
       });
       document.getElementById("leavePlanGoal")?.addEventListener("click", () => {
@@ -312,7 +405,7 @@
     }
 
     function startGoalFlow(item, preparedSolution) {
-      activeGoalFlow = { rejectedByGoal: new Map(), appliedAny: false };
+      activeGoalFlow = { rejectedByGoal: new Map(), rejectedSlotsByGoal: new Map(), appliedAny: false };
       openGoalStep(solutions.goalKey(item), preparedSolution);
     }
 

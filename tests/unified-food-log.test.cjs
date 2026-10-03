@@ -126,6 +126,33 @@ test("legacy standalone sample reload removes invented texture instead of fallin
   assert.equal(core.logHasMealContext(migrated.logs[0]), false);
 });
 
+test("historical tried outcomes migrate to eaten for overall and per-food results", () => {
+  const source = defaultState();
+  source.foods = [customFood()];
+  source.logs = [{
+    id: "legacy-tried",
+    date: "2026-08-10",
+    meal: "lunch",
+    foodIds: ["karotte"],
+    focusId: "karotte",
+    sampleFoodIds: ["karotte"],
+    foodOutcomes: { karotte: "tried" },
+    outcome: "tried",
+  }];
+
+  const migrate = migrationContext().__migrateStateCore;
+  const migrated = clone(migrate(source));
+  assert.equal(migrated.logs[0].outcome, "eaten");
+  assert.deepEqual(migrated.logs[0].foodOutcomes, { karotte: "eaten" });
+  const migratedAgain = clone(migrate(migrated));
+  assert.equal(migratedAgain.logs[0].outcome, "eaten");
+  assert.deepEqual(migratedAgain.logs[0].foodOutcomes, { karotte: "eaten" });
+});
+
+test("log entry form no longer offers tried as an outcome", () => {
+  assert.doesNotMatch(logSource, /\[\s*["']tried["']\s*,\s*["']Probiert["']\s*\]/);
+});
+
 test("real historical meal texture survives reload", () => {
   const source = defaultState();
   source.foods = [customFood()];
@@ -170,9 +197,21 @@ test("free unknown unified log remains unknown through another migration round",
   assert.equal(Object.hasOwn(migrated.logs[0], "textureStage"), false);
 });
 
+test("Tagesabschlüsse bleiben bei der Migration als eigener, reversibler Zustand erhalten", () => {
+  const source = defaultState();
+  source.dayClosures = {
+    "2026-08-10": { closedAt: "2026-08-10T20:00:00.000Z" },
+    invalid: { closedAt: "ignored" },
+  };
+  const migrated = clone(migrationContext().__migrateStateCore(source));
+  assert.deepEqual(migrated.dayClosures, {
+    "2026-08-10": { closedAt: "2026-08-10T20:00:00.000Z" },
+  });
+});
+
 test("unified log scopes meal correction to meal-context entries and has no current-texture fallback", () => {
   assert.equal(logSource.includes('id="logMeal"'), true);
-  assert.equal(logSource.includes('pendingLog.__mealContext && value("logMeal")'), true);
+  assert.equal(logSource.includes('document.getElementById("logMeal")'), true);
   assert.equal(logSource.includes('entryType: "food"'), true);
   assert.equal(logSource.includes('<option value="">Bitte auswählen</option>'), true);
   assert.equal(logSource.includes("log.textureStage || state.settings.textureStage"), false);

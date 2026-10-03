@@ -21,8 +21,11 @@ test("Unified Log: explicit texture is preserved for non-positive outcomes", () 
   assert.doesNotMatch(source, /let selectedTexture = offered\s*\?/);
 });
 
-test("Unified Log: texture guidance names not-offered as optional", () => {
-  assert.match(logSource, /Bei Ablehnung, Reaktion oder „Nicht angeboten“ optional/);
+test("Unified Log: Konsistenzfeld bleibt ohne zusätzlichen Hinweistext", () => {
+  assert.doesNotMatch(
+    logSource,
+    /<div class="small" style="margin-top:5px">Bei „Probiert“ oder „Gegessen“ erforderlich\./,
+  );
 });
 
 test("Unified Log: documented non-positive texture does not count as positive texture progress", () => {

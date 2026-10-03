@@ -1,0 +1,199 @@
+"use strict";
+
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const vm = require("node:vm");
+
+const ROOT = path.join(__dirname, "..");
+const dataSource = fs.readFileSync(path.join(ROOT, "data/recipes.js"), "utf8");
+const runtimeSource = fs.readFileSync(path.join(ROOT, "js/recipes.js"), "utf8");
+
+function loadCatalog() {
+  const context = vm.createContext({ console });
+  vm.runInContext(dataSource, context, { filename: "data/recipes.js" });
+  vm.runInContext(runtimeSource, context, { filename: "js/recipes.js" });
+  return JSON.parse(vm.runInContext("JSON.stringify(RECIPES)", context));
+}
+
+const INCOMPLETE_PREPARATIONS = Object.freeze([
+  "Birne-Hirse-Pancakes",
+  "Rind-Hafer-Bällchen",
+  "Geflügel-Gemüse-Hafer-Bällchen",
+  "Rote-Linsen-Gemüsebällchen",
+  "Tofu-Brokkoli-Bällchen",
+  "Zucchini-Hafer-Puffer",
+  "Polenta-Zucchini-Sticks",
+  "Zucchini-Omelett",
+  "Kürbis-Hafer-Brei",
+  "Gemüse-Nudel-Sauce",
+  "Baby-Linsen-Bolognese",
+  "Bangus-Kartoffel-Taler",
+  "Obst-Hafer-Muffins",
+  "Gemüse-Hafer-Muffins",
+  "Kürbis-Hirse-Muffins",
+  "Bananen-Haferbrei mit Erdnussmus",
+  "Karotten-Hirse-Brei mit Tahin",
+  "Apfel-Hirse-Brei mit Mandelmus",
+  "Paprika-Omelettstreifen",
+  "Ei-Champignon-Cups",
+]);
+
+const TERSE_PREPARATIONS = Object.freeze([
+  "Zucchini-Hafer-Pancakes",
+  "Ube-Bananen-Pancakes",
+  "Rote-Linsen-Bratlinge",
+  "Omelettstreifen",
+  "Obst-Hirsebrei",
+  "Obst-Polentabrei",
+  "Obst-Reisbrei",
+  "Obst-Buchweizenbrei",
+  "Obst-Grießbrei",
+  "Lugaw-Basis",
+  "Kürbis-Lugaw",
+  "Tinola-inspiriert",
+  "Arroz-caldo-inspiriert",
+  "Kalabasa mit Kokos",
+  "Tilapia-Reis-Brei",
+  "Bananen-Joghurt-Hafer-Pancakes",
+  "Obst-Joghurt-Hafer-Ofenbites",
+  "Zucchini-Joghurt-Hafer-Bites",
+  "Joghurt-Hafer-Waffeln",
+  "Weiche Joghurt-Fladen",
+  "Gemüse-Joghurt-Mini-Muffins",
+  "Huhn-Gemüse-Muffins",
+  "Süßkartoffel-Linsen-Muffins",
+]);
+
+const REQUIRED_NOTE_FRAGMENTS = Object.freeze({
+  "Birne-Hirse-Pancakes": [/Birne/i, /Hirse/i, /Ei/i, /verrühr/i],
+  "Rind-Hafer-Bällchen": [/Hafer/i, /Ei/i, /vermeng/i],
+  "Geflügel-Gemüse-Hafer-Bällchen": [/Gemüse/i, /Hafer/i, /vermeng/i],
+  "Rote-Linsen-Gemüsebällchen": [/Linsen/i, /Karotte/i, /Hafer/i, /vermeng/i],
+  "Tofu-Brokkoli-Bällchen": [/Tofu/i, /Brokkoli/i, /Hafer/i, /vermeng/i],
+  "Zucchini-Hafer-Puffer": [/Zucchini/i, /Hafer/i, /Ei/i, /verrühr/i],
+  "Polenta-Zucchini-Sticks": [/Polenta/i, /Zucchini/i, /unterrühr/i, /auskühl|fest/i],
+  "Zucchini-Omelett": [/Zucchini/i, /Ei/i, /verrühr/i],
+  "Kürbis-Hafer-Brei": [/Kürbis/i, /Hafer/i, /verrühr/i],
+  "Gemüse-Nudel-Sauce": [/Zucchini/i, /Tomate/i, /Nudeln/i, /Sauce/i],
+  "Baby-Linsen-Bolognese": [/Linsen/i, /Tomate/i, /Nudeln/i, /Sauce/i],
+  "Bangus-Kartoffel-Taler": [/Bangus/i, /Kartoffel/i, /vermeng/i, /Taler/i],
+  "Obst-Hafer-Muffins": [/Obst/i, /Hafer/i, /Ei/i, /verrühr/i],
+  "Gemüse-Hafer-Muffins": [/Gemüse/i, /Hafer/i, /Ei/i, /verrühr/i],
+  "Kürbis-Hirse-Muffins": [/Kürbis/i, /Hirse/i, /Ei/i, /verrühr/i],
+  "Bananen-Haferbrei mit Erdnussmus": [/Hafer/i, /Banane/i, /Erdnuss/i],
+  "Karotten-Hirse-Brei mit Tahin": [/Hirse/i, /Karotte/i, /Tahin/i],
+  "Apfel-Hirse-Brei mit Mandelmus": [/Hirse/i, /Apfel/i, /Mandel/i],
+  "Paprika-Omelettstreifen": [/Paprika/i, /Ei/i, /verrühr/i],
+  "Ei-Champignon-Cups": [/Champignon/i, /Ei/i, /verrühr/i],
+  "Bananen-Joghurt-Hafer-Pancakes": [/Banane/i, /Naturjoghurt/i, /Hafer/i, /Ei/i, /verrühr/i],
+  "Obst-Joghurt-Hafer-Ofenbites": [/Obst/i, /Naturjoghurt/i, /Hafer/i, /Ei/i, /verrühr/i],
+  "Zucchini-Joghurt-Hafer-Bites": [/Zucchini/i, /Naturjoghurt/i, /Hafer/i, /Ei/i, /verrühr/i],
+  "Joghurt-Hafer-Waffeln": [/Naturjoghurt/i, /Hafer/i, /Ei/i, /verrühr/i],
+  "Weiche Joghurt-Fladen": [/Naturjoghurt/i, /Weizen|Grieß/i, /Ei/i, /verrühr/i],
+  "Gemüse-Joghurt-Mini-Muffins": [/Gemüse/i, /Naturjoghurt/i, /Hafer/i, /Ei/i, /verrühr/i],
+  "Huhn-Gemüse-Muffins": [/Huhn/i, /Gemüse/i, /Hafer/i, /Ei/i, /verrühr/i],
+  "Süßkartoffel-Linsen-Muffins": [/Süßkartoffel/i, /Linsen/i, /Hafer/i, /vermeng/i],
+});
+
+test("recipe preparation audit covers the full 139-recipe runtime catalog", () => {
+  const recipes = loadCatalog();
+  assert.equal(recipes.length, 139);
+  assert.equal(INCOMPLETE_PREPARATIONS.length, 20);
+  assert.equal(TERSE_PREPARATIONS.length, 23);
+  assert.equal(new Set([...INCOMPLETE_PREPARATIONS, ...TERSE_PREPARATIONS]).size, 43);
+});
+
+test("recipe preparation completeness: Herzhafte Hirseschnitten sind vollständig gegart und weich servierbar", () => {
+  const recipes = loadCatalog();
+  const matches = recipes.filter((item) => item.name === "Herzhafte Hirseschnitten");
+  assert.equal(matches.length, 1, "Rezept muss genau einmal im Runtime-Katalog vorkommen");
+  const recipe = matches[0];
+  assert.deepEqual(recipe.requires, ["Hirse", "Karotte", "Zucchini", "Ei", "Frischkäse", "Rapsöl"]);
+  for (const fragment of [/120 g Goldhirse/i, /kleine Karotte/i, /kleine Zucchini/i, /2 Eier/i, /2 EL Frischkäse/i, /2 EL Rapsöl/i]) {
+    assert.match(recipe.ingredients, fragment, `Zutat fehlt (${fragment})`);
+  }
+  for (const fragment of [/Goldhirse gründlich ausspülen/i, /vollständig weich kochen/i, /Zucchini raspeln/i, /Karotte fein reiben/i, /gut ausdrücken/i, /180 °C Ober-\/Unterhitze/i, /20–25 Minuten/i, /vollständig durchbacken/i, /breite, gut greifbare Sticks/i, /ohne zugesetztes Salz/i]) {
+    assert.match(recipe.note, fragment, `Safety-/Zubereitungshinweis fehlt (${fragment})`);
+  }
+  assert.equal(recipe.freezable, true);
+  assert.equal(recipe.minMonths, undefined, "Werbeaussage 'ab Beikostreife' ist kein gespeichertes Altersgate");
+});
+
+
+test("recipe preparation completeness: new Bulgur- und Quinoa-Gerichte enthalten konkrete Schritte", () => {
+  const recipes = loadCatalog();
+  const expected = {
+    "Quinoa-Huhn-Süßkartoffel-Finger": [/Quinoa/i, /Huhn/i, /Süßkartoffel/i, /vermeng/i, /fingerlang/i, /zerdrückbar/i],
+    "Quinoa-Linsen-Gemüse-Khichdi": [/Quinoa/i, /Linsen/i, /Karotte/i, /Zucchini/i, /weich koch/i, /zerdrück/i],
+    "Quinoa-Gemüse-Puffer": [/Quinoa/i, /Zucchini/i, /Karotte/i, /Ei/i, /Puffer/i, /durchgar/i],
+    "Bulgur-Zucchini-Ei": [/Bulgur/i, /Zucchini/i, /Ei/i, /stock/i, /Löffel/i],
+    "Bulgur-Gemüse-Köfte": [/Bulgur/i, /Linsen/i, /Karotte/i, /Köfte/i, /zerdrück/i],
+    "Bulgur-Linsen-Suppe": [/Bulgur/i, /Linsen/i, /Tomate/i, /Karotte/i, /Suppe/i, /zerdrück/i],
+  };
+  for (const [name, fragments] of Object.entries(expected)) {
+    const recipe = recipes.find((item) => item.name === name);
+    assert.ok(recipe, name + ": Rezept fehlt");
+    assert.ok(recipe.note.length >= 180, name + ": Zubereitung bleibt zu knapp");
+    for (const fragment of fragments) assert.match(recipe.note, fragment, name + ": Zubereitungshinweis fehlt (" + fragment + ")");
+  }
+});
+
+test("recipe preparation completeness: Fischküchlein enthalten Gräten-, Gar- und Konsistenzhinweise", () => {
+  const recipes = loadCatalog();
+  const expected = {
+    "Forelle-Kartoffel-Bällchen": [/Forelle/i, /Kartoffel/i, /Ei/i, /entgrät|Gräten/i, /vollständig durchgar/i, /zerdrückbar/i],
+    "Kabeljau-Süßkartoffel-Fischküchlein": [/Kabeljau/i, /Süßkartoffel/i, /Ei/i, /Gräten/i, /vollständig durchgar/i, /zerdrückbar/i],
+  };
+  for (const [name, fragments] of Object.entries(expected)) {
+    const recipe = recipes.find((item) => item.name === name);
+    assert.ok(recipe, name + ": Rezept fehlt");
+    assert.ok(recipe.note.length >= 220, name + ": Zubereitung bleibt zu knapp");
+    for (const fragment of fragments) assert.match(recipe.note, fragment, name + ": Zubereitungshinweis fehlt (" + fragment + ")");
+  }
+});
+
+test("recipe preparation completeness: Hirsotto enthält Mengen, Aromatik und weiche Zubereitung", () => {
+  const recipe = loadCatalog().find((item) => item.name === "Hirsotto");
+  assert.ok(recipe, "Hirsotto: Rezept fehlt");
+  for (const fragment of [/60 g Goldhirse/i, /20 g rote Linsen/i, /100 g gegarte[rn]? und pürierte[rn]? Kürbis/i, /350 ml salzfreie Gemüsebrühe/i, /1 TL .*Öl/i, /1 TL fein gehackte Petersilie/i, /1 TL Butter/i]) {
+    assert.match(recipe.ingredients, fragment, `Hirsotto: Zutat fehlt (${fragment})`);
+  }
+  for (const fragment of [/gründlich waschen/i, /höchstens optional/i, /sehr weich kochen/i, /Kürbispüree einarbeiten/i, /Butter unterrühren/i, /risottoartige Struktur/i]) {
+    assert.match(recipe.note, fragment, `Hirsotto: Zubereitungshinweis fehlt (${fragment})`);
+  }
+  assert.match(recipe.note, /Keine gesalzene Brühe/i);
+});
+
+test("recipe preparation completeness: the 20 incomplete recipes now explain their missing preparation steps", () => {
+  const recipes = loadCatalog();
+  for (const name of INCOMPLETE_PREPARATIONS) {
+    const recipe = recipes.find((item) => item.name === name);
+    assert.ok(recipe, `${name}: Rezept fehlt`);
+    assert.ok(recipe.note.length >= 120, `${name}: Zubereitung bleibt zu knapp`);
+    for (const fragment of REQUIRED_NOTE_FRAGMENTS[name] || []) {
+      assert.match(recipe.note, fragment, `${name}: Zubereitung ist weiter unvollständig (${fragment})`);
+    }
+  }
+});
+
+test("recipe preparation completeness: the 23 terse recipes now contain reproducible multi-step guidance", () => {
+  const recipes = loadCatalog();
+  for (const name of TERSE_PREPARATIONS) {
+    const recipe = recipes.find((item) => item.name === name);
+    assert.ok(recipe, `${name}: Rezept fehlt`);
+    assert.ok(recipe.note.length >= 120, `${name}: Zubereitung bleibt zu knapp`);
+    assert.ok((recipe.note.match(/[.!?](?:\s|$)/g) || []).length >= 2, `${name}: Zubereitung bleibt einschrittig`);
+    for (const fragment of REQUIRED_NOTE_FRAGMENTS[name] || []) {
+      assert.match(recipe.note, fragment, `${name}: Zubereitung ist weiter unvollständig (${fragment})`);
+    }
+  }
+});
+
+test("recipe preparation consistency: Monggo-Kalabasa does not suggest undeclared Malunggay", () => {
+  const recipes = loadCatalog();
+  const monggo = recipes.find((item) => item.name === "Monggo-Kalabasa-Brei");
+  assert.ok(monggo);
+  assert.doesNotMatch(monggo.note, /Malunggay/i, "Monggo-Kalabasa-Brei darf keine nicht deklarierte Malunggay-Freigabe enthalten");
+});

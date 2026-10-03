@@ -88,7 +88,7 @@ test("UI: Haupttab-Wechsel behält Filter, Suchen und normale Accordions in der 
     /renderFoods\(\)/,
     "der ausgeblendete Lebensmittel-Tab wird beim Verlassen des Sortiermodus erst beim nächsten Öffnen neu gerendert",
   );
-  assert.match(showView, /window\.scrollTo/);
+  assert.match(showView, /previous !== id[\s\S]*main\.scrollTop = 0/);
 });
 
 test("UI: kein nachgelagerter Session-Override wird mehr geladen", () => {

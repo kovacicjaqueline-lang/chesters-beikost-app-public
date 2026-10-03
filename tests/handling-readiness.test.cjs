@@ -65,9 +65,13 @@ function settings(overrides = {}) {
 
 function auditedLegacyFingerNames() {
   const expandedNames = new Set([
+    "Herzhafte Hirseschnitten",
     "Grießschnitten ohne Panade", "Apfel-Milchreisschnitten", "Bananen-French-Toast-Finger",
     "Gemüse-Couscous-Schnitten", "Bunte Gemüse-Nuggets", "Weiche Gemüse-Reis-Finger",
     "Apfel-Bananen-Baked-Oatmeal", "Weiche Apfel-Hafer-Riegel",
+    "Quinoa-Huhn-Süßkartoffel-Finger", "Quinoa-Gemüse-Puffer", "Bulgur-Gemüse-Köfte",
+    "Bananen-Hirseschnitten",
+    "Forelle-Kartoffel-Bällchen", "Kabeljau-Süßkartoffel-Fischküchlein",
   ]);
   return [
     ...RECIPE_CONTRACT_GROUPS.fingerLowResistance,
@@ -105,23 +109,23 @@ test("HANDLING: feedingApproach sortiert nur Präferenzen und entfernt keine sic
   ]);
 });
 
-test("HANDLING: alle 123 Laufzeitrezepte sind explizit und genau einmal migriert", () => {
+test("HANDLING: alle 139 Laufzeitrezepte sind explizit und genau einmal migriert", () => {
   const runtimeNames = runtimeRecipeNames();
   const contractNames = Object.keys(RECIPE_HANDLING_CONTRACT);
   const grouped = Object.values(RECIPE_CONTRACT_GROUPS).flat();
-  assert.equal(runtimeNames.length, 123);
-  assert.equal(contractNames.length, 123);
-  assert.equal(new Set(grouped).size, 123, "Contract-Gruppen dürfen sich nicht überlappen");
+  assert.equal(runtimeNames.length, 139);
+  assert.equal(contractNames.length, 139);
+  assert.equal(new Set(grouped).size, 139, "Contract-Gruppen dürfen sich nicht überlappen");
   assert.deepEqual([...contractNames].sort(), [...runtimeNames].sort());
   assert.deepEqual([...grouped].sort(), [...runtimeNames].sort());
 });
 
-test("HANDLING: bestehende 103er Auditmatrix bleibt erhalten und zwei graded-bite-Fälle kommen explizit hinzu", () => {
+test("HANDLING: aktuelle Auditmatrix bleibt vollständig erhalten", () => {
   const entries = Object.values(RECIPE_HANDLING_CONTRACT);
-  assert.equal(entries.filter((entry) => !entry.laterKind).length, 98);
+  assert.equal(entries.filter((entry) => !entry.laterKind).length, 111);
   assert.equal(entries.filter((entry) => entry.laterKind === "oral-capability").length, 4);
   assert.equal(entries.filter((entry) => entry.laterKind === "handling-capability").length, 3);
-  assert.equal(entries.filter((entry) => entry.laterKind === "soft-orientation").length, 16);
+  assert.equal(entries.filter((entry) => entry.laterKind === "soft-orientation").length, 19);
   assert.equal(entries.filter((entry) => entry.laterKind === "bite-capability").length, 1);
   assert.equal(entries.filter((entry) => entry.laterKind === "bite-oral-capability").length, 1);
 });
@@ -159,6 +163,18 @@ test("ORAL: easy-chew ist post-separation und die alte Mischsemantik ist kein Or
   assert.equal(ORAL_PROCESSING_PROFILES.EASY_BITE_SEPARATE, undefined);
   assert.equal(RECIPE_HANDLING_CONTRACT["Obst-Hafer-Pancakes"].oralProcessing, ORAL_PROCESSING_PROFILES.EASY_CHEW);
   assert.equal(RECIPE_HANDLING_CONTRACT["Omelettstreifen"].biteSeparation, BITE_SEPARATION_PROFILES.LOW_RESISTANCE_SEPARATE);
+});
+
+test("BITE/ORAL: Herzhafte Hirseschnitten haben eine eigenständige weiche Fingerfood-Einordnung", () => {
+  const entry = RECIPE_HANDLING_CONTRACT["Herzhafte Hirseschnitten"];
+  assert.deepEqual(entry.modes, [HANDLING_MODES.FINGER_GRASPABLE]);
+  assert.equal(entry.biteSeparation, BITE_SEPARATION_PROFILES.EASY_BITE_SEPARATE);
+  assert.equal(entry.oralProcessing, ORAL_PROCESSING_PROFILES.EASY_CHEW);
+  assert.equal(entry.biteRequiredCapability, undefined);
+  assert.equal(entry.oralRequiredCapability, undefined);
+  assert.match(entry.servingRequirement, /breite, gut greifbare Sticks/i);
+  assert.match(entry.servingRequirement, /leicht zerdrücken/i);
+  assert.match(entry.servingRequirement, /harte oder dunkle Kruste/i);
 });
 
 test("BITE/ORAL: vier bisherige strukturierte Rezepte bleiben bite-seitig easy und verlangen nur structured-chew", () => {
@@ -348,6 +364,16 @@ test("HANDLING: Nockerl werden nur durch small-soft-pieces freigeschaltet", () =
   );
 });
 
+test("HANDLING: Hirsotto ist als weiche risottoartige Löffelmahlzeit vollständig eingeordnet", () => {
+  const entry = RECIPE_HANDLING_CONTRACT.Hirsotto;
+  assert.deepEqual(entry.modes, [HANDLING_MODES.SPOON_MASHED, HANDLING_MODES.SPOON_SOFT_LUMPY]);
+  assert.equal(entry.biteSeparation, undefined);
+  assert.equal(entry.oralProcessing, ORAL_PROCESSING_PROFILES.SOFT_BREAKDOWN);
+  assert.match(entry.servingRequirement, /risottoartig/i);
+  assert.match(entry.servingRequirement, /Butter/i);
+  assert.match(entry.servingRequirement, /salzfreie Brühe/i);
+});
+
 test("HANDLING: weich-stückige Formfälle bleiben soft-orientation statt künstlicher Capability", () => {
   const expected = [
     "Gemüse-Nudel-Sauce",
@@ -366,6 +392,9 @@ test("HANDLING: weich-stückige Formfälle bleiben soft-orientation statt künst
     "Lachs-Brokkoli-Kartoffel-Auflauf",
     "Mildes Bohnen-Süßkartoffel-Chili",
     "Gefüllte Paprika mit Linsenreis",
+    "Quinoa-Linsen-Gemüse-Khichdi",
+    "Bulgur-Zucchini-Ei",
+    "Bulgur-Linsen-Suppe",
   ].sort();
   const actual = Object.entries(RECIPE_HANDLING_CONTRACT)
     .filter(([, entry]) => entry.laterKind === "soft-orientation")

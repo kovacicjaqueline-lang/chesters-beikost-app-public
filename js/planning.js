@@ -28,17 +28,55 @@ function recipeSuitableForMeal(recipe, meal) {
   if (meal === "snack")
     return (recipe?.tags || []).some((tag) => normalizeName(tag) === "snack");
   if (meal === "breakfast")
-    return ["porridge", "pancakes", "baking"].includes(c);
+    return ["porridge", "pancakes", "baking"].includes(c) && plannerRecipeBreakfastHasBase(recipe);
   if (meal === "dinner")
     return !["philippines"].includes(c) || Number(recipe.stage || 1) <= 3;
   return true;
 }
+function plannerRecipeSuitableForManualMeal(recipe, meal) {
+  if (Array.isArray(recipe?.excludeMeals) && recipe.excludeMeals.includes(meal)) return false;
+  if (meal === "snack")
+    return (recipe?.tags || []).some((tag) => normalizeName(tag) === "snack");
+  if (meal === "breakfast") return ["porridge", "pancakes", "baking"].includes(recipe?.category || "");
+  if (meal === "dinner")
+    return !["philippines"].includes(recipe?.category || "") || Number(recipe?.stage || 1) <= 3;
+  return true;
+}
+function plannerRecipeBreakfastHasBase(recipe) {
+  if (recipe?.breakfastBase === false) return false;
+  let names = [
+    ...(recipe?.requires || []),
+    ...(recipe?.alternatives || []).flat(),
+    ...(recipe?.oneOf || []),
+    ...(recipe?.milkChoices || []),
+  ].filter(Boolean);
+  let foods = typeof state !== "undefined" && Array.isArray(state?.foods)
+    ? state.foods
+    : typeof FOOD_DB !== "undefined" && Array.isArray(FOOD_DB) ? FOOD_DB : [];
+  if (foods.length) {
+    return names.some((name) => {
+      let item = foods.find((food) => food?.name === name);
+      return ["Getreide/Stärke", "Milchprodukt"].includes(item?.category) &&
+        (typeof plannerFoodCanBeBase !== "function" || plannerFoodCanBeBase(item)) &&
+        item.id !== "kuhmilch";
+    });
+  }
+  return names.some((name) => /hafer|hirse|polenta|reis|quinoa|buchweizen|weizen|dinkel|grieß|griess|naturjoghurt|joghurt|buttermilch|quark|skyr/i.test(String(name)));
+}
 function manualMealKey(date, meal) {
   return `${date}|${meal}`;
 }
+function plannerManualMealIsExplicitlyAdded(data) {
+  return data?.manualAdded === true;
+}
+function plannerManualMealCanOccupySlot(date, meal, data) {
+  if (!data) return false;
+  if (plannerManualMealIsExplicitlyAdded(data)) return true;
+  return typeof activeMeal !== "function" || activeMeal(meal, date);
+}
 function manualMealFor(date, meal) {
   let data = state.manualMeals?.[manualMealKey(date, meal)];
-  if (!data) return null;
+  if (!plannerManualMealCanOccupySlot(date, meal, data)) return null;
   return {
     ...clone(data),
     meal,
@@ -118,11 +156,13 @@ function activeMeal(meal, on) {
   return phaseMealKeys().includes(meal);
 }
 function usageCount(id) {
+  if (typeof foodUsageCount === "function") return foodUsageCount(id);
   return state.logs.filter(
     (l) => (l.foodIds || []).includes(id) && outcomeForFood(l, id) === "eaten",
   ).length;
 }
 function eatenExposureCount(id) {
+  if (typeof foodEatenExposureCount === "function") return foodEatenExposureCount(id);
   return new Set(
     state.logs
       .filter(
@@ -142,11 +182,36 @@ function canCombine(f) {
 function isTrustedBase(f) {
   return ["Verträgliche Basis", "Regelmäßig"].includes(status(f));
 }
+const PLANNER_STANDALONE_ALLERGEN_INTRODUCTION_TYPES = new Set([
+  "neu",
+  "gezielt wiederholen",
+  "Allergen einführen",
+  "Allergen wiederholen",
+  "manuell",
+]);
+function plannerAllergenCanBeStandalone(f) {
+  return !!f?.allergenGroup && f.plannerIntroductionMode === "standalone";
+}
+function plannerAllergenIsStandaloneIntroduction(f, focusType = "") {
+  return (
+    plannerAllergenCanBeStandalone(f) &&
+    PLANNER_STANDALONE_ALLERGEN_INTRODUCTION_TYPES.has(focusType) &&
+    !isTrustedBase(f)
+  );
+}
+function plannerIntroductionNeedsTrustedBase(f, focusType = "") {
+  return (
+    PLANNER_STANDALONE_ALLERGEN_INTRODUCTION_TYPES.has(focusType) &&
+    !isTrustedBase(f) &&
+    !plannerAllergenCanBeStandalone(f)
+  );
+}
 function knownBase(meal, exclude = []) {
   let pool = state.foods.filter(
     (f) =>
       f.active &&
       f.meals.includes(meal) &&
+      !isFoodUnavailable(f.id) &&
       !f.allergenGroup &&
       isTrustedBase(f) &&
       !exclude.includes(f.id) &&
@@ -208,20 +273,29 @@ function chooseFocus(meal, on, exclude = [], key = "") {
     let f = retries[0];
     return {
       f,
-      type: eatenExposureCount(f.id) >= 1
+      type: f.allergenGroup && rank(f) === 1
+        ? "Allergen wiederholen"
+        : eatenExposureCount(f.id) >= 1
         ? "bekannt kombinieren"
         : "gezielt wiederholen",
     };
   }
-  let due = pool.filter((f) => dueAllergen(f, on) && baseExists);
+  let due = pool.filter(
+    (f) => dueAllergen(f, on) && (baseExists || plannerAllergenCanBeStandalone(f)),
+  );
   due.sort((a, b) =>
     (lastDate(a.id, true) || "").localeCompare(lastDate(b.id, true)),
   );
   if (due.length) return { f: due[0], type: "Allergen wiederholen" };
   let fresh = pool.filter(
-    (f) => rank(f) === 0 && (!f.allergenGroup || baseExists),
+    (f) =>
+      rank(f) === 0 &&
+      (!f.allergenGroup || baseExists || plannerAllergenCanBeStandalone(f)),
   );
-  fresh.sort((a, b) => effectivePriority(a, on) - effectivePriority(b, on));
+  fresh.sort((a, b) =>
+    Number(!a.allergenGroup) - Number(!b.allergenGroup) ||
+    effectivePriority(a, on) - effectivePriority(b, on),
+  );
   if (fresh.length) return { f: fresh[0], type: fresh[0].allergenGroup ? "Allergen einführen" : "neu" };
   let regular = pool.filter((f) => rank(f) >= 2);
   regular.sort(
@@ -258,6 +332,7 @@ function combinationKey(ids) {
 }
 function combinationHistory(ids) {
   let key = combinationKey(ids);
+  if (typeof logIndexFor === "function") return logIndexFor().byCombinationKey.get(key) || [];
   return state.logs
     .filter((l) => combinationKey(l.foodIds) === key)
     .sort((a, b) => `${a.date}|${a.createdAt || ""}`.localeCompare(`${b.date}|${b.createdAt || ""}`));
@@ -343,24 +418,56 @@ function applyPlannedMealAmounts(meal) {
   meal.ingredientAmounts = allocation.amounts;
   return meal;
 }
+function applyRecipeFoodComposition(meal, date, ctx) {
+  if (typeof plannerRecipeFoodCompositionCandidates !== "function" ||
+      typeof plannerApplyRecipeFoodComposition !== "function") return meal;
+  let recipes = typeof RECIPES !== "undefined" ? RECIPES : [];
+  let pairings = typeof RECIPE_FOOD_PAIRING_DATA !== "undefined" ? RECIPE_FOOD_PAIRING_DATA : [];
+  let candidates = plannerRecipeFoodCompositionCandidates(
+    meal,
+    recipes,
+    state.foods || [],
+    pairings,
+    {
+      on: date,
+      recipeSuitableFn: recipeSuitableForMeal,
+      ingredientReadyFn: (name, item, mealKey, on) => {
+        let candidate = item || foodByName(name, state.foods);
+        if (!candidate || !eligible(candidate, mealKey, on)) return false;
+        if (typeof plannerCulinaryRecipeIngredientReady === "function") {
+          return plannerCulinaryRecipeIngredientReady(name, meal, on);
+        }
+        return canCombine(candidate) || (meal.foodIds || []).includes(candidate.id);
+      },
+      foodEligibleFn: (id, mealKey, on) => {
+        let candidate = food(id);
+        return !!candidate && eligible(candidate, mealKey, on);
+      },
+      milkCompatibleFn: (currentMeal, recipe) => {
+        let currentMilk = String(currentMeal.milkMeal || "");
+        let recipeMilk = String(recipe.milkMeal || currentMilk);
+        return !currentMilk || !recipeMilk || currentMilk === recipeMilk;
+      },
+      singleStarchFn: (ids) => ids.filter((id) => isStarchyFood(food(id))).length <= 1,
+    },
+  );
+  let selected = plannerSelectRecipeFoodComposition(candidates);
+  return selected ? plannerApplyRecipeFoodComposition(meal, selected) : meal;
+}
 
 function companionFor(f, meal, on, focusType = "") {
-  if (f.allergenGroup) return knownBase(meal, [f.id]);
-
-  let introductionTypes = new Set([
-    "neu",
-    "gezielt wiederholen",
-    "Allergen wiederholen",
-    "manuell",
-  ]);
-  let needsTrustedBase =
-    introductionTypes.has(focusType) && !isTrustedBase(f);
+  let needsTrustedBase = plannerIntroductionNeedsTrustedBase(f, focusType);
+  if (plannerAllergenIsStandaloneIntroduction(f, focusType)) return null;
+  if (f.allergenGroup && !plannerAllergenCanBeStandalone(f)) {
+    return knownBase(meal, [f.id]);
+  }
 
   let pool = state.foods.filter((x) => {
     let normalMealMatch = eligible(x, meal, on);
     let flexibleCerealMatch =
       f.category === "Getreide/Stärke" &&
       x.active &&
+      !isFoodUnavailable(x.id) &&
       status(x) !== "Pausiert" &&
       ["Obst", "Gemüse", "Wurzel/Knolle"].includes(x.category);
 
@@ -431,7 +538,7 @@ function ironCompanion(f, meal, on, exclude = []) {
   );
   return pool[0] || null;
 }
-function introductionCandidate(meal, on, ctx, exclude = []) {
+function introductionCandidate(meal, on, ctx, exclude = [], baseExclude = exclude) {
   let key = on + "|" + meal,
     override = state.overrides[key];
   if (override) {
@@ -439,36 +546,70 @@ function introductionCandidate(meal, on, ctx, exclude = []) {
     if (f && eligible(f, meal, on))
       return { f, type: rank(f) >= 2 ? "bekannt" : "manuell" };
   }
-  let baseExists = !!knownBase(meal, exclude);
+  let baseExists = !!knownBase(meal, baseExclude);
   let pool = state.foods.filter(
     (f) =>
       eligible(f, meal, on) &&
       !exclude.includes(f.id) &&
       !ctx.reserved.has(f.id),
   );
-  let retries = pool.filter(
-    (f) => rank(f) === 1 || lastOutcome(f.id) === "not_accepted",
+  let retries = pool.filter((f) =>
+    lastOutcome(f.id) === "not_accepted" ||
+    (!!f.allergenGroup && rank(f) === 1),
   );
-  retries.sort((a, b) => effectivePriority(a, on) - effectivePriority(b, on));
+  retries.sort((a, b) =>
+    (a.allergenGroup && b.allergenGroup && typeof foodSpecificSuccessfulExposureCount === "function"
+      ? foodSpecificSuccessfulExposureCount(a.id) - foodSpecificSuccessfulExposureCount(b.id)
+      : 0) ||
+    Number(!a.allergenGroup) - Number(!b.allergenGroup) ||
+    effectivePriority(a, on) - effectivePriority(b, on),
+  );
   if (retries.length) {
     let f = retries[0];
     return {
       f,
-      type: eatenExposureCount(f.id) >= 1
+      type: f.allergenGroup && rank(f) === 1
+        ? "Allergen wiederholen"
+        : eatenExposureCount(f.id) >= 1
         ? "bekannt kombinieren"
         : "gezielt wiederholen",
     };
   }
-  let due = pool.filter((f) => dueAllergen(f, on) && baseExists);
+  let due = pool.filter(
+    (f) => dueAllergen(f, on) && (baseExists || plannerAllergenCanBeStandalone(f)),
+  );
   due.sort((a, b) =>
     (lastDate(a.id, true) || "").localeCompare(lastDate(b.id, true)),
   );
   if (due.length) return { f: due[0], type: "Allergen wiederholen" };
   let fresh = pool.filter(
-    (f) => rank(f) === 0 && (!f.allergenGroup || baseExists),
+    (f) =>
+      rank(f) === 0 &&
+      (!f.allergenGroup || baseExists || plannerAllergenCanBeStandalone(f)),
   );
-  fresh.sort((a, b) => effectivePriority(a, on) - effectivePriority(b, on));
+  fresh.sort((a, b) =>
+    Number(!a.allergenGroup) - Number(!b.allergenGroup) ||
+    effectivePriority(a, on) - effectivePriority(b, on),
+  );
   return fresh.length ? { f: fresh[0], type: fresh[0].allergenGroup ? "Allergen einführen" : "neu" } : null;
+}
+function breakfastBaseIntroductionCandidate(meal, on, ctx, exclude = []) {
+  if (meal !== "breakfast" || !state?.foods) return null;
+  let originalFoods = state.foods;
+  state.foods = originalFoods.filter((item) =>
+    item?.active &&
+    item.meals?.includes("breakfast") &&
+    !item.allergenGroup &&
+    item.category === "Getreide/Stärke" &&
+    (typeof plannerFoodCanBeBase !== "function" || plannerFoodCanBeBase(item)) &&
+    (typeof plannerFoodCanBeAutomaticFocus !== "function" || plannerFoodCanBeAutomaticFocus(item)),
+  );
+  try {
+    let result = introductionCandidate(meal, on, ctx, exclude);
+    return result?.f?.category === "Getreide/Stärke" ? result : null;
+  } finally {
+    state.foods = originalFoods;
+  }
 }
 function knownCandidate(meal, on, ctx, exclude = []) {
   let key = on + "|" + meal,
@@ -547,13 +688,126 @@ function recipeStockCandidate(meal, on, ctx) {
           (ctx.recipeReserved?.get(r.name) || 0),
     )
     .sort((a, b) => {
+      let culinary = typeof plannerCulinaryRecipeScore === "function"
+        ? plannerCulinaryRecipeScore(a, recipeFoodIds(a), state.foods || [], meal)
+        : 0;
+      let culinaryB = typeof plannerCulinaryRecipeScore === "function"
+        ? plannerCulinaryRecipeScore(b, recipeFoodIds(b), state.foods || [], meal)
+        : 0;
       let ba = oldestRecipeBatch(a.name);
       let bb = oldestRecipeBatch(b.name);
-      return String(ba?.frozenDate || "9999").localeCompare(
+      return culinaryB - culinary || String(ba?.frozenDate || "9999").localeCompare(
         String(bb?.frozenDate || "9999"),
       );
     });
   return states[0] || null;
+}
+function plannerSmoothRecipeBatch(recipe, batch, on) {
+  if (!recipe?.smoothBatchAllowed || batch?.preparationMode !== "spoon-smooth" ||
+      batch.kind !== "recipe" || Number(batch.portions) <= 0 ||
+      !recipeNameMatches(batch.recipeName, recipe.name)) return false;
+  if (recipe.hardMinMonths && monthsOld(on) < Number(recipe.hardMinMonths)) return false;
+  // Changing the serving texture never waives missing ingredients, hard age or
+  // automatic FOOD eligibility. Only the recipe's original texture stage differs.
+  return (recipe.ingredientMissing || []).length === 0 &&
+    (recipe.requirementMissing || []).length > 0 &&
+    (recipe.requirementMissing || []).every((missing) =>
+      String(missing).startsWith("Konsistenz:") ||
+      missing === "Darreichungsform: aktuell noch nicht passend");
+}
+function plannerRecipeBatchFor(recipe, on, ctx) {
+  if (!state.settings.preferInventoryInPlan) return null;
+  let reserved = ctx.recipeReserved?.get(recipe.name) || 0;
+  let batches = state.inventory.filter((batch) => batch.kind === "recipe" &&
+    recipeNameMatches(batch.recipeName, recipe.name) && Number(batch.portions) > 0 &&
+    (recipe.unlocked || plannerSmoothRecipeBatch(recipe, batch, on)))
+    .sort((a, b) => String(a.frozenDate).localeCompare(String(b.frozenDate)));
+  for (let batch of batches) {
+    let portions = Math.max(0, Math.floor(Number(batch.portions) || 0));
+    if (reserved < portions) return batch;
+    reserved -= portions;
+  }
+  return null;
+}
+function knownRecipeCandidate(meal, on, ctx) {
+  if (typeof recipeStates !== "function" || typeof plannerRecipeVariantIdSets !== "function") return null;
+  let explicit = food(state.overrides?.[`${on}|${meal}`]);
+  if (explicit && eligible(explicit, meal, on)) return null;
+  let candidates = recipeStates().filter((r) =>
+    (r.unlocked || plannerRecipeBatchFor(r, on, ctx)) && recipeSuitableForMeal(r, meal) &&
+    !(r.milkMeal === "full" && (ctx.fullMilkDates?.has(on) || recipeContainsMeatOrFish(r)))
+  ).flatMap((recipe) => plannerRecipeVariantIdSets(recipe, state.foods, recipeIngredientReady)
+    .filter((ids) => ids.some((id) =>
+      typeof plannerFoodCanBeAutomaticFocus !== "function" ||
+      plannerFoodCanBeAutomaticFocus(food(id))) && ids.every((id) => {
+      let item = food(id);
+      return item && eligible(item, meal, on) && canCombine(item);
+    }) && !combinationPaused(ids, on) &&
+      (typeof plannerCulinaryRecipeScore !== "function" ||
+        plannerCulinaryRecipeScore(recipe, ids, state.foods, meal) > -1000))
+    .map((ids) => ({ recipe, ids, batch: plannerRecipeBatchFor(recipe, on, ctx) })));
+  if (!candidates.length) return null;
+  candidates = candidates.filter((candidate) => ctx.recipeLastUse?.get(candidate.recipe.name) !== on);
+  if (!candidates.length) return null;
+  let prior = ctx.qualityLastFoodUse || ctx.lastFocus;
+  let rank = (candidate) => {
+    let recent = candidate.ids.reduce((sum, id) => {
+      let last = prior?.get(id);
+      return sum + (last && diffDays(on, last) <= 1 ? 2 : last && diffDays(on, last) <= 3 ? 1 : 0);
+    }, 0);
+    let used = ctx.recipePlannedUse?.get(candidate.recipe.name) || 0;
+    let culinary = typeof plannerCulinaryRecipeScore === "function"
+      ? plannerCulinaryRecipeScore(candidate.recipe, candidate.ids, state.foods, meal) : 0;
+    let stock = candidate.batch ? 1 : 0;
+    return [recent, used, -culinary, -stock];
+  };
+  let compareRank = (a, b) => {
+    let left = rank(a), right = rank(b);
+    for (let i = 0; i < left.length; i++) {
+      if (left[i] !== right[i]) return left[i] - right[i];
+    }
+    return 0;
+  };
+  candidates.sort((a, b) => {
+    return compareRank(a, b) || a.recipe.name.localeCompare(b.recipe.name, "de");
+  });
+  let generation = Math.max(0, Number(state.settings?.planRebuildGeneration) || 0);
+  let best = candidates[0];
+  let tied = candidates.filter((candidate) => compareRank(candidate, best) === 0);
+  if (generation && tied.length > 1) best = tied[generation % tied.length];
+  return best;
+}
+function enrichKnownFreeMeal(meal, on, ctx) {
+  if (!meal || meal.recipeName || meal.compositionMode ||
+      (meal.sampleFoodIds || []).length || (meal.foodIds || []).length !== 2 ||
+      typeof plannerCulinaryAssessment !== "function") return meal;
+  let ids = meal.foodIds;
+  let original = plannerCulinaryAssessment(ids, state.foods, meal.meal);
+  let candidates = state.foods.filter((item) =>
+    !ids.includes(item.id) && !item.allergenGroup && canCombine(item) &&
+    eligible(item, meal.meal, on) &&
+    ["Gemüse", "Wurzel/Knolle", "Hülsenfrucht", "Fleisch", "Fisch", "Soja/Tofu"].includes(item.category) &&
+    !(isStarchyFood(item) && ids.some((id) => isStarchyFood(food(id)))) &&
+    !combinationPaused([...ids, item.id], on) &&
+    !(isMeatOrFish(item) && mealContainsMilkProduct(ids))
+  ).map((item) => ({
+    item,
+    assessment: plannerCulinaryAssessment([...ids, item.id], state.foods, meal.meal),
+  })).filter(({ assessment }) => assessment.allowed && assessment.score > original.score);
+  candidates.sort((a, b) => {
+    let last = (item) => ctx.qualityLastFoodUse?.get(item.id) || ctx.lastFocus?.get(item.id);
+    let recent = (item) => last(item) && diffDays(on, last(item)) <= 1 ? 1 : 0;
+    return recent(a.item) - recent(b.item) ||
+      b.assessment.score - a.assessment.score ||
+      (ctx.qualityFoodUse?.get(a.item.id) || 0) - (ctx.qualityFoodUse?.get(b.item.id) || 0) ||
+      usageCount(a.item.id) - usageCount(b.item.id) ||
+      a.item.priority - b.item.priority;
+  });
+  if (!candidates.length) return meal;
+  let extra = candidates[0].item.id;
+  meal.foodIds = [...ids, extra];
+  meal.baseFoodIds = [...new Set([...(meal.baseFoodIds || []), extra])];
+  return applyPlannedMealAmounts(meal);
 }
 function snackRecipeCandidate(on, ctx) {
   let candidates = (typeof viewRenderRecipeStates === "function" ? viewRenderRecipeStates() : recipeStates())
@@ -564,11 +818,17 @@ function snackRecipeCandidate(on, ctx) {
       !(r.milkMeal === "full" && ctx.fullMilkDates?.has(on))
     )
     .sort((a, b) => {
+      let culinary = typeof plannerCulinaryRecipeScore === "function"
+        ? plannerCulinaryRecipeScore(a, recipeFoodIds(a), state.foods || [], "snack")
+        : 0;
+      let culinaryB = typeof plannerCulinaryRecipeScore === "function"
+        ? plannerCulinaryRecipeScore(b, recipeFoodIds(b), state.foods || [], "snack")
+        : 0;
       let aStock = recipeInventoryPortions(a.name) > (ctx.recipeReserved?.get(a.name) || 0) ? 0 : 1;
       let bStock = recipeInventoryPortions(b.name) > (ctx.recipeReserved?.get(b.name) || 0) ? 0 : 1;
       let aUsed = ctx.recipePlannedUse?.get(a.name) || 0;
       let bUsed = ctx.recipePlannedUse?.get(b.name) || 0;
-      return aStock - bStock || aUsed - bUsed || a.name.localeCompare(b.name, "de");
+      return culinaryB - culinary || aStock - bStock || aUsed - bUsed || a.name.localeCompare(b.name, "de");
     });
   return candidates[0] || null;
 }
@@ -597,6 +857,25 @@ function buildSnackRecipeMeal(recipe, on, ctx) {
   return meal;
 }
 function reserveMealInventory(meal, ctx) {
+  if (meal.compositionMode === "recipe-plus-food") {
+    meal.inventoryFoodIds = [];
+    if (!state.settings.preferInventoryInPlan) return meal;
+    if (meal.recipeInventoryId) {
+      ctx.recipeReserved.set(
+        meal.recipeName,
+        (ctx.recipeReserved.get(meal.recipeName) || 0) + 1,
+      );
+    } else {
+      for (let id of [...(meal.recipeIngredientFoodIds || []), ...(meal.additionalFoodIds || [])]) {
+        let reserved = ctx.inventoryReserved.get(id) || 0;
+        if (inventoryPortions(id) > reserved) {
+          meal.inventoryFoodIds.push(id);
+          ctx.inventoryReserved.set(id, reserved + 1);
+        }
+      }
+    }
+    return meal;
+  }
   if (meal.recipeName) {
     let currentItem = state.inventory.find(
       (i) =>
@@ -660,8 +939,14 @@ function mealSnapshot(date, meal, generated, mode = "manual") {
     foodRoles: { ...(generated.foodRoles || foodRolesFor(generated.foodIds || [], generated.baseFoodIds || [], generated.sampleFoodIds || [])) },
     optionalAddons: [...(generated.optionalAddons || [])],
     inventoryFoodIds: [...(generated.inventoryFoodIds || [])],
+    allergenMaintenanceFoodIds: [...(generated.allergenMaintenanceFoodIds || [])],
     recipeName: generated.recipeName || "",
     recipeInventoryId: generated.recipeInventoryId || "",
+    preparationMode: generated.preparationMode || "",
+    compositionMode: generated.compositionMode || "",
+    recipeIngredientFoodIds: [...(generated.recipeIngredientFoodIds || [])],
+    additionalFoodIds: [...(generated.additionalFoodIds || [])],
+    recipePairingKey: generated.recipePairingKey || "",
     milkMeal: generated.milkMeal || mealMilkLevel(generated),
     type: generated.type,
     note: generated.note,
@@ -707,6 +992,7 @@ function lockedMeal(date, meal) {
     foodRoles: { ...(lock.foodRoles || foodRolesFor(lock.foodIds || [], lock.baseFoodIds || [], lock.sampleFoodIds || [])) },
     optionalAddons: [...(lock.optionalAddons || [])],
     inventoryFoodIds: [...(lock.inventoryFoodIds || [])],
+    allergenMaintenanceFoodIds: [...(lock.allergenMaintenanceFoodIds || [])],
     recipeName: lock.recipeName || "",
     recipeInventoryId: lock.recipeInventoryId || "",
     type: lock.type || "bekannt",
@@ -829,9 +1115,55 @@ function openFullPlanRebuild() {
   document.getElementById("rebuildKeepLocks").onclick = () => { closeGeneric(); rebuildVisiblePlan(false); showToast("Woche vollständig neu geplant; manuell geschützte Mahlzeiten wurden behalten."); };
   document.getElementById("rebuildReleaseLocks").onclick = () => { closeGeneric(); rebuildVisiblePlan(true); showToast("Woche vollständig neu geplant; lösbare feste Planungen wurden aufgehoben."); };
 }
+function removeUnavailableGeneratedFoods(meal) {
+  if (!meal || typeof isFoodUnavailable !== "function") return meal;
+  let unavailableIds = new Set((meal.foodIds || []).filter((id) => isFoodUnavailable(id)));
+  if (!unavailableIds.size) return meal;
+  if (meal.focusId && unavailableIds.has(meal.focusId)) return null;
+
+  for (let field of ["foodIds", "baseFoodIds", "sampleFoodIds", "optionalAddons", "inventoryFoodIds", "recipeIngredientFoodIds", "additionalFoodIds"]) {
+    if (Array.isArray(meal[field])) meal[field] = meal[field].filter((id) => !unavailableIds.has(id));
+  }
+  if (meal.foodRoles && typeof meal.foodRoles === "object") {
+    meal.foodRoles = Object.fromEntries(
+      Object.entries(meal.foodRoles).filter(([id]) => !unavailableIds.has(id)),
+    );
+  }
+  if (meal.ingredientAmounts && typeof meal.ingredientAmounts === "object") {
+    meal.ingredientAmounts = Object.fromEntries(
+      Object.entries(meal.ingredientAmounts).filter(([id]) => !unavailableIds.has(id)),
+    );
+  }
+  if (
+    meal.recipeName &&
+    (meal.recipeIngredientFoodIds || []).some((id) => unavailableIds.has(id))
+  ) {
+    meal.recipeName = "";
+    meal.recipeInventoryId = "";
+    delete meal.compositionMode;
+    delete meal.recipeIngredientFoodIds;
+    delete meal.additionalFoodIds;
+    delete meal.recipePairingKey;
+  }
+  return meal;
+}
+
 function buildDay(date, index, ctx) {
   let meals = [];
-  let activeMeals = ["breakfast", "lunch", "snack", "dinner"].filter((m) => activeMeal(m, date) || !!state.manualMeals?.[manualMealKey(date, m)]);
+  function recordMealForQualityRotation(mealPlan) {
+    if (typeof plannerQualityMarkMealInProgress === "function") {
+      let hasSnapshotForDay = Object.entries(state.planLocks || {}).some(([key, lock]) =>
+        key.startsWith(`${date}|`) && (!lock?.plannerTrackingSnapshot || lock?.rolloverShifted),
+      );
+      // A retained same-day snapshot is user-visible plan state. Do not let a
+      // partial rebuild cascade through other slots around that snapshot.
+      if (hasSnapshotForDay) return;
+      plannerQualityMarkMealInProgress(mealPlan, date, ctx);
+    }
+  }
+  let activeMeals = ["breakfast", "lunch", "snack", "dinner"].filter((m) =>
+    activeMeal(m, date) || plannerManualMealIsExplicitlyAdded(state.manualMeals?.[manualMealKey(date, m)]),
+  );
   // A later fixed/manual milk meal must already protect earlier automatic meals on the same day.
   let hasPresetFullMilk = ["breakfast", "lunch", "snack", "dinner"].some((meal) => {
     let preset = manualMealFor(date, meal) || lockedMeal(date, meal);
@@ -847,14 +1179,14 @@ function buildDay(date, index, ctx) {
     if (manual) {
       reserveMealInventory(manual, ctx);
       if (mealMilkLevel(manual) === "full") ctx.fullMilkDates?.add(date);
-      meals.push(manual); used.push(manual.focusId); continue;
+      meals.push(manual); recordMealForQualityRotation(manual); used.push(manual.focusId); continue;
     }
     if (!activeMeals.includes(meal)) { meals.push({ meal, active: false }); continue; }
     let fixed = lockedMeal(date, meal);
     if (fixed) {
       reserveMealInventory(fixed, ctx);
       if (mealMilkLevel(fixed) === "full") ctx.fullMilkDates?.add(date);
-      meals.push(fixed); used.push(fixed.focusId);
+      meals.push(fixed); recordMealForQualityRotation(fixed); used.push(fixed.focusId);
       ctx.plannedUse.set(fixed.focusId, (ctx.plannedUse.get(fixed.focusId) || 0) + 1); ctx.lastFocus.set(fixed.focusId, date);
       if (["neu", "gezielt wiederholen", "Allergen einführen", "Allergen wiederholen", "manuell"].includes(fixed.type)) { introAssigned = true; ctx.reserved.add(fixed.focusId); ctx.introduced.push(fixed.focusId); }
       continue;
@@ -863,22 +1195,39 @@ function buildDay(date, index, ctx) {
       let snack = buildSnackRecipeMeal(snackRecipeCandidate(date, ctx), date, ctx);
       if (!snack) { meals.push({ meal, active: true, empty: true }); continue; }
       if (mealMilkLevel(snack) === "full") ctx.fullMilkDates?.add(date);
-      meals.push(snack); used.push(snack.focusId);
+      meals.push(snack); recordMealForQualityRotation(snack); used.push(snack.focusId);
       continue;
     }
     let c = null;
-    if (introDue && !introAssigned && (!forcedIntroMeal || meal === forcedIntroMeal)) c = introductionCandidate(meal, date, ctx, used);
+    let breakfastBaseRequired = meal === "breakfast" &&
+      !state.overrides[date + "|" + meal] &&
+      !knownBase(meal, used);
+    let breakfastBaseIntroduction = false;
+    if (breakfastBaseRequired) {
+      c = breakfastBaseIntroductionCandidate(meal, date, ctx, used);
+      breakfastBaseIntroduction = !!c;
+    } else if (introDue && !introAssigned && (!forcedIntroMeal || meal === forcedIntroMeal)) {
+      c = introductionCandidate(meal, date, ctx, used);
+    }
     if (c && ["neu", "gezielt wiederholen", "bekannt kombinieren", "Allergen einführen", "Allergen wiederholen", "manuell"].includes(c.type)) {
       introAssigned = true; ctx.reserved.add(c.f.id); ctx.introduced.push(c.f.id);
     }
+    if (!c && breakfastBaseRequired) {
+      meals.push({ meal, active: true, empty: true, note: "Für ein sinnvolles Frühstück wird zuerst eine geeignete Basis eingeführt." });
+      continue;
+    }
     if (!c && (!introDue || introAssigned)) {
-      let recipe = recipeStockCandidate(meal, date, ctx);
-      if (recipe) {
-        let batch = oldestRecipeBatch(recipe.name), ids = recipeFoodIds(recipe);
-        let recipeMeal = applyPlannedMealAmounts({ meal, active: true, focusId: ids[0], foodIds: ids, baseFoodIds: ids, sampleFoodIds: [], optionalAddons: [], inventoryFoodIds: [], recipeName: recipe.name, recipeInventoryId: batch?.id || "", milkMeal: recipe.milkMeal || "", type: "Rezeptvorrat", note: "Eine vorbereitete Portion aus dem Gefriervorrat verwenden." });
+      let selected = knownRecipeCandidate(meal, date, ctx);
+      if (selected) {
+        let { recipe, ids, batch } = selected;
+        let focusId = ids.find((id) => typeof plannerFoodCanBeAutomaticFocus !== "function" || plannerFoodCanBeAutomaticFocus(food(id))) || ids[0];
+        let smoothBatch = batch && recipe.smoothBatchAllowed && batch.preparationMode === "spoon-smooth";
+        let recipeMeal = applyPlannedMealAmounts({ meal, active: true, focusId, foodIds: ids, baseFoodIds: ids, sampleFoodIds: [], optionalAddons: [], inventoryFoodIds: [], recipeName: recipe.name, recipeInventoryId: batch?.id || "", preparationMode: smoothBatch ? "spoon-smooth" : "", milkMeal: recipe.milkMeal || "", type: batch ? "Rezeptvorrat" : "Rezept", note: smoothBatch ? "Diese Vorratsportion wurde vollständig glatt püriert; nur diese Zubereitungsform anbieten." : batch ? "Eine vorbereitete Portion aus dem Gefriervorrat verwenden." : "Passendes vorhandenes Rezept zubereiten." });
         reserveMealInventory(recipeMeal, ctx);
+        ctx.recipePlannedUse?.set(recipe.name, (ctx.recipePlannedUse.get(recipe.name) || 0) + 1);
+        ctx.recipeLastUse?.set(recipe.name, date);
         if (recipe.milkMeal === "full") ctx.fullMilkDates?.add(date);
-        meals.push(recipeMeal); used.push(recipeMeal.focusId); continue;
+        meals.push(recipeMeal); recordMealForQualityRotation(recipeMeal); used.push(recipeMeal.focusId); continue;
       }
     }
     if (!c) c = knownCandidate(meal, date, ctx, used);
@@ -889,8 +1238,8 @@ function buildDay(date, index, ctx) {
     if (!c) { meals.push({ meal, active: true, empty: true }); continue; }
     let f = c.f;
     used.push(f.id); ctx.plannedUse.set(f.id, (ctx.plannedUse.get(f.id) || 0) + 1); ctx.lastFocus.set(f.id, date);
-    let introduction = ["neu", "gezielt wiederholen", "Allergen einführen", "Allergen wiederholen", "manuell"].includes(c.type) && !isTrustedBase(f);
-    let base = companionFor(f, meal, date, c.type);
+    let introduction = (breakfastBaseIntroduction || ["neu", "gezielt wiederholen", "Allergen einführen", "Allergen wiederholen", "manuell"].includes(c.type)) && !isTrustedBase(f);
+    let base = breakfastBaseIntroduction ? null : companionFor(f, meal, date, c.type);
     let companions = enforceSingleStarch(f, base ? [base] : []);
     let ids = introduction ? companions.map((x) => x.id) : [f.id, ...companions.map((x) => x.id)];
     if (introduction && !ids.includes(f.id)) ids.push(f.id);
@@ -923,10 +1272,27 @@ function buildDay(date, index, ctx) {
     if (!introduction && meal !== "breakfast" && AMOUNT_LEVELS[currentAmountLevel()].rank >= 1 && !mealContainsMilkProduct(ids)) { let oil = food("rapsoel"); if (oil?.active) optionalAddons.push(oil.id); }
     let baseFoodIds = introduction ? companions.map((x) => x.id) : ids.filter((id) => id !== f.id);
     let sampleFoodIds = introduction ? [f.id] : [];
-    let note = c.type === "neu" ? "Neue Einführung separat oder in kleiner Menge mit der sicheren Basis anbieten." : c.type === "gezielt wiederholen" ? "Wiederholung nach Pause erneut klein und getrennt bewerten." : c.type === "Allergen wiederholen" ? "Allergen mit bekannter Basis gezielt wiederholen." : "Bekannte Lebensmittel sinnvoll rotieren; Vorrat bevorzugt nutzen.";
+    let standaloneAllergen = plannerAllergenCanBeStandalone(f) && !isTrustedBase(f);
+    let note = breakfastBaseIntroduction
+      ? "Geeignete Frühstücksbasis zuerst als kleine Kostprobe einführen; danach mit passenden Komponenten zu einer Mahlzeit aufbauen."
+      : c.type === "neu"
+      ? standaloneAllergen
+        ? `Neue ${f.name}-Einführung als eigenständige, gut durchgegarte altersgerechte Speise anbieten.`
+        : "Neue Einführung separat oder in kleiner Menge mit der sicheren Basis anbieten."
+      : c.type === "gezielt wiederholen"
+        ? "Wiederholung nach Pause erneut klein und getrennt bewerten."
+        : c.type === "Allergen wiederholen"
+          ? standaloneAllergen
+            ? `${f.name} als eigenständige, gut durchgegarte altersgerechte Speise gezielt wiederholen.`
+            : "Allergen mit bekannter Basis gezielt wiederholen."
+          : "Bekannte Lebensmittel sinnvoll rotieren; Vorrat bevorzugt nutzen.";
     let generated = applyPlannedMealAmounts({ meal, active: true, focusId: f.id, foodIds: ids, baseFoodIds, sampleFoodIds, optionalAddons, milkMeal: mealContainsMilkProduct(ids) ? (introduction ? "small" : "full") : "", type: c.type, note });
+    generated = applyRecipeFoodComposition(generated, date, ctx);
+    generated = enrichKnownFreeMeal(generated, date, ctx);
+    generated = removeUnavailableGeneratedFoods(generated);
+    if (!generated) { meals.push({ meal, active: true, empty: true }); continue; }
     if (mealMilkLevel(generated) === "full") ctx.fullMilkDates?.add(date);
-    reserveMealInventory(generated, ctx); meals.push(generated);
+    reserveMealInventory(generated, ctx); meals.push(generated); recordMealForQualityRotation(generated);
   }
   return { date, index, meals, introDue, introAssigned };
 }
@@ -939,6 +1305,7 @@ function freshPlanContext() {
     inventoryReserved: new Map(),
     recipeReserved: new Map(),
     recipePlannedUse: new Map(),
+    recipeLastUse: new Map(),
     fullMilkDates: new Set(),
   };
 }
@@ -962,7 +1329,7 @@ function mealName(m) {
   return { breakfast: "Frühstück", snack: "Snack", lunch: "Mittag", dinner: "Abendessen" }[m] || "Mahlzeit";
 }
 function outcomeLabel(o) {
-  return ({ not_offered: "Nicht angeboten", not_accepted: "Nicht angenommen", tried: "Probiert", eaten: "Gegessen", reaction: "Reaktion" }[o] || o);
+  return ({ not_offered: "Nicht angeboten", not_accepted: "Nicht angenommen", tried: "Gegessen", eaten: "Gegessen", reaction: "Reaktion" }[o] || o);
 }
 function phaseText() {
   return PHASES[currentPhase()].label;
@@ -1026,6 +1393,16 @@ function naturalMealFoodTitle(items) {
   return `${main.name} mit ${naturalFoodList(companions)}`;
 }
 function dishTitle(m) {
+  if (m.recipeName && m.compositionMode === "recipe-plus-food") {
+    let additional = (m.additionalFoodIds || [m.focusId]).map(food).filter(Boolean);
+    let title = additional.length
+      ? `${naturalFoodList(additional.map((item) => item.name))} mit ${m.recipeName}`
+      : m.recipeName;
+    if ((m.sampleFoodIds || []).some((id) => (m.additionalFoodIds || []).includes(id))) {
+      title += ` zur ${plannerLearningRoleLabel(food(m.additionalFoodIds[0]), m.type || "")}`;
+    }
+    return title;
+  }
   if (m.recipeName) return m.recipeName;
   let sample = (m.sampleFoodIds || []).map(food).filter(Boolean);
   let base = (m.baseFoodIds || []).map(food).filter(Boolean);
@@ -1046,8 +1423,13 @@ function dishTitle(m) {
 }
 
 function mealRolesHtml(m) {
-  let f = food(m.focusId),
-    companions = (m.foodIds || [])
+  let f = food(m.focusId);
+  if (m.compositionMode === "recipe-plus-food") {
+    let rows = `<div class="role-row"><div class="role-label">${esc(focusRole(m.type))}</div><div class="role-value">${esc(f?.name || "")}</div></div>`;
+    rows += `<div class="role-row"><div class="role-label">Rezept</div><div class="role-value">${esc(m.recipeName || "")}</div></div>`;
+    return `<div class="role-list">${rows}</div>`;
+  }
+  let companions = (m.foodIds || [])
       .filter((id) => id !== m.focusId)
       .map(food)
       .filter(Boolean),
@@ -1070,7 +1452,7 @@ function mealRolesHtml(m) {
   return `<div class="role-list">${rows}</div>${addonLine}`;
 }
 function mealExplanation(m) {
-  let f = food(m.focusId), companions = (m.foodIds || []).filter((id) => id !== m.focusId).map(food).filter(Boolean), addons = (m.optionalAddons || []).map(food).filter(Boolean);
+  let f = food(m.focusId), recipeIngredients = new Set(m.recipeIngredientFoodIds || []), companions = (m.foodIds || []).filter((id) => id !== m.focusId && !recipeIngredients.has(id)).map(food).filter(Boolean), addons = (m.optionalAddons || []).map(food).filter(Boolean);
   let parts = [];
   if (m.type === "neu") parts.push(`${f.name} ist heute neu.`);
   else if (m.type === "gezielt wiederholen") parts.push(`${f.name} wird gezielt noch einmal angeboten.`);
@@ -1089,6 +1471,9 @@ function mealExplanation(m) {
         ? `${companions.map((x) => x.name).join(" und ")} ${companions.length === 1 ? "ist" : "sind"} die bereits verträgliche Basis.`
         : `${companions.map((x) => x.name).join(" und ")} wurde bereits problemlos gegessen und ergänzt die Mahlzeit.`,
     );
+  }
+  if (m.compositionMode === "recipe-plus-food" && m.recipeName) {
+    parts.push(`${m.recipeName} bildet die Rezeptkomponente der Mahlzeit; ${f.name} bleibt als einzelnes Lebensmittel separat erfasst.`);
   }
   if (addons.length) parts.push(`${addons.map((x) => x.name).join(" und ")} ist nur eine optionale Zubereitungszugabe und wird nicht automatisch als gegessen protokolliert.`);
   return parts.join(" ");
@@ -1250,6 +1635,7 @@ function shiftAutomaticSlot(date, meal) {
   return true;
 }
 function priorBaseIds(foodId) {
+  if (typeof latestLogForFood === "function") return latestLogForFood(foodId)?.baseFoodIds || [];
   return state.logs
     .filter((log) => (log.foodIds || []).includes(foodId))
     .sort((a, b) => `${b.date}${b.createdAt || ""}`.localeCompare(`${a.date}${a.createdAt || ""}`))[0]?.baseFoodIds || [];
@@ -1339,6 +1725,7 @@ function applyFollowUpPlan(record, requestedDate = "") {
   return { ok: true, date };
 }
 function refusalHistory(foodId) {
+  if (typeof logIndexFor === "function") return logIndexFor().refusalByFoodId.get(foodId) || [];
   return state.logs.filter((log) => (log.foodIds || []).includes(foodId) && outcomeForFood(log, foodId) === "not_accepted");
 }
 function followUpStatusText(record) {
@@ -1412,6 +1799,7 @@ function clearFollowUp(foodId) {
   removeFollowUpPlan(foodId);
 }
 function latestLogForFood(foodId) {
+  if (typeof logIndexFor === "function") return logIndexFor().latestByFoodId.get(foodId) || null;
   return state.logs.filter((log) => (log.foodIds || []).includes(foodId)).sort((a, b) => `${b.date}${b.updatedAt || b.createdAt || ""}`.localeCompare(`${a.date}${a.updatedAt || a.createdAt || ""}`))[0] || null;
 }
 function clearLogGeneratedState(foodId) {
@@ -1454,6 +1842,7 @@ function rebuildFoodConsequences(foodId) {
     let unavailable = log.focusId === foodId && log.notOfferedReason === "unavailable";
     if (unavailable) {
       state.shoppingHints[foodId] = { foodId, status: "needed", createdAt: new Date().toISOString(), sourceLogId: log.id };
+      if (typeof globalThis !== "undefined") globalThis.__plannerMissingIngredient?.installAvailabilityPolicies?.();
       state.followUps[foodId] = { id: `${foodId}-${Date.now()}`, foodId, reason: "not_offered", detail: "unavailable", status: "awaiting_stock", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), dueDate: "", meal: followUpMealForLog(log, foodId), baseFoodId: "", baseMode: "none", alternativeBaseIds: [], previousBaseIds: priorBaseIds(foodId), preparationKey: "standard", preparationText: food(foodId)?.safeForm || "" };
       cleanFoodFromAutomaticFuturePlan(foodId);
     } else scheduleFollowUp(foodId, log.date, followUpMealForLog(log, foodId), "not_offered", "no_opportunity");

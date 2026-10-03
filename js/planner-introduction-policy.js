@@ -3,8 +3,10 @@
 /* Planner-Einführungsfrequenz und Snack-Obst.
  *
  * Fachlicher Vertrag:
- * - geeignete offene Nicht-Allergene dürfen täglich und in jeder aktiven
- *   Hauptmahlzeit (Frühstück/Mittag/Abend) jeweils einmal eingeführt werden;
+ * - eine geeignete offene Nicht-Allergen-Kostprobe darf genau einen freien
+ *   Lernslot pro Tag belegen; manuelle Planung und passende Rezepte bleiben möglich;
+ * - FOODs mit explizitem Einführungsmodus "none" werden nicht automatisch als
+ *   Allergen-Einführung oder -Wiederholung geplant; manuelle Auswahl bleibt möglich;
  * - ein bloß erfolgreich probiertes FOOD blockiert keine weitere Einführung;
  * - eine echte Ablehnung darf weiterhin als gezielte Wiederholung priorisiert werden;
  * - sobald eine Allergen-Einführung oder Allergen-Wiederholung geplant ist, bleibt
@@ -14,7 +16,7 @@
  *
  * Bestehende Auto-, Safety-, Rollen-, Milch-, Recipe-first-, Lock- und
  * Mahlzeiteneignungs-Gates bleiben vorgeschaltet und werden nicht gelockert.
- * Zusätzliche Nicht-Allergen-Einführungen werden deshalb nicht frei konstruiert,
+ * Nicht-Allergen-Einführungen werden deshalb nicht frei konstruiert,
  * sondern erneut durch den vollständigen bestehenden buildDay-Stack erzeugt.
  */
 
@@ -23,6 +25,10 @@ const PLANNER_INTRODUCTION_MAIN_MEALS = Object.freeze([
   "lunch",
   "dinner",
 ]);
+
+// Eine geeignete offene Nicht-Allergen-Kostprobe darf an einem Tag ohne
+// Allergen-Lernaufgabe genau einen freien Hauptmahlzeitenslot belegen.
+const PLANNER_INTRODUCTION_AUTOPLAN_NON_ALLERGENS = true;
 
 const PLANNER_INTRODUCTION_LEARNING_TYPES = new Set([
   "neu",
@@ -36,6 +42,15 @@ const PLANNER_INTRODUCTION_ALLERGEN_TYPES = new Set([
   "Allergen einführen",
   "Allergen wiederholen",
 ]);
+
+function plannerIntroductionModeForFood(item) {
+  return String(item?.plannerIntroductionMode || "").trim() || "food";
+}
+
+function plannerIntroductionFoodAllowsAutomaticAllergenLearning(item) {
+  if (!item?.allergenGroup) return true;
+  return plannerIntroductionModeForFood(item) !== "none";
+}
 
 function plannerIntroductionMealIsLearning(meal) {
   if (!meal?.active || meal.empty) return false;
@@ -55,14 +70,53 @@ function plannerIntroductionCandidateShouldSkip(
   rankFn = () => 0,
   lastOutcomeFn = () => "",
   allowAllergen = true,
+  allowNonAllergen = true,
 ) {
   let item = result?.f;
   if (!item) return true;
+  if (
+    item.allergenGroup &&
+    result.type !== "manuell" &&
+    !plannerIntroductionFoodAllowsAutomaticAllergenLearning(item)
+  ) return true;
   if (item.allergenGroup && !allowAllergen) return true;
+  if (
+    !item.allergenGroup &&
+    !allowNonAllergen &&
+    result.type !== "manuell" &&
+    lastOutcomeFn(item.id) !== "not_accepted"
+  ) return true;
   let concreteRank = Number(rankFn(item)) || 0;
-  return result.type === "bekannt kombinieren" &&
+  return !item.allergenGroup && result.type === "bekannt kombinieren" &&
     concreteRank === 1 &&
     lastOutcomeFn(item.id) !== "not_accepted";
+}
+
+function plannerIntroductionPrefilterBlockedFoods(
+  foods = [],
+  exclude = [],
+  overrideId = "",
+  allowAllergen = true,
+  allowNonAllergen = true,
+  lastOutcomeFn = () => "",
+) {
+  let blocked = new Set(exclude || []);
+  for (let item of foods || []) {
+    if (!item?.id || blocked.has(item.id)) continue;
+    if (item.allergenGroup) {
+      if (
+        !allowAllergen ||
+        (item.id !== overrideId && !plannerIntroductionFoodAllowsAutomaticAllergenLearning(item))
+      ) blocked.add(item.id);
+      continue;
+    }
+    if (
+      !allowNonAllergen &&
+      item.id !== overrideId &&
+      lastOutcomeFn(item.id) !== "not_accepted"
+    ) blocked.add(item.id);
+  }
+  return [...blocked];
 }
 
 function plannerIntroductionNormalizeCandidate(
@@ -70,10 +124,17 @@ function plannerIntroductionNormalizeCandidate(
   on,
   dueFn = null,
   lastOutcomeFn = () => "",
+  rankFn = () => 0,
 ) {
   if (!result?.f) return result;
   if (
     result.f.allergenGroup &&
+    Number(rankFn(result.f)) === 1 &&
+    ["bekannt kombinieren", "gezielt wiederholen"].includes(result.type)
+  ) return { ...result, type: "Allergen wiederholen" };
+  if (
+    result.f.allergenGroup &&
+    plannerIntroductionFoodAllowsAutomaticAllergenLearning(result.f) &&
     typeof dueFn === "function" &&
     dueFn(result.f, on) &&
     result.type !== "Allergen einführen"
@@ -155,26 +216,45 @@ function installPlannerIntroductionPolicyRuntime() {
   let originalManualMealRoleInfo = manualMealRoleInfo;
   let supplementalNonAllergenOnly = false;
   let baselineBlocksAllergens = false;
+  let baselineBlocksNonAllergens = false;
 
   let slotProtected = (date, meal) => {
     let key = `${date}|${meal}`;
+    let lock = state?.planLocks?.[key];
     return !!state?.manualMeals?.[key] ||
-      !!state?.planLocks?.[key] ||
+      (!!lock && (!lock.plannerTrackingSnapshot || lock.rolloverShifted)) ||
       !!state?.overrides?.[key] ||
       (typeof mealIsCompleted === "function" && mealIsCompleted(date, meal));
   };
 
-  let candidateFor = (meal, on, ctx, exclude = [], allowAllergen = true) => {
-    let blocked = [...new Set(exclude || [])];
+  let candidateFor = (
+    meal,
+    on,
+    ctx,
+    exclude = [],
+    allowAllergen = true,
+    allowNonAllergen = true,
+  ) => {
+    let overrideId = state?.overrides?.[`${on}|${meal}`] || "";
+    let blocked = plannerIntroductionPrefilterBlockedFoods(
+      state?.foods || [],
+      exclude,
+      overrideId,
+      allowAllergen,
+      allowNonAllergen,
+      lastOutcome,
+    );
     let max = (state?.foods?.length || 0) + 1;
     for (let i = 0; i < max; i++) {
-      let result = originalIntroductionCandidate(meal, on, ctx, blocked);
+      // Keep policy-filtered focus candidates separate from the trusted-base pool.
+      let result = originalIntroductionCandidate(meal, on, ctx, blocked, exclude);
       if (!result?.f) return null;
       result = plannerIntroductionNormalizeCandidate(
         result,
         on,
         typeof dueAllergen === "function" ? dueAllergen : null,
         lastOutcome,
+        rank,
       );
       let id = result.f.id;
       if (blocked.includes(id)) return null;
@@ -184,6 +264,7 @@ function installPlannerIntroductionPolicyRuntime() {
           rank,
           lastOutcome,
           allowAllergen,
+          allowNonAllergen,
         )
       ) {
         blocked.push(id);
@@ -196,7 +277,14 @@ function installPlannerIntroductionPolicyRuntime() {
 
   introductionCandidate = function plannerDailyIntroductionCandidate(meal, on, ctx, exclude = []) {
     let allowAllergen = !supplementalNonAllergenOnly && !baselineBlocksAllergens;
-    return candidateFor(meal, on, ctx, exclude, allowAllergen);
+    return candidateFor(
+      meal,
+      on,
+      ctx,
+      exclude,
+      allowAllergen,
+      PLANNER_INTRODUCTION_AUTOPLAN_NON_ALLERGENS && !baselineBlocksNonAllergens,
+    );
   };
 
   let normalizePresetRecords = (date) => {
@@ -356,7 +444,6 @@ function installPlannerIntroductionPolicyRuntime() {
 
     let oldPlanLocks = state.planLocks;
     let oldOverrides = state.overrides;
-    let oldEvery = state.settings?.newFoodEvery;
     state.planLocks = { ...(state.planLocks || {}) };
     state.overrides = { ...(state.overrides || {}) };
 
@@ -370,8 +457,6 @@ function installPlannerIntroductionPolicyRuntime() {
     let targetKey = `${date}|${mealKey}`;
     delete state.planLocks[targetKey];
     state.overrides[targetKey] = candidate.f.id;
-    if (state.settings) state.settings.newFoodEvery = 1;
-
     let normalization = normalizePresetRecords(date);
     let tempContext = plannerIntroductionCloneContext(dayStartContext);
     let previousSupplemental = supplementalNonAllergenOnly;
@@ -387,7 +472,6 @@ function installPlannerIntroductionPolicyRuntime() {
       baselineBlocksAllergens = previousBlock;
       state.planLocks = oldPlanLocks;
       state.overrides = oldOverrides;
-      if (state.settings) state.settings.newFoodEvery = oldEvery;
     }
 
     let generated = generatedDay?.meals?.find((meal) => meal?.meal === mealKey);
@@ -447,29 +531,31 @@ function installPlannerIntroductionPolicyRuntime() {
 
   buildDay = function plannerDailyIntroductionBuildDay(date, index, ctx) {
     let dayStartContext = plannerIntroductionCloneContext(ctx);
-    let oldEvery = state?.settings?.newFoodEvery;
     let wasDeferred = !!state?.deferred?.[date];
+    let newFoodEvery = Math.max(1, Number(state?.settings?.newFoodEvery) || 2);
+    let ordinaryIntroductionDue = !wasDeferred && index % newFoodEvery === 0;
     let normalization = normalizePresetRecords(date);
     if (normalization.hasNonAllergenLearning) suppressDueAllergensInWorkingContext(ctx, date);
-    if (!wasDeferred && state?.settings) state.settings.newFoodEvery = 1;
 
     let previousBlock = baselineBlocksAllergens;
+    let previousNonAllergenBlock = baselineBlocksNonAllergens;
     baselineBlocksAllergens = normalization.hasNonAllergenLearning;
+    baselineBlocksNonAllergens = normalization.hasNonAllergenLearning || normalization.hasAllergenLearning;
     let day;
     try {
       day = originalBuildDay(date, index, ctx);
     } finally {
       baselineBlocksAllergens = previousBlock;
+      baselineBlocksNonAllergens = previousNonAllergenBlock;
       normalization.restore();
-      if (state?.settings) state.settings.newFoodEvery = oldEvery;
     }
     if (!day?.meals) return day;
 
     restoreDisplayedPresets(day, date, normalization.displays);
     plannerIntroductionRestoreContext(ctx, dayStartContext);
 
-    let allergenDay = normalization.hasAllergenLearning || day.meals.some((meal) =>
-      plannerIntroductionMealIsAllergenLearning(meal, food),
+    let learningDay = normalization.hasNonAllergenLearning || normalization.hasAllergenLearning || day.meals.some((meal) =>
+      plannerIntroductionMealIsLearning(meal),
     );
     let used = [];
     let finalMeals = [];
@@ -495,8 +581,9 @@ function installPlannerIntroductionPolicyRuntime() {
 
       let currentIsLearning = plannerIntroductionMealIsLearning(meal);
       if (
-        !wasDeferred &&
-        !allergenDay &&
+        PLANNER_INTRODUCTION_AUTOPLAN_NON_ALLERGENS &&
+        ordinaryIntroductionDue &&
+        !learningDay &&
         PLANNER_INTRODUCTION_MAIN_MEALS.includes(meal.meal) &&
         !protectedSlot &&
         !currentIsLearning
@@ -512,6 +599,7 @@ function installPlannerIntroductionPolicyRuntime() {
         if (generated) {
           meal = generated;
           currentIsLearning = true;
+          learningDay = true;
         }
       }
 
@@ -521,9 +609,7 @@ function installPlannerIntroductionPolicyRuntime() {
     }
 
     day.meals = finalMeals;
-    day.introDue = !wasDeferred && PLANNER_INTRODUCTION_MAIN_MEALS.some((meal) =>
-      typeof activeMeal !== "function" || activeMeal(meal, date),
-    );
+    day.introDue = !wasDeferred && finalMeals.some(plannerIntroductionMealIsLearning);
     day.introAssigned = finalMeals.some(plannerIntroductionMealIsLearning);
     return day;
   };
@@ -551,11 +637,6 @@ function installPlannerIntroductionPolicyRuntime() {
     return originalManualMealRoleInfo(foodOrId, meal, on, context);
   };
 
-  let cadenceField = typeof document !== "undefined"
-    ? document.getElementById("newFoodEvery")?.closest?.(".field")
-    : null;
-  if (cadenceField) cadenceField.hidden = true;
-
   return true;
 }
 
@@ -568,9 +649,13 @@ if (typeof module !== "undefined" && module.exports) {
     PLANNER_INTRODUCTION_MAIN_MEALS,
     PLANNER_INTRODUCTION_LEARNING_TYPES,
     PLANNER_INTRODUCTION_ALLERGEN_TYPES,
+    PLANNER_INTRODUCTION_AUTOPLAN_NON_ALLERGENS,
+    plannerIntroductionModeForFood,
+    plannerIntroductionFoodAllowsAutomaticAllergenLearning,
     plannerIntroductionMealIsLearning,
     plannerIntroductionMealIsAllergenLearning,
     plannerIntroductionCandidateShouldSkip,
+    plannerIntroductionPrefilterBlockedFoods,
     plannerIntroductionNormalizeCandidate,
     plannerIntroductionKnownSnackFruitEligible,
     plannerIntroductionCloneContext,

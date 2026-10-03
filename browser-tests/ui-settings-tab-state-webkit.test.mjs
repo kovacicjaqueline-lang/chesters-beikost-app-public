@@ -1,48 +1,10 @@
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { webkit } from "playwright";
+import { closeBrowserApp, startStaticServer } from "./helpers/app-harness.mjs";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const mimeTypes = {
-  ".html": "text/html; charset=utf-8",
-  ".js": "text/javascript; charset=utf-8",
-  ".css": "text/css; charset=utf-8",
-  ".json": "application/json; charset=utf-8",
-  ".webmanifest": "application/manifest+json; charset=utf-8",
-  ".svg": "image/svg+xml",
-  ".png": "image/png",
-  ".webp": "image/webp",
-};
 
-function startStaticServer() {
-  const server = http.createServer((request, response) => {
-    const url = new URL(request.url || "/", "http://127.0.0.1");
-    const pathname = decodeURIComponent(url.pathname === "/" ? "/index.html" : url.pathname);
-    const filePath = path.resolve(root, `.${pathname}`);
-    if (filePath !== path.join(root, "index.html") && !filePath.startsWith(`${root}${path.sep}`)) {
-      response.writeHead(403).end("Forbidden");
-      return;
-    }
-    fs.stat(filePath, (error, stat) => {
-      if (error || !stat.isFile()) {
-        response.writeHead(404).end("Not found");
-        return;
-      }
-      response.writeHead(200, {
-        "content-type": mimeTypes[path.extname(filePath)] || "application/octet-stream",
-        "cache-control": "no-store",
-      });
-      fs.createReadStream(filePath).pipe(response);
-    });
-  });
-  return new Promise((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(0, "127.0.0.1", () => resolve(server));
-  });
-}
 
 async function waitForApp(page) {
   await page.waitForFunction(() => !!window.__beikostTest?.getState);
@@ -168,6 +130,23 @@ try {
   await page.locator("#structuredChewCapability").check();
   await page.locator("#saveSettings").click();
 
+  const saveToast = page.locator("#toast");
+  await saveToast.waitFor({ state: "visible" });
+  assert.equal(await page.locator("#toastText").textContent(), "Einstellungen gespeichert.");
+  const saveToastLayout = await page.evaluate(() => {
+    const toast = document.querySelector("#toast").getBoundingClientRect();
+    const discard = document.querySelector("#discardSettings").getBoundingClientRect();
+    const save = document.querySelector("#saveSettings").getBoundingClientRect();
+    return { toastBottom: toast.bottom, actionsTop: Math.min(discard.top, save.top), toastTop: toast.top, actionsBottom: Math.max(discard.bottom, save.bottom) };
+  });
+  assert.ok(
+    saveToastLayout.toastBottom <= saveToastLayout.actionsTop || saveToastLayout.toastTop >= saveToastLayout.actionsBottom,
+    "Speicherhinweis darf die Einstellungsbuttons nicht überdecken",
+  );
+  await page.locator("#discardSettings").click();
+  assert.equal(await page.locator("#toastText").textContent(), "Nicht gespeicherte Änderungen verworfen.", "Buttons müssen trotz sichtbarem Toast bedienbar bleiben");
+  await saveToast.waitFor({ state: "hidden", timeout: 3500 });
+
   assert.deepEqual(
     await page.evaluate(() => window.__beikostTest.getState().settings.handlingCapabilities),
     { smallSoftPieces: true, gradedBite: true, structuredChew: true },
@@ -182,6 +161,7 @@ try {
   assert.equal(await page.locator("#structuredChewCapability").isChecked(), true, "Structured-Chew-Fähigkeit muss Reload überleben");
 
   await page.locator('nav button[data-view="foods"]').click();
+  await page.locator("#foodFilters > .food-filter-toolbar > .food-primary-select > summary").click();
   await page.locator('#foodFilters button[data-filter="allergen"]').click();
   await page.locator("#foodSearch").fill("Ei");
   await page.locator('nav button[data-view="plan"]').click();
@@ -192,6 +172,7 @@ try {
   await page.locator('#catalogSwitch button[data-catalog-mode="recipes"]').click();
   assert.equal(await page.locator("#foodsCatalogSection").isHidden(), true, "Lebensmittelliste muss im Rezeptmodus ausgeblendet sein");
   assert.equal(await page.locator("#recipesSection").isVisible(), true, "Rezeptansicht muss im gemeinsamen Tab sichtbar sein");
+  await page.locator(".recipe-match-select > summary").click();
   await page.locator('#recipeFilter button[data-recipe-filter="all"]').click();
   await page.locator("#recipeSearch").fill("Banane");
   await page.locator('nav button[data-view="plan"]').click();
@@ -222,7 +203,7 @@ try {
   await page.locator('nav button[data-view="prep"]').click();
   await page.locator("#prepOpenFreezerRecipes").click();
   assert.equal(await page.locator("#recipesSection").isVisible(), true, "Gefrierschrank-Einstieg muss direkt die Rezeptansicht öffnen");
-  assert.ok(await page.locator('#recipeFilter button[data-recipe-filter="freezer"]').evaluate((button) => button.classList.contains("active")), "Gefrierschrank-Einstieg muss direkt den Einfrierbar-Filter öffnen");
+  assert.ok(await page.locator('[data-recipe-extra-filter="freezer"]').evaluate((button) => button.classList.contains("active")), "Gefrierschrank-Einstieg muss direkt den Einfrierbar-Detailfilter öffnen");
 
   await page.reload({ waitUntil: "load" });
   await waitForApp(page);
@@ -231,13 +212,11 @@ try {
   assert.ok(await page.locator('#foodFilters button[data-filter="open"]').evaluate((button) => button.classList.contains("active")), "Lebensmittelfilter muss nach Reload wieder auf Offen stehen");
   await page.locator('#catalogSwitch button[data-catalog-mode="recipes"]').click();
   assert.equal(await page.locator("#recipeSearch").inputValue(), "", "Rezeptsuche darf Reload nicht überleben");
-  assert.ok(await page.locator('#recipeFilter button[data-recipe-filter="available"]').evaluate((button) => button.classList.contains("active")), "Rezeptfilter muss nach Reload wieder auf Jetzt passend stehen");
+  assert.ok(await page.locator('#recipeFilter button[data-recipe-filter="almost"]').evaluate((button) => button.classList.contains("active")), "Rezeptfilter muss nach Reload wieder auf Fast passend stehen");
   assert.equal(await page.locator("#smallSoftPiecesCapability").isChecked(), true, "gespeicherte Small-Soft-Fähigkeit darf durch UI-Tab-State-Reset nicht verloren gehen");
   assert.equal(await page.locator("#gradedBiteCapability").isChecked(), true, "gespeicherte Graded-Bite-Fähigkeit darf durch UI-Tab-State-Reset nicht verloren gehen");
   assert.equal(await page.locator("#structuredChewCapability").isChecked(), true, "gespeicherte Structured-Chew-Fähigkeit darf durch UI-Tab-State-Reset nicht verloren gehen");
 
-  await context.close();
 } finally {
-  await browser.close();
-  await new Promise((resolve) => server.close(resolve));
+  await closeBrowserApp({ context: typeof context !== "undefined" ? context : null, browser, server });
 }

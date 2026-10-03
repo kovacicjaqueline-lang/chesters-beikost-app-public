@@ -3,8 +3,8 @@
 // PHASE-TRANSITION core: recommendation only. This module never mutates phaseSelected
 // and deliberately does not inspect age, grams, log counts, texture, inventory or planner locks.
 const PHASE_READINESS_RULES = Object.freeze({
-  kennenlernen: Object.freeze({ nextPhase: "aufbau", nextMeal: "breakfast" }),
-  aufbau: Object.freeze({ nextPhase: "drei", nextMeal: "dinner" }),
+  kennenlernen: Object.freeze({ nextPhase: "aufbau", nextMeal: "dinner" }),
+  aufbau: Object.freeze({ nextPhase: "drei", nextMeal: "breakfast" }),
   drei: Object.freeze({ nextPhase: "familie", nextMeal: "snack" }),
   familie: Object.freeze({ nextPhase: null, nextMeal: null }),
 });

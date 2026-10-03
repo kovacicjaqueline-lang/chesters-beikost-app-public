@@ -38,21 +38,56 @@ function inventoryUnitGrams(item) {
 function inventoryPortionCount(item) {
   return Math.max(0, Math.floor(Number(item?.portions) || 0));
 }
+let inventoryAggregateCache = new WeakMap();
+function inventoryRecipeKey(name) {
+  let canonical = typeof canonicalRecipeName === "function"
+    ? canonicalRecipeName(name || "")
+    : String(name || "");
+  return typeof normalizeName === "function" ? normalizeName(canonical) : canonical;
+}
+function inventoryAggregateIndex(inventory = typeof state !== "undefined" ? state.inventory : []) {
+  let list = Array.isArray(inventory) ? inventory : [];
+  let cached = inventoryAggregateCache.get(list);
+  if (cached?.length === list.length) return cached;
+  let byFoodId = new Map();
+  let byRecipeName = new Map();
+  for (let item of list) {
+    let portions = inventoryPortionCount(item);
+    if (portions <= 0) continue;
+    if (item.kind === "recipe") {
+      let name = inventoryRecipeKey(item.recipeName);
+      byRecipeName.set(name, (byRecipeName.get(name) || 0) + portions);
+      continue;
+    }
+    let current = byFoodId.get(item.foodId) || { grams: 0, portions: 0 };
+    current.portions += portions;
+    current.grams += portions * inventoryUnitGrams(item);
+    byFoodId.set(item.foodId, current);
+  }
+  cached = { length: list.length, byFoodId, byRecipeName };
+  inventoryAggregateCache.set(list, cached);
+  return cached;
+}
+function invalidateInventoryAggregateCache(inventory = typeof state !== "undefined" ? state.inventory : null) {
+  if (Array.isArray(inventory)) inventoryAggregateCache.delete(inventory);
+}
 function inventoryGrams(foodId) {
-  return state.inventory
-    .filter((i) => i.kind !== "recipe" && i.foodId === foodId)
-    .reduce((sum, i) => sum + inventoryPortionCount(i) * inventoryUnitGrams(i), 0);
+  return inventoryAggregateIndex().byFoodId.get(foodId)?.grams || 0;
 }
 function inventoryPortions(foodId) {
-  return state.inventory
-    .filter((i) => i.kind !== "recipe" && i.foodId === foodId)
-    .reduce((sum, i) => sum + inventoryPortionCount(i), 0);
+  return inventoryAggregateIndex().byFoodId.get(foodId)?.portions || 0;
+}
+function inventoryRecipePortions(recipeName) {
+  return inventoryAggregateIndex().byRecipeName.get(inventoryRecipeKey(recipeName)) || 0;
 }
 function formatPrepNumber(value) {
   let rounded = Math.round((Number(value) || 0) * 10) / 10;
   return Number.isInteger(rounded) ? String(rounded) : rounded.toLocaleString("de-AT", { maximumFractionDigits: 1 });
 }
 function completedLog(date, meal) {
+  if (typeof logIndexFor === "function") {
+    return (logIndexFor().byDateMealCompletion.get(`${date}|${meal}`) || [])[0] || null;
+  }
   return state.logs
     .filter(
       (l) =>
@@ -104,6 +139,7 @@ function consumeInventoryPortion(foodId) {
   batch.portions = Math.max(0, Number(batch.portions) - 1);
   if (batch.portions <= 0)
     state.inventory = state.inventory.filter((i) => i.id !== batch.id);
+  invalidateInventoryAggregateCache();
   return true;
 }
 function freshAtMealFood(f) {
@@ -133,9 +169,13 @@ function prepDemand() {
 function computePrepDemand() {
   let from = state.settings.planFrom || today();
   if (from < today()) from = today();
-  let days = typeof viewRenderBuildDays === "function"
-    ? viewRenderBuildDays(from, 7)
-    : buildDays(from, 7);
+  let days = typeof viewRenderPrepPlanDays === "function"
+    ? viewRenderPrepPlanDays(from, 7)
+    : typeof viewRenderPlanDays === "function"
+      ? viewRenderPlanDays(from, 7)
+    : typeof planDisplayDays === "function"
+      ? planDisplayDays(from, 7)
+      : buildDays(from, 7);
   let map = new Map();
   days.forEach((day) =>
     day.meals.forEach((meal) => {
@@ -213,20 +253,25 @@ function prepAdvice(f, demand) {
   return {mode:missingGrams?"Nach Bedarf":"Vorrat reicht",covered:missingGrams===0,headline:missingGrams?(f.prep||"Eine normale Kochmenge vorbereiten"):"Durch Vorrat gedeckt",recommendation:f.safeForm||"Altersgerecht weich zubereiten.",form:"Überschuss flexibel portionieren.",details:`${formatPrepNumber(requiredGrams)} g geplant, ${formatPrepNumber(availableGrams)} g vorhanden, ${formatPrepNumber(missingGrams)} g fehlen.`,available,missing,availableGrams,requiredGrams,missingGrams,inventorySize:standardPrepPortionSizeForFood(f),inventoryNote:"",inventoryPortions:4};
 }
 function prepItems() {
-  let demands = typeof viewRenderPrepDemand === "function" ? viewRenderPrepDemand() : prepDemand();
-  return demands
-    .map((demand) => {
-      let f = food(demand.foodId);
-      return f ? { f, demand, advice: prepAdvice(f, demand) } : null;
-    })
-    .filter(Boolean)
-    .sort((a, b) => {
-      let score = (x) =>
-        (x.advice.covered ? 3 : 0) +
-        (x.advice.mode === "Frisch" ? 2 : 0) +
-        (x.advice.mode.includes("Trocken") || x.advice.mode === "Je nach Form" ? 1 : 0);
-      return score(a) - score(b) || a.demand.firstDate.localeCompare(b.demand.firstDate);
-    });
+  let compute = () => {
+    let demands = typeof viewRenderPrepDemand === "function" ? viewRenderPrepDemand() : prepDemand();
+    return demands
+      .map((demand) => {
+        let f = food(demand.foodId);
+        return f ? { f, demand, advice: prepAdvice(f, demand) } : null;
+      })
+      .filter(Boolean)
+      .sort((a, b) => {
+        let score = (x) =>
+          (x.advice.covered ? 3 : 0) +
+          (x.advice.mode === "Frisch" ? 2 : 0) +
+          (x.advice.mode.includes("Trocken") || x.advice.mode === "Je nach Form" ? 1 : 0);
+        return score(a) - score(b) || a.demand.firstDate.localeCompare(b.demand.firstDate);
+      });
+  };
+  return typeof memoizeViewRenderValue === "function"
+    ? memoizeViewRenderValue("prepItems", compute)
+    : compute();
 }
 function shoppingQuantity(f) {
   let n=normalizeName(f.name);
@@ -347,7 +392,8 @@ function calculateBatch() {
           frozenDate: today(),
           note: "Restportion aus derselben Kochmenge",
         });
-      save();
+      invalidateInventoryAggregateCache();
+      save({ preservePlanCache: true });
       renderAll();
       showToast(`${storedPortions} ${storedPortions === 1 ? "Portion" : "Portionen"} ${f.name} zum Vorrat hinzugefügt.`);
     };
@@ -376,6 +422,10 @@ function bindRecipeStockButtons() {
   );
 }
 function renderPrepCore() {
+  if (typeof plannerViewReady === "function" && !plannerViewReady()) {
+    renderPlannerReadinessPlaceholder("prep");
+    return;
+  }
   populateBatchCalculator();
   let items = prepItems();
   let actionable = items.filter(
@@ -391,7 +441,16 @@ function renderPrepCore() {
       freshAtMealFood(x.f) &&
       x.demand.requiredGrams > x.demand.reservedGrams,
   );
-  let days = (typeof viewRenderBuildDays === "function" ? viewRenderBuildDays : buildDays)(
+  let buildPrepDisplayDays = typeof viewRenderPrepPlanDays === "function"
+    ? viewRenderPrepPlanDays
+    : typeof viewRenderPlanDays === "function"
+      ? viewRenderPlanDays
+      : typeof planDisplayDays === "function"
+        ? planDisplayDays
+        : typeof viewRenderBuildDays === "function"
+          ? viewRenderBuildDays
+          : buildDays;
+  let days = buildPrepDisplayDays(
     state.settings.planFrom && state.settings.planFrom >= today()
       ? state.settings.planFrom
       : today(),
@@ -547,18 +606,8 @@ function renderPrepCore() {
         )
         .join("")
     : '<div class="empty">Noch kein einfrierbares Rezept hinterlegt.</div>';
-  document.getElementById("prepOpenFreezerRecipes").onclick = () => {
-    recipeFilter = "freezer";
-    showView("more");
-    setTimeout(() => {
-      renderPrep();
-      let details = document.getElementById("recipesDetails");
-      if (details) details.open = true;
-      document
-        .getElementById("recipesSection")
-        ?.scrollIntoView({ behavior: "smooth" });
-    }, 80);
-  };
+  // Navigation in den Rezeptkatalog wird zentral in catalog-navigation.js gebunden.
+  // Der alte Handler darf den neuen Einfrierbar-Detailfilter nicht überschreiben.
 
   let guides = [
     ["Reis", "Sehr weich kochen und pur einfrieren. Innerhalb 1 Stunde abkühlen; nur einmal wieder erhitzen."],
@@ -634,7 +683,8 @@ function renderPrepCore() {
       (button.onclick = () => {
         let id = button.closest("[data-inv]").dataset.inv;
         state.inventory = state.inventory.filter((i) => i.id !== id);
-        save();
+        invalidateInventoryAggregateCache();
+        save({ preservePlanCache: true });
         renderAll();
       }),
   );
@@ -643,87 +693,15 @@ function renderPrepCore() {
       (button.onclick = () => {
         let id = button.closest("[data-inv]").dataset.inv;
         if (!consumeInventoryItem(id)) return;
-        save();
+        save({ preservePlanCache: true });
         renderAll();
         showToast("Eine Vorratsportion verbraucht.");
       }),
   );
 
-  let filterBar = document.getElementById("recipeFilter");
-  let search = document.getElementById("recipeSearch");
-  if (filterBar) {
-    filterBar.querySelectorAll("[data-recipe-filter]").forEach((button) =>
-      button.classList.toggle("active", button.dataset.recipeFilter === recipeFilter),
-    );
-  }
-  if (search) search.value = recipeQuery;
-  let q = normalizeName(recipeQuery);
-  let rs = allRecipeStates.filter((r) => {
-    let categoryMatch =
-      recipeFilter === "available"
-        ? r.unlocked
-        : recipeFilter === "almost"
-          ? r.almost
-          : recipeFilter === "all"
-            ? true
-            : recipeFilter === "pantry"
-              ? (r.requires || []).every((name) => {
-                  let f = state.foods.find((x) => x.name === name);
-                  return f && (inventoryPortions(f.id) > 0 || state.pantry[f.id]);
-                })
-              : recipeFilter === "freezer"
-                ? !!r.freezable
-                : recipeFilter === "philippines"
-                  ? r.ph || r.category === "philippines"
-                  : recipeFilter === "snack"
-                    ? (r.tags || []).some((tag) => normalizeName(tag) === "snack")
-                    : r.category === recipeFilter;
-    if (!categoryMatch) return false;
-    if (!q) return true;
-    return normalizeName(recipeSearchText(r)).includes(q);
-  });
-  let countBox = document.getElementById("recipeCount");
-  if (countBox) {
-    let context = recipeFilter === "almost"
-      ? "es fehlen höchstens zwei Schritte"
-      : recipeFilter === "snack"
-        ? "Snack"
-        : "passend zu Filter und Suche";
-    countBox.textContent = `${rs.length} Rezept${rs.length === 1 ? "" : "e"} · ${context}`;
-  }
-  let recipeEmptyMode = q || recipeFilter !== "available"
-    ? "reset"
-    : allRecipeStates.some((item) => item.almost)
-      ? "almost"
-      : "all";
-  let recipeEmptyLabel = recipeEmptyMode === "reset"
-    ? "Filter zurücksetzen"
-    : recipeEmptyMode === "almost"
-      ? "Fast passende Rezepte anzeigen"
-      : "Alle Rezepte anzeigen";
-  document.getElementById("recipeList").innerHTML = rs.length
-    ? rs.map(renderRecipeCard).join("")
-    : `<div class="empty ds-empty"><div>Keine Rezepte für diesen Filter gefunden.</div><button class="btn" id="recipeEmptyAction" type="button">${recipeEmptyLabel}</button></div>`;
-  document.getElementById("recipeEmptyAction")?.addEventListener("click", () => {
-    recipeQuery = "";
-    if (recipeEmptyMode === "almost") recipeFilter = "almost";
-    else if (recipeEmptyMode === "all") recipeFilter = "all";
-    else recipeFilter = "available";
-    renderPrep();
-  });
-  if (filterBar) {
-    filterBar.querySelectorAll("[data-recipe-filter]").forEach((button) => {
-      button.onclick = () => {
-        recipeFilter = button.dataset.recipeFilter;
-        renderPrep();
-      };
-    });
-  }
-  if (search)
-    search.oninput = (e) => {
-      recipeQuery = e.target.value;
-      renderPrep();
-    };
+  // Recipe catalog rendering belongs to catalog-performance.js. Rebuilding
+  // every recipe card here made opening Prep pay for an unrelated full view.
+  // Keep Prep's own recommendations above; the catalog renders when opened.
   bindRecipeStockButtons();
 }
 function recipeIngredientReady(name) {
@@ -732,6 +710,9 @@ function recipeIngredientReady(name) {
 }
 
 function renderPrep() {
+  if (typeof plannerViewReady === "function" && !plannerViewReady()) {
+    return renderPlannerReadinessPlaceholder("prep");
+  }
   let render = () => {
     renderPrepCore();
     let shoppingBox = document.getElementById("shoppingList");

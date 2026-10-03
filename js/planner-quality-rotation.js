@@ -56,10 +56,79 @@ function plannerQualityRelatedIds(foodRecord, foods = [], relatedFn = null) {
 
 function plannerQualityEnsureContext(ctx) {
   if (!ctx) return ctx;
+  ctx.plannedUse ||= new Map();
+  ctx.lastFocus ||= new Map();
+  ctx.recipePlannedUse ||= new Map();
+  ctx.recipeLastUse ||= new Map();
   ctx.qualityFoodUse ||= new Map();
   ctx.qualityLastFoodUse ||= new Map();
   ctx.qualityPairUse ||= new Map();
   ctx.qualityDuePlanned ||= new Set();
+  ctx.qualityKeptSeededDates ||= new Set();
+  return ctx;
+}
+
+function plannerQualityKeptPlanInstances(stateValue, date) {
+  let handled = stateValue?.backupMeta?.plannerLinking?.rolloverHandled;
+  if (!handled || typeof handled !== "object" || Array.isArray(handled)) return [];
+
+  let candidates = [];
+  for (let [key, plan] of Object.entries(stateValue?.planLocks || {})) {
+    let [planDate, meal] = key.split("|");
+    candidates.push({ ...(plan || {}), date: plan?.date || planDate, meal: plan?.meal || meal });
+  }
+  for (let [key, plan] of Object.entries(stateValue?.manualMeals || {})) {
+    let [planDate, meal] = key.split("|");
+    candidates.push({ ...(plan || {}), date: plan?.date || planDate, meal: plan?.meal || meal });
+  }
+  for (let plan of Object.values(stateValue?.backupMeta?.plannerLinking?.carriedPlans || {})) {
+    candidates.push({ ...(plan || {}) });
+  }
+
+  let seen = new Set();
+  return candidates.filter((plan) => {
+    let planId = String(plan?.planId || "");
+    if (!planId || seen.has(planId)) return false;
+    if (plan.date !== date || handled[planId]?.action !== "keep") return false;
+    seen.add(planId);
+    return true;
+  });
+}
+
+function plannerQualityPreviousDate(date) {
+  let [year, month, day] = String(date || "").split("-").map(Number);
+  if (![year, month, day].every(Number.isFinite)) return "";
+  let value = new Date(Date.UTC(year, month - 1, day - 1));
+  return value.toISOString().slice(0, 10);
+}
+
+function plannerQualitySeedKeptPlans(ctx, date, stateValue) {
+  if (!ctx || !date) return ctx;
+  plannerQualityEnsureContext(ctx);
+  if (ctx.qualityKeptSeededDates.has(date)) return ctx;
+  ctx.qualityKeptSeededDates.add(date);
+
+  for (let plan of plannerQualityKeptPlanInstances(stateValue, plannerQualityPreviousDate(date))) {
+    let ids = [...new Set(plan.foodIds || [])].filter(Boolean);
+    if (!ids.length && plan.focusId) ids = [plan.focusId];
+    if (!ids.length) continue;
+    if (plan.focusId) {
+      ctx.plannedUse.set(plan.focusId, (ctx.plannedUse.get(plan.focusId) || 0) + 1);
+      ctx.lastFocus.set(plan.focusId, plan.date);
+    }
+    if (plan.recipeName) {
+      ctx.recipePlannedUse.set(
+        plan.recipeName,
+        (ctx.recipePlannedUse.get(plan.recipeName) || 0) + 1,
+      );
+      ctx.recipeLastUse.set(plan.recipeName, plan.date);
+    }
+    plannerQualityRecordMeal(
+      { ...plan, active: true, foodIds: ids },
+      plan.date,
+      ctx,
+    );
+  }
   return ctx;
 }
 
@@ -96,6 +165,17 @@ function plannerQualityRecordMeal(
   return ctx;
 }
 
+function plannerQualityMarkMealInProgress(meal, date, ctx) {
+  if (!meal?.active || meal.empty || !ctx || !date) return ctx;
+  plannerQualityEnsureContext(ctx);
+  // buildDay selects slots in order; publish only recency here so later slots
+  // can rotate. Counts and pair statistics are still recorded once afterward.
+  for (let id of new Set(meal.foodIds || [])) {
+    if (id) ctx.qualityLastFoodUse.set(id, date);
+  }
+  return ctx;
+}
+
 function plannerQualityRecencyBucket(lastDateValue, on, diffFn) {
   if (!lastDateValue || typeof diffFn !== "function") return 0;
   let distance = Number(diffFn(on, lastDateValue));
@@ -106,12 +186,13 @@ function plannerQualityRecencyBucket(lastDateValue, on, diffFn) {
   return 0;
 }
 
-function plannerQualityCandidateTuple(result, index, ctx, on, diffFn, focusId = "") {
+function plannerQualityCandidateTuple(result, index, ctx, on, diffFn, focusId = "", optionCount = 1) {
   let id = result?.f?.id || "";
   let pairUse = focusId ? Number(ctx?.qualityPairUse?.get(plannerQualityPairKey(focusId, id)) || 0) : 0;
   let recency = plannerQualityRecencyBucket(ctx?.qualityLastFoodUse?.get(id), on, diffFn);
   let use = Number(ctx?.qualityFoodUse?.get(id) || 0);
-  return [pairUse, recency, use, index];
+  let generation = Math.max(0, Number(ctx?.qualityReplanGeneration) || 0);
+  return [pairUse, recency, use, (index + generation) % Math.max(1, optionCount)];
 }
 
 function plannerQualityCompareTuple(a, b) {
@@ -125,8 +206,27 @@ function plannerQualityCompareTuple(a, b) {
 function plannerQualityChooseResult(results, ctx, on, diffFn, focusId = "") {
   if (!Array.isArray(results) || !results.length) return null;
   return results
-    .map((result, index) => ({ result, tuple: plannerQualityCandidateTuple(result, index, ctx, on, diffFn, focusId) }))
+    .map((result, index) => ({ result, tuple: plannerQualityCandidateTuple(result, index, ctx, on, diffFn, focusId, results.length) }))
     .sort((a, b) => plannerQualityCompareTuple(a.tuple, b.tuple))[0]?.result || null;
+}
+
+function plannerQualityCompanionResults(results, ctx, on, diffFn) {
+  if (!Array.isArray(results) || results.length < 2 || typeof diffFn !== "function") return results || [];
+  let rotated = results.filter((result) => {
+    let id = result?.f?.id || result?.id || "";
+    if (!id) return false;
+    let last = ctx?.qualityLastFoodUse?.get(id);
+    if (!last) return true;
+    let distance = Number(diffFn(on, last));
+    return !Number.isFinite(distance) || distance > 1;
+  });
+  return rotated.length ? rotated : results;
+}
+
+// Backward-compatible name for callers/tests that used the original
+// breakfast-specific helper before rotation became a general companion policy.
+function plannerQualityBreakfastCompanionResults(results, ctx, on, diffFn) {
+  return plannerQualityCompanionResults(results, ctx, on, diffFn);
 }
 
 function plannerQualityKnownCandidatePriorityTuple(
@@ -166,6 +266,8 @@ function plannerQualityKnownCandidatePriorityTuple(
 
   return [
     recentFocusPenalty,
+    Number(effectivePriorityFn(item, on) || 0) - (Number(item.priority) || 0),
+    plannerQualityRecencyBucket(ctx?.qualityLastFoodUse?.get(item.id), on, diffFn),
     inventoryPreference,
     Number(ctx?.plannedUse?.get(item.id) || 0),
     Number(usageCountFn(item.id) || 0),
@@ -177,8 +279,10 @@ function plannerQualityChooseKnownResult(results, ctx, on, diffFn, priorityOptio
   if (!Array.isArray(results) || !results.length) return null;
   if (results.length < 2) return results[0] || null;
 
-  let baseline = plannerQualityKnownCandidatePriorityTuple(results[0], on, ctx, priorityOptions);
-  if (!baseline) return results[0] || null;
+  let ranked = results.map((result) => ({ result, tuple: plannerQualityKnownCandidatePriorityTuple(result, on, ctx, priorityOptions) }));
+  if (ranked.some((entry) => !entry.tuple)) return results[0] || null;
+  ranked.sort((a, b) => plannerQualityCompareTuple(a.tuple, b.tuple));
+  let baseline = ranked[0].tuple;
   let samePriority = results.filter((result) => {
     let tuple = plannerQualityKnownCandidatePriorityTuple(result, on, ctx, priorityOptions);
     return tuple && plannerQualityCompareTuple(tuple, baseline) === 0;
@@ -243,6 +347,17 @@ function installPlannerQualityRotationRuntime() {
   let originalPlanQualityIssues = planQualityIssues;
   let activeQualityContext = null;
   let activeDueFood = null;
+
+  globalThis.plannerQualityWithActiveContext = function plannerQualityWithActiveContext(ctx, callback) {
+    if (typeof callback !== "function") return undefined;
+    let previous = activeQualityContext;
+    activeQualityContext = ctx || previous;
+    try {
+      return callback();
+    } finally {
+      activeQualityContext = previous;
+    }
+  };
 
   let relatedIdsFor = (item) => plannerQualityRelatedIds(
     item,
@@ -340,6 +455,17 @@ function installPlannerQualityRotationRuntime() {
     let results = collectCompanionResults(focus, meal, on, focusType);
     if (results.length < 2) return results[0]?.f || null;
 
+    // Begleiter dürfen in keiner relevanten automatischen Mahlzeit täglich
+    // denselben Partner wiederholen, wenn eine gleich zulässige Alternative
+    // vorhanden ist. Der Fallback auf die vollständige Liste bleibt wichtig,
+    // wenn tatsächlich nur ein FOOD verfügbar ist.
+    results = plannerQualityCompanionResults(
+      results,
+      activeQualityContext,
+      on,
+      diffDays,
+    );
+
     if (typeof plannerAutomaticPairPreferencePenalty === "function") {
       let baseline = plannerAutomaticPairPreferencePenalty(focus, results[0].f, meal);
       let sameTier = results.filter((entry) => plannerAutomaticPairPreferencePenalty(focus, entry.f, meal) <= baseline);
@@ -351,7 +477,9 @@ function installPlannerQualityRotationRuntime() {
   };
 
   freshPlanContext = function plannerQualityFreshPlanContext() {
-    return plannerQualityEnsureContext(originalFreshPlanContext());
+    let ctx = plannerQualityEnsureContext(originalFreshPlanContext());
+    ctx.qualityReplanGeneration = Math.max(0, Number(state?.settings?.planRebuildGeneration) || 0);
+    return ctx;
   };
 
   let presetMealsFor = (date) => ["breakfast", "lunch", "snack", "dinner"]
@@ -394,6 +522,7 @@ function installPlannerQualityRotationRuntime() {
 
   buildDay = function plannerQualityBuildDay(date, index, ctx) {
     plannerQualityEnsureContext(ctx);
+    plannerQualitySeedKeptPlans(ctx, date, state);
     let presetMeals = presetMealsFor(date);
     let presetLearning = presetMeals.some(plannerQualityMealConsumesLearningSlot);
     let forcedOverride = forcedLearningOverride(date);
@@ -475,11 +604,17 @@ if (typeof module !== "undefined" && module.exports) {
     plannerQualityPairKey,
     plannerQualityRelatedIds,
     plannerQualityEnsureContext,
+    plannerQualityKeptPlanInstances,
+    plannerQualityPreviousDate,
+    plannerQualitySeedKeptPlans,
     plannerQualityRecordMeal,
+    plannerQualityMarkMealInProgress,
     plannerQualityRecencyBucket,
     plannerQualityCandidateTuple,
     plannerQualityCompareTuple,
     plannerQualityChooseResult,
+    plannerQualityCompanionResults,
+    plannerQualityBreakfastCompanionResults,
     plannerQualityKnownCandidatePriorityTuple,
     plannerQualityChooseKnownResult,
     plannerQualityNormalizeQualityDays,

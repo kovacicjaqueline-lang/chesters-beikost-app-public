@@ -17,9 +17,11 @@ Zusätzlich existiert `Pausiert` als Sonderstatus.
 - `Bekannt`: mindestens zwei getrennte `Gegessen`-Expositionen.
 - `Pausiert`: Sonderstatus, insbesondere nach dokumentierter Reaktion bzw. manueller Pause.
 
+Ein manuell gesetztes `Probiert` bewahrt den bekannten Ausgangsstand, sperrt aber keine spätere automatische Hochstufung: Sobald die protokollierten Gaben die Schwelle zu `Bekannt` erfüllen, gilt `Bekannt`. Eine dokumentierte Reaktion führt auch bei manuellem `Probiert` zu `Pausiert`. `Probiert` zählt dabei selbst nicht als protokollierte `Gegessen`-Exposition.
+
 `Regelmäßig` entfällt vollständig. Frühere Werte `Vertragen`, `Verträgliche Basis` und `Regelmäßig` werden bei der Migration kompatibel als `Bekannt` übernommen.
 
-`Probiert` und `Gegessen` bleiben Log-Ereignisse und werden nicht zu zusätzlichen Statusstufen. Mehrfaches `Probiert` darf als Erfahrung gezählt und angezeigt werden, führt aber nicht automatisch zu `Bekannt`. Drei oder mehr `Gegessen`-Expositionen erzeugen keinen weiteren Status. Für den Status gibt es kein Datums- oder Recency-Kriterium.
+`Probiert` ist weiterhin ein abgeleiteter Lebensmittelstatus, aber kein Protokollausgang mehr. Historische `tried`-Ereignisse werden beim Laden zu `eaten` migriert. Drei oder mehr `Gegessen`-Expositionen erzeugen keinen weiteren Status. Für den Status gibt es kein Datums- oder Recency-Kriterium.
 
 ## Planner-Vertrag
 

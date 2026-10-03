@@ -70,12 +70,19 @@ const RECIPE_CONTRACT_GROUPS = Object.freeze({
     "Fleisch-Gemüse-Bällchen",
     "Grießschnitten ohne Panade",
     "Apfel-Milchreisschnitten",
+    "Bananen-Hirseschnitten",
     "Bananen-French-Toast-Finger",
     "Gemüse-Couscous-Schnitten",
     "Bunte Gemüse-Nuggets",
-    "Weiche Gemüse-Reis-Finger"
+    "Weiche Gemüse-Reis-Finger",
+    "Quinoa-Huhn-Süßkartoffel-Finger",
+    "Quinoa-Gemüse-Puffer",
+    "Bulgur-Gemüse-Köfte",
+    "Forelle-Kartoffel-Bällchen",
+    "Kabeljau-Süßkartoffel-Fischküchlein"
   ]),
   fingerEasyChew: Object.freeze([
+    "Herzhafte Hirseschnitten",
     "Obst-Hafer-Pancakes",
     "Birne-Hirse-Pancakes",
     "Gemüse-Hafer-Pancakes",
@@ -137,7 +144,8 @@ const RECIPE_CONTRACT_GROUPS = Object.freeze({
     "Obst-Grieß-Joghurt",
     "Buttermilch-Hafer-Obstbrei",
     "Buttermilch-Hirse-Obstbrei",
-    "Buttermilch-Grieß-Obstbrei"
+    "Buttermilch-Grieß-Obstbrei",
+    "Gemüse-Reis-Brei"
   ]),
   spoonSoftLumpyLater: Object.freeze([
     "Gemüse-Nudel-Sauce",
@@ -154,7 +162,10 @@ const RECIPE_CONTRACT_GROUPS = Object.freeze({
     "Huhn-Spinat-Quinoa-Auflauf",
     "Lachs-Brokkoli-Kartoffel-Auflauf",
     "Mildes Bohnen-Süßkartoffel-Chili",
-    "Gefüllte Paprika mit Linsenreis"
+    "Gefüllte Paprika mit Linsenreis",
+    "Quinoa-Linsen-Gemüse-Khichdi",
+    "Bulgur-Zucchini-Ei",
+    "Bulgur-Linsen-Suppe"
   ]),
   spoonMash: Object.freeze([
     "Lugaw-Basis",
@@ -171,7 +182,10 @@ const RECIPE_CONTRACT_GROUPS = Object.freeze({
     "Joghurt-Nussmus-Miniportion",
     "Karotten-Linsen-Aufstrich",
     "Weiße-Bohnen-Paprika-Aufstrich",
-    "Erbsen-Basilikum-Pesto ohne Salz"
+    "Erbsen-Basilikum-Pesto ohne Salz",
+    "Apfel-Pflaumen-Kompott",
+    "Birne-Pfirsich-Kompott",
+    "Mango-Bananen-Creme"
   ]),
   spoonMashLumpy: Object.freeze([
     "Arroz-caldo-inspiriert",
@@ -179,12 +193,14 @@ const RECIPE_CONTRACT_GROUPS = Object.freeze({
     "Karfiol-Kartoffel-Stampf",
     "Erbsen-Kartoffel-Stampf",
     "Kürbis-Linsen-Suppe",
+    "Hirsotto",
     "Huhn-Brokkoli-Reis",
     "Lachs-Reis-Erbsen",
     "Kabeljau-Tomaten-Gemüse",
     "Weiches Rührei",
     "Tofu-Zucchini-Reis",
-    "Bohnen-Kartoffel-Stampf"
+    "Bohnen-Kartoffel-Stampf",
+    "Kartoffel-Karotten-Stampf"
   ]),
   fingerEasyLater: Object.freeze([
     "Ei-Champignon-Cups"
@@ -197,6 +213,32 @@ const RECIPE_CONTRACT_GROUPS = Object.freeze({
 });
 
 const RECIPE_CONTRACT_OVERRIDES = Object.freeze({
+  "Forelle-Kartoffel-Bällchen": Object.freeze({
+    servingRequirement: "Vollständig garen und sorgfältig auf Gräten prüfen. Flach oder länglich statt fest rund formen; weich, feucht und ohne harte Kruste anbieten. Der Bissen muss zwischen zwei Fingern leicht zerdrückbar sein.",
+    noteOverride: "Forelle vollständig garen und sehr sorgfältig auf Gräten prüfen. Kartoffel weich garen und fein zerdrücken. Fisch fein zerpflücken, mit Kartoffel, Ei, Haferflocken und Petersilie vermengen, flache oder längliche Bällchen formen und vollständig durchgaren. Keine harte Kruste und kein Salz; vor dem Servieren die weiche, leicht zerdrückbare Konsistenz prüfen.",
+  }),
+  "Kabeljau-Süßkartoffel-Fischküchlein": Object.freeze({
+    servingRequirement: "Vollständig garen und sorgfältig auf Gräten prüfen. Als flache, weiche Küchlein ohne harte Kruste anbieten; der Bissen muss zwischen zwei Fingern leicht zerdrückbar sein.",
+    noteOverride: "Kabeljau vollständig garen und sorgfältig auf Gräten prüfen. Süßkartoffel weich garen und fein zerdrücken. Fisch fein zerpflücken, mit Süßkartoffel, Ei, Haferflocken und Petersilie vermengen, flache Küchlein formen und vollständig durchgaren. Die Oberfläche darf nicht hart und die Mitte nicht trocken oder kompakt werden; ohne Salz anbieten.",
+  }),
+  "Quinoa-Huhn-Süßkartoffel-Finger": Object.freeze({
+    servingRequirement: "Flach und fingerlang anbieten; das Stück muss zwischen zwei Fingern leicht zerdrückbar sein. Vollständig durchgegart, feucht und ohne harte Kruste servieren.",
+  }),
+  "Quinoa-Gemüse-Puffer": Object.freeze({
+    servingRequirement: "Sehr weich und flach als kleine Puffer anbieten; sie müssen zwischen zwei Fingern leicht zerdrückbar sein. Keine harte Kruste und keine trockene Mitte.",
+  }),
+  "Bulgur-Gemüse-Köfte": Object.freeze({
+    servingRequirement: "Als kleine flache, ovale und sehr weiche Stücke anbieten; keine festen runden Kugeln. Das Stück muss zwischen zwei Fingern leicht zerdrückbar sein.",
+  }),
+  "Quinoa-Linsen-Gemüse-Khichdi": Object.freeze({
+    servingRequirement: "Quinoa, Linsen und Gemüse vollständig weich garen und feucht vom Löffel anbieten. Bei Bedarf weich zerdrücken; keine trockenen Körner und keine gesalzene Brühe.",
+  }),
+  "Bulgur-Zucchini-Ei": Object.freeze({
+    servingRequirement: "Bulgur und Zucchini vollständig weich garen, das Ei vollständig stocken lassen und die feuchte Mischung weich vom Löffel anbieten. Keine trockenen Körner und kein Salz.",
+  }),
+  "Bulgur-Linsen-Suppe": Object.freeze({
+    servingRequirement: "Bulgur, Linsen, Tomate und Karotte vollständig weich kochen und einen Teil zerdrücken, damit keine harten losen Körner bleiben. Feucht vom Löffel anbieten; keine gesalzene Brühe.",
+  }),
   "Rind-Hafer-Bällchen": Object.freeze({
     servingRequirement: "Sehr weich, saftig und flach oder länglich anbieten; keine runden festen Kugeln und keine harte Kruste. Der abgetrennte Bissen bleibt strukturiert und muss anschließend sicher im Mund positioniert und wiederholt zerkleinert werden können.",
   }),
@@ -230,6 +272,9 @@ const RECIPE_CONTRACT_OVERRIDES = Object.freeze({
   "Ei-Champignon-Cups": Object.freeze({
     servingRequirement: "Vollständig durchbacken und weich halten; Champignons sehr fein und weich vorbereiten. Die Cup-Form bleibt die kanonische Form; keine harte oder trockene Kruste.",
   }),
+  "Hirsotto": Object.freeze({
+    servingRequirement: "Sehr weich und feucht als cremige, risottoartige Löffelmahlzeit anbieten. Je nach Phase fein pürieren, grob zerdrücken oder weich strukturiert servieren; Hirse und rote Linsen müssen vollständig weich sein. Butter und Öl vollständig einrühren und nur salzfreie Brühe verwenden.",
+  }),
   "Weiche Joghurt-Fladen": Object.freeze({
     servingRequirement: "Vollständig, aber weich durchbacken; die Mitte darf nicht roh, klebrig oder teigig bleiben und es darf keine harte Kruste entstehen. Der abgetrennte Bissen bleibt zusammenhängend und verlangt anschließend sicheres strukturiertes Kauen.",
     noteOverride: "Kleine flache Portionen vollständig, aber weich durchbacken. Die Mitte muss vollständig durchgegart und darf nicht klebrig oder teigig sein; keine harte oder dunkle Kruste.",
@@ -260,8 +305,14 @@ const RECIPE_CONTRACT_OVERRIDES = Object.freeze({
   "Grießschnitten ohne Panade": Object.freeze({
     servingRequirement: "Sehr weich und feucht als handlange Sticks anbieten; ohne Panade, harte Kanten oder trockene Kruste. Die Schnitte muss zwischen zwei Fingern leicht zerdrückbar sein.",
   }),
+  "Herzhafte Hirseschnitten": Object.freeze({
+    servingRequirement: "Als breite, gut greifbare Sticks anbieten. Die Hirse muss vollständig weich gekocht und die Schnitten vollständig durchgebacken, feucht und ohne harte oder dunkle Kruste sein. Vor dem Servieren prüfen, dass sich ein Stick zwischen zwei Fingern leicht zerdrücken lässt; nur aufrecht sitzend und direkt beaufsichtigt anbieten.",
+  }),
   "Apfel-Milchreisschnitten": Object.freeze({
     servingRequirement: "Feucht und weich als breite Sticks anbieten; keine klebrig-kompakte Masse und keine kleinen runden Reisstücke.",
+  }),
+  "Bananen-Hirseschnitten": Object.freeze({
+    servingRequirement: "Als breite, sehr weiche Schnitten anbieten. Die Hirse muss vollständig weich und die Masse feucht gebunden sein; die Schnitte muss zwischen zwei Fingern leicht zerdrückbar bleiben. Keine trockenen oder harten Kanten und keine ganzen oder gehackten Nüsse.",
   }),
   "Apfel-Bananen-Baked-Oatmeal": Object.freeze({
     servingRequirement: "Zunächst löffelbar und feucht anbieten; spätere Stücke müssen weich zerdrückbar bleiben. Nicht trocken ausbacken.",
@@ -310,6 +361,21 @@ const RECIPE_CONTRACT_OVERRIDES = Object.freeze({
   }),
   "Gefüllte Paprika mit Linsenreis": Object.freeze({
     servingRequirement: "Paprika sehr weich und ohne harte Haut anbieten. Füllung weich garen und Babyportion in kleine, leicht zerdrückbare Stücke teilen.",
+  }),
+  "Apfel-Pflaumen-Kompott": Object.freeze({
+    servingRequirement: "Sehr weich dünsten und glatt pürieren oder passend zur aktuellen Konsistenz zerdrücken. Ohne Zucker, Honig und Salz vom Löffel anbieten.",
+  }),
+  "Birne-Pfirsich-Kompott": Object.freeze({
+    servingRequirement: "Sehr weich dünsten und glatt pürieren oder passend zur aktuellen Konsistenz zerdrücken. Ohne Zucker, Honig und Salz vom Löffel anbieten.",
+  }),
+  "Mango-Bananen-Creme": Object.freeze({
+    servingRequirement: "Reife Früchte glatt pürieren oder sehr fein zerdrücken und frisch vom Löffel anbieten. Keine zusätzlichen Süßungsmittel; bei nicht sofortigem Servieren gekühlt aufbewahren.",
+  }),
+  "Kartoffel-Karotten-Stampf": Object.freeze({
+    servingRequirement: "Kartoffel und Karotte vollständig weich garen und glatt pürieren oder weich zerdrücken. Feucht vom Löffel anbieten; Rapsöl erst in die servierte Portion geben. Keine Brühe und kein Salz.",
+  }),
+  "Gemüse-Reis-Brei": Object.freeze({
+    servingRequirement: "Reis und Gemüse vollständig weich garen und glatt pürieren oder weich zerdrücken. Feucht vom Löffel anbieten; keine trockenen Körner und keine gesalzene Brühe. Rapsöl erst in die servierte Portion geben.",
   }),
 });
 

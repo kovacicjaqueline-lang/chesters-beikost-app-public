@@ -629,18 +629,28 @@
     state.planLocks[key] = snapshot;
     delete state.overrides?.[key];
     delete state.autoLockExcluded?.[key];
-    save();
-    renderAll();
-    for (const button of globalScope.document?.querySelectorAll?.("#blockPlan .logMeal[data-plan]") || []) {
-      try {
-        const payload = JSON.parse(decodeURIComponent(button.dataset.plan || ""));
-        const preserved = preservedVisiblePlanIds.get(slotKey(payload.date, payload.meal));
-        if (preserved && slotKey(payload.date, payload.meal) !== key) {
-          payload.planId = preserved;
-          payload.plannedMealId = preserved;
-          button.dataset.plan = encodeURIComponent(JSON.stringify(payload));
-        }
-      } catch (_) {}
+    const preserveRenderedPlanIds = () => {
+      for (const button of globalScope.document?.querySelectorAll?.("#blockPlan .logMeal[data-plan]") || []) {
+        try {
+          const payload = JSON.parse(decodeURIComponent(button.dataset.plan || ""));
+          const preserved = preservedVisiblePlanIds.get(slotKey(payload.date, payload.meal));
+          if (preserved && slotKey(payload.date, payload.meal) !== key) {
+            payload.planId = preserved;
+            payload.plannedMealId = preserved;
+            button.dataset.plan = encodeURIComponent(JSON.stringify(payload));
+          }
+        } catch (_) {}
+      }
+    };
+    const persistAndRefresh = () => {
+      save();
+      renderAll();
+    };
+    if (typeof runWithDeferredCurrentViewRender === "function") {
+      runWithDeferredCurrentViewRender(persistAndRefresh, preserveRenderedPlanIds);
+    } else {
+      persistAndRefresh();
+      preserveRenderedPlanIds();
     }
     showToast("Mahlzeit getauscht. Der restliche Wochenplan bleibt unverändert.");
     return { ok: true, meal: snapshot };

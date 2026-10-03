@@ -300,6 +300,7 @@
   let baseBuildDay = buildDay;
   let baseBuildDays = buildDays;
   let maintenanceBuildRange = null;
+  let maintenanceDueCache = null;
 
   function runtimeHelpers() {
     return {
@@ -309,18 +310,25 @@
   }
 
   function runtimeDueTargets(on, ctx) {
-    return CORE.dueTargets({
-      foods: state.foods,
-      logs: state.logs,
-      on,
-      intervalDays: Number(state.settings.allergenDays) || 7,
-      rankFn: (foodRecord) => rank(foodRecord),
-      outcomeForFoodFn: (log, id) => outcomeForFood(log, id),
-      projectedTargetKeys: CORE.ensureProjectedTargetSet(ctx),
-      exposureKeyFn: (log) => typeof plannerLogExposureKey === "function"
-        ? plannerLogExposureKey(log)
-        : `${log?.date || ""}|${log?.meal || log?.id || "entry"}`,
-    });
+    let projected = CORE.ensureProjectedTargetSet(ctx);
+    let due = null;
+    if (maintenanceDueCache?.has(on)) {
+      due = maintenanceDueCache.get(on);
+    } else {
+      due = CORE.dueTargets({
+        foods: state.foods,
+        logs: state.logs,
+        on,
+        intervalDays: Number(state.settings.allergenDays) || 7,
+        rankFn: (foodRecord) => rank(foodRecord),
+        outcomeForFoodFn: (log, id) => outcomeForFood(log, id),
+        exposureKeyFn: (log) => typeof plannerLogExposureKey === "function"
+          ? plannerLogExposureKey(log)
+          : `${log?.date || ""}|${log?.meal || log?.id || "entry"}`,
+      });
+      maintenanceDueCache?.set(on, due);
+    }
+    return due.filter((target) => !projected.has(target.key));
   }
 
   function runtimeMealCompleted(date, meal) {
@@ -565,11 +573,14 @@
 
   buildDays = function maintenanceAwareBuildDays(from, n = 7, applyAutoLocks = true) {
     let previousRange = maintenanceBuildRange;
+    let previousDueCache = maintenanceDueCache;
     maintenanceBuildRange = { from, count: n };
+    if (!maintenanceDueCache) maintenanceDueCache = new Map();
     try {
       return baseBuildDays(from, n, applyAutoLocks);
     } finally {
       maintenanceBuildRange = previousRange;
+      maintenanceDueCache = previousDueCache;
     }
   };
 

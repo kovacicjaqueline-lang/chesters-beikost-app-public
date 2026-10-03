@@ -4,6 +4,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const vm = require("node:vm");
 
 const root = path.resolve(__dirname, "..");
 const precompute = fs.readFileSync(path.join(root, "js", "plan-checks-solution-precompute.js"), "utf8");
@@ -133,6 +134,74 @@ test("der erste Core-Render installiert Precompute explizit ohne renderAll-Wrapp
     /renderAll = baseRenderAll/,
     "Der asynchrone Bootstrap darf keinen später installierten renderAll-Wrapper mit einer alten Referenz überschreiben",
   );
+});
+
+test("Eine vorberechnete Allergen-Lösung bleibt bei Rückkehr zum unveränderten Plan verfügbar", async () => {
+  let searchCalls = 0;
+  const planQuality = { style: {}, className: "", innerHTML: "" };
+  const goal = {
+    key: "allergen:milch",
+    code: "ALLERGEN_MAINTENANCE_DUE",
+    details: { representativeFoodId: "milch" },
+    refs: { allergenTargets: [{ value: "Milch" }] }
+  };
+  const context = {
+    console,
+    Map, Set, Object, Array, Number, String, Math, Date, JSON, Promise,
+    currentPlanKey: "week-a",
+    days: [{ date: "2026-10-03", meals: [] }],
+    document: { getElementById: (id) => id === "planQuality" ? planQuality : null },
+    scheduler: { postTask: (callback) => Promise.resolve().then(callback) },
+    localStorage: { getItem: () => null, setItem: () => {} },
+    PlannerPlanCheckSolutions: {
+      FEATURE_VERSION: 1,
+      INTRO_OPEN_CODE: "ALLERGEN_INTRODUCTION_CONTINUE",
+      goalKey: (item) => item.key,
+      evaluationKey: (days) => context.currentPlanKey,
+      report: () => ({ items: [] }),
+      openGoalItems: () => [goal],
+      hashText: (value) => String(value.length),
+      stableStringify: (value) => JSON.stringify(value),
+      findSolutionAsync: async (item) => {
+        searchCalls += 1;
+        return { id: "solution-" + context.currentPlanKey, goalKey: item.key, date: "2026-10-05", meal: "lunch", before: {}, after: {} };
+      },
+      findSolution: () => { throw new Error("Die vorberechnete Lösung sollte wiederverwendet werden"); },
+      applySolution: () => true,
+      dismissGoal: () => {}
+    },
+    __planChecksUiInstalled: true,
+    clone: (value) => JSON.parse(JSON.stringify(value)),
+    food: (id) => ({ name: id }),
+    esc: (value) => String(value || ""),
+    mealName: (value) => value,
+    nice: (value) => value,
+    planDisplayDays: () => context.days,
+    visiblePlanStart: () => "2026-10-03",
+    renderPlan: () => {},
+    renderPlanQuality: () => {}
+  };
+  context.globalThis = context;
+  vm.createContext(context);
+  vm.runInContext(precompute, context, { filename: "plan-checks-solution-precompute.js" });
+  context.__installPlanCheckSolutionPrecompute({ renderNow: false });
+
+  const renderCurrent = () => vm.runInContext("renderPlanQuality(days)", context);
+  const flushTasks = () => new Promise((resolve) => setImmediate(resolve));
+
+  renderCurrent();
+  await flushTasks();
+  assert.equal(searchCalls, 1);
+
+  context.currentPlanKey = "week-b";
+  renderCurrent();
+  await flushTasks();
+  assert.equal(searchCalls, 2);
+
+  context.currentPlanKey = "week-a";
+  renderCurrent();
+  await flushTasks();
+  assert.equal(searchCalls, 2, "Die vorhandene Lösung wird bei Rückkehr zu demselben Plan wiederverwendet");
 });
 
 test("Der erste Lösungsschritt verwendet die vorberechnete Lösung statt erneut zu suchen", () => {

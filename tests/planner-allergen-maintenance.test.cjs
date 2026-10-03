@@ -468,6 +468,64 @@ test("Runtime: erledigter Lock mit tried zählt weder als Projektion noch als hi
   assert.equal(days[1].meals[0].type, "bekannt kombinieren");
 });
 
+test("Runtime: Allergen-Fortsetzung wird je Datum nur einmal historisch geprüft", () => {
+  const context = runtimeContext(`
+    var window = {};
+    var document = {};
+    var rankCalls = 0;
+    var state = {
+      settings: { allergenDays: 7 },
+      foods: [
+        { id: "hafer", name: "Hafer", allergenGroup: "Glutenhaltiges Getreide", allergenFamily: "hafer", _rank: 2 },
+        { id: "weizen", name: "Weizen", allergenGroup: "Glutenhaltiges Getreide", _rank: 2 },
+        { id: "mandel", name: "Mandel", allergenGroup: "Schalenfrüchte", allergenFamily: "nuss:mandel", _rank: 2 }
+      ],
+      logs: [
+        { date: "2026-08-01", meal: "breakfast", foodIds: ["hafer"], foodOutcomes: { hafer: "eaten" } },
+        { date: "2026-08-01", meal: "lunch", foodIds: ["mandel"], foodOutcomes: { mandel: "eaten" } }
+      ],
+      manualMeals: {}, planLocks: {}
+    };
+    function food(id) { return state.foods.find((item) => item.id === id); }
+    function rank(item) { rankCalls++; return item?._rank || 0; }
+    function outcomeForFood(log, id) { return log.foodOutcomes?.[id] || ""; }
+    function dueAllergen() { return false; }
+    function manualMealFor() { return null; }
+    function lockedMeal() { return null; }
+    function recipeByName() { return null; }
+    function recipeFoodIds() { return []; }
+    function recipeStockCandidate() { return null; }
+    function snackRecipeCandidate() { return null; }
+    function addDays(value, amount) {
+      let d = new Date(value + "T00:00:00Z");
+      d.setUTCDate(d.getUTCDate() + amount);
+      return d.toISOString().slice(0, 10);
+    }
+    function freshPlanContext() { return {}; }
+    function ensureAutoLocks() { return false; }
+    function knownCandidate() { return { f: food("hafer"), type: "bekannt" }; }
+    function buildDay(date, index, ctx) {
+      const breakfast = knownCandidate("breakfast", date, ctx, []);
+      const lunch = knownCandidate("lunch", date, ctx, []);
+      return {
+        date, index,
+        meals: [
+          { meal: "breakfast", active: true, focusId: breakfast.f.id, foodIds: [breakfast.f.id], baseFoodIds: [breakfast.f.id], sampleFoodIds: [], type: breakfast.type },
+          { meal: "lunch", active: true, focusId: lunch.f.id, foodIds: [lunch.f.id], baseFoodIds: [lunch.f.id], sampleFoodIds: [], type: lunch.type }
+        ]
+      };
+    }
+    function buildDays(from, n = 7, applyAutoLocks = true) {
+      const ctx = freshPlanContext();
+      return Array.from({ length: n }, (_, index) => buildDay(addDays(from, index), index, ctx));
+    }
+  `);
+
+  const days = vm.runInContext(`buildDays("2026-08-20", 1, false)`, context);
+  assert.equal(days.length, 1);
+  assert.equal(context.rankCalls, 3, "Maintenance-Ränge werden für das Datum nur einmal über den FOOD-Stamm gelesen");
+});
+
 test("Katalog-Hafer kann Glutenpflege abdecken, ohne selbst als Allergen geführt zu werden", () => {
   const context = vm.createContext({});
   const catalogSource = fs.readFileSync(path.join(root, "data", "foods.js"), "utf8");

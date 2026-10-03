@@ -1687,7 +1687,7 @@ function bind() {
       state.settings.textureStageSince = today();
     if (!state.settings.planFrom) state.settings.planFrom = today();
     save();
-    renderAll();
+    renderSettings();
     showToast("Einstellungen gespeichert.");
   };
   document.getElementById("exportData").onclick = exportBackup;

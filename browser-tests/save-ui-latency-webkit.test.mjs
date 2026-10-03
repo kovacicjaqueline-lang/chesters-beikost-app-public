@@ -171,26 +171,74 @@ try {
     "Ausgangsansicht muss auch nach dem verzögerten Voll-Render aktiv bleiben",
   );
 
-  // Einstellungen: Toast/State werden im Klickpfad gesetzt, kompletter Re-Render folgt separat.
-  await page.evaluate(() => window.showView("more"));
+  // Einstellungen speichern und sofort den Bottom-Tab wechseln: kein globaler Render darf den Tap blockieren.
+  await page.evaluate(() => {
+    document.querySelector('nav button[data-view="more"]').click();
+    document.querySelector("#more .settings-card > details > summary")?.click();
+  });
+  await page.waitForFunction(() => Number.isFinite(window.__plannerWeekCache?.revision));
+  const settingsCacheRevisionBefore = await page.evaluate(() => window.__plannerWeekCache.revision);
   const settingsImmediate = await page.evaluate(() => {
-    const input = document.getElementById("allergenDays");
-    input.value = String(Math.max(3, Number(input.value || 3) + 1));
+    const input = document.getElementById("newFoodEvery");
+    const options = [...input.options].map((option) => option.value);
+    const currentIndex = options.indexOf(input.value);
+    input.value = options[(currentIndex + 1) % options.length];
     const expected = input.value;
     const before = window.__saveUiLatencyProbe.renderCalls;
     document.getElementById("saveSettings").click();
+    const afterSave = window.__saveUiLatencyProbe.renderCalls;
+    document.querySelector('nav button[data-view="home"]').click();
     return {
       before,
-      after: window.__saveUiLatencyProbe.renderCalls,
+      afterSave,
+      afterTabTap: window.__saveUiLatencyProbe.renderCalls,
       expected,
-      saved: window.__beikostTest.getState().settings.allergenDays,
+      saved: window.__beikostTest.getState().settings.newFoodEvery,
       toast: document.getElementById("toastText").textContent,
+      homeVisible: document.getElementById("home").classList.contains("active"),
+      moreVisible: document.getElementById("more").classList.contains("active"),
+      cacheRevision: window.__plannerWeekCache.revision,
     };
   });
-  assert.equal(settingsImmediate.after, settingsImmediate.before, "Settings-Save darf nicht synchron voll rendern");
-  assert.equal(settingsImmediate.saved, settingsImmediate.expected);
+  assert.equal(settingsImmediate.afterSave, settingsImmediate.before, "Settings-Save darf keinen globalen Voll-Render starten");
+  assert.equal(settingsImmediate.afterTabTap, settingsImmediate.before, "Der sofortige Tabwechsel darf nicht auf renderAll warten");
+  assert.equal(settingsImmediate.saved, settingsImmediate.expected, "Geänderte Einstellung muss sofort im State stehen");
   assert.equal(settingsImmediate.toast, "Einstellungen gespeichert.");
-  await waitForDeferredRender(page, settingsImmediate.before);
+  assert.equal(settingsImmediate.homeVisible, true, "Bottom-Tab muss direkt nach dem Speichern wechseln");
+  assert.equal(settingsImmediate.moreVisible, false);
+  assert.ok(settingsImmediate.cacheRevision > settingsCacheRevisionBefore, "Settings-Save muss den Planner-Cache invalidieren");
+
+  await page.waitForFunction(() => {
+    const home = document.getElementById("home");
+    return home?.classList.contains("active") && !home.hasAttribute("aria-busy");
+  });
+  const persistedSettings = await page.evaluate(async () => {
+    await saveQueue;
+    const db = await new Promise((resolve, reject) => {
+      const request = indexedDB.open("chester-beikost-db", 2);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    return await new Promise((resolve, reject) => {
+      const transaction = db.transaction("app", "readonly");
+      const request = transaction.objectStore("app").get("state");
+      transaction.oncomplete = () => resolve(request.result?.settings?.newFoodEvery);
+      transaction.onerror = () => reject(transaction.error);
+    });
+  });
+  assert.equal(persistedSettings, settingsImmediate.expected, "Settings müssen in IndexedDB gespeichert sein");
+
+  await page.locator('nav button[data-view="more"]').click();
+  await page.waitForFunction((expected) => {
+    const view = document.getElementById("more");
+    return view?.classList.contains("active") &&
+      document.getElementById("newFoodEvery")?.value === expected;
+  }, settingsImmediate.expected);
+  await page.locator('nav button[data-view="plan"]').click();
+  await page.waitForFunction(() => {
+    const view = document.getElementById("plan");
+    return view?.classList.contains("active") && !view.hasAttribute("aria-busy");
+  });
 
   // Separates Profiling von storage.save(): keine Produktionslogik ändern, sondern den synchronen
   // Anteil (clone + JSON + localStorage) gegen einen vollständigen renderAll() auf derselben WebKit-Laufzeit messen.

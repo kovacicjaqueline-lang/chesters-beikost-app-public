@@ -286,11 +286,15 @@ function runWithDeferredCurrentViewRender(callback, afterRender = null) {
   }
 }
 
-function renderCurrentViewAfterNextPaint(afterRender = null) {
-  if (typeof renderAll === "function" && typeof renderCurrentView === "function") {
-    return runWithDeferredCurrentViewRender(() => renderAll(), afterRender);
-  }
-  return renderAllAfterNextPaint(afterRender);
+function renderCurrentViewAfterNextPaint(expectedViewId, afterRender = null) {
+  let viewId = String(expectedViewId || "");
+  if (!viewId || typeof renderView !== "function") return false;
+  renderViewAfterNextPaint(viewId, (scheduledViewId) => {
+    if (activeRenderViewId() !== viewId) return;
+    renderView(scheduledViewId);
+    if (typeof afterRender === "function") afterRender();
+  });
+  return true;
 }
 
 function runWithTargetedFullRender(callback, renderTarget, { wrapUndo = false } = {}) {

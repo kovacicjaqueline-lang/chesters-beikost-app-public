@@ -899,6 +899,7 @@ function openAddMealMenu(date) {
   );
 }
 let manualMealSearchViewportAdjustmentInstalled = false;
+let manualMealSearchViewportAdjustmentObserver = null;
 function keepFirstManualMealResultAboveActions() {
   let search = document.getElementById("mealSelectorSearch");
   if (!search) return;
@@ -910,9 +911,12 @@ function keepFirstManualMealResultAboveActions() {
   let overlap = firstResult.getBoundingClientRect().bottom - actions.getBoundingClientRect().top;
   if (overlap > 0) sheet.scrollTop += overlap + 8;
 }
+function scheduleManualMealSearchViewportAdjustment() {
+  window.requestAnimationFrame(() => window.requestAnimationFrame(keepFirstManualMealResultAboveActions));
+}
 function installManualMealSearchViewportAdjustment() {
   if (manualMealSearchViewportAdjustmentInstalled) return;
-  let scheduleAdjustment = () => window.requestAnimationFrame(keepFirstManualMealResultAboveActions);
+  let scheduleAdjustment = scheduleManualMealSearchViewportAdjustment;
   document.addEventListener("focusin", (event) => {
     if (event.target?.id === "mealSelectorSearch") scheduleAdjustment();
   });
@@ -921,6 +925,11 @@ function installManualMealSearchViewportAdjustment() {
   }, true);
   window.addEventListener("resize", scheduleAdjustment, { passive: true });
   window.visualViewport?.addEventListener("resize", scheduleAdjustment, { passive: true });
+  let body = document.getElementById("genericBody");
+  if (body && typeof MutationObserver === "function") {
+    manualMealSearchViewportAdjustmentObserver = new MutationObserver(scheduleAdjustment);
+    manualMealSearchViewportAdjustmentObserver.observe(body, { childList: true, subtree: true });
+  }
   manualMealSearchViewportAdjustmentInstalled = true;
 }
 function openManualMealSelector(date, meal, initialMeal = null) {
@@ -1096,6 +1105,7 @@ function openManualMealSelector(date, meal, initialMeal = null) {
         let field = document.getElementById("mealSelectorSearch");
         field?.focus();
         field?.setSelectionRange(field.value.length, field.value.length);
+        scheduleManualMealSearchViewportAdjustment();
       });
     };
     document.querySelectorAll(".selectRecipe").forEach((button) => button.onclick = () => {

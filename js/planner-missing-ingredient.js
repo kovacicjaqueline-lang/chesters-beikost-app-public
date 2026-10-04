@@ -543,6 +543,10 @@
   }
 
   function requestFullRender() {
+    if (typeof renderCurrentViewAfterNextPaint === "function") {
+      renderCurrentViewAfterNextPaint();
+      return;
+    }
     if (typeof renderAllAfterNextPaint === "function") {
       renderAllAfterNextPaint();
       return;

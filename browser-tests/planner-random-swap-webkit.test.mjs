@@ -112,7 +112,33 @@ try {
   assert.equal(before[targetKey]?.length, 1, "heutiges Mittagessen muss im sichtbaren Wochenplan genau einmal offen geplant sein");
   const previousTarget = before[targetKey][0].foods;
 
-  await todayButton.click();
+  const immediateNavigation = await page.evaluate((date) => {
+    const button = document.querySelector(
+      `#todayCard .randomizeMeal[data-random-date="${date}"][data-random-meal="lunch"]`,
+    );
+    const navButton = document.querySelector('nav button[data-view="foods"]');
+    if (!button || !navButton) throw new Error("Tausch- oder Navigationsbutton fehlt");
+
+    const baseRenderAll = window.renderAll;
+    let fullRenders = 0;
+    window.renderAll = function randomSwapRenderProbe(...args) {
+      fullRenders += 1;
+      return baseRenderAll.apply(this, args);
+    };
+    try {
+      button.click();
+    } finally {
+      window.renderAll = baseRenderAll;
+    }
+    navButton.click();
+    return {
+      fullRenders,
+      foodsVisible: document.getElementById("foods")?.classList.contains("active") === true,
+    };
+  }, today);
+  assert.equal(immediateNavigation.fullRenders, 0, "Tauschen darf keinen synchronen Voll-Render auslösen");
+  assert.equal(immediateNavigation.foodsVisible, true, "Die Hauptnavigation muss direkt nach dem Tauschen reagieren");
+
   await page.waitForFunction(({ key, previous }) => {
     const lock = window.__beikostTest.getState().planLocks?.[key];
     const current = [...new Set(lock?.foodIds || [])].filter(Boolean).sort().join("+");
@@ -125,6 +151,13 @@ try {
     return { pinned: !!lock?.randomSwapPinned, target: !!lock?.randomSwapTarget };
   }, targetKey);
   assert.deepEqual(targetInternalPin, { pinned: true, target: true }, "Tauschen behält seinen internen Stabilisierungssnapshot");
+
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0))));
+  assert.equal(
+    await page.locator("#foods").evaluate((node) => node.classList.contains("active")),
+    true,
+    "Ein aufgeschobener Tausch-Refresh darf den sofort gewählten Haupttab nicht wieder überschreiben",
+  );
 
   await page.locator('nav button[data-view="plan"]').click();
   const targetDayButton = page.locator(`#planWeekOverview .plan-week-day[data-plan-date="${today}"]`);

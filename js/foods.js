@@ -53,6 +53,16 @@ function cleanFoodFromFuturePlan(foodId) {
   delete state.inactivePlanKept?.[foodId];
 }
 
+function renderFoodActionViewAfterPaint() {
+  if (typeof renderCurrentViewAfterNextPaint === "function") {
+    renderCurrentViewAfterNextPaint();
+  } else if (typeof renderAllAfterNextPaint === "function") {
+    renderAllAfterNextPaint();
+  } else if (typeof renderAll === "function") {
+    renderAll();
+  }
+}
+
 function setFoodActiveWithPlanCheck(f, nextActive) {
   if (!f) return;
   if (!nextActive && typeof plannerViewReady === "function" && !plannerViewReady()) {
@@ -65,7 +75,7 @@ function setFoodActiveWithPlanCheck(f, nextActive) {
     save();
     closeGeneric();
     showToast(`${f.name} ist wieder aktiv.`);
-    renderAllAfterNextPaint();
+    renderFoodActionViewAfterPaint();
     return;
   }
   let refs = futurePlanReferences(f.id);
@@ -75,7 +85,7 @@ function setFoodActiveWithPlanCheck(f, nextActive) {
     save();
     closeGeneric();
     showToast(`${f.name} bleibt unter „Deaktiviert“ abrufbar.`);
-    renderAllAfterNextPaint();
+    renderFoodActionViewAfterPaint();
     return;
   }
   openGeneric(
@@ -94,7 +104,7 @@ function setFoodActiveWithPlanCheck(f, nextActive) {
     save();
     closeGeneric();
     showToast(`${f.name} deaktiviert; zukünftige Planungen wurden bereinigt.`);
-    renderAllAfterNextPaint();
+    renderFoodActionViewAfterPaint();
   };
   document.getElementById("deactivateKeep").onclick = () => {
     f.active = false;
@@ -103,7 +113,7 @@ function setFoodActiveWithPlanCheck(f, nextActive) {
     save();
     closeGeneric();
     showToast(`${f.name} deaktiviert; bestehende Planungen bleiben sichtbar.`);
-    renderAllAfterNextPaint();
+    renderFoodActionViewAfterPaint();
   };
   document.getElementById("deactivateCancel").onclick = closeGeneric;
 }

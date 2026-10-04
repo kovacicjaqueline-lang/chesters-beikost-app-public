@@ -349,7 +349,8 @@ function manualMealFlowRestorePlan(targetDate, meal) {
     manualMealFlowObserver = null;
   }
   let restore = () => {
-    if (typeof renderAll === "function") renderAll();
+    if (typeof renderCurrentView === "function") renderCurrentView();
+    else if (typeof renderAll === "function") renderAll();
     manualMealFlowEnhanceCards();
     if (typeof document === "undefined") return;
     let target = document.querySelector(`.removeManualMeal[data-date="${targetDate}"][data-meal="${meal}"]`);

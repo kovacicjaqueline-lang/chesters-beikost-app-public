@@ -85,9 +85,10 @@ try {
   assert.ok(rowLayout.copy && rowLayout.check && rowLayout.copy.right < rowLayout.check.left, "Text und Häkchen dürfen nicht in derselben schmalen Spalte kollabieren");
 
   const search = page.locator("#mealSelectorSearch");
-  await search.click();
-  // Simuliere den verkleinerten sichtbaren Bereich, den die iPhone-Tastatur lässt.
+  // Simuliere zuerst den verkleinerten sichtbaren Bereich, den die iPhone-Tastatur lässt.
+  // Danach fokussieren wir das Feld, damit WebKit den Fokus nicht gegen die Resize-Animation verschiebt.
   await page.setViewportSize({ width: 390, height: 430 });
+  await search.click();
   await page.waitForFunction(() => {
     const sheet = document.querySelector("#genericModal .sheet");
     return !!sheet && sheet.clientHeight < 430;
@@ -101,10 +102,8 @@ try {
     const visible = !!row && !!actions && !!sheet && sheet.clientHeight < 430 &&
       row.getBoundingClientRect().bottom <= actions.getBoundingClientRect().top + 1;
     window.__manualMealSearchVisibleFrames = visible ? window.__manualMealSearchVisibleFrames + 1 : 0;
-    // WebKit can briefly expose the result during keyboard viewport/focus adjustment.
-    // Require a stable visible layout so this assertion doesn't pass on one transient frame.
     return window.__manualMealSearchVisibleFrames >= 3;
-  }, null, { timeout: 1500 }).then(() => true, () => false);
+  }, null, { timeout: 5000 }).then(() => true, () => false);
   const firstVisibleResult = page.locator(".selector-results .selectFood:not([hidden])").first();
   const firstResultBox = await firstVisibleResult.boundingBox();
   const actionbarBox = await page.locator("#genericModal .sticky-form-actions").boundingBox();

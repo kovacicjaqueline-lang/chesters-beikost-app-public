@@ -93,12 +93,17 @@ try {
     return !!sheet && sheet.clientHeight < 430;
   });
   await search.fill("Nudeln");
+  await page.evaluate(() => { window.__manualMealSearchVisibleFrames = 0; });
   const firstResultReady = await page.waitForFunction(() => {
     const row = document.querySelector(".selector-results .selectFood:not([hidden])");
     const actions = document.querySelector("#genericModal .sticky-form-actions");
     const sheet = document.querySelector("#genericModal .sheet");
-    return !!row && !!actions && !!sheet && sheet.clientHeight < 430 &&
+    const visible = !!row && !!actions && !!sheet && sheet.clientHeight < 430 &&
       row.getBoundingClientRect().bottom <= actions.getBoundingClientRect().top + 1;
+    window.__manualMealSearchVisibleFrames = visible ? window.__manualMealSearchVisibleFrames + 1 : 0;
+    // WebKit can briefly expose the result during keyboard viewport/focus adjustment.
+    // Require a stable visible layout so this assertion doesn't pass on one transient frame.
+    return window.__manualMealSearchVisibleFrames >= 3;
   }, null, { timeout: 1500 }).then(() => true, () => false);
   const firstVisibleResult = page.locator(".selector-results .selectFood:not([hidden])").first();
   const firstResultBox = await firstVisibleResult.boundingBox();

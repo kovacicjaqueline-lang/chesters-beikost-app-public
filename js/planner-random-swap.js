@@ -642,15 +642,10 @@
         } catch (_) {}
       }
     };
-    const persistAndRefresh = () => {
-      save();
-      renderAll();
-    };
-    if (typeof runWithDeferredCurrentViewRender === "function") {
-      runWithDeferredCurrentViewRender(persistAndRefresh, preserveRenderedPlanIds);
-    } else {
-      persistAndRefresh();
-      preserveRenderedPlanIds();
+    const activeViewId = globalScope.document?.querySelector?.(".view.active")?.id || "";
+    save();
+    if (typeof renderCurrentViewAfterNextPaint === "function") {
+      renderCurrentViewAfterNextPaint(activeViewId, preserveRenderedPlanIds);
     }
     showToast("Mahlzeit getauscht. Der restliche Wochenplan bleibt unverändert.");
     return { ok: true, meal: snapshot };

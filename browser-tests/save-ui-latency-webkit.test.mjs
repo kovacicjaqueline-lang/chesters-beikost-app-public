@@ -7,7 +7,7 @@ import { closeBrowserApp, startStaticServer } from "./helpers/app-harness.mjs";
 
 
 async function waitForDeferredRender(page, before) {
-  await page.waitForFunction((count) => window.__saveUiLatencyProbe.renderCalls > count, before);
+  await page.waitForFunction((count) => window.__saveUiLatencyProbe.currentViewCalls > count, before);
 }
 
 const server = await startStaticServer();
@@ -28,20 +28,27 @@ try {
 
   await page.evaluate(() => {
     const baseRenderAll = window.renderAll;
-    window.__saveUiLatencyProbe = { renderCalls: 0 };
+    const baseRenderCurrentView = window.renderCurrentView;
+    window.__saveUiLatencyProbe = { renderCalls: 0, currentViewCalls: 0 };
     window.renderAll = function profiledRenderAll(...args) {
       window.__saveUiLatencyProbe.renderCalls += 1;
       return baseRenderAll.apply(this, args);
     };
+    window.renderCurrentView = function profiledRenderCurrentView(...args) {
+      window.__saveUiLatencyProbe.currentViewCalls += 1;
+      return baseRenderCurrentView.apply(this, args);
+    };
   });
 
-  // Konsistenz bestätigen: State und Modal-Close sind sofort sichtbar, Voll-Render folgt erst danach.
+  // Konsistenz bestätigen: State und Modal-Close sind sofort sichtbar, die aktive View folgt nach Paint.
   await page.evaluate(() => window.openTextureAdvance(2));
   const textureImmediate = await page.evaluate(() => {
     const before = window.__saveUiLatencyProbe.renderCalls;
+    const currentBefore = window.__saveUiLatencyProbe.currentViewCalls;
     document.getElementById("confirmTextureStage").click();
     return {
       before,
+      currentBefore,
       after: window.__saveUiLatencyProbe.renderCalls,
       modalOpen: document.getElementById("genericModal").classList.contains("open"),
       stage: window.__beikostTest.getState().settings.textureStage,
@@ -52,9 +59,9 @@ try {
   assert.equal(textureImmediate.modalOpen, false, "Konsistenz-Dialog muss vor dem Voll-Render schließen");
   assert.equal(textureImmediate.stage, 2, "Konsistenz muss bereits vor dem Voll-Render gespeichert sein");
   assert.match(textureImmediate.toast, /Konsistenz auf Stufe 2 gestellt/);
-  await waitForDeferredRender(page, textureImmediate.before);
+  await waitForDeferredRender(page, textureImmediate.currentBefore);
 
-  // Lebensmittel reaktivieren: auch der Detaildialog darf nicht auf renderAll warten.
+  // Lebensmittel reaktivieren: auch der Detaildialog darf nicht auf die View-Nacharbeit warten.
   const inactiveFoodId = await page.evaluate(() => {
     const snapshot = window.__beikostTest.getState();
     const item = snapshot.foods.find((food) => food.active);
@@ -65,9 +72,11 @@ try {
   });
   const foodImmediate = await page.evaluate(() => {
     const before = window.__saveUiLatencyProbe.renderCalls;
+    const currentBefore = window.__saveUiLatencyProbe.currentViewCalls;
     document.getElementById("foodToggleActive").click();
     return {
       before,
+      currentBefore,
       after: window.__saveUiLatencyProbe.renderCalls,
       modalOpen: document.getElementById("genericModal").classList.contains("open"),
     };
@@ -79,17 +88,19 @@ try {
     true,
     "Lebensmittel muss vor dem verzögerten Voll-Render bereits aktiv sein",
   );
-  await waitForDeferredRender(page, foodImmediate.before);
+  await waitForDeferredRender(page, foodImmediate.currentBefore);
 
-  // Eigenes Lebensmittel: Persistenz und Dialogschluss passieren vor dem Voll-Render.
+  // Eigenes Lebensmittel: Persistenz und Dialogschluss passieren vor dem View-Render.
   const foodsBeforeCustom = await page.evaluate(() => window.__beikostTest.getState().foods.length);
   await page.evaluate(() => window.addCustomFoodForm());
   await page.locator("#customName").fill("Latency-Test-Lebensmittel");
   const customImmediate = await page.evaluate(() => {
     const before = window.__saveUiLatencyProbe.renderCalls;
+    const currentBefore = window.__saveUiLatencyProbe.currentViewCalls;
     document.getElementById("saveCustom").click();
     return {
       before,
+      currentBefore,
       after: window.__saveUiLatencyProbe.renderCalls,
       modalOpen: document.getElementById("genericModal").classList.contains("open"),
       foodCount: window.__beikostTest.getState().foods.length,
@@ -98,18 +109,20 @@ try {
   assert.equal(customImmediate.after, customImmediate.before, "Custom-Food-Save darf nicht synchron voll rendern");
   assert.equal(customImmediate.modalOpen, false);
   assert.equal(customImmediate.foodCount, foodsBeforeCustom + 1);
-  await waitForDeferredRender(page, customImmediate.before);
+  await waitForDeferredRender(page, customImmediate.currentBefore);
 
-  // Vorrat speichern: der Batch ist bereits im State, während der Voll-Render noch aussteht.
+  // Vorrat speichern: der Batch ist bereits im State, während der View-Render noch aussteht.
   const inventoryFoodId = await page.evaluate(() => window.__beikostTest.getState().foods.find((food) => food.active).id);
   const inventoryBefore = await page.evaluate(() => window.__beikostTest.getState().inventory.length);
   await page.evaluate((foodId) => window.addInventoryForm({ foodId, portions: 1 }), inventoryFoodId);
   await page.waitForFunction(() => !!document.getElementById("saveInv") && !document.getElementById("saveInv").disabled);
   const inventoryImmediate = await page.evaluate(() => {
     const before = window.__saveUiLatencyProbe.renderCalls;
+    const currentBefore = window.__saveUiLatencyProbe.currentViewCalls;
     document.getElementById("saveInv").click();
     return {
       before,
+      currentBefore,
       after: window.__saveUiLatencyProbe.renderCalls,
       modalOpen: document.getElementById("genericModal").classList.contains("open"),
       inventoryCount: window.__beikostTest.getState().inventory.length,
@@ -118,7 +131,7 @@ try {
   assert.equal(inventoryImmediate.after, inventoryImmediate.before, "Vorrat-Save darf nicht synchron voll rendern");
   assert.equal(inventoryImmediate.modalOpen, false);
   assert.equal(inventoryImmediate.inventoryCount, inventoryBefore + 1);
-  await waitForDeferredRender(page, inventoryImmediate.before);
+  await waitForDeferredRender(page, inventoryImmediate.currentBefore);
 
   // Protokoll speichern: Save-Semantik ist synchron, Modal-Close ebenfalls; die aktuelle Ansicht bleibt erhalten.
   await page.evaluate(() => window.showView("home"));

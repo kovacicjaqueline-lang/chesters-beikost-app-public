@@ -18,6 +18,7 @@ function createHarness({ withAnimationFrame = true } = {}) {
   const events = [];
   const raf = [];
   const timers = [];
+  const microtasks = [];
   const documentListeners = {};
   const sandbox = {
     console,
@@ -31,11 +32,12 @@ function createHarness({ withAnimationFrame = true } = {}) {
     renderAll: () => events.push("render"),
     renderCurrentView: () => events.push("current"),
     setTimeout: (callback) => { timers.push(callback); return timers.length; },
+    queueMicrotask: (callback) => microtasks.push(callback),
   };
   if (withAnimationFrame) sandbox.requestAnimationFrame = (callback) => { raf.push(callback); return raf.length; };
   vm.createContext(sandbox);
   vm.runInContext(source, sandbox, { filename: "js/deferred-render.js" });
-  return { sandbox, events, raf, timers, documentListeners };
+  return { sandbox, events, raf, timers, microtasks, documentListeners };
 }
 
 {
@@ -54,6 +56,41 @@ function createHarness({ withAnimationFrame = true } = {}) {
   h.timers.shift()();
   assert.deepEqual(h.events, ["render"], "Koaleszierte Anforderungen müssen genau einen Voll-Render auslösen");
   assert.deepEqual(callbacks, ["first", "second"], "After-Render-Callbacks müssen nach dem gemeinsamen Voll-Render laufen");
+}
+
+{
+  for (const eventType of ["click", "change", "submit"]) {
+    const h = createHarness();
+    h.sandbox.installInteractiveCurrentViewRenderScope();
+    h.documentListeners[eventType]({});
+    h.sandbox.renderAll();
+
+    assert.deepEqual(h.events, [], `${eventType}: synchroner Voll-Render innerhalb einer Nutzeraktion muss abgefangen werden`);
+    assert.equal(h.microtasks.length, 1, `${eventType}: Render-Scope endet erst nach allen synchronen Event-Handlern`);
+    h.microtasks.shift()();
+    assert.equal(h.raf.length, 1, `${eventType}: Nutzeraktion plant genau einen aktuellen View-Render nach dem Event`);
+    h.raf.shift()();
+    h.timers.shift()();
+    assert.deepEqual(h.events, ["current"], `${eventType}: Nutzeraktion rendert nach Paint nur die aktive View`);
+
+    h.sandbox.renderAll();
+    assert.deepEqual(h.events, ["current", "render"], `${eventType}: Voll-Render außerhalb der Aktion bleibt unverändert`);
+  }
+}
+
+{
+  const h = createHarness();
+  const activeView = { id: "plan" };
+  h.sandbox.document = { ...h.sandbox.document, querySelector: () => activeView };
+  h.sandbox.installInteractiveCurrentViewRenderScope();
+  h.documentListeners.click({});
+  h.sandbox.runWithDeferredCurrentViewRender(() => h.sandbox.renderAll());
+  h.microtasks.shift()();
+  activeView.id = "foods";
+  h.raf.shift()();
+  h.timers.shift()();
+
+  assert.deepEqual(h.events, [], "Ein Tabwechsel verwirft die aufgeschobene Render-Nacharbeit der alten View");
 }
 
 {

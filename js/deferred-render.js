@@ -11,17 +11,22 @@ let deferredRenderScopeDepth = 0;
 let deferredRenderScopeBase = null;
 let deferredRenderScopeRequested = false;
 let deferredRenderScopeCallbacks = [];
+let deferredCurrentViewRenderScopeDepth = 0;
+let deferredCurrentViewRenderScopeBase = null;
+let deferredCurrentViewRenderScopeViewId = "";
+let deferredCurrentViewRenderScopeRequested = false;
+let deferredCurrentViewRenderScopeCallbacks = [];
 let deferredViewRenderPending = false;
 let deferredViewRenderId = "";
 let deferredViewRenderCallback = null;
 let deferredViewRenderUseCache = false;
-const deferredRenderClickTargets = new WeakSet();
 let deferredLogSuggestionRequest = 0;
 let deferredFoodDetailRequest = 0;
 let deferredAllergenPlanRequest = 0;
 let deferredRecipeDetailRequest = 0;
 let tabNavigationRenderActive = false;
 let tabNavigationMarkerInstalled = false;
+let interactiveCurrentViewRenderScopeInstalled = false;
 let viewRenderRevision = 0;
 let viewRenderCacheInstalled = false;
 const renderedViewSignatures = new Map();
@@ -160,6 +165,73 @@ function cancelDeferredViewRender() {
   deferredViewRenderUseCache = false;
 }
 
+function activeRenderViewId() {
+  return typeof document !== "undefined" && typeof document.querySelector === "function"
+    ? document.querySelector(".view.active")?.id || ""
+    : "";
+}
+
+function beginDeferredCurrentViewRender() {
+  if (typeof renderAll !== "function" || typeof renderCurrentView !== "function") return false;
+  deferredCurrentViewRenderScopeDepth++;
+  if (deferredCurrentViewRenderScopeDepth > 1) return true;
+
+  deferredCurrentViewRenderScopeBase = renderAll;
+  deferredCurrentViewRenderScopeViewId = activeRenderViewId();
+  deferredCurrentViewRenderScopeRequested = false;
+  deferredCurrentViewRenderScopeCallbacks = [];
+  renderAll = function requestDeferredCurrentViewRender() {
+    deferredCurrentViewRenderScopeRequested = true;
+    if (typeof invalidateViewRenderCache === "function") invalidateViewRenderCache();
+  };
+  return true;
+}
+
+function endDeferredCurrentViewRender(afterRender = null) {
+  if (!deferredCurrentViewRenderScopeDepth) return;
+  if (typeof afterRender === "function") deferredCurrentViewRenderScopeCallbacks.push(afterRender);
+  deferredCurrentViewRenderScopeDepth--;
+  if (deferredCurrentViewRenderScopeDepth) return;
+
+  let base = deferredCurrentViewRenderScopeBase;
+  let requested = deferredCurrentViewRenderScopeRequested;
+  let initialViewId = deferredCurrentViewRenderScopeViewId;
+  let callbacks = deferredCurrentViewRenderScopeCallbacks;
+  deferredCurrentViewRenderScopeBase = null;
+  deferredCurrentViewRenderScopeRequested = false;
+  deferredCurrentViewRenderScopeViewId = "";
+  deferredCurrentViewRenderScopeCallbacks = [];
+  if (typeof base === "function") renderAll = base;
+
+  if (!requested) {
+    callbacks.forEach((callback) => callback());
+    return;
+  }
+  afterNextPaint(() => {
+    let activeViewId = activeRenderViewId();
+    let viewUnchanged = !initialViewId || !activeViewId || activeViewId === initialViewId;
+    if (!viewUnchanged) return;
+    renderCurrentView();
+    callbacks.forEach((callback) => callback());
+  });
+}
+
+function queueDeferredCurrentViewRenderEnd() {
+  let finish = () => endDeferredCurrentViewRender();
+  if (typeof queueMicrotask === "function") queueMicrotask(finish);
+  else Promise.resolve().then(finish);
+}
+
+function installInteractiveCurrentViewRenderScope() {
+  if (typeof document === "undefined" || interactiveCurrentViewRenderScopeInstalled) return;
+  interactiveCurrentViewRenderScopeInstalled = true;
+  ["click", "change", "submit"].forEach((eventType) => {
+    document.addEventListener(eventType, () => {
+      if (beginDeferredCurrentViewRender()) queueDeferredCurrentViewRenderEnd();
+    }, true);
+  });
+}
+
 function beginDeferredFullRender() {
   if (typeof renderAll !== "function") return false;
   deferredRenderScopeDepth++;
@@ -206,34 +278,19 @@ function runWithDeferredCurrentViewRender(callback, afterRender = null) {
   if (typeof renderAll !== "function" || typeof renderCurrentView !== "function") {
     return runWithDeferredFullRender(callback, afterRender);
   }
-
-  let baseRenderAll = renderAll;
-  let initialViewId = typeof document !== "undefined" && typeof document.querySelector === "function"
-    ? document.querySelector(".view.active")?.id || ""
-    : "";
-  let requested = false;
-  renderAll = function requestDeferredCurrentViewRender() {
-    requested = true;
-  };
+  if (!beginDeferredCurrentViewRender()) return callback();
   try {
     return callback();
   } finally {
-    renderAll = baseRenderAll;
-    if (requested) {
-      afterNextPaint(() => {
-        let activeViewId = typeof document !== "undefined" && typeof document.querySelector === "function"
-          ? document.querySelector(".view.active")?.id || ""
-          : "";
-        let viewUnchanged = !initialViewId || !activeViewId || activeViewId === initialViewId;
-        if (viewUnchanged) {
-          renderCurrentView();
-          if (typeof afterRender === "function") afterRender();
-        }
-      });
-    } else if (typeof afterRender === "function") {
-      afterRender();
-    }
+    endDeferredCurrentViewRender(afterRender);
   }
+}
+
+function renderCurrentViewAfterNextPaint(afterRender = null) {
+  if (typeof renderAll === "function" && typeof renderCurrentView === "function") {
+    return runWithDeferredCurrentViewRender(() => renderAll(), afterRender);
+  }
+  return renderAllAfterNextPaint(afterRender);
 }
 
 function runWithTargetedFullRender(callback, renderTarget, { wrapUndo = false } = {}) {
@@ -349,41 +406,16 @@ function queueDeferredFullRenderEnd() {
   else Promise.resolve().then(finish);
 }
 
-function deferFullRenderForClick(button) {
-  if (!button || deferredRenderClickTargets.has(button)) return;
-  deferredRenderClickTargets.add(button);
-  button.addEventListener("click", () => {
-    if (beginDeferredFullRender()) queueDeferredFullRenderEnd();
-  }, true);
-}
-
 function installSaveUiLatencyFlows() {
   if (typeof document === "undefined") return;
 
   installViewRenderCache();
-
-  let genericBody = document.getElementById("genericBody");
-  if (genericBody) {
-    let genericIds = new Set([
-      "saveConcreteProduct",
-      "deleteConcreteProduct",
-      "saveInv",
-      "saveCustom",
-      "useExistingCustom",
-    ]);
-    genericBody.addEventListener("click", (event) => {
-      let button = event.target?.closest?.("button");
-      if (!button || !genericIds.has(button.id)) return;
-      if (beginDeferredFullRender()) queueDeferredFullRenderEnd();
-    }, true);
-  }
-
-  deferFullRenderForClick(document.getElementById("saveSettings"));
+  installInteractiveCurrentViewRenderScope();
 
   if (typeof setTextureStage === "function") {
     let baseSetTextureStage = setTextureStage;
     setTextureStage = function setTextureStageWithoutBlockingFullRender(...args) {
-      return runWithDeferredFullRender(() => baseSetTextureStage.apply(this, args));
+      return runWithDeferredCurrentViewRender(() => baseSetTextureStage.apply(this, args));
     };
   }
 

@@ -31,6 +31,7 @@ function createHarness({ withAnimationFrame = true } = {}) {
     },
     renderAll: () => events.push("render"),
     renderCurrentView: () => events.push("current"),
+    renderView: (viewId) => events.push(`view:${viewId}`),
     setTimeout: (callback) => { timers.push(callback); return timers.length; },
     queueMicrotask: (callback) => microtasks.push(callback),
   };
@@ -76,6 +77,38 @@ function createHarness({ withAnimationFrame = true } = {}) {
     h.sandbox.renderAll();
     assert.deepEqual(h.events, ["current", "render"], `${eventType}: Voll-Render außerhalb der Aktion bleibt unverändert`);
   }
+}
+
+{
+  const h = createHarness();
+  const activeView = { id: "plan" };
+  h.sandbox.document = { ...h.sandbox.document, querySelector: () => activeView };
+  const callbacks = [];
+  assert.equal(
+    h.sandbox.renderCurrentViewAfterNextPaint("plan", () => callbacks.push("after")),
+    true,
+  );
+  assert.deepEqual(h.events, [], "Ein gezielter View-Render läuft nicht synchron");
+  h.raf.shift()();
+  h.timers.shift()();
+  assert.deepEqual(h.events, ["view:plan"]);
+  assert.deepEqual(callbacks, ["after"]);
+}
+
+{
+  const h = createHarness();
+  const activeView = { id: "plan" };
+  h.sandbox.document = { ...h.sandbox.document, querySelector: () => activeView };
+  const callbacks = [];
+  assert.equal(
+    h.sandbox.renderCurrentViewAfterNextPaint("plan", () => callbacks.push("stale")),
+    true,
+  );
+  activeView.id = "foods";
+  h.raf.shift()();
+  h.timers.shift()();
+  assert.deepEqual(h.events, [], "Ein View-Wechsel verwirft den veralteten Render");
+  assert.deepEqual(callbacks, [], "Nacharbeit läuft nur nach dem passenden View-Render");
 }
 
 {

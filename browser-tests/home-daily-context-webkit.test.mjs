@@ -17,7 +17,9 @@ try {
   const page = await context.newPage();
   await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() =>
-    !!window.__beikostTest?.getState && !!document.querySelector("#dailyContextCard"),
+    !!window.__beikostTest?.getState &&
+    document.querySelector("#phaseCard")?.innerText.includes("Mahlzeiten") &&
+    document.querySelector("#textureCoachCard")?.innerText.includes("Konsistenz"),
   );
 
   const card = page.locator("#dailyContextCard");

@@ -24,9 +24,10 @@ try {
   );
 
   const card = page.locator("#dailyContextCard");
-  assert.equal(await card.locator("details").count(), 0, "Der Essenskontext muss ohne Aufklappen sichtbar sein.");
-  assert.match(await card.innerText(), /Mahlzeiten[\s\S]*Konsistenz/, "Beide Angaben müssen klar beschriftet sein.");
-  assert.doesNotMatch(await card.innerText(), /Tageskontext/, "Die technische Überschrift darf nicht mehr erscheinen.");
+  assert.equal(await card.isVisible(), true, "Der Essenskontext muss ohne Aufklappen sichtbar sein.");
+  assert.equal(await card.locator("details").count(), 0, "Der Essenskontext darf keine Aufklappsteuerung enthalten.");
+  assert.match(await card.evaluate((element) => element.textContent), /Mahlzeiten[\s\S]*Konsistenz/, "Beide Angaben müssen klar beschriftet sein.");
+  assert.doesNotMatch(await card.evaluate((element) => element.textContent), /Tageskontext/, "Die technische Überschrift darf nicht mehr erscheinen.");
   await page.setViewportSize({ width: 320, height: 844 });
   assert.equal(
     await card.evaluate((element) => element.scrollWidth <= element.clientWidth),
@@ -46,7 +47,7 @@ try {
     document.querySelector("#textureCoachCard")?.innerText.includes(`Stufe ${stage} von 4`),
   nextStage);
   assert.equal(await page.locator("#genericModal").evaluate((element) => element.classList.contains("open")), false);
-  assert.match(await card.innerText(), new RegExp(`Stufe ${nextStage} von 4`));
+  assert.match(await card.evaluate((element) => element.textContent), new RegExp(`Stufe ${nextStage} von 4`));
 } finally {
   await closeBrowserApp({ context, browser, server });
 }

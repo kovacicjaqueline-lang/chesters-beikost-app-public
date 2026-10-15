@@ -232,3 +232,30 @@ test('bestehende automatische Locks mit neuer Eligibility werden migrationssiche
   assert.ok(s.planLocks['2026-08-21|lunch']);
   assert.equal(s.overrides['2026-08-20|lunch'], undefined);
 });
+
+test('alte automatische Hafer-Allergen-Locks werden bei FOOD-Neueinordnung entfernt', () => {
+  const foods = baseFoods();
+  applyFoodPolicyData(foods, {});
+  const obsolete = {
+    focusId: 'hafer', foodIds: ['hafer'], sampleFoodIds: ['hafer'],
+    type: 'Allergen wiederholen', mode: 'auto',
+  };
+  const state = {
+    settings: settings('aufbau'),
+    foods,
+    planLocks: {
+      '2026-08-20|breakfast': { ...obsolete },
+      '2026-08-20|lunch': { ...obsolete, mode: 'manual' },
+      '2026-08-20|dinner': {
+        focusId: 'banane', foodIds: ['banane'], baseFoodIds: ['banane'],
+        sampleFoodIds: [], type: 'bekannt', mode: 'auto',
+      },
+    },
+    overrides: {},
+    followUps: {},
+  };
+  assert.equal(pruneIneligibleAutomaticPlanState(state), true);
+  assert.equal(state.planLocks['2026-08-20|breakfast'], undefined);
+  assert.ok(state.planLocks['2026-08-20|lunch'], 'manueller Lock bleibt erhalten');
+  assert.ok(state.planLocks['2026-08-20|dinner'], 'gültige automatische Mahlzeit bleibt erhalten');
+});

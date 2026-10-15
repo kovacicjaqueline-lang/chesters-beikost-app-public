@@ -320,12 +320,15 @@ function applyFoodPolicyData(foodDb, idAliases = {}) {
     item.allergenGroup = "Sesam";
   }
 
+  // Hafer ist im Beikost-Planer ein gewöhnliches Lebensmittel und kein
+  // eigenes Allergen- oder Glutenpflegeziel. Der gemeinsame FOOD-Stamm bleibt.
   let hafer = byId.get("hafer");
   let haferdrink = byId.get("haferdrink");
   for (let item of [hafer, haferdrink].filter(Boolean)) {
     item.foodFamily = "hafer";
-    item.allergenFamily = "hafer";
-    item.allergenGroup = "Glutenhaltiges Getreide";
+    item.allergenGroup = "";
+    delete item.allergenFamily;
+    delete item.allergenMaintenanceGroup;
   }
 
   for (let id of FOOD_POLICY_DATA.componentOnlyFoods) {

@@ -412,7 +412,7 @@ try {
   await showView(page, "home");
   const phaseCard = page.locator("#phaseCard");
   assert.equal(await phaseCard.locator(".daily-context-value").isVisible(), true);
-  assert.equal((await phaseCard.locator(".daily-context-label").innerText()).trim(), "Mahlzeiten");
+  assert.equal((await phaseCard.locator(".daily-context-label").innerText()).trim().toLocaleLowerCase(), "Mahlzeiten");
   const phaseBefore = await page.evaluate(() => window.__beikostTest.getState().settings.phaseSelected);
   await phaseCard.locator("#phaseForward").click();
   await page.locator("#confirmPhaseChange").waitFor({ state: "visible" });

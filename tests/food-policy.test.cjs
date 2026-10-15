@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
+const allergenMaintenance = require('../js/planner-allergen-maintenance.js');
 const {
   FOOD_PHASE_ORDER,
   automaticFoodEligibility,
@@ -185,14 +186,33 @@ test('Milchprodukte teilen den freigegebenen Allergenstamm, konkrete Produkte bl
   assert.equal(logs[0].foodIds.includes('naturjoghurt'), false);
 });
 
-test('Hafer und Haferdrink haben korrekte Gluten-Allergenzuordnung und gemeinsamen Haferstamm', () => {
-  const foods = baseFoods(); applyFoodPolicyData(foods, {});
-  for (const id of ['hafer','haferdrink']) {
+test('Hafer und Haferdrink bleiben gewöhnliche Lebensmittel ohne Allergen- oder Glutenpflegepflicht', () => {
+  const foods = baseFoods();
+  for (const id of ['hafer', 'haferdrink']) {
     const f = foods.find(x => x.id === id);
-    assert.equal(f.allergenGroup, 'Glutenhaltiges Getreide');
-    assert.equal(f.foodFamily, 'hafer');
-    assert.equal(f.allergenFamily, 'hafer');
+    // Auch ältere bereits angereicherte FOOD-Stämme werden bereinigt.
+    f.allergenGroup = 'Glutenhaltiges Getreide';
+    f.allergenFamily = 'hafer';
+    f.allergenMaintenanceGroup = 'Glutenhaltiges Getreide';
   }
+  applyFoodPolicyData(foods, {});
+  for (const id of ['hafer', 'haferdrink']) {
+    const f = foods.find(x => x.id === id);
+    assert.equal(f.foodFamily, 'hafer');
+    assert.equal(f.allergenGroup, '');
+    assert.equal(f.allergenFamily, undefined);
+    assert.equal(f.allergenMaintenanceGroup, undefined);
+    assert.equal(allergenMaintenance.targetForFood(f), null);
+    assert.deepEqual(
+      foods.filter(x => x.foodFamily === 'hafer').map(x => x.id).sort(),
+      ['hafer', 'haferdrink'],
+    );
+  }
+  assert.equal(
+    allergenMaintenance.targetForFood({ id: 'weizen', allergenGroup: 'Glutenhaltiges Getreide' }).key,
+    'allergen:Glutenhaltiges Getreide',
+    'Glutenpflege für andere tatsächlich zugeordnete Quellen bleibt erhalten',
+  );
 });
 
 test('bestehende automatische Locks mit neuer Eligibility werden migrationssicher entfernt, manuelle bleiben', () => {
@@ -211,4 +231,31 @@ test('bestehende automatische Locks mit neuer Eligibility werden migrationssiche
   assert.equal(s.planLocks['2026-08-20|lunch'], undefined);
   assert.ok(s.planLocks['2026-08-21|lunch']);
   assert.equal(s.overrides['2026-08-20|lunch'], undefined);
+});
+
+test('alte automatische Hafer-Allergen-Locks werden bei FOOD-Neueinordnung entfernt', () => {
+  const foods = baseFoods();
+  applyFoodPolicyData(foods, {});
+  const obsolete = {
+    focusId: 'hafer', foodIds: ['hafer'], sampleFoodIds: ['hafer'],
+    type: 'Allergen wiederholen', mode: 'auto',
+  };
+  const state = {
+    settings: settings('aufbau'),
+    foods,
+    planLocks: {
+      '2026-08-20|breakfast': { ...obsolete },
+      '2026-08-20|lunch': { ...obsolete, mode: 'manual' },
+      '2026-08-20|dinner': {
+        focusId: 'banane', foodIds: ['banane'], baseFoodIds: ['banane'],
+        sampleFoodIds: [], type: 'bekannt', mode: 'auto',
+      },
+    },
+    overrides: {},
+    followUps: {},
+  };
+  assert.equal(pruneIneligibleAutomaticPlanState(state), true);
+  assert.equal(state.planLocks['2026-08-20|breakfast'], undefined);
+  assert.ok(state.planLocks['2026-08-20|lunch'], 'manueller Lock bleibt erhalten');
+  assert.ok(state.planLocks['2026-08-20|dinner'], 'gültige automatische Mahlzeit bleibt erhalten');
 });

@@ -292,7 +292,7 @@ Für bereits verträgliche Allergene ist die regelmäßige Pflegeexposition fach
 - Langfristige Pflege ist **keine neue FOOD-Einführung, keine Kostprobe und keine Lernaufgabe**. Sie darf daher keinen ansonsten freien FOOD-Einführungsslot verbrauchen und wird als normale bekannte Mahlzeit/Komponente behandelt.
 - Die Fälligkeit wird nicht mehr allein pro FOOD-ID über `lastDate(foodId)` bewertet. Maßgeblich ist ein zentrales Maintenance-Ziel aus dem vorhandenen strukturierten Allergenmodell.
 - Wo eine feinere `allergenFamily` fachlich eine konkrete Allergenquelle trennt, bleibt diese Trennung erhalten. Insbesondere werden unterschiedliche Nussfamilien nicht allein über die breite Gruppe `Schalenfrüchte` gleichgesetzt.
-- Für die ausdrücklich freigegebene **Glutenpflege** gilt dagegen `Glutenhaltiges Getreide` als gemeinsames langfristiges Maintenance-Ziel. Ein bereits geeignetes glutenhaltiges Lebensmittel wie Hafer, Weizen oder Dinkel kann deshalb dasselbe Pflegeziel erfüllen. Das macht diese FOODs **nicht** zu derselben Einführungsfamilie und verändert ihre Einführungs-/Statuslogik nicht. Hafer ist dafür im FOOD-Stamm über `allergenMaintenanceGroup` zugeordnet; `allergenGroup` bleibt leer, damit Hafer kein eigenes Allergen-Einführungsziel erhält.
+- Für die ausdrücklich freigegebene **Glutenpflege** gilt `Glutenhaltiges Getreide` als gemeinsames langfristiges Maintenance-Ziel geeigneter zugeordneter Quellen wie Weizen und Dinkel. Das macht diese FOODs **nicht** zu derselben Einführungsfamilie und verändert ihre Einführungs-/Statuslogik nicht. Hafer und Haferdrink gehören im Beikost-Planer weder zu einer priorisierten Allergen-Einführung noch zur wiederkehrenden Glutenpflege; sie bleiben gewöhnliche Lebensmittel. Die gesetzliche EU-Allergenkennzeichnung für Lebensmittel ist davon getrennt.
 - Ohne feinere Familie wird die bestehende strukturierte `allergenGroup` als langfristiges Pflegeziel verwendet; es wird dafür keine neue medizinische Gruppe erfunden.
 - Ein anderes FOOD darf ein Pflegeziel nur erfüllen, wenn es selbst über den normalen bekannten Planner-Pfad für die konkrete Mahlzeit geeignet ist. `autoPlan`, Mahlzeiteneignung, `minPhase`, Alter, `Pausiert`, Safety, Rollen und weitere harte Gates bleiben vollständig wirksam.
 - Rezepte können ein oder mehrere Pflegeziele über ihre **tatsächlichen kanonischen Zutaten** abdecken. Ein bloßer Rezeptname genügt nicht.
@@ -303,9 +303,9 @@ Für bereits verträgliche Allergene ist die regelmäßige Pflegeexposition fach
 
 Referenzfall:
 
-**„Hafer sollte als Allergen wieder angeboten werden; kein geeigneter freier Slot.“**
+**Historischer Fehlfall: „Hafer sollte als Allergen wieder angeboten werden.“**
 
-Eine fällige Langzeitpflege darf diesen FOOD-Lernslot nicht mehr allein wegen der FOOD-ID `hafer` blockieren. Ist das gemeinsame Glutenpflegeziel bereits durch eine andere geeignete geplante glutenhaltige Quelle oder ein passendes Rezept abgedeckt, gilt die Planung voraussichtlich als gedeckt; tatsächlich erfüllt ist sie erst nach protokolliertem Essen der relevanten Zutat.
+Hafer und Haferdrink dürfen keine Allergen-Wiederholung auslösen und nicht als Glutenpflege-Abdeckung angerechnet werden. Das gemeinsame Glutenpflegeziel kann hingegen durch eine andere geeignete geplante, tatsächlich zugeordnete Quelle oder ein passendes Rezept voraussichtlich abgedeckt werden; tatsächlich erfüllt ist es erst nach protokolliertem Essen der relevanten Zutat.
 
 ## 6.4 Nüsse/Samen: Komponente, Sample und Topping ✅ main
 
@@ -748,7 +748,7 @@ Weitere offene FOOD-Datenfragen werden separat im FOOD-Fachregel-Track geklärt 
 - Allergen-Einführung oder gezielte Allergen-Wiederholung bleibt die einzige automatische Lernaufgabe des Tages;
 - langfristige Allergenpflege ist keine Lernaufgabe, kein `sample` und verbraucht keinen FOOD-Einführungsslot;
 - Maintenance-Fälligkeit wird pro Pflegeziel statt ausschließlich pro FOOD-ID bewertet; nur `eaten` erfüllt die historische Exposition. Zwei erfolgreiche Expositionen auf unterschiedlichen geeigneten Quellen können das gemeinsame Pflegeziel etablieren;
-- Glutenpflege darf durch eine andere bereits geeignete glutenhaltige Quelle oder ein Rezept mit tatsächlicher kanonischer Gluten-Zutat abgedeckt werden, ohne Hafer/Weizen/Dinkel als Einführungsfamilie gleichzusetzen;
+- Glutenpflege darf durch eine andere bereits geeignete, als Pflegequelle zugeordnete Getreideart oder ein Rezept mit tatsächlich zugeordneter kanonischer Zutat abgedeckt werden. Hafer und Haferdrink zählen nicht als Allergen- oder Pflegequelle;
 - feinere vorhandene Allergenfamilien – insbesondere einzelne Nussfamilien – bleiben als getrennte Maintenance-Ziele erhalten;
 - geplante FOODs/Rezepte zählen nur als voraussichtliche Maintenance-Abdeckung; mehrere bekannte Pflegeziele dürfen durch dieselbe normale Mahlzeit abgedeckt werden;
 - Snack führt keine neuen FOODs ein, darf aber ein geeignetes Rezept oder bekanntes Obst sein;

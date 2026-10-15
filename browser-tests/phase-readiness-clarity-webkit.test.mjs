@@ -1,79 +1,59 @@
 import assert from "node:assert/strict";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { webkit } from "playwright";
-import { closeBrowserApp, configureBrowserTestPage, startStaticServer } from "./helpers/app-harness.mjs";
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const screenshotDir = path.join(root, "artifacts", "browser-tests", "plan-checks-ux-webkit");
-
-
-
-async function assertSheetFitsMobile(page) {
-  const metrics = await page.locator("#genericModal .sheet").evaluate((sheet) => {
-    const rect = sheet.getBoundingClientRect();
-    return {
-      scrollWidth: sheet.scrollWidth,
-      clientWidth: sheet.clientWidth,
-      left: rect.left,
-      right: rect.right,
-      bottom: rect.bottom,
-      viewportWidth: window.innerWidth,
-      viewportHeight: window.innerHeight,
-    };
-  });
-  assert.ok(metrics.scrollWidth <= metrics.clientWidth + 1, "Bottom-Sheet darf horizontal nicht überlaufen");
-  assert.ok(metrics.left >= -1 && metrics.right <= metrics.viewportWidth + 1, "Bottom-Sheet muss im mobilen Viewport bleiben");
-  assert.ok(metrics.bottom <= metrics.viewportHeight + 1, "Bottom-Sheet muss inklusive Safe-Area im Viewport bleiben");
-}
+import { closeBrowserApp, startStaticServer } from "./helpers/app-harness.mjs";
 
 const server = await startStaticServer();
 const { port } = server.address();
 const browser = await webkit.launch();
+let context;
 
 try {
-  const context = await browser.newContext({
+  context = await browser.newContext({
     viewport: { width: 390, height: 844 },
     deviceScaleFactor: 2,
     isMobile: true,
     hasTouch: true,
   });
-  const page = configureBrowserTestPage(await context.newPage());
+  const page = await context.newPage();
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
 
-  await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "domcontentloaded" });
+  await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "load" });
   await page.waitForFunction(() => !!window.__beikostTest?.reset && window.__planChecksUiInstalled === true);
   await page.evaluate(() => window.__beikostTest.reset());
-  await page.waitForFunction(() => document.getElementById("home")?.classList.contains("active"));
+  await page.waitForFunction(() =>
+    document.querySelector("#dailyContextCard")?.isConnected &&
+    document.querySelector("#phaseForward") &&
+    document.querySelector("#textureChange"),
+  );
 
-  await page.locator(".phase-details-trigger").click();
-  await page.locator('[data-readiness-signal="currentPatternAccepted"][data-readiness-value="yes"]').click();
-  await page.locator('[data-readiness-signal="additionalMealCue"][data-readiness-value="no"]').click();
-  await page.locator('[data-readiness-signal="routineCompatible"][data-readiness-value="unknown"]').click();
+  const contextCard = page.locator("#dailyContextCard");
+  assert.equal(await contextCard.isVisible(), true, "Der Tagesbereich muss direkt sichtbar sein.");
+  assert.equal(await contextCard.locator("details").count(), 0, "Der Tagesbereich darf keine Aufklappsteuerung enthalten.");
+  assert.match(await page.locator("#phaseCard").textContent(), /Mahlzeiten/);
+  assert.match(await page.locator("#textureCoachCard").textContent(), /Konsistenz/);
 
-  const yes = page.locator('[data-readiness-signal="currentPatternAccepted"][data-readiness-value="yes"]');
-  const no = page.locator('[data-readiness-signal="additionalMealCue"][data-readiness-value="no"]');
-  const unknown = page.locator('[data-readiness-signal="routineCompatible"][data-readiness-value="unknown"]');
-  await yes.waitFor({ state: "visible" });
-  assert.equal(await yes.evaluate((button) => button.classList.contains("secondary")), false);
-  assert.equal(await no.evaluate((button) => button.classList.contains("secondary")), false);
-  assert.equal(await unknown.evaluate((button) => button.classList.contains("secondary")), false);
+  await page.locator("#phaseForward").click();
+  assert.match(await page.locator("#genericTitle").textContent(), /Phase wechseln/);
+  assert.match(await page.locator("#genericBody").textContent(), /Vorgesehene Mahlzeiten/);
+  await page.getByRole("button", { name: "Abbrechen" }).click();
+  assert.equal(await page.locator("#genericModal").evaluate((element) => element.classList.contains("open")), false);
 
-  const reasonBlocks = page.locator(".readiness-reasons");
-  assert.ok(await reasonBlocks.count() >= 1, "Readiness-Gründe bleiben im strukturierten DOM vorhanden");
-  for (let index = 0; index < await reasonBlocks.count(); index++) {
-    assert.equal(await reasonBlocks.nth(index).isVisible(), false, "Erfüllt-/Fehlt-noch-Erklärungen sollen visuell entfallen");
-  }
-
-  assert.match(await page.locator("#genericBody").textContent(), /Nächste Phase noch nicht empfohlen/);
-  assert.match(await page.locator("#genericBody").textContent(), /Mit der nächsten Phase plant die App zusätzlich ein (Frühstück|Abendessen)\. (?:Frühstück und )?Mittagessen bleib(?:t|en) bestehen/);
-  assert.equal(await page.locator("#toast").isVisible(), false, "Abnahmescreenshot darf keinen alten Toast enthalten");
-  await assertSheetFitsMobile(page);
-  await page.screenshot({ path: path.join(screenshotDir, "phase-readiness-clean.png"), fullPage: false });
-
-  assert.deepEqual(pageErrors, [], `Phase-Readiness darf keine JavaScript-Fehler auslösen: ${pageErrors.join(" | ")}`);
-  await context.close();
-  console.log("phase-readiness-clarity-webkit: ok");
+  const currentStage = await page.evaluate(() => Number(window.__beikostTest.getState().settings.textureStage) || 1);
+  const nextStage = currentStage === 4 ? 3 : 4;
+  await page.getByRole("button", { name: "Konsistenz ändern" }).click();
+  await page.locator("#homeTextureStage").selectOption(String(nextStage));
+  await page.getByRole("button", { name: "Konsistenz übernehmen" }).click();
+  await page.waitForFunction((stage) =>
+    Number(window.__beikostTest.getState().settings.textureStage) === stage,
+  nextStage);
+  await page.waitForFunction((stage) =>
+    document.querySelector("#textureCoachCard")?.textContent.includes(`Stufe ${stage} von 4`),
+  nextStage);
+  assert.equal(await page.locator("#genericModal").evaluate((element) => element.classList.contains("open")), false);
+  assert.deepEqual(pageErrors, [], `Heute-Kontext darf keine JavaScript-Fehler auslösen: ${pageErrors.join(" | ")}`);
 } finally {
-  await closeBrowserApp({ context: typeof context !== "undefined" ? context : null, browser, server });
+  await closeBrowserApp({ context, browser, server });
 }
+
+console.log("home daily context and phase controls: ok");

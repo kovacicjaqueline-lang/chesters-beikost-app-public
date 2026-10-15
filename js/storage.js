@@ -416,6 +416,7 @@ async function bootstrapStorage() {
       state.backupMeta.storagePersisted = granted ? "granted" : "denied";
     } catch (_) { state.backupMeta.storagePersisted = "unavailable"; }
   } else state.backupMeta.storagePersisted = "unavailable";
+  if (typeof applyFoodSafetyAudit === "function") applyFoodSafetyAudit(state.foods);
   syncPlanFromToToday();
   await save();
   globalThis.installRecipeV2ComponentRuntime?.();

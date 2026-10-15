@@ -126,14 +126,16 @@ test('alle 34 neuen Datensätze besitzen Pflichtfelder ohne erfundene Alters- od
   }
 });
 
-test('verbindliche Allergenzuordnungen einschließlich Haferkorrektur sind wirksam', () => {
+test('verbindliche Allergenzuordnungen bleiben erhalten, Hafer ist kein priorisiertes Allergen', () => {
   const foods = json(loadRuntime().__foods);
   for (const id of ['pecannuss','paranuss','macadamia']) assert.equal(byId(foods, id).allergenGroup, 'Schalenfrüchte', id);
   assert.equal(byId(foods, 'lupine').allergenGroup, 'Lupine');
   assert.equal(byId(foods, 'miesmuschel').allergenGroup, 'Weichtiere');
   assert.notEqual(byId(foods, 'miesmuschel').allergenGroup, 'Krebstiere');
-  assert.equal(byId(foods, 'hafer').allergenGroup, 'Glutenhaltiges Getreide');
-  assert.equal(byId(foods, 'haferdrink').allergenGroup, 'Glutenhaltiges Getreide');
+  for (const id of ['hafer', 'haferdrink']) {
+    assert.equal(byId(foods, id).allergenGroup, '', id);
+    assert.equal(byId(foods, id).allergenMaintenanceGroup, undefined, id);
+  }
 });
 
 test('österreichische und alternative Namen werden durch die echte Suche gefunden', () => {

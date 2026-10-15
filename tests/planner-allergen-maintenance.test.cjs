@@ -526,13 +526,15 @@ test("Runtime: Allergen-Fortsetzung wird je Datum nur einmal historisch geprüft
   assert.equal(context.rankCalls, 3, "Maintenance-Ränge werden für das Datum nur einmal über den FOOD-Stamm gelesen");
 });
 
-test("Katalog-Hafer kann Glutenpflege abdecken, ohne selbst als Allergen geführt zu werden", () => {
+test("Katalog-Hafer löst weder eine Allergen-Einführung noch Glutenpflege aus", () => {
   const context = vm.createContext({});
   const catalogSource = fs.readFileSync(path.join(root, "data", "foods.js"), "utf8");
   vm.runInContext(`${catalogSource}\nthis.__catalogFoods = FOOD_DB;`, context);
-  const hafer = context.__catalogFoods.find((item) => item.id === "hafer");
-  assert.ok(hafer);
-  assert.equal(hafer.allergenGroup, "");
-  assert.equal(hafer.allergenMaintenanceGroup, "Glutenhaltiges Getreide");
-  assert.equal(maintenance.targetForFood(hafer).key, "allergen:Glutenhaltiges Getreide");
+  for (const id of ["hafer", "haferdrink"]) {
+    const item = context.__catalogFoods.find((food) => food.id === id);
+    assert.ok(item);
+    assert.equal(item.allergenGroup, "");
+    assert.equal(item.allergenMaintenanceGroup, undefined);
+    assert.equal(maintenance.targetForFood(item), null);
+  }
 });

@@ -106,11 +106,14 @@ try {
   assert.ok(headerHeight < 90, "Die App-Bar bleibt mobil kompakt");
 
   const phaseCard = page.locator("#phaseCard");
-  assert.equal(await phaseCard.evaluate((node) => node.classList.contains("card")), false, "Tageskontext ist keine eigene Dashboard-Card mehr");
-  assert.match(
-    (await phaseCard.locator("summary b").innerText()).replace(/\s+/g, " "),
-    /Drei Hauptmahlzeiten · Konsistenz: fein zerdrückt/,
-  );
+  assert.equal(await phaseCard.evaluate((node) => node.classList.contains("card")), false, "Der Heute-Kontext bleibt in die Startansicht integriert");
+  assert.equal((await phaseCard.locator(".daily-context-label").innerText()).trim(), "Mahlzeiten");
+  assert.match((await phaseCard.locator(".daily-context-value").innerText()).replace(/\s+/g, " "), /Drei Hauptmahlzeiten/);
+
+  const textureCard = page.locator("#textureCoachCard");
+  assert.equal((await textureCard.locator(".daily-context-label").innerText()).trim(), "Konsistenz");
+  assert.match((await textureCard.locator(".daily-context-value").innerText()).replace(/\s+/g, " "), /dick \/ fein zerdrückt/);
+  assert.equal(await textureCard.locator("#textureChange").isVisible(), true, "Die Konsistenzänderung ist direkt erreichbar");
 
   const todayCard = page.locator("#todayCard");
   assert.equal(await todayCard.locator(":scope > .row h2").innerText(), "Mittag");

@@ -23,7 +23,9 @@ try {
   });
   await page.waitForFunction(() =>
     document.querySelector("#phaseCard")?.textContent.includes("Mahlzeiten") &&
-    document.querySelector("#textureCoachCard")?.textContent.includes("Konsistenz"),
+    document.querySelector("#phaseForward") &&
+    document.querySelector("#textureCoachCard")?.textContent.includes("Konsistenz") &&
+    document.querySelector("#textureChange"),
   );
 
   const card = page.locator("#dailyContextCard");

@@ -29,8 +29,9 @@ try {
   const card = page.locator("#dailyContextCard");
   assert.equal(await card.isVisible(), true, "Der Essenskontext muss ohne Aufklappen sichtbar sein.");
   assert.equal(await card.locator("details").count(), 0, "Der Essenskontext darf keine Aufklappsteuerung enthalten.");
-  assert.match(await card.evaluate((element) => element.textContent), /Mahlzeiten[\s\S]*Konsistenz/, "Beide Angaben müssen klar beschriftet sein.");
-  assert.doesNotMatch(await card.evaluate((element) => element.textContent), /Tageskontext/, "Die technische Überschrift darf nicht mehr erscheinen.");
+  assert.match(await page.locator("#phaseCard").textContent(), /Mahlzeiten/, "Die Mahlzeitenangabe braucht eine klare Beschriftung.");
+  assert.match(await page.locator("#textureCoachCard").textContent(), /Konsistenz/, "Die Konsistenzangabe braucht eine klare Beschriftung.");
+  assert.equal(await page.getByText("Tageskontext", { exact: true }).count(), 0, "Die technische Überschrift darf nicht mehr erscheinen.");
   await page.setViewportSize({ width: 320, height: 844 });
   assert.equal(
     await card.evaluate((element) => element.scrollWidth <= element.clientWidth),

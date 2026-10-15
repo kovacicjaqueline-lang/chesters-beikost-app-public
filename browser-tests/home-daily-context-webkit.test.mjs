@@ -16,10 +16,11 @@ try {
   });
   const page = await context.newPage();
   await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "load" });
+  await page.waitForFunction(() => !!window.__beikostTest?.getState);
+  await page.evaluate(() => renderCurrentView());
   await page.waitForFunction(() =>
-    !!window.__beikostTest?.getState &&
-    document.querySelector("#phaseCard")?.innerText.includes("Mahlzeiten") &&
-    document.querySelector("#textureCoachCard")?.innerText.includes("Konsistenz"),
+    document.querySelector("#phaseCard")?.textContent.includes("Mahlzeiten") &&
+    document.querySelector("#textureCoachCard")?.textContent.includes("Konsistenz"),
   );
 
   const card = page.locator("#dailyContextCard");

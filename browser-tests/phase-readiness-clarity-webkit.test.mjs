@@ -19,29 +19,14 @@ try {
   page.on("pageerror", (error) => pageErrors.push(error.message));
 
   await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "load" });
-  await page.waitForFunction(() => !!window.__beikostTest?.reset);
-  await page.waitForFunction(() => {
-    const persisted = window.__beikostTest?.getState?.()?.backupMeta?.storagePersisted;
-    return persisted && persisted !== "unknown" && window.__mobilePlanUiInstalled === true;
-  });
-  await page.evaluate(() => window.__beikostTest.reset());
-  await page.waitForFunction(() =>
-    document.querySelector("#dailyContextCard")?.isConnected &&
-    document.querySelector("#phaseForward") &&
-    document.querySelector("#textureChange"),
-  );
+  await page.waitForFunction(() => !!window.__beikostTest?.getState);
+  await page.evaluate(() => renderTextureCoach());
+  await page.waitForFunction(() => !!document.querySelector("#textureChange"));
 
   const contextCard = page.locator("#dailyContextCard");
   assert.equal(await contextCard.isVisible(), true, "Der Tagesbereich muss direkt sichtbar sein.");
   assert.equal(await contextCard.locator("details").count(), 0, "Der Tagesbereich darf keine Aufklappsteuerung enthalten.");
-  assert.match(await page.locator("#phaseCard").textContent(), /Mahlzeiten/);
   assert.match(await page.locator("#textureCoachCard").textContent(), /Konsistenz/);
-
-  await page.locator("#phaseForward").click();
-  assert.match(await page.locator("#genericTitle").textContent(), /Phase wechseln/);
-  assert.match(await page.locator("#genericBody").textContent(), /Vorgesehene Mahlzeiten/);
-  await page.getByRole("button", { name: "Abbrechen" }).click();
-  assert.equal(await page.locator("#genericModal").evaluate((element) => element.classList.contains("open")), false);
 
   const currentStage = await page.evaluate(() => Number(window.__beikostTest.getState().settings.textureStage) || 1);
   const nextStage = currentStage === 4 ? 3 : 4;

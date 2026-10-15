@@ -173,7 +173,6 @@ const FOOD_DB = [
     "priority": 7,
     "active": true,
     "allergenGroup": "",
-    "allergenMaintenanceGroup": "Glutenhaltiges Getreide",
     "ironRich": true,
     "ph": false,
     "alias": "",

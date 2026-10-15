@@ -107,11 +107,11 @@ try {
 
   const phaseCard = page.locator("#phaseCard");
   assert.equal(await phaseCard.evaluate((node) => node.classList.contains("card")), false, "Der Heute-Kontext bleibt in die Startansicht integriert");
-  assert.equal((await phaseCard.locator(".daily-context-label").innerText()).trim().toLocaleLowerCase(), "Mahlzeiten");
+  assert.equal((await phaseCard.locator(".daily-context-label").innerText()).trim().toLocaleLowerCase(), "mahlzeiten");
   assert.match((await phaseCard.locator(".daily-context-value").innerText()).replace(/\s+/g, " "), /Drei Hauptmahlzeiten/);
 
   const textureCard = page.locator("#textureCoachCard");
-  assert.equal((await textureCard.locator(".daily-context-label").innerText()).trim().toLocaleLowerCase(), "Konsistenz");
+  assert.equal((await textureCard.locator(".daily-context-label").innerText()).trim().toLocaleLowerCase(), "konsistenz");
   assert.match((await textureCard.locator(".daily-context-value").innerText()).replace(/\s+/g, " "), /dick \/ fein zerdrückt/);
   assert.equal(await textureCard.locator("#textureChange").isVisible(), true, "Die Konsistenzänderung ist direkt erreichbar");
 

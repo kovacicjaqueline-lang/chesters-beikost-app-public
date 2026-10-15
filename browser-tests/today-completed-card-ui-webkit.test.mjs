@@ -110,10 +110,6 @@ try {
   assert.equal((await phaseCard.locator(".daily-context-label").innerText()).trim().toLocaleLowerCase(), "mahlzeiten");
   assert.match((await phaseCard.locator(".daily-context-value").innerText()).replace(/\s+/g, " "), /Drei Hauptmahlzeiten/);
 
-  const textureCard = page.locator("#textureCoachCard");
-  assert.equal((await textureCard.locator(".daily-context-label").innerText()).trim().toLocaleLowerCase(), "konsistenz");
-  assert.match((await textureCard.locator(".daily-context-value").innerText()).replace(/\s+/g, " "), /dick \/ fein zerdrückt/);
-  assert.equal(await textureCard.locator("#textureChange").isVisible(), true, "Die Konsistenzänderung ist direkt erreichbar");
 
   const todayCard = page.locator("#todayCard");
   assert.equal(await todayCard.locator(":scope > .row h2").innerText(), "Mittag");

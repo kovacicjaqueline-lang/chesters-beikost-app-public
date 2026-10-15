@@ -248,7 +248,8 @@ test('TODO3 FOOD-FAMILIES: Mais/Polenta, Sesam/Tahin und Hafer/Haferdrink bleibe
   for (const id of ['sesam', 'tahin']) assert.equal(context.state.foods.find((food) => food.id === id).allergenFamily, 'sesam');
   for (const id of ['hafer', 'haferdrink']) {
     const food = context.state.foods.find((item) => item.id === id);
-    assert.equal(food.allergenFamily, 'hafer');
-    assert.equal(food.allergenGroup, 'Glutenhaltiges Getreide');
+    assert.equal(food.allergenFamily, undefined);
+    assert.equal(food.allergenGroup, '');
+    assert.equal(food.allergenMaintenanceGroup, undefined);
   }
 });

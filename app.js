@@ -499,6 +499,7 @@ function familyPlanningRank(foodRecord, foods, logs, outcomeForFoodFn, concreteR
 
 function installFoodPolicyRuntime() {
   applyFoodPolicyData(FOOD_DB, ID_ALIASES);
+  if (typeof applyFoodSafetyAudit === "function") applyFoodSafetyAudit(FOOD_DB);
 
   let autoPlanningDepth = 0;
   let autoPlanningDate = "";
@@ -881,6 +882,7 @@ function startBeikostApp() {
   installFoodPolicyRuntime();
 
   state = load();
+  if (typeof applyFoodSafetyAudit === "function") applyFoodSafetyAudit(state.foods);
   if (!state.settings.planFrom) state.settings.planFrom = today();
   if (pruneIneligibleAutomaticPlanState(state)) save();
 

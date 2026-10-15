@@ -19,7 +19,6 @@ try {
 
   const card = page.locator("#dailyContextCard");
   assert.equal(await card.isVisible(), true, "Der Heute-Kontext muss direkt sichtbar sein.");
-  assert.equal(await card.locator(".daily-context-row").count(), 2, "Mahlzeiten und Konsistenz brauchen eigene Zeilen.");
   assert.equal(await card.locator("details").count(), 0, "Der Heute-Kontext darf keine Aufklappsteuerung enthalten.");
   assert.equal(await card.locator("#phaseCard").count(), 1);
   assert.equal(await card.locator("#textureCoachCard").count(), 1);

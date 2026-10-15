@@ -538,3 +538,71 @@ test("Katalog-Hafer löst weder eine Allergen-Einführung noch Glutenpflege aus"
     assert.equal(maintenance.targetForFood(item), null);
   }
 });
+
+test("Runtime: alte manuelle Hafer-Allergen-Snapshots behalten das Essen, aber nicht die falsche Kennzeichnung", () => {
+  const context = runtimeContext(`
+    var window = {};
+    var document = {};
+    var state = {
+      settings: { allergenDays: 7 },
+      foods: [
+        { id: "hafer", name: "Hafer", allergenGroup: "", _rank: 2 },
+        { id: "weizen", name: "Weizen", allergenGroup: "Glutenhaltiges Getreide", _rank: 2 },
+        { id: "ei", name: "Ei", allergenGroup: "Ei", _rank: 1 }
+      ],
+      logs: [],
+      planLocks: {
+        "2026-10-15|breakfast": {
+          focusId: "hafer", foodIds: ["hafer"], sampleFoodIds: ["hafer"],
+          allergenMaintenanceFoodIds: ["hafer", "weizen"],
+          type: "Allergen wiederholen",
+          note: "Allergen mit bekannter Basis gezielt wiederholen.",
+          mode: "manual"
+        },
+        "2026-10-15|lunch": {
+          focusId: "ei", foodIds: ["ei"], sampleFoodIds: ["ei"],
+          allergenMaintenanceFoodIds: [],
+          type: "Allergen wiederholen", mode: "manual"
+        }
+      }
+    };
+    function food(id) { return state.foods.find((item) => item.id === id); }
+    function rank(item) { return item?._rank || 0; }
+    function lockedMeal(date, meal) { return state.planLocks[date + "|" + meal] || null; }
+    function dueAllergen() { return false; }
+    function buildDay() { return null; }
+    function buildDays() { return []; }
+  `);
+  const hafer = vm.runInContext('lockedMeal("2026-10-15", "breakfast")', context);
+  assert.equal(hafer.type, "bekannt kombinieren");
+  assert.equal(hafer.note, "Lebensmittel wie geplant anbieten.");
+  assert.deepEqual(Array.from(hafer.foodIds), ["hafer"]);
+  assert.deepEqual(Array.from(hafer.allergenMaintenanceFoodIds), ["weizen"]);
+  assert.equal(context.state.planLocks["2026-10-15|breakfast"].type, "Allergen wiederholen",
+    "der gespeicherte manuelle Lock wird nur in der Ansicht normalisiert");
+  const ei = vm.runInContext('lockedMeal("2026-10-15", "lunch")', context);
+  assert.equal(ei.type, "Allergen wiederholen", "echte Allergen-Kostproben bleiben unverändert");
+});
+
+test("Runtime: frühe Hafer-Wiederholung wird nicht mehr als Allergen bezeichnet", () => {
+  const context = runtimeContext(`
+    var window = {};
+    var document = {};
+    var state = {
+      foods: [{ id: "hafer", allergenGroup: "", _rank: 1 }],
+      planLocks: {}
+    };
+    function food(id) { return state.foods.find((item) => item.id === id); }
+    function rank(item) { return item?._rank || 0; }
+    function lockedMeal() { return {
+      focusId: "hafer", foodIds: ["hafer"], sampleFoodIds: ["hafer"],
+      type: "Allergen wiederholen"
+    }; }
+    function dueAllergen() { return false; }
+    function buildDay() { return null; }
+    function buildDays() { return []; }
+  `);
+  const result = vm.runInContext('lockedMeal("2026-10-15", "breakfast")', context);
+  assert.equal(result.type, "gezielt wiederholen");
+  assert.deepEqual(Array.from(result.sampleFoodIds), ["hafer"]);
+});

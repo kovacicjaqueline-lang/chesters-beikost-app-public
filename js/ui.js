@@ -231,7 +231,7 @@ function renderTextureCoach() {
     <div class="daily-context-label">Konsistenz</div>
     <div class="daily-context-value">${esc(textureName(stage))}</div>
     <div class="texture-track" role="img" aria-label="Konsistenzstufe ${stage} von 4">${progress}</div>
-    <div class="small daily-context-meta">${successes} positive Texturerfahrung${successes === 1 ? "" : "en"} auf dieser Stufe.</div>
+    <div class="small daily-context-meta">Stufe ${stage} von 4 · ${successes} positive Texturerfahrung${successes === 1 ? "" : "en"}.</div>
   </div>
   <div class="daily-context-actions texture-coach-actions">
     <button class="btn secondary smallbtn" id="textureChange" type="button">Konsistenz ändern</button>

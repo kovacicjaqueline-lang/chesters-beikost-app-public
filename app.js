@@ -853,7 +853,13 @@ function pruneIneligibleAutomaticPlanState(currentState, recipes = typeof RECIPE
     let date = key.split("|")[0];
     let automaticIds = [...new Set([...(lock.foodIds || []), ...(lock.optionalAddons || [])])];
     let knownIds = new Set((currentState.foods || []).map((item) => item.id));
-    let blocked = automaticIds.some((id) => !knownIds.has(id)) ||
+    let focus = (currentState.foods || []).find((item) => item.id === lock.focusId);
+    // Alte automatische Allergen-Locks verlieren nach einer FOOD-Neueinordnung
+    // ihre Grundlage. Manuell geschützte Mahlzeiten bleiben unangetastet.
+    let obsoleteAllergenRepeat = lock.type === "Allergen wiederholen" &&
+      focus && !focus.allergenGroup && !focus.allergenMaintenanceGroup;
+    let blocked = obsoleteAllergenRepeat ||
+      automaticIds.some((id) => !knownIds.has(id)) ||
       automaticIds.some((id) => {
         let f = currentState.foods?.find((item) => item.id === id);
         return f && !automaticFoodEligibility(f, date, currentState.settings || {});

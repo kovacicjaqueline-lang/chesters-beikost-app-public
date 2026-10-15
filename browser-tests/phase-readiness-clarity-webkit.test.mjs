@@ -19,7 +19,11 @@ try {
   page.on("pageerror", (error) => pageErrors.push(error.message));
 
   await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "load" });
-  await page.waitForFunction(() => !!window.__beikostTest?.reset && window.__planChecksUiInstalled === true);
+  await page.waitForFunction(() => !!window.__beikostTest?.reset);
+  await page.waitForFunction(() => {
+    const persisted = window.__beikostTest?.getState?.()?.backupMeta?.storagePersisted;
+    return persisted && persisted !== "unknown" && window.__mobilePlanUiInstalled === true;
+  });
   await page.evaluate(() => window.__beikostTest.reset());
   await page.waitForFunction(() =>
     document.querySelector("#dailyContextCard")?.isConnected &&

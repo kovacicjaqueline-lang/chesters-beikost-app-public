@@ -17,6 +17,10 @@ try {
   const page = await context.newPage();
   await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "load" });
   await page.waitForFunction(() => !!window.__beikostTest?.getState);
+  await page.waitForFunction(() => {
+    const persisted = window.__beikostTest?.getState?.()?.backupMeta?.storagePersisted;
+    return persisted && persisted !== "unknown";
+  });
   await page.evaluate(() => renderCurrentView());
   await page.waitForFunction(() =>
     document.querySelector("#phaseCard")?.textContent.includes("Mahlzeiten") &&

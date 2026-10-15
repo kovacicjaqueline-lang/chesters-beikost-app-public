@@ -39,6 +39,9 @@ try {
   await page.waitForFunction((stage) =>
     Number(window.__beikostTest.getState().settings.textureStage) === stage,
   nextStage);
+  await page.waitForFunction((stage) =>
+    document.querySelector("#textureCoachCard")?.innerText.includes(`Stufe ${stage} von 4`),
+  nextStage);
   assert.equal(await page.locator("#genericModal").evaluate((element) => element.classList.contains("open")), false);
   assert.match(await card.innerText(), new RegExp(`Stufe ${nextStage} von 4`));
 } finally {

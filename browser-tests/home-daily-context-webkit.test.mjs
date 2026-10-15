@@ -21,7 +21,6 @@ try {
     const persisted = window.__beikostTest?.getState?.()?.backupMeta?.storagePersisted;
     return persisted && persisted !== "unknown";
   });
-  await page.evaluate(() => renderCurrentView());
   await page.waitForFunction(() =>
     document.querySelector("#phaseCard")?.textContent.includes("Mahlzeiten") &&
     document.querySelector("#textureCoachCard")?.textContent.includes("Konsistenz"),

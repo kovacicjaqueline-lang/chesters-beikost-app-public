@@ -414,14 +414,28 @@
 
   lockedMeal = function maintenanceAwareLockedMeal(date, meal) {
     let result = baseLockedMeal(date, meal);
-    if (
-      !result ||
-      result.type !== "Allergen wiederholen" ||
-      (result.sampleFoodIds || []).length
-    ) return result;
+    if (!result) return result;
+
+    // Gespeicherte Lock-Snapshots dürfen keine früheren Pflege-Kennzeichnungen
+    // anzeigen, wenn die kanonische FOOD-Zuordnung nicht mehr besteht.
+    let previousIds = result.allergenMaintenanceFoodIds || [];
+    let currentIds = previousIds.filter((id) => !!CORE.targetForFood(food(id)));
+    if (currentIds.length !== previousIds.length) {
+      result = { ...result, allergenMaintenanceFoodIds: currentIds };
+    }
+    if (result.type !== "Allergen wiederholen") return result;
+
     let focus = food(result.focusId);
     let target = CORE.targetForFood(focus);
-    if (!target) return result;
+    if (!target && focus && !focus.allergenGroup) {
+      let currentRank = Number(rank(focus)) || 0;
+      let type = currentRank <= 0 ? "neu"
+        : currentRank === 1 ? "gezielt wiederholen" : "bekannt kombinieren";
+      let note = result.note === "Allergen mit bekannter Basis gezielt wiederholen."
+        ? "Lebensmittel wie geplant anbieten." : result.note;
+      return { ...result, type, note };
+    }
+    if (!target || (result.sampleFoodIds || []).length) return result;
     let established = CORE.establishedTargets(state.foods, (item) => rank(item))
       .some((item) => item.key === target.key);
     return established ? { ...result, type: "bekannt kombinieren" } : result;

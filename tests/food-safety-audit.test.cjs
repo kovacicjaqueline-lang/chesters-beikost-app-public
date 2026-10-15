@@ -7,6 +7,8 @@ const vm = require('node:vm');
 const root = path.join(__dirname, '..');
 const foodsSource = fs.readFileSync(path.join(root, 'data', 'foods.js'), 'utf8');
 const stateSource = fs.readFileSync(path.join(root, 'js', 'state.js'), 'utf8');
+const appSource = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
+const storageSource = fs.readFileSync(path.join(root, 'js', 'storage.js'), 'utf8');
 
 function loadAudit() {
   const sandbox = {};
@@ -146,9 +148,30 @@ test('erneute Anwendung nach einem späteren Policy-Patch stellt die auditierte 
     meals: ['lunch', 'dinner'],
   }];
 
-  applyFoodSafetyAudit(foods);
+  assert.equal(applyFoodSafetyAudit(foods), true);
   assert.match(foods[0].safeForm, /Haut möglichst entfernen/i);
   assert.match(foods[0].safeForm, /längs vierteln/i);
   assert.equal(foods[0].priority, 42);
   assert.deepEqual(foods[0].meals, ['lunch', 'dinner']);
+  assert.equal(applyFoodSafetyAudit(foods), false, 'Die erneute Anwendung muss idempotent sein');
+});
+
+test('Safe-Form-Audit läuft vor dem jeweiligen Render statt verzögert über DOMContentLoaded', () => {
+  assert.doesNotMatch(stateSource, /reapplyFoodSafetyAuditAfterRuntime|DOMContentLoaded/);
+
+  const policyStart = appSource.indexOf('function installFoodPolicyRuntime()');
+  const policyEnd = appSource.indexOf('function pruneIneligibleAutomaticPlanState(', policyStart);
+  const policyInstall = appSource.slice(policyStart, policyEnd);
+  assert.ok(policyInstall.indexOf('applyFoodPolicyData(FOOD_DB, ID_ALIASES);') < policyInstall.indexOf('applyFoodSafetyAudit(FOOD_DB);'));
+
+  const appStart = appSource.slice(appSource.indexOf('function startBeikostApp()'));
+  const loadIndex = appStart.indexOf('state = load();');
+  const auditIndex = appStart.indexOf('applyFoodSafetyAudit(state.foods);');
+  const renderIndex = appStart.indexOf('renderCurrentView();');
+  assert.ok(loadIndex >= 0 && auditIndex > loadIndex && renderIndex > auditIndex);
+
+  const storageBoot = storageSource.slice(storageSource.indexOf('async function bootstrapStorage()'));
+  const hydrationAuditIndex = storageBoot.indexOf('applyFoodSafetyAudit(state.foods);');
+  const hydratedRenderIndex = storageBoot.indexOf('renderCurrentView();');
+  assert.ok(hydrationAuditIndex >= 0 && hydratedRenderIndex > hydrationAuditIndex);
 });

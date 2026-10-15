@@ -102,11 +102,8 @@ applyFoodAliasAudit(FOOD_DB);
  * Fachlich geprüfte Safe-Form-Korrekturen.
  * Diese Schicht korrigiert nur Zubereitungs-/Darreichungsdetails und Prep-Hinweise;
  * IDs, Prioritäten, Mahlzeiteneignung, Allergene und Planungsstatus bleiben unverändert.
- *
- * Die Korrekturen werden vor dem Defaultzustand und nach dem späteren FOOD-Policy-Lauf
- * nochmals angewendet. So bleiben sie auch für zur Laufzeit ergänzte Datensätze sowie
- * für den bestehenden Gurke-/Tomate-Policy-Patch wirksam, ohne data/foods.js des
- * parallelen FOOD-Aufnahmeblocks zu verändern.
+ * Nach Policy-Patches und Speicher-Hydration wird sie vor dem jeweiligen Render
+ * erneut angewendet, damit die Safety-Angaben auch in älteren Zuständen aktuell sind.
  */
 const FOOD_SAFETY_AUDIT_GROUPS = Object.freeze({
   leafVegetables: Object.freeze([
@@ -354,15 +351,19 @@ const FOOD_SAFE_FORM_AUDIT_OVERRIDES = Object.freeze({
 });
 
 function applyFoodSafetyAudit(foodDb) {
-  if (!Array.isArray(foodDb)) return foodDb;
+  if (!Array.isArray(foodDb)) return false;
+  let changed = false;
   let byId = new Map(foodDb.map((item) => [item?.id, item]).filter(([id]) => id));
-  let patchIds = (ids, patch) => {
-    for (let id of ids) {
-      let item = byId.get(id);
-      if (!item) continue;
-      if (patch.safeForm) item.safeForm = patch.safeForm;
-      if (patch.prep) item.prep = patch.prep;
+  let patchItem = (item, patch) => {
+    if (!item) return;
+    for (let [key, value] of Object.entries(patch)) {
+      if (item[key] === value) continue;
+      item[key] = value;
+      changed = true;
     }
+  };
+  let patchIds = (ids, patch) => {
+    for (let id of ids) patchItem(byId.get(id), patch);
   };
 
   patchIds(FOOD_SAFETY_AUDIT_GROUPS.leafVegetables, {
@@ -380,25 +381,12 @@ function applyFoodSafetyAudit(foodDb) {
   });
 
   for (let [id, patch] of Object.entries(FOOD_SAFE_FORM_AUDIT_OVERRIDES)) {
-    let item = byId.get(id);
-    if (!item) continue;
-    if (patch.safeForm) item.safeForm = patch.safeForm;
-    if (patch.prep) item.prep = patch.prep;
+    patchItem(byId.get(id), patch);
   }
-  return foodDb;
+  return changed;
 }
 
 applyFoodSafetyAudit(FOOD_DB);
-
-function reapplyFoodSafetyAuditAfterRuntime() {
-  applyFoodSafetyAudit(FOOD_DB);
-  if (Array.isArray(state?.foods)) applyFoodSafetyAudit(state.foods);
-  if (state && typeof renderCurrentView === "function") renderCurrentView();
-}
-
-if (typeof window !== "undefined" && typeof document !== "undefined") {
-  window.addEventListener("DOMContentLoaded", reapplyFoodSafetyAuditAfterRuntime, { once: true });
-}
 
 const DEFAULT = {
   settings: {

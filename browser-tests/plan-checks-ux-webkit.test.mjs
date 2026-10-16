@@ -407,28 +407,18 @@ try {
   await page.locator("#reactivateRequiredFood").click({ timeout: 30_000 });
   await page.waitForFunction((id) => window.__beikostTest.getState().foods.find((record) => record.id === id)?.active === true, required.foodId);
 
-  // 9. Phase-Details zeigen tatsächliche erfüllte und fehlende Kriterien.
+  // 9. Mahlzeitenphase ist direkt sichtbar und änderbar; Änderungen brauchen Bestätigung.
   await page.evaluate(() => window.__beikostTest.setState(structuredClone(window.__beikostTestBaseline)));
   await showView(page, "home");
-  await page.locator(".phase-details-trigger").click();
-  await page.locator('[data-readiness-signal="currentPatternAccepted"][data-readiness-value="yes"]').click({ timeout: 30_000 });
-  await page.locator('[data-readiness-signal="additionalMealCue"][data-readiness-value="no"]').click({ timeout: 30_000 });
-  await page.locator('[data-readiness-signal="routineCompatible"][data-readiness-value="unknown"]').click({ timeout: 30_000 });
-  await page.waitForFunction(() => document.getElementById("genericBody")?.textContent?.includes("Erfüllt") && document.getElementById("genericBody")?.textContent?.includes("Fehlt noch"));
-  assert.match(await page.locator("#genericBody").textContent(), /Das aktuelle Mahlzeitenmuster funktioniert im Alltag/);
-  assert.match(await page.locator("#genericBody").textContent(), /Signale für eine zusätzliche Mahlzeit fehlen noch/);
-  await assertSheetFitsMobile(page);
-  await page.screenshot({ path: path.join(artifactDir, "phase-readiness-mixed.png"), fullPage: false });
-
-  // 10. Empfehlung nennt den zusätzlichen Slot; Phasenwechsel erfolgt erst nach bestehender Bestätigung.
-  await page.locator('[data-readiness-signal="additionalMealCue"][data-readiness-value="yes"]').click({ timeout: 30_000 });
-  await page.locator('[data-readiness-signal="routineCompatible"][data-readiness-value="yes"]').click({ timeout: 30_000 });
-  await page.waitForFunction(() => document.getElementById("genericBody")?.textContent?.includes("Nächste Phase empfohlen"));
-  assert.match(await page.locator("#genericBody").textContent(), /Mit der nächsten Phase plant die App zusätzlich ein (Frühstück|Abendessen)\. (?:Frühstück und )?Mittagessen bleib(?:t|en) bestehen/);
+  const phaseCard = page.locator("#phaseCard");
+  assert.equal(await phaseCard.locator(".daily-context-value").isVisible(), true);
+  assert.equal((await phaseCard.locator(".daily-context-label").innerText()).trim().toLocaleLowerCase(), "mahlzeiten");
   const phaseBefore = await page.evaluate(() => window.__beikostTest.getState().settings.phaseSelected);
-  await page.locator("#startRecommendedPhase").click();
-  await page.waitForFunction(() => document.getElementById("genericTitle")?.textContent?.includes("wechseln?"));
+  await phaseCard.locator("#phaseForward").click();
+  await page.locator("#confirmPhaseChange").waitFor({ state: "visible" });
   assert.equal(await page.evaluate(() => window.__beikostTest.getState().settings.phaseSelected), phaseBefore);
+  await page.locator("#cancelPhaseChange").click();
+  await phaseCard.locator("#phaseForward").click();
   await page.locator("#confirmPhaseChange").click();
   await page.waitForFunction((before) => window.__beikostTest.getState().settings.phaseSelected !== before, phaseBefore);
 

@@ -188,6 +188,32 @@ function openTextureAdvance(nextStage) {
   document.getElementById("confirmTextureStage").onclick = () =>
     setTextureStage(nextStage);
 }
+function openTextureStagePicker(currentStage) {
+  let options = [1, 2, 3, 4]
+    .map((stage) => `<option value="${stage}" ${stage === currentStage ? "selected" : ""}>${stage} – ${esc(textureName(stage))}</option>`)
+    .join("");
+  openGeneric(
+    "Konsistenz ändern",
+    `<div class="field">
+       <label for="homeTextureStage">Konsistenzstufe</label>
+       <select id="homeTextureStage">${options}</select>
+     </div>
+     <div class="notice olive">Die gewählte Stufe gilt für Planung und Rezepte. Sie wird nicht automatisch geändert.</div>
+     <div class="sticky-form-actions ds-actionbar">
+       <button class="btn secondary" id="cancelHomeTextureStage" type="button">Abbrechen</button>
+       <button class="btn" id="saveHomeTextureStage" type="button">Konsistenz übernehmen</button>
+     </div>`,
+  );
+  document.getElementById("cancelHomeTextureStage").onclick = closeGeneric;
+  document.getElementById("saveHomeTextureStage").onclick = () => {
+    let nextStage = Number(document.getElementById("homeTextureStage").value);
+    if (nextStage === currentStage) {
+      closeGeneric();
+      return;
+    }
+    setTextureStage(nextStage);
+  };
+}
 function renderTextureCoach() {
   let card = document.getElementById("textureCoachCard");
   if (!card) return;
@@ -201,23 +227,19 @@ function renderTextureCoach() {
         `<span class="texture-step ${n <= stage ? "done" : n === next ? "next" : ""}"></span>`,
     )
     .join("");
-  card.innerHTML = `<details class="home-control-details">
-    <summary>
-      <span>
-        <small>Konsistenz</small>
-        <b>Stufe ${stage} · ${esc(textureName(stage))}</b>
-      </span>
-      <span class="pill ${suggest ? "ph" : "dim"}">${stage === 4 ? "Aktuell" : suggest ? "Test möglich" : "Aktuell"}</span>
-    </summary>
-    <div class="home-control-body">
-      <div class="texture-track" aria-label="Konsistenzstufe ${stage} von 4">${progress}</div>
-      <div class="small">${successes} positive Texturerfahrung${successes === 1 ? "" : "en"} auf dieser Stufe.</div>
-      <div class="texture-coach-actions">
-        ${stage > 1 ? `<button class="btn secondary" id="textureBack">Zurück</button>` : ""}
-        ${stage < 4 ? `<button class="btn ${suggest ? "" : "secondary"}" id="textureNext">Stufe ${next} testen</button>` : ""}
-      </div>
-    </div>
-  </details>`;
+  card.innerHTML = `<div class="daily-context-copy">
+    <div class="daily-context-label">Konsistenz</div>
+    <div class="daily-context-value">${esc(textureName(stage))}</div>
+    <div class="texture-track" role="img" aria-label="Konsistenzstufe ${stage} von 4">${progress}</div>
+    <div class="small daily-context-meta">Stufe ${stage} von 4 · ${successes} positive Texturerfahrung${successes === 1 ? "" : "en"}.</div>
+  </div>
+  <div class="daily-context-actions texture-coach-actions">
+    <button class="btn secondary smallbtn" id="textureChange" type="button">Konsistenz ändern</button>
+    ${stage > 1 ? `<button class="btn secondary smallbtn" id="textureBack" type="button">Zurück</button>` : ""}
+    ${stage < 4 ? `<button class="btn ${suggest ? "" : "secondary"} smallbtn" id="textureNext" type="button">Stufe ${next} testen</button>` : ""}
+  </div>`;
+  document.getElementById("textureChange").onclick = () =>
+    openTextureStagePicker(stage);
   if (document.getElementById("textureBack"))
     document.getElementById("textureBack").onclick = () =>
       setTextureStage(stage - 1);
@@ -329,22 +351,15 @@ function renderHomeCore() {
   bindInactiveMealActions();
   if (document.getElementById("homeFreeLog")) document.getElementById("homeFreeLog").onclick = () => openLog(null);
   let selected = currentPhase(), idx = phaseIndex(selected);
-  document.getElementById("phaseCard").innerHTML = `<details class="home-control-details">
-    <summary>
-      <span>
-        <small>Beikostphase</small>
-        <b>${esc(PHASES[selected].label)}</b>
-      </span>
-      <span class="pill ok">${phaseMealKeys().map(mealName).join(" · ")}</span>
-    </summary>
-    <div class="home-control-body">
-      <div class="small phase-guidance">Die Phase richtet sich nach Chesters Entwicklung und eurem Tagesablauf. Alter oder Grammwerte wechseln sie nicht automatisch.</div>
-      <div class="phase-controls">
-        <button class="btn secondary" id="phaseBack" ${idx <= 0 ? "disabled" : ""}>Zurück</button>
-        <button class="btn secondary" id="phaseForward" ${idx >= 3 ? "disabled" : ""}>Weiter</button>
-      </div>
-    </div>
-  </details>`;
+  document.getElementById("phaseCard").innerHTML = `<div class="daily-context-copy">
+    <div class="daily-context-label">Mahlzeiten</div>
+    <div class="daily-context-value">${esc(PHASES[selected].label)}</div>
+    <div class="small daily-context-meta">${esc(phaseMealKeys().map(mealName).join(" · "))}</div>
+  </div>
+  <div class="daily-context-actions phase-controls">
+    <button class="btn secondary smallbtn" id="phaseBack" aria-label="Vorherige Beikostphase" ${idx <= 0 ? "disabled" : ""}>Zurück</button>
+    <button class="btn secondary smallbtn" id="phaseForward" aria-label="Nächste Beikostphase" ${idx >= 3 ? "disabled" : ""}>Weiter</button>
+  </div>`;
   let requestPhase = (delta) => {
     let keys = ["kennenlernen", "aufbau", "drei", "familie"], next = keys[idx + delta];
     if (!next || !PHASES[next]) return;

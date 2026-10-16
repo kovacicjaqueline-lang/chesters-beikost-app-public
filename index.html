@@ -57,8 +57,10 @@ try{if(("standalone" in navigator&&navigator.standalone)||matchMedia("(display-m
 <main>
 <section id="home" class="view active">
  <div class="card today-card" id="todayCard"></div>
- <div class="card phase-card" id="phaseCard"></div>
- <div class="card texture-coach" id="textureCoachCard"></div>
+ <div class="card daily-context-card" id="dailyContextCard">
+  <div class="daily-context-row" id="phaseCard"></div>
+  <div class="daily-context-row" id="textureCoachCard"></div>
+ </div>
  <div class="card compact-progress" id="progressCard"></div>
  <div class="card" id="recipePreviewCard"><div class="row"><div class="grow"><h3>Was ihr jetzt daraus machen könnt</h3></div><button class="btn secondary smallbtn" id="openRecipes">Alle Rezepte</button></div><div id="recipePreview"></div></div>
 </section>

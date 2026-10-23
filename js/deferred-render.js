@@ -20,6 +20,7 @@ let deferredViewRenderPending = false;
 let deferredViewRenderId = "";
 let deferredViewRenderCallback = null;
 let deferredViewRenderUseCache = false;
+let deferredViewRenderGeneration = 0;
 let deferredLogSuggestionRequest = 0;
 let deferredFoodDetailRequest = 0;
 let deferredAllergenPlanRequest = 0;
@@ -140,7 +141,9 @@ function renderViewAfterNextPaint(viewId, callback) {
   deferredViewRenderUseCache = tabNavigationRenderActive;
   if (deferredViewRenderPending) return;
   deferredViewRenderPending = true;
+  let generation = ++deferredViewRenderGeneration;
   afterNextPaint(() => {
+    if (generation !== deferredViewRenderGeneration) return;
     deferredViewRenderPending = false;
     let id = deferredViewRenderId;
     let render = deferredViewRenderCallback;
@@ -160,9 +163,42 @@ function renderViewAfterNextPaint(viewId, callback) {
 }
 
 function cancelDeferredViewRender() {
+  deferredViewRenderPending = false;
+  deferredViewRenderGeneration++;
   deferredViewRenderId = "";
   deferredViewRenderCallback = null;
   deferredViewRenderUseCache = false;
+}
+
+function flushDeferredViewRender() {
+  if (!deferredViewRenderPending) return false;
+  let id = deferredViewRenderId;
+  let render = deferredViewRenderCallback;
+  deferredViewRenderPending = false;
+  deferredViewRenderGeneration++;
+  deferredViewRenderId = "";
+  deferredViewRenderCallback = null;
+  deferredViewRenderUseCache = false;
+
+  if (!id || activeRenderViewId() !== id || typeof render !== "function") return false;
+  let previousTabNavigationRenderActive = tabNavigationRenderActive;
+  tabNavigationRenderActive = false;
+  try {
+    render(id);
+  } finally {
+    tabNavigationRenderActive = previousTabNavigationRenderActive;
+  }
+  return true;
+}
+
+if (typeof document !== "undefined") {
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") flushDeferredViewRender();
+  });
+}
+if (typeof window !== "undefined") {
+  window.addEventListener("pageshow", flushDeferredViewRender);
+  window.addEventListener("focus", flushDeferredViewRender);
 }
 
 function activeRenderViewId() {

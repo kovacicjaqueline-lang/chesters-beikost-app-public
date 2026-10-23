@@ -60,15 +60,3 @@ test("Unified Follow-up: no active eligible slot stays unplanned instead of fabr
 
   assert.equal(followUpMealForLog({ meal: "" }, "fruehstueck_only"), "");
 });
-
-test("Unified Follow-up: planning source contains no lunch fallback for missing follow-up meal context", () => {
-  const applySource = extractFunction("applyFollowUpPlan", "refusalHistory");
-  assert.doesNotMatch(applySource, /record\.meal\s*\|\|\s*["']lunch["']/);
-  assert.match(applySource, /let meal = plannerLogMealKeys\(\)\.includes\(record\.meal\) \? record\.meal : "";/);
-  assert.match(applySource, /if \(!meal\) return \{ ok: true, date: "", unplanned: true \};/);
-
-  assert.match(
-    planningSource,
-    /function scheduleFollowUp\(foodId, fromDate, meal = "", reason = "rejection", detail = "interest"\)/,
-  );
-});

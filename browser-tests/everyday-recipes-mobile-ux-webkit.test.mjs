@@ -206,6 +206,46 @@ try {
   assert.ok(await page.locator('#recipeFilter [data-recipe-filter="freezer"]').evaluate((button) => button.classList.contains("active")));
   await page.locator('#catalogSwitch [data-catalog-mode="foods"]').click();
   assert.equal(await page.locator("#foodsCatalogSection").isVisible(), true, "Lebensmittel bleiben über den bestehenden Umschalter erreichbar");
+  await page.locator(".food-primary-select > summary").click();
+  await page.locator('#foodFilters [data-filter="all"]').click();
+  await page.evaluate(() => {
+    const bridge = window.__beikostTest;
+    const state = bridge.getState();
+    state.foods.find((item) => item.id === "karotte").manualStatus = "Bekannt";
+    bridge.setState(state);
+  });
+  const knownFoodCard = page.locator('#foodsCatalogSection .foodcard[data-food="karotte"]');
+  await knownFoodCard.waitFor();
+  assert.equal(await knownFoodCard.locator(".food-status-text").innerText(), "Bekannt");
+  assert.equal(
+    await knownFoodCard.evaluate((element) => element.classList.contains("status-tolerated")),
+    true,
+    "Bekannt muss in der Lebensmittelübersicht die aktive Statusdarstellung erhalten",
+  );
+  const foodCard = page.locator("#foodsCatalogSection .foodcard").first();
+  await foodCard.locator(".foodInfo").click();
+  await page.locator("#genericModal.open").waitFor();
+  const foodDetailLogButton = page.locator("#genericBody #foodCatalogLog");
+  await foodDetailLogButton.waitFor();
+  assert.equal(await foodDetailLogButton.isVisible(), true, "Lebensmittelprotokollierung ist in der geöffneten Detailansicht erreichbar");
+  await foodDetailLogButton.click();
+  await page.locator("#logModal.open").waitFor();
+  await page.locator("#cancelLog").click();
+  await page.evaluate(() => {
+    const api = window.__beikostTest;
+    const state = api.getState();
+    const lupine = state.foods.find((item) => item.id === "lupine");
+    if (!lupine) throw new Error("Kanonische Lupine fehlt im FOOD-Stamm");
+    lupine.active = true;
+    api.setState(state);
+  });
+  await page.locator("#foodSearch").fill("Lupine");
+  const lupineCard = page.locator('#foodsCatalogSection .foodcard[data-food="lupine"]');
+  await lupineCard.waitFor();
+  await lupineCard.locator(".foodInfo").click();
+  await page.locator("#genericModal.open").waitFor();
+  assert.match(await page.locator("#genericBody").innerText(), /Allergen: Lupine/, "FOOD-Details zeigen die gespeicherte Allergengruppe tatsächlich an");
+  await page.locator("#closeGeneric").click();
 
   const afterCatalog = await page.evaluate(() => {
     const meal = window.__beikostTest.getState().planLocks[`${window.__beikostTest.today()}|breakfast`];

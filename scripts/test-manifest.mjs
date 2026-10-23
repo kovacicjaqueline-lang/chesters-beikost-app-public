@@ -29,6 +29,7 @@ const criticalBrowserPerformanceNames = new Set([
   "save-ui-latency-webkit.test.mjs",
   "targeted-action-rendering-webkit.test.mjs",
   "app-resume-lifecycle-webkit.test.mjs",
+  "view-render-latency-webkit.test.mjs",
 ]);
 
 export const TEST_GROUPS = Object.freeze({

@@ -100,6 +100,14 @@ Die aktuelle Testmatrix in `docs/AI_WORKFLOW.md` ist für die Testauswahl verbin
 - bei rotem CI nach `docs/AI_WORKFLOW.md` **Evidence first, fix second** vorgehen; kein blindes Rerun oder spekulatives Reparieren,
 - bei reinen Dokumentationsänderungen ohne Code-/Konfigurationswirkung keine künstlichen Regressionstests erzeugen.
 
+### Verhaltens- und Source-Contracts
+
+- Regressionstests prüfen beobachtbares Verhalten oder ausdrücklich definierte Daten-/Build-Contracts. Ein Test, der nur konkrete JavaScript-, HTML- oder CSS-Quelltextmuster per Regex oder Stringsuche findet, belegt kein behauptetes Laufzeitverhalten und soll dafür nicht neu eingeführt werden.
+- UI-Sichtbarkeit und Interaktion gehören in Browser-/DOM-Tests; Geschäftslogik wird über direkt aufgerufene Funktionen oder tatsächlich ausgeführten Runtime-Code geprüft; Seiteneffekte werden mit Harnesses, Spies oder Stubs beobachtet.
+- Statische Source-/Asset-Prüfungen bleiben zulässig, wenn der Inhalt selbst der Contract ist, etwa Versionen, Precache-/Asset-Manifeste, verbotene Legacy-Assets oder ausdrücklich festgelegte Architektur-/Build-Regeln. Für Architekturregeln sind ein benannter statischer Contract oder eine AST-/Lint-Regel einem fragilen Regex vorzuziehen.
+- Regex-/Stringprüfungen auf von ausgeführtem Code erzeugte Ergebnisse sind Verhaltenstests und nicht mit Sourcecode-Suche gleichzusetzen.
+- Bei Reviews prüfen, ob neue und geänderte Tests Verhalten tatsächlich ausführen oder einen legitimen statischen Contract absichern.
+
 ## Versionsregeln
 
 Diese Regeln gelten, sobald Versionierung für den Auftrag relevant ist:

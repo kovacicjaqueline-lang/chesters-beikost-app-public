@@ -77,6 +77,14 @@ try {
     assert.equal(await page.locator("#smallSoftPiecesCapability").count(), 1, `Small-Soft-Fähigkeit muss bei ${width}px vorhanden sein`);
     assert.equal(await page.locator("#gradedBiteCapability").count(), 1, `Graded-Bite-Fähigkeit muss bei ${width}px vorhanden sein`);
     assert.equal(await page.locator("#structuredChewCapability").count(), 1, `Structured-Chew-Fähigkeit muss bei ${width}px vorhanden sein`);
+    const newFoodInterval = page.locator("#newFoodEvery");
+    assert.equal(await newFoodInterval.isVisible(), true, `Mindestabstand neuer Lebensmittel muss bei ${width}px sichtbar sein`);
+    const previousInterval = await newFoodInterval.inputValue();
+    const nextInterval = previousInterval === "2" ? "3" : "2";
+    await newFoodInterval.selectOption(nextInterval);
+    await page.locator("#saveSettings").click();
+    await page.waitForFunction((value) => window.__beikostTest.getState().settings.newFoodEvery === value, nextInterval);
+    assert.equal(await page.locator("#newFoodEvery").inputValue(), nextInterval, `Mindestabstand muss bei ${width}px gespeichert bleiben`);
 
     const actionbar = page.locator("#settingsActionbar");
     await actionbar.scrollIntoViewIfNeeded();

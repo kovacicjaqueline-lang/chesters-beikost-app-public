@@ -147,8 +147,7 @@ test("Plan-Kopie ersetzt nur den Ziel-Slot und lässt Quelle, Quell-Lock und Que
   });
 });
 
-test("Plan-UI lädt die Kopieraktion versioniert, offline und ausschließlich an Plan-Verschiebeaktionen", () => {
-  const moduleSource = fs.readFileSync(path.join(root, "js", "plan-meal-copy.js"), "utf8");
+test("Plan-Kopiermodul bleibt versioniert im Loader und Offline-Precache enthalten", () => {
   const loader = fs.readFileSync(path.join(root, "js", "plan-checks-ui.js"), "utf8");
   const serviceWorker = fs.readFileSync(path.join(root, "sw.js"), "utf8");
 
@@ -158,12 +157,4 @@ test("Plan-UI lädt die Kopieraktion versioniert, offline und ausschließlich an
     "Kopieraktion soll vor der mobilen Plan-Nachbearbeitung installiert sein",
   );
   assert.match(serviceWorker, /\.\/js\/plan-meal-copy\.js\?v=10\.1\.26/);
-  assert.match(moduleSource, /document\.getElementById\("plan"\)/);
-  assert.match(moduleSource, /\.moveMeal\[data-move-payload\]/);
-  assert.match(moduleSource, /Mahlzeit kopieren/);
-  assert.match(moduleSource, /type=\"date\" min=\"\$\{firstTarget\}\"/);
-  assert.match(moduleSource, /planMealCopyTargetState\(payload, targetDate/);
-  assert.match(moduleSource, /Protokollierte Mahlzeiten werden beim Kopieren nicht überschrieben/);
-  assert.match(moduleSource, /manualMealFlowPreparationMapFor/);
-  assert.match(moduleSource, /nextFreeMealDate\(fromDate, payload\.meal\)/);
 });

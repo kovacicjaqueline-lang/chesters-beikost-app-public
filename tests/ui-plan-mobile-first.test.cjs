@@ -6,7 +6,7 @@ const vm = require("node:vm");
 
 const root = path.resolve(__dirname, "..");
 const source = fs.readFileSync(path.join(root, "js/plan-mobile-ui.js"), "utf8");
-const css = fs.readFileSync(path.join(root, "plan-mobile-ui.css"), "utf8");
+const index = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const loader = fs.readFileSync(path.join(root, "js/plan-checks-ui.js"), "utf8");
 const serviceWorker = fs.readFileSync(path.join(root, "sw.js"), "utf8");
 
@@ -134,22 +134,12 @@ test("Tageskarten erkennen nur ausreichend horizontale Wischgesten", () => {
   assert.equal(context.api.mobilePlanSwipeDirection(120, 100, 155, 100), 0, "Kurze horizontale Bewegungen wechseln nicht den Tag");
 });
 
-test("Mobile-Plan bleibt lazy, wird als letzte Plan-UI-Erweiterung geladen und nutzt planspezifische Styles", () => {
-  assert.match(loader, /plan-mobile-ui\.js/);
-  assert.match(source, /MobileUiLifecycle\.onRender\("plan", enhanceMobilePlan\)/);
-  assert.doesNotMatch(source, /baseRenderPlanCore|renderPlanCore\s*=/);
-  assert.match(source, /applySelectedDay/);
-  assert.match(source, /plan-week-overview/);
-  assert.match(source, /plan-secondary-actions/);
-  assert.match(source, /document\.getElementById\("plan"\)\?\.classList\.contains\("active"\)/);
-  assert.match(source, /state\.settings\.planFrom = nextFrom;[\s\S]*?save\(\{ preservePlanCache: true \}\);[\s\S]*?renderPlan\(\);/);
-  assert.doesNotMatch(source, /save\(\);\s*renderAll\(\);/);
-  assert.match(css, /#plan \.plan-week-days/);
-  assert.match(css, /#plan #blockPlan\s*\{[\s\S]*?touch-action:pan-y/);
-  assert.match(css, /#plan #blockPlan > \[hidden\]/);
-  assert.match(css, /flex:0 0 44px/);
-  assert.match(css, /overflow-x:auto/);
-  assert.doesNotMatch(css, /:root\s*\{/);
-  assert.match(serviceWorker, /\.\/js\/plan-mobile-ui\.js\?v=10\.1\.26/);
-  assert.match(serviceWorker, /\.\/plan-mobile-ui\.css\?v=10\.1\.26/);
+test("Mobile-Plan Runtime bleibt nach den Basisprüfungen geladen und beide Assets sind offline verfügbar", () => {
+  const checksRuntime = index.indexOf("js/plan-checks-ui.js?v=");
+  const copyRuntime = loader.indexOf("plan-meal-copy.js");
+  const mobileRuntime = loader.indexOf("plan-mobile-ui.js");
+  assert.ok(checksRuntime >= 0, "App-Ladegraph enthält den Plan-Checks-Loader");
+  assert.ok(copyRuntime >= 0 && mobileRuntime > copyRuntime);
+  assert.ok(serviceWorker.includes("./js/plan-mobile-ui.js?v=10.1.26"));
+  assert.ok(serviceWorker.includes("./plan-mobile-ui.css?v=10.1.26"));
 });

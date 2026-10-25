@@ -217,28 +217,10 @@ test('completed-day summary counts every actual log and every documented gram', 
   assert.deepEqual(summary, { count: 3, grams: 55 });
 });
 
-test('normal move review layer restores conflict choices and never calls rollover cascade directly', () => {
-  const source = fs.readFileSync(path.join(__dirname, '..', 'js', 'planner-log-rollover-review-fixes.js'), 'utf8');
-  assert.match(source, /Vorhandene Mahlzeit ersetzen/);
-  assert.match(source, /Auf den nächsten freien Tag verschieben/);
-  assert.match(source, /moveCancel/);
-  assert.match(source, /clearRolloverAcknowledgement\(state, core, sourcePlanId\)/);
-  assert.doesNotMatch(source, /shiftPlanOneDay|shiftOutstandingPlans/);
-});
-
-test('editing a free log is explicitly protected from accidental plan inference', () => {
-  const source = fs.readFileSync(path.join(__dirname, '..', 'js', 'planner-log-rollover-review-fixes.js'), 'utf8');
-  assert.match(source, /plan\?\.editId && !plan\.plannedMealId/);
-  assert.match(source, /FREE_EDIT_SENTINEL/);
-  assert.match(source, /delete saved\.plannedMealId/);
-});
-
 test('review-fix runtime loads before app startup and all planner runtime files are offline precached', () => {
   const root = path.join(__dirname, '..');
-  const cascade = fs.readFileSync(path.join(root, 'js', 'planner-log-rollover-cascade.js'), 'utf8');
   const index = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
-  assert.match(cascade, /planner-log-rollover-review-fixes\.js\?v=\d+\.\d+\.\d+/);
   for (const file of [
     './js/planner-log-rollover.js',
     './js/planner-log-rollover-cascade.js',

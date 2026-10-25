@@ -131,18 +131,12 @@ test('RANDOM-SWAP-04b: heutiger Tracking-Snapshot wird beim Tauschen zum wirksam
   assert.equal(data.planLocks[key].recipeName, 'Obst-Hirsebrei');
 });
 
-test('RANDOM-SWAP-05: Browser-Loader, Heute-Zugang und Offline-Precache enthalten das Tauschmodul', () => {
+test('RANDOM-SWAP-05: Tauschmodul bleibt im Browser-Loader und Offline-Precache enthalten', () => {
   const cascade = fs.readFileSync(path.join(root, 'js', 'planner-log-rollover-cascade.js'), 'utf8');
   const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
-  const source = fs.readFileSync(path.join(root, 'js', 'planner-random-swap.js'), 'utf8');
 
   assert.match(cascade, /planner-random-swap\.js\?v=\d+\.\d+\.\d+/);
   assert.match(sw, /\.\/js\/planner-random-swap\.js/);
-  assert.match(source, /class="btn secondary randomizeMeal"/);
-  assert.match(source, /today-randomize-meal/);
-  assert.match(source, /\.homeLog\[data-plan\]/);
-  assert.match(source, /↻ Tauschen/);
-  assert.match(source, /Der restliche Wochenplan bleibt unverändert/);
 });
 
 test('RANDOM-SWAP-06: automatische Fokus-Eignung respektiert Basis-, Auto- und Planner-Policy', () => {

@@ -74,6 +74,15 @@ try {
     });
     state.planLocks[`${today}|lunch`] = makeLock(today, "karotte", "mobile-prep-today");
     state.planLocks[`${tomorrow}|lunch`] = makeLock(tomorrow, "brokkoli", "mobile-prep-tomorrow");
+    state.planLocks[`${tomorrow}|dinner`] = {
+      ...makeLock(tomorrow, "kürbis", "mobile-prep-recipe-tomorrow"),
+      meal: "dinner",
+      foodIds: ["kürbis", "hafer"],
+      baseFoodIds: ["kürbis", "hafer"],
+      recipeName: "Kürbis-Hafer-Brei",
+      recipeInventoryId: "",
+      type: "Rezept",
+    };
     delete state.autoLockExcluded[`${today}|lunch`];
     delete state.autoLockExcluded[`${tomorrow}|lunch`];
     api.setState(state);
@@ -121,6 +130,21 @@ try {
 
   assert.ok(await page.locator("#prepToday .prep-task-mobile").count() >= 1, "Heute fällige Vorbereitung wird als kompakte Aufgabe gezeigt");
   assert.ok(await page.locator("#prepTomorrow .prep-task-mobile").count() >= 1, "Morgen fällige Vorbereitung wird getrennt gezeigt");
+  const suggestedStock = page.locator("#prepToday .addSuggestedStock, #prepTomorrow .addSuggestedStock").first();
+  await suggestedStock.waitFor();
+  await suggestedStock.click();
+  await page.locator("#genericModal.open").waitFor();
+  assert.equal(await page.locator("#genericTitle").innerText(), "Vorrat hinzufügen", "Die vor dem Recipe-first-Einfügen gebundene Prep-Aktion bleibt bedienbar");
+  const changeTarget = page.locator("#genericBody .selected-target-row .btn");
+  await changeTarget.waitFor();
+  const targetButton = await changeTarget.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return { width: element.getBoundingClientRect().width, scrollWidth: element.scrollWidth, minWidth: style.minWidth, whiteSpace: style.whiteSpace };
+  });
+  assert.ok(targetButton.width >= targetButton.scrollWidth - 1, "Die Zieländerung bleibt vollständig bedienbar");
+  assert.equal(targetButton.minWidth, "max-content");
+  assert.equal(targetButton.whiteSpace, "nowrap");
+  await page.locator("#closeGeneric").click();
   const taskMarker = page.locator("#prepToday .prep-task-marker").first();
   await taskMarker.waitFor();
   const taskMarkerStyle = await taskMarker.evaluate((node) => {

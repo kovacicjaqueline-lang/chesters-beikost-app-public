@@ -323,7 +323,7 @@ function runWithDeferredCurrentViewRender(callback, afterRender = null) {
 }
 
 function renderCurrentViewAfterNextPaint(expectedViewId, afterRender = null) {
-  let viewId = String(expectedViewId || "");
+  let viewId = String(expectedViewId || activeRenderViewId() || "");
   if (!viewId || typeof renderView !== "function") return false;
   renderViewAfterNextPaint(viewId, (scheduledViewId) => {
     if (activeRenderViewId() !== viewId) return;

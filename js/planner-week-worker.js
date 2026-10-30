@@ -90,9 +90,9 @@
       installFoodPolicyRuntime();
     }
 
-    // Die App lädt die Allergenpflege statisch vor den Planner-Policies und
-    // später nochmals nach Final Quality. Beide Wrapper müssen im Worker
-    // dieselbe Reihenfolge haben.
+    // Die statische App-Ladung installiert den Wrapper vor den dynamischen
+    // Planner-Policies. utils.js erkennt das selbst markierte Script später
+    // wieder und installiert es nicht erneut.
     importScripts("./planner-allergen-maintenance.js?v=10.1.26");
 
     importScripts(
@@ -106,7 +106,6 @@
       "./planner-quality-rotation.js?v=10.1.26",
       "./planner-introduction-policy.js?v=10.1.26",
       "./planner-final-quality.js?v=10.1.26",
-      "./planner-allergen-maintenance.js?v=10.1.26",
       "./handling-readiness.js?v=10.1.26"
     );
 

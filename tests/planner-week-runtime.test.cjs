@@ -110,19 +110,22 @@ test("phasenplan ergänzt eine freie Mittagsmahlzeit und lässt Kostproben sowie
   assert.ok(recipePlanned.additionalFoodIds.includes("huhn"));
 });
 
-test("7-Tage-Worker installiert beide Allergenpflege-Wrapper wie die App", () => {
+test("7-Tage-Worker installiert den Allergenpflege-Wrapper genau einmal vor den Planner-Policies", () => {
   const source = read("js/planner-week-worker.js");
-  const firstMaintenanceImport = source.indexOf('importScripts("./planner-allergen-maintenance.js?v=10.1.26")');
+  const maintenanceImports = [...source.matchAll(/importScripts\("\.\/planner-allergen-maintenance\.js\?v=10\.1\.26"\)/g)];
+  const firstMaintenanceImport = maintenanceImports[0]?.index ?? -1;
   const policyImport = source.indexOf('"./planner-meal-eligibility.js?v=10.1.26"');
   const finalQualityImport = source.indexOf('"./planner-final-quality.js?v=10.1.26"');
-  const secondMaintenanceImport = source.indexOf('"./planner-allergen-maintenance.js?v=10.1.26"', finalQualityImport);
   const handlingReadinessImport = source.indexOf('"./handling-readiness.js?v=10.1.26"');
 
-  assert.ok(firstMaintenanceImport >= 0, "Worker muss den statischen Allergenpflege-Wrapper vor den dynamischen Policies laden");
+  assert.equal(maintenanceImports.length, 1, "Das statische Script wird in der App durch sein data-Attribut wiedererkannt und nicht erneut installiert");
+  assert.ok(firstMaintenanceImport >= 0, "Worker muss den statischen Allergenpflege-Wrapper laden");
   assert.ok(policyImport > firstMaintenanceImport, "Der erste Wrapper liegt vor den späteren Day-Plan-Policies");
   assert.ok(finalQualityImport >= 0, "Worker muss dieselbe Final-Quality-Policy wie die Haupt-App laden");
-  assert.ok(secondMaintenanceImport > finalQualityImport, "Der zweite Wrapper liegt nach Final-Quality wie in der App");
-  assert.ok(handlingReadinessImport > secondMaintenanceImport, "Handling-Readiness folgt der Planner-Wrapper-Kette");
+  assert.ok(handlingReadinessImport > finalQualityImport, "Handling-Readiness folgt der Planner-Wrapper-Kette");
+
+  const maintenanceSource = read("js/planner-allergen-maintenance.js");
+  assert.match(maintenanceSource, /currentScript\.dataset\.plannerAllergenMaintenance\s*=\s*"maintenance-v2"/);
 });
 
 test("echter buildDays-Plan erzeugt eine abwechslungsreiche 7-Tage-Woche", () => {

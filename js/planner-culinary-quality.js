@@ -95,7 +95,7 @@ function plannerMealComponentAssessment(ids, foods = [], recipe = null, phase = 
 
   // Der einmal tägliche Milch-Getreide-Brei ist ein ausdrücklich definierter
   // vollständiger Rezeptbaustein und bleibt zusätzlich durch MILK-01 begrenzt.
-  if (recipe?.milkPorridge === true && recipe?.milkMeal === "full" && meal !== "lunch") {
+  if (recipe?.milkPorridge === true && recipe?.milkMeal === "full") {
     return { applicable: true, complete: true, groups: [...groups], missing: [], plan };
   }
 

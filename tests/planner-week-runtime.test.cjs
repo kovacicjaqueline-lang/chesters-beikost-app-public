@@ -159,6 +159,39 @@ test("7-Tage-Worker installiert die Planner-Wrapper in derselben Reihenfolge wie
   assert.match(maintenanceSource, /currentScript\.dataset\.plannerAllergenMaintenance\s*=\s*"maintenance-v2"/);
 });
 
+test("volles Milch-Getreide-Rezept bleibt auch im Lunch-Slot unverändert", () => {
+  const { context, state } = loadPlanner();
+  state.settings.phaseSelected = "kennenlernen";
+  state.foods = state.foods.filter((item) =>
+    ["hafer", "naturjoghurt", "rapsoel", "zucchini", "ei"].includes(item.id),
+  );
+  for (const item of state.foods) {
+    item.active = true;
+    item.manualStatus = "Regelmäßig";
+  }
+  state.recipes = [{
+    name: "Milch-Getreide-Brei",
+    milkPorridge: true,
+    milkMeal: "full",
+  }];
+
+  const meal = {
+    meal: "lunch",
+    active: true,
+    focusId: "hafer",
+    recipeName: "Milch-Getreide-Brei",
+    foodIds: ["hafer", "naturjoghurt"],
+    baseFoodIds: ["hafer"],
+    sampleFoodIds: [],
+    optionalAddons: [],
+  };
+  context.__ensureMealComponentPlan(meal, "2026-09-22", context.freshPlanContext());
+
+  assert.deepEqual(clone(meal.foodIds), ["hafer", "naturjoghurt"]);
+  assert.deepEqual(clone(meal.optionalAddons), []);
+  assert.equal(meal.recipeName, "Milch-Getreide-Brei");
+});
+
 test("echter buildDays-Plan erzeugt eine abwechslungsreiche 7-Tage-Woche", () => {
   const { context, state } = loadPlanner();
   const days = context.__buildDays("2026-09-22", 7, false);

@@ -106,6 +106,19 @@ test("Komponentenprüfung verlangt beim Mittagsbrei Stärke, Gemüse, Eiweiß un
   assert.deepEqual(missingOil.missing, ["fat"]);
 });
 
+test("volle Milch-Getreide-Mahlzeit bleibt auch im Lunch-Slot ein vollständiges Rezept", () => {
+  const result = quality.plannerMealComponentAssessment(
+    ["hafer"],
+    foods,
+    { milkPorridge: true, milkMeal: "full" },
+    "kennenlernen",
+    "lunch",
+  );
+
+  assert.equal(result.complete, true);
+  assert.deepEqual(result.missing, []);
+});
+
 test("dreiteilige Frühstücke zählen die Zubereitungsfett-Option als eigenen Baustein", () => {
   const result = quality.plannerMealComponentAssessment(
     ["hafer", "birne", "ei"], foods, { cookingFat: "Rapsöl" }, "drei", "breakfast",

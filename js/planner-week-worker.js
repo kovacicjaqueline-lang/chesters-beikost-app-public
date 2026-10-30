@@ -189,6 +189,23 @@
             recipeName: lock?.recipeName || "",
           }))
         : null;
+      const firstStart = String(message.starts?.[0] || "");
+      const lockLookupChecks = message.diagnostics === true
+        ? ["breakfast", "lunch", "dinner"].map((meal) => {
+            const key = typeof planLockKey === "function" ? planLockKey(firstStart, meal) : `${firstStart}|${meal}`;
+            const stored = state?.planLocks?.[key] || null;
+            const resolved = typeof lockedMeal === "function" ? lockedMeal(firstStart, meal) : null;
+            return {
+              meal,
+              key,
+              stored: !!stored,
+              storedRecipeName: stored?.recipeName || "",
+              resolved: !!resolved,
+              resolvedRecipeName: resolved?.recipeName || "",
+              resolvedLockedMode: resolved?.lockedMode || "",
+            };
+          })
+        : null;
       const weeks = (message.starts || []).map((start) => ({
         from: String(start || ""),
         count: 7,
@@ -199,6 +216,14 @@
             referenceDate,
             resolvedToday: typeof globalScope.today === "function" ? globalScope.today() : "",
             inputLocks: inputLockChecks,
+            lockLookups: lockLookupChecks,
+            firstDayMeals: (weeks[0]?.days?.[0]?.meals || []).map((meal) => ({
+              meal: meal.meal,
+              lockedMode: meal.lockedMode || "",
+              recipeName: meal.recipeName || "",
+              focusId: meal.focusId || "",
+              foodIds: [...(meal.foodIds || [])],
+            })),
             remainingLockKeys: Object.keys(state?.planLocks || {}),
           }
         : undefined;

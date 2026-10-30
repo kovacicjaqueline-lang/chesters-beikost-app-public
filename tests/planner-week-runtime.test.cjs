@@ -114,7 +114,13 @@ test("7-Tage-Worker installiert den Allergenpflege-Wrapper genau einmal vor den 
   const source = read("js/planner-week-worker.js");
   const rolloverImport = source.indexOf('"./planner-log-rollover.js?v=10.1.26"');
   const cascadeImport = source.indexOf('"./planner-log-rollover-cascade.js?v=10.1.26"');
-  const missingIngredientImport = source.indexOf('importScripts("./planner-missing-ingredient.js?v=10.1.26")');
+  const cascadeModules = [
+    '"./meal-card-unification.js?v=10.1.26"',
+    '"./planner-log-rollover-review-fixes.js?v=10.1.26"',
+    '"./planner-random-swap.js?v=10.1.26"',
+    '"./planner-task-alternatives.js?v=10.1.26"',
+    '"./planner-missing-ingredient.js?v=10.1.26"',
+  ].map((path) => source.indexOf(path));
   const foodPolicyInstall = source.indexOf("installFoodPolicyRuntime();");
   const maintenanceImports = [...source.matchAll(/importScripts\("\.\/planner-allergen-maintenance\.js\?v=10\.1\.26"\)/g)];
   const firstMaintenanceImport = maintenanceImports[0]?.index ?? -1;
@@ -123,9 +129,10 @@ test("7-Tage-Worker installiert den Allergenpflege-Wrapper genau einmal vor den 
   const handlingReadinessImport = source.indexOf('"./handling-readiness.js?v=10.1.26"');
 
   assert.ok(rolloverImport >= 0, "Worker muss die Plan-ID-/Rollover-Basis der App laden");
-  assert.ok(cascadeImport > rolloverImport && cascadeImport < missingIngredientImport, "Rollover-Cascade und Tagesplan-Cache liegen vor den späteren Policies");
-  assert.ok(missingIngredientImport >= 0, "Worker muss dieselbe Verfügbarkeitsregel für fehlende Zutaten wie die App laden");
-  assert.ok(foodPolicyInstall > missingIngredientImport, "Missing-Ingredient-Regeln werden vor der Food-Policy installiert wie im Browser");
+  assert.ok(cascadeImport > rolloverImport, "Rollover-Cascade und Tagesplan-Cache liegen vor den späteren Policies");
+  assert.ok(cascadeModules.every((index) => index >= 0), "Worker muss alle synchronen Cascade-Module laden");
+  assert.ok(cascadeModules.every((index, position) => position === 0 || index > cascadeModules[position - 1]), "Cascade-Module bleiben in derselben Reihenfolge wie im Browser");
+  assert.ok(foodPolicyInstall > cascadeModules.at(-1), "Missing-Ingredient-Regeln werden vor der Food-Policy installiert wie im Browser");
   assert.equal(maintenanceImports.length, 1, "Das statische Script wird in der App durch sein data-Attribut wiedererkannt und nicht erneut installiert");
   assert.ok(firstMaintenanceImport >= 0, "Worker muss den statischen Allergenpflege-Wrapper laden");
   assert.ok(policyImport > firstMaintenanceImport, "Der erste Wrapper liegt vor den späteren Day-Plan-Policies");

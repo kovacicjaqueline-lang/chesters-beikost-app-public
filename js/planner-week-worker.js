@@ -120,8 +120,9 @@
 
     // The app loads allergen maintenance statically after app.js, before
     // the Planner-Policies that utils.js adds on DOMContentLoaded.
+    importScripts("./planner-allergen-maintenance.js?v=10.1.26");
+
     importScripts(
-      "./planner-allergen-maintenance.js?v=10.1.26",
       "./planner-keep-policy.js?v=10.1.26",
       "./planner-keep-tracking.js?v=10.1.26"
     );

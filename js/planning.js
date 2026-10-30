@@ -1322,12 +1322,14 @@ function buildDay(date, index, ctx) {
         let focusId = ids.find((id) => typeof plannerFoodCanBeAutomaticFocus !== "function" || plannerFoodCanBeAutomaticFocus(food(id))) || ids[0];
         let smoothBatch = batch && recipe.smoothBatchAllowed && batch.preparationMode === "spoon-smooth";
         let recipeMeal = applyPlannedMealAmounts({ meal, active: true, focusId, foodIds: ids, baseFoodIds: ids, sampleFoodIds: [], optionalAddons: [], inventoryFoodIds: [], recipeName: recipe.name, recipeInventoryId: batch?.id || "", preparationMode: smoothBatch ? "spoon-smooth" : "", milkMeal: recipe.milkMeal || "", type: batch ? "Rezeptvorrat" : "Rezept", note: smoothBatch ? "Diese Vorratsportion wurde vollständig glatt püriert; nur diese Zubereitungsform anbieten." : batch ? "Eine vorbereitete Portion aus dem Gefriervorrat verwenden." : "Passendes vorhandenes Rezept zubereiten." });
+        let rotationFoodIds = new Set(recipeMeal.foodIds || []);
         recipeMeal = plannerEnsureMealComponentPlan(recipeMeal, date, ctx);
+        let rotationMeal = { ...recipeMeal, foodIds: (recipeMeal.foodIds || []).filter((id) => rotationFoodIds.has(id)) };
         reserveMealInventory(recipeMeal, ctx);
         ctx.recipePlannedUse?.set(recipe.name, (ctx.recipePlannedUse.get(recipe.name) || 0) + 1);
         ctx.recipeLastUse?.set(recipe.name, date);
         if (recipe.milkMeal === "full") ctx.fullMilkDates?.add(date);
-        meals.push(recipeMeal); recordMealForQualityRotation(recipeMeal); used.push(recipeMeal.focusId); continue;
+        meals.push(recipeMeal); recordMealForQualityRotation(rotationMeal); used.push(recipeMeal.focusId); continue;
       }
     }
     if (!c) c = knownCandidate(meal, date, ctx, used);
@@ -1390,10 +1392,12 @@ function buildDay(date, index, ctx) {
     generated = applyRecipeFoodComposition(generated, date, ctx);
     generated = enrichKnownFreeMeal(generated, date, ctx);
     generated = removeUnavailableGeneratedFoods(generated);
+    let rotationFoodIds = new Set(generated?.foodIds || []);
     generated = plannerEnsureMealComponentPlan(generated, date, ctx);
     if (!generated) { meals.push({ meal, active: true, empty: true }); continue; }
+    let rotationMeal = { ...generated, foodIds: (generated.foodIds || []).filter((id) => rotationFoodIds.has(id)) };
     if (mealMilkLevel(generated) === "full") ctx.fullMilkDates?.add(date);
-    reserveMealInventory(generated, ctx); meals.push(generated); recordMealForQualityRotation(generated);
+    reserveMealInventory(generated, ctx); meals.push(generated); recordMealForQualityRotation(rotationMeal);
   }
   return { date, index, meals, introDue, introAssigned };
 }

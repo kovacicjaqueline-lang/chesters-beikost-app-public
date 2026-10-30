@@ -180,6 +180,10 @@
     }
 
     try {
+      // Policy runtimes may normalize state while they install. The browser
+      // installs them after loading the active user state, so the worker must
+      // expose the request snapshot before its first bootstrap as well.
+      state = message.state;
       ensureBoot();
       state = message.state;
       const inputLockChecks = message.diagnostics === true

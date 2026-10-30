@@ -115,6 +115,9 @@ test("7-Tage-Worker installiert den Allergenpflege-Wrapper genau einmal vor den 
   const weekCacheImport = source.indexOf('"./planner-week-cache.js?v=10.1.26&planner-cache=5"');
   const rolloverImport = source.indexOf('"./planner-log-rollover.js?v=10.1.26"');
   const cascadeImport = source.indexOf('"./planner-log-rollover-cascade.js?v=10.1.26"');
+  const appImport = source.indexOf('importScripts("../app.js?v=10.1.26")');
+  const recipeInventoryImport = source.indexOf('"./recipe-inventory-ingredients.js?v=10.1.26"');
+  const recipeV2Import = source.indexOf('"./recipe-v2-component-options.js?v=10.1.26"');
   const cascadeModules = [
     '"./meal-card-unification.js?v=10.1.26"',
     '"./planner-log-rollover-review-fixes.js?v=10.1.26"',
@@ -134,7 +137,8 @@ test("7-Tage-Worker installiert den Allergenpflege-Wrapper genau einmal vor den 
   assert.ok(cascadeImport > rolloverImport, "Rollover-Cascade und Tagesplan-Cache liegen vor den späteren Policies");
   assert.ok(cascadeModules.every((index) => index >= 0), "Worker muss alle synchronen Cascade-Module laden");
   assert.ok(cascadeModules.every((index, position) => position === 0 || index > cascadeModules[position - 1]), "Cascade-Module bleiben in derselben Reihenfolge wie im Browser");
-  assert.ok(foodPolicyInstall > cascadeModules.at(-1), "Missing-Ingredient-Regeln werden vor der Food-Policy installiert wie im Browser");
+  assert.ok(recipeInventoryImport > cascadeModules.at(-1) && recipeV2Import > recipeInventoryImport && appImport > recipeV2Import, "Statische Rezept- und UI-Schichten folgen vor app.js");
+  assert.ok(foodPolicyInstall > appImport, "Food-Policy wird wie in der App während des Bootstraps installiert");
   assert.equal(maintenanceImports.length, 1, "Das statische Script wird in der App durch sein data-Attribut wiedererkannt und nicht erneut installiert");
   assert.ok(firstMaintenanceImport >= 0, "Worker muss den statischen Allergenpflege-Wrapper laden");
   assert.ok(policyImport > firstMaintenanceImport, "Der erste Wrapper liegt vor den späteren Day-Plan-Policies");

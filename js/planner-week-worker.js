@@ -53,13 +53,10 @@
     "./recipes.js?v=10.1.26",
     "./prep.js?v=10.1.26",
     "./recipe-frozen-ingredient-stock.js?v=10.1.26",
-    "./recipe-inventory-ingredients.js?v=10.1.26",
-    "./recipe-v2-component-options.js?v=10.1.26",
     "./log.js?v=10.1.26",
     "./food-status-preferences.js?v=10.1.26",
     "./planner-culinary-quality.js?v=10.1.26",
-    "./ui.js?v=10.1.26",
-    "../app.js?v=10.1.26"
+    "./ui.js?v=10.1.26"
   );
 
   function installNoopUi() {
@@ -98,8 +95,24 @@
       "./planner-log-rollover-review-fixes.js?v=10.1.26",
       "./planner-random-swap.js?v=10.1.26",
       "./planner-task-alternatives.js?v=10.1.26",
-      "./planner-missing-ingredient.js?v=10.1.26"
+      "./planner-missing-ingredient.js?v=10.1.26",
+      "./plan-checks.js?v=10.1.26",
+      "./planned-recipe-details.js?v=10.1.26",
+      "./recipe-inventory-ingredients.js?v=10.1.26",
+      "./catalog-navigation.js?v=10.1.26",
+      "./catalog-performance.js?v=10.1.26",
+      "./app-focus-mode.js?v=10.1.26",
+      "./mobile-beikost-more.js?v=10.1.26",
+      "./flow-dialog-ui.js?v=10.1.26",
+      "./recipe-v2-component-options.js?v=10.1.26"
     );
+
+    // The app evaluates app.js after its static planner wrappers. Hide window
+    // during import so startBeikostApp() stays disabled in this worker.
+    const workerWindow = globalScope.window;
+    globalScope.window = undefined;
+    importScripts("../app.js?v=10.1.26");
+    globalScope.window = workerWindow;
 
     if (typeof installFoodPolicyRuntime === "function") {
       installFoodPolicyRuntime();

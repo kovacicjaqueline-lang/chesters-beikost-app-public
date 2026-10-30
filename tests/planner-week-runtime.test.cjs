@@ -108,6 +108,28 @@ test("phasenplan ergänzt eine freie Mittagsmahlzeit und lässt Kostproben sowie
   assert.deepEqual(clone(recipePlanned.recipeIngredientFoodIds), ["kartoffel"]);
   assert.ok(recipePlanned.additionalFoodIds.includes("zucchini"));
   assert.ok(recipePlanned.additionalFoodIds.includes("huhn"));
+
+  state.shoppingHints.rapsoel = { status: "needed" };
+  state.pantry.rapsoel = false;
+  const unavailableOilMeal = {
+    meal: "lunch",
+    active: true,
+    focusId: "kartoffel",
+    foodIds: ["kartoffel", "zucchini", "huhn"],
+    baseFoodIds: ["kartoffel"],
+    sampleFoodIds: [],
+    optionalAddons: [],
+  };
+  context.__ensureMealComponentPlan(unavailableOilMeal, "2026-09-24", context.freshPlanContext());
+  assert.equal(unavailableOilMeal.optionalAddons.includes("rapsoel"), false);
+  const unavailableOilAssessment = context.plannerMealComponentAssessment(
+    unavailableOilMeal.foodIds,
+    state.foods,
+    null,
+    "aufbau",
+    "lunch",
+  );
+  assert.deepEqual(clone(unavailableOilAssessment.missing), ["fat"]);
 });
 
 test("7-Tage-Worker installiert die Planner-Wrapper in derselben Reihenfolge wie der Browser", () => {

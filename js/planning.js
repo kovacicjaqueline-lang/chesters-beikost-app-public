@@ -850,7 +850,14 @@ function plannerEnsureMealComponentPlan(meal, on, ctx) {
     if (!requirement) continue;
     if (key === "fat") {
       let oil = food("rapsoel");
-      if (oil?.active && !meal.foodIds?.includes(oil.id)) {
+      let oilAvailable =
+        oil?.active &&
+        (!Array.isArray(oil.meals) || oil.meals.includes(meal.meal)) &&
+        status(oil) !== "Pausiert" &&
+        !isFoodUnavailable(oil.id) &&
+        (typeof automaticFoodEligibility !== "function" ||
+          automaticFoodEligibility(oil, on, state.settings || {}));
+      if (oilAvailable && !meal.foodIds?.includes(oil.id) && !meal.optionalAddons?.includes(oil.id)) {
         meal.optionalAddons = [...new Set([...(meal.optionalAddons || []), oil.id])];
       }
       continue;

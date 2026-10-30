@@ -74,18 +74,21 @@
     if (booted) return;
     installNoopUi();
 
-    // Diese Schicht muss vor den spaeteren Policy-Wrappern installiert werden,
-    // damit der Worker dieselbe Plan-ID-/Rollover-Basis wie die App verwendet.
-    importScripts("./planner-log-rollover.js?v=10.1.26");
-
+    // Match the app's static planner setup order before FoodPolicy and the
+    // DOMContentLoaded policies are installed.
     if (typeof installFoodStatusPreferencePolicy === "function") {
       installFoodStatusPreferencePolicy();
     }
-    // Im Browser liegt Culinary bereits vor app.js und damit vor der
-    // Food-Policy. Der Worker reproduziert exakt diese Wrapper-Reihenfolge.
     if (typeof installPlannerCulinaryQualityRuntime === "function") {
       installPlannerCulinaryQualityRuntime();
     }
+
+    // The app installs the rollover layer and its runtime cache before app.js.
+    importScripts(
+      "./planner-log-rollover.js?v=10.1.26",
+      "./planner-log-rollover-cascade.js?v=10.1.26"
+    );
+
     // The browser loads these availability wrappers before app.js installs
     // FoodPolicy. Keep recipe readiness identical when a FOOD is unavailable.
     importScripts("./planner-missing-ingredient.js?v=10.1.26");

@@ -112,6 +112,8 @@ test("phasenplan ergänzt eine freie Mittagsmahlzeit und lässt Kostproben sowie
 
 test("7-Tage-Worker installiert den Allergenpflege-Wrapper genau einmal vor den Planner-Policies", () => {
   const source = read("js/planner-week-worker.js");
+  const rolloverImport = source.indexOf('"./planner-log-rollover.js?v=10.1.26"');
+  const cascadeImport = source.indexOf('"./planner-log-rollover-cascade.js?v=10.1.26"');
   const missingIngredientImport = source.indexOf('importScripts("./planner-missing-ingredient.js?v=10.1.26")');
   const foodPolicyInstall = source.indexOf("installFoodPolicyRuntime();");
   const maintenanceImports = [...source.matchAll(/importScripts\("\.\/planner-allergen-maintenance\.js\?v=10\.1\.26"\)/g)];
@@ -120,6 +122,8 @@ test("7-Tage-Worker installiert den Allergenpflege-Wrapper genau einmal vor den 
   const finalQualityImport = source.indexOf('"./planner-final-quality.js?v=10.1.26"');
   const handlingReadinessImport = source.indexOf('"./handling-readiness.js?v=10.1.26"');
 
+  assert.ok(rolloverImport >= 0, "Worker muss die Plan-ID-/Rollover-Basis der App laden");
+  assert.ok(cascadeImport > rolloverImport && cascadeImport < missingIngredientImport, "Rollover-Cascade und Tagesplan-Cache liegen vor den späteren Policies");
   assert.ok(missingIngredientImport >= 0, "Worker muss dieselbe Verfügbarkeitsregel für fehlende Zutaten wie die App laden");
   assert.ok(foodPolicyInstall > missingIngredientImport, "Missing-Ingredient-Regeln werden vor der Food-Policy installiert wie im Browser");
   assert.equal(maintenanceImports.length, 1, "Das statische Script wird in der App durch sein data-Attribut wiedererkannt und nicht erneut installiert");

@@ -322,12 +322,6 @@ function plannerCulinaryPairAllowed(focus, candidate, meal, options = {}) {
 }
 
 function plannerCulinaryRecipeScore(recipe, ids, foods = [], meal = "lunch") {
-  const phase = typeof currentPhase === "function"
-    ? currentPhase()
-    : String(typeof state !== "undefined" ? state?.settings?.phaseSelected || "" : "");
-  const componentAssessment = plannerMealComponentAssessment(ids, foods, recipe, phase, meal);
-  if (componentAssessment.applicable && !componentAssessment.complete) return -1000;
-
   const assessment = plannerCulinaryAssessment(ids, foods, meal, { recipeBacked: true });
   if (!assessment.allowed) return -1000;
   const categoryBonus = {

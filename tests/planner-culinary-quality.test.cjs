@@ -114,3 +114,14 @@ test("dreiteilige Frühstücke zählen die Zubereitungsfett-Option als eigenen B
   assert.equal(result.complete, true);
   assert.deepEqual(result.groups.sort(), ["base", "fat", "fruit", "protein"]);
 });
+
+test("fehlende Bausteine sperren ein vorhandenes Rezept nicht von Recipe-first aus", () => {
+  const score = quality.plannerCulinaryRecipeScore(
+    { category: "family" },
+    ["polenta", "zucchini", "ei"],
+    foods,
+    "lunch",
+  );
+
+  assert.ok(score > -1000, "das Rezept bleibt auswählbar; die Planner-Ergänzung füllt erst danach verfügbare Bausteine auf");
+});

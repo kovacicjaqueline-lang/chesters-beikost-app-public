@@ -872,7 +872,7 @@ function plannerEnsureMealComponentPlan(meal, on, ctx) {
       return true;
     });
     candidates.sort((a, b) =>
-      (ctx?.qualityFoodUse?.get(a.id) || 0) - (ctx?.qualityFoodUse?.get(b.id) || 0) ||
+      (ctx?.componentFoodUse?.get(a.id) || 0) - (ctx?.componentFoodUse?.get(b.id) || 0) ||
       usageCount(a.id) - usageCount(b.id) ||
       effectivePriority(a, on) - effectivePriority(b, on) ||
       String(a.id).localeCompare(String(b.id)),
@@ -895,6 +895,8 @@ function plannerEnsureMealComponentPlan(meal, on, ctx) {
       ...(meal.foodRoles || {}),
       [selected.id]: plannerMealComponentRole(selected) === "base" ? "base" : "component",
     };
+    ctx.componentFoodUse ||= new Map();
+    ctx.componentFoodUse.set(selected.id, (ctx.componentFoodUse.get(selected.id) || 0) + 1);
     if (typeof applyPlannedMealAmounts === "function") applyPlannedMealAmounts(meal);
   }
 
@@ -907,6 +909,23 @@ function plannerEnsureMealComponentPlan(meal, on, ctx) {
   for (let id of [...(meal.foodIds || []), ...(meal.optionalAddons || [])]) sameDayFoods.add(id);
   ctx.componentFoodsByDate.set(on, sameDayFoods);
   return meal;
+}
+function plannerEnsurePlanComponents(days, ctx) {
+  for (let day of days || []) {
+    for (let meal of day?.meals || []) {
+      let before = new Set(meal?.foodIds || []);
+      plannerEnsureMealComponentPlan(meal, day.date, ctx);
+      if (!state.settings?.preferInventoryInPlan) continue;
+      for (let id of meal?.foodIds || []) {
+        if (before.has(id) || (meal.inventoryFoodIds || []).includes(id)) continue;
+        let reserved = Number(ctx?.inventoryReserved?.get(id) || 0);
+        if (inventoryPortions(id) <= reserved) continue;
+        meal.inventoryFoodIds = [...new Set([...(meal.inventoryFoodIds || []), id])];
+        ctx?.inventoryReserved?.set(id, reserved + 1);
+      }
+    }
+  }
+  return days;
 }
 function snackRecipeCandidate(on, ctx) {
   let candidates = (typeof viewRenderRecipeStates === "function" ? viewRenderRecipeStates() : recipeStates())
@@ -1322,7 +1341,6 @@ function buildDay(date, index, ctx) {
         let focusId = ids.find((id) => typeof plannerFoodCanBeAutomaticFocus !== "function" || plannerFoodCanBeAutomaticFocus(food(id))) || ids[0];
         let smoothBatch = batch && recipe.smoothBatchAllowed && batch.preparationMode === "spoon-smooth";
         let recipeMeal = applyPlannedMealAmounts({ meal, active: true, focusId, foodIds: ids, baseFoodIds: ids, sampleFoodIds: [], optionalAddons: [], inventoryFoodIds: [], recipeName: recipe.name, recipeInventoryId: batch?.id || "", preparationMode: smoothBatch ? "spoon-smooth" : "", milkMeal: recipe.milkMeal || "", type: batch ? "Rezeptvorrat" : "Rezept", note: smoothBatch ? "Diese Vorratsportion wurde vollständig glatt püriert; nur diese Zubereitungsform anbieten." : batch ? "Eine vorbereitete Portion aus dem Gefriervorrat verwenden." : "Passendes vorhandenes Rezept zubereiten." });
-        recipeMeal = plannerEnsureMealComponentPlan(recipeMeal, date, ctx);
         reserveMealInventory(recipeMeal, ctx);
         ctx.recipePlannedUse?.set(recipe.name, (ctx.recipePlannedUse.get(recipe.name) || 0) + 1);
         ctx.recipeLastUse?.set(recipe.name, date);
@@ -1390,7 +1408,6 @@ function buildDay(date, index, ctx) {
     generated = applyRecipeFoodComposition(generated, date, ctx);
     generated = enrichKnownFreeMeal(generated, date, ctx);
     generated = removeUnavailableGeneratedFoods(generated);
-    generated = plannerEnsureMealComponentPlan(generated, date, ctx);
     if (!generated) { meals.push({ meal, active: true, empty: true }); continue; }
     if (mealMilkLevel(generated) === "full") ctx.fullMilkDates?.add(date);
     reserveMealInventory(generated, ctx); meals.push(generated); recordMealForQualityRotation(generated);
@@ -1416,6 +1433,7 @@ function buildDaysUnlocked(from, n = 7) {
   let ctx = freshPlanContext();
   let arr = [];
   for (let i = 0; i < n; i++) arr.push(buildDay(addDays(from, i), i, ctx));
+  plannerEnsurePlanComponents(arr, ctx);
   state.planLocks = savedLocks;
   return arr;
 }
@@ -1423,6 +1441,7 @@ function buildDays(from, n = 7, applyAutoLocks = true) {
   let ctx = freshPlanContext();
   let arr = [];
   for (let i = 0; i < n; i++) arr.push(buildDay(addDays(from, i), i, ctx));
+  plannerEnsurePlanComponents(arr, ctx);
   if (applyAutoLocks && ensureAutoLocks(arr)) return buildDays(from, n, false);
   return arr;
 }

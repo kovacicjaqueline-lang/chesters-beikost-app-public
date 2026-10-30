@@ -160,6 +160,10 @@ try {
   );
 
   await page.locator('nav button[data-view="plan"]').click();
+  await page.waitForFunction(() => {
+    const plan = document.getElementById("plan");
+    return !!plan?.classList.contains("active") && !plan.hasAttribute("aria-busy");
+  });
   const targetDayButton = page.locator(`#planWeekOverview .plan-week-day[data-plan-date="${today}"]`);
   await targetDayButton.click();
   const targetLockButton = page.locator(`#blockPlan .meal-lock[data-lock-date="${today}"][data-lock-meal="lunch"]`);

@@ -216,6 +216,7 @@
   }
 
   function scheduleWarmup() {
+    if (globalScope.__plannerWeekWorkerRuntime === true) return;
     if (warmupPending || typeof globalScope.visiblePlanStart !== "function") return;
     if (!currentState()?.settings) return;
     warmupPending = true;

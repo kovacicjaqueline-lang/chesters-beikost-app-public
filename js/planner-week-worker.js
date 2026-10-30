@@ -83,6 +83,11 @@
       installPlannerCulinaryQualityRuntime();
     }
 
+    // The app's week cache also wraps save() to invalidate the day-plan cache.
+    // This worker builds weeks directly and must not schedule nested warmups.
+    globalScope.__plannerWeekWorkerRuntime = true;
+    importScripts("./planner-week-cache.js?v=10.1.26&planner-cache=5");
+
     // The browser's rollover cascade inserts these layers synchronously
     // before app.js. The worker DOM stub cannot load inserted scripts, so import
     // the same stack explicitly and in the same order.

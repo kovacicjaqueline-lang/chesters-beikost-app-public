@@ -112,6 +112,7 @@ test("phasenplan ergänzt eine freie Mittagsmahlzeit und lässt Kostproben sowie
 
 test("7-Tage-Worker installiert den Allergenpflege-Wrapper genau einmal vor den Planner-Policies", () => {
   const source = read("js/planner-week-worker.js");
+  const weekCacheImport = source.indexOf('"./planner-week-cache.js?v=10.1.26&planner-cache=5"');
   const rolloverImport = source.indexOf('"./planner-log-rollover.js?v=10.1.26"');
   const cascadeImport = source.indexOf('"./planner-log-rollover-cascade.js?v=10.1.26"');
   const cascadeModules = [
@@ -128,6 +129,7 @@ test("7-Tage-Worker installiert den Allergenpflege-Wrapper genau einmal vor den 
   const finalQualityImport = source.indexOf('"./planner-final-quality.js?v=10.1.26"');
   const handlingReadinessImport = source.indexOf('"./handling-readiness.js?v=10.1.26"');
 
+  assert.ok(weekCacheImport >= 0 && weekCacheImport < rolloverImport, "Worker muss den Save-Cache vor der Rollover-Schicht installieren");
   assert.ok(rolloverImport >= 0, "Worker muss die Plan-ID-/Rollover-Basis der App laden");
   assert.ok(cascadeImport > rolloverImport, "Rollover-Cascade und Tagesplan-Cache liegen vor den späteren Policies");
   assert.ok(cascadeModules.every((index) => index >= 0), "Worker muss alle synchronen Cascade-Module laden");

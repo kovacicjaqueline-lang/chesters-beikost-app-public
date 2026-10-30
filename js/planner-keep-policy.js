@@ -109,17 +109,22 @@
   globalScope.ensureAutoLocks = () => false;
 
   function rebuildVisiblePlanKeepingUserChoices() {
-    const from = state.settings?.planFrom || (typeof today === "function" ? today() : "");
-    if (!from || typeof addDays !== "function") return;
-    clearReplannablePlanState(state, from, 7, addDays);
-    // Repeated explicit replans should explore equally suitable candidates.
-    // Stored choices and the underlying suitability gates remain unchanged.
-    if (state.settings) {
-      state.settings.planRebuildGeneration =
-        (Math.max(0, Number(state.settings.planRebuildGeneration) || 0) + 1) % 10000;
-    }
-    if (typeof save === "function") save();
-    if (typeof renderAll === "function") renderAll();
+    const rebuild = () => {
+      const from = state.settings?.planFrom || (typeof today === "function" ? today() : "");
+      if (!from || typeof addDays !== "function") return;
+      clearReplannablePlanState(state, from, 7, addDays);
+      // Repeated explicit replans should explore equally suitable candidates.
+      // Stored choices and the underlying suitability gates remain unchanged.
+      if (state.settings) {
+        state.settings.planRebuildGeneration =
+          (Math.max(0, Number(state.settings.planRebuildGeneration) || 0) + 1) % 10000;
+      }
+      if (typeof save === "function") save();
+      if (typeof renderAll === "function") renderAll();
+    };
+    const replanHook = globalScope.__plannerWeekReplanWithDiversification;
+    if (typeof replanHook === "function") return replanHook(rebuild);
+    return rebuild();
   }
   globalScope.clearAutomaticLocks = rebuildVisiblePlanKeepingUserChoices;
   globalScope.rebuildVisiblePlan = rebuildVisiblePlanKeepingUserChoices;
@@ -140,7 +145,13 @@
     if (cancel) cancel.onclick = typeof closeGeneric === "function" ? closeGeneric : null;
     if (confirm) confirm.onclick = () => {
       if (typeof closeGeneric === "function") closeGeneric();
-      rebuildVisiblePlanKeepingUserChoices();
+      // Call through the installed global hook so later planner layers (such
+      // as the week-replan diversification wrapper) can participate.
+      if (typeof globalScope.rebuildVisiblePlan === "function") {
+        globalScope.rebuildVisiblePlan();
+      } else {
+        rebuildVisiblePlanKeepingUserChoices();
+      }
       if (typeof showToast === "function") showToast("Woche neu geplant; deine bewusst festgelegten Mahlzeiten bleiben erhalten.");
     };
   };

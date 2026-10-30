@@ -221,6 +221,13 @@
             resolvedToday: typeof globalScope.today === "function" ? globalScope.today() : "",
             inputLocks: inputLockChecks,
             lockLookups: lockLookupChecks,
+            runtimeFlags: Object.keys(globalScope)
+              .filter((key) =>
+                /^__(?:planner|handling|foodStatus|mealEditor|manualMeal)/.test(key) &&
+                /(Installed|Ready)$/.test(key) &&
+                globalScope[key] === true,
+              )
+              .sort(),
             firstDayMeals: (weeks[0]?.days?.[0]?.meals || []).map((meal) => ({
               meal: meal.meal,
               lockedMode: meal.lockedMode || "",

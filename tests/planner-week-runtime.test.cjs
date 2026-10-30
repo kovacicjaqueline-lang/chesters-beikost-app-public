@@ -112,12 +112,16 @@ test("phasenplan ergänzt eine freie Mittagsmahlzeit und lässt Kostproben sowie
 
 test("7-Tage-Worker installiert den Allergenpflege-Wrapper genau einmal vor den Planner-Policies", () => {
   const source = read("js/planner-week-worker.js");
+  const missingIngredientImport = source.indexOf('importScripts("./planner-missing-ingredient.js?v=10.1.26")');
+  const foodPolicyInstall = source.indexOf("installFoodPolicyRuntime();");
   const maintenanceImports = [...source.matchAll(/importScripts\("\.\/planner-allergen-maintenance\.js\?v=10\.1\.26"\)/g)];
   const firstMaintenanceImport = maintenanceImports[0]?.index ?? -1;
   const policyImport = source.indexOf('"./planner-meal-eligibility.js?v=10.1.26"');
   const finalQualityImport = source.indexOf('"./planner-final-quality.js?v=10.1.26"');
   const handlingReadinessImport = source.indexOf('"./handling-readiness.js?v=10.1.26"');
 
+  assert.ok(missingIngredientImport >= 0, "Worker muss dieselbe Verfügbarkeitsregel für fehlende Zutaten wie die App laden");
+  assert.ok(foodPolicyInstall > missingIngredientImport, "Missing-Ingredient-Regeln werden vor der Food-Policy installiert wie im Browser");
   assert.equal(maintenanceImports.length, 1, "Das statische Script wird in der App durch sein data-Attribut wiedererkannt und nicht erneut installiert");
   assert.ok(firstMaintenanceImport >= 0, "Worker muss den statischen Allergenpflege-Wrapper laden");
   assert.ok(policyImport > firstMaintenanceImport, "Der erste Wrapper liegt vor den späteren Day-Plan-Policies");

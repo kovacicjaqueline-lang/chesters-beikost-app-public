@@ -86,6 +86,10 @@
     if (typeof installPlannerCulinaryQualityRuntime === "function") {
       installPlannerCulinaryQualityRuntime();
     }
+    // The browser loads these availability wrappers before app.js installs
+    // FoodPolicy. Keep recipe readiness identical when a FOOD is unavailable.
+    importScripts("./planner-missing-ingredient.js?v=10.1.26");
+
     if (typeof installFoodPolicyRuntime === "function") {
       installFoodPolicyRuntime();
     }

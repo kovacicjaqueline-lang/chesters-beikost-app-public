@@ -81,6 +81,17 @@ function createHarness({ withAnimationFrame = true } = {}) {
 
 {
   const h = createHarness();
+  const callbacks = [];
+  assert.equal(h.sandbox.renderCurrentViewAfterNextPaint(undefined, () => callbacks.push("after")), true);
+  assert.deepEqual(h.events, [], "Ein View-Render ohne explizite View-ID läuft nicht synchron");
+  h.raf.shift()();
+  h.timers.shift()();
+  assert.deepEqual(h.events, ["view:home"], "Ohne View-ID wird die aktuelle View gerendert");
+  assert.deepEqual(callbacks, ["after"]);
+}
+
+{
+  const h = createHarness();
   const activeView = { id: "plan" };
   h.sandbox.document = { ...h.sandbox.document, querySelector: () => activeView };
   const callbacks = [];

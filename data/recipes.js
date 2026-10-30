@@ -11,6 +11,7 @@ const RECIPES = [
   {
     "name": "Obst-Hafer-Pancakes",
     "category": "pancakes",
+    "cookingFat": "Rapsöl",
     "requires": [
       "Hafer",
       "Ei"
@@ -48,6 +49,7 @@ const RECIPES = [
   {
     "name": "Birne-Hirse-Pancakes",
     "category": "pancakes",
+    "cookingFat": "Rapsöl",
     "requires": [
       "Birne",
       "Hirse",
@@ -65,6 +67,7 @@ const RECIPES = [
   {
     "name": "Gemüse-Hafer-Pancakes",
     "category": "pancakes",
+    "cookingFat": "Rapsöl",
     "requires": [
       "Hafer",
       "Ei"
@@ -98,6 +101,7 @@ const RECIPES = [
   {
     "name": "Zucchini-Hafer-Pancakes",
     "category": "pancakes",
+    "cookingFat": "Rapsöl",
     "requires": [
       "Zucchini",
       "Hafer",
@@ -115,6 +119,7 @@ const RECIPES = [
   {
     "name": "Ube-Bananen-Pancakes",
     "category": "pancakes",
+    "cookingFat": "Rapsöl",
     "ph": true,
     "requires": [
       "Ube (violette Yamswurzel)",
@@ -1499,6 +1504,7 @@ const RECIPES = [
   {
     "name": "Buchweizen-Bananen-Pancakes",
     "category": "pancakes",
+    "cookingFat": "Rapsöl",
     "requires": [
       "Buchweizen",
       "Banane",
@@ -1943,6 +1949,7 @@ const RECIPES = [
   {
     "name": "Bananen-Joghurt-Hafer-Pancakes",
     "category": "pancakes",
+    "cookingFat": "Rapsöl",
     "requires": [
       "Banane",
       "Naturjoghurt",

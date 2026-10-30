@@ -160,10 +160,24 @@ try {
   );
 
   await page.locator('nav button[data-view="plan"]').click();
+  await page.waitForFunction(() => {
+    const plan = document.getElementById("plan");
+    return !!plan?.classList.contains("active") && !plan.hasAttribute("aria-busy");
+  });
   const targetDayButton = page.locator(`#planWeekOverview .plan-week-day[data-plan-date="${today}"]`);
   await targetDayButton.click();
   const targetLockButton = page.locator(`#blockPlan .meal-lock[data-lock-date="${today}"][data-lock-meal="lunch"]`);
   await targetLockButton.waitFor();
+  await page.waitForFunction(({ key, previous }) => {
+    const button = [...document.querySelectorAll("#blockPlan .logMeal[data-plan]")].find((entry) => {
+      const payload = JSON.parse(decodeURIComponent(entry.dataset.plan || ""));
+      return `${payload.date}|${payload.meal}` === key;
+    });
+    if (!button) return false;
+    const payload = JSON.parse(decodeURIComponent(button.dataset.plan || ""));
+    const current = [...new Set(payload.foodIds || [])].filter(Boolean).sort().join("+");
+    return !!current && current !== previous;
+  }, { key: targetKey, previous: previousTarget });
   assert.equal(await targetLockButton.evaluate((node) => node.classList.contains("unlocked")), true, "Random-Swap-Pin erscheint nicht als bewusstes Behalten");
   assert.equal(await targetLockButton.getAttribute("aria-label"), "Mahlzeit bei automatischer Neuplanung behalten");
   assert.equal(

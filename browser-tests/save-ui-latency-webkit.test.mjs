@@ -10,6 +10,10 @@ async function waitForDeferredRender(page, before) {
   await page.waitForFunction((count) => window.__saveUiLatencyProbe.currentViewCalls > count, before);
 }
 
+async function waitForDeferredViewRender(page, before) {
+  await page.waitForFunction((count) => window.__saveUiLatencyProbe.viewCalls > count, before);
+}
+
 const server = await startStaticServer();
 const { port } = server.address();
 const browser = await webkit.launch();
@@ -29,7 +33,7 @@ try {
   await page.evaluate(() => {
     const baseRenderAll = window.renderAll;
     const baseRenderCurrentView = window.renderCurrentView;
-    window.__saveUiLatencyProbe = { renderCalls: 0, currentViewCalls: 0 };
+    window.__saveUiLatencyProbe = { renderCalls: 0, currentViewCalls: 0, viewCalls: 0 };
     window.renderAll = function profiledRenderAll(...args) {
       window.__saveUiLatencyProbe.renderCalls += 1;
       return baseRenderAll.apply(this, args);
@@ -37,6 +41,11 @@ try {
     window.renderCurrentView = function profiledRenderCurrentView(...args) {
       window.__saveUiLatencyProbe.currentViewCalls += 1;
       return baseRenderCurrentView.apply(this, args);
+    };
+    const baseRenderView = window.renderView;
+    window.renderView = function profiledRenderView(...args) {
+      window.__saveUiLatencyProbe.viewCalls += 1;
+      return baseRenderView.apply(this, args);
     };
   });
 
@@ -73,10 +82,12 @@ try {
   const foodImmediate = await page.evaluate(() => {
     const before = window.__saveUiLatencyProbe.renderCalls;
     const currentBefore = window.__saveUiLatencyProbe.currentViewCalls;
+    const viewBefore = window.__saveUiLatencyProbe.viewCalls;
     document.getElementById("foodToggleActive").click();
     return {
       before,
       currentBefore,
+      viewBefore,
       after: window.__saveUiLatencyProbe.renderCalls,
       modalOpen: document.getElementById("genericModal").classList.contains("open"),
     };
@@ -88,7 +99,7 @@ try {
     true,
     "Lebensmittel muss vor dem verzögerten Voll-Render bereits aktiv sein",
   );
-  await waitForDeferredRender(page, foodImmediate.currentBefore);
+  await waitForDeferredViewRender(page, foodImmediate.viewBefore);
 
   // Eigenes Lebensmittel: Persistenz und Dialogschluss passieren vor dem View-Render.
   const foodsBeforeCustom = await page.evaluate(() => window.__beikostTest.getState().foods.length);

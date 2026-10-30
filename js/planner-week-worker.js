@@ -53,13 +53,10 @@
     "./recipes.js?v=10.1.26",
     "./prep.js?v=10.1.26",
     "./recipe-frozen-ingredient-stock.js?v=10.1.26",
-    "./recipe-inventory-ingredients.js?v=10.1.26",
-    "./recipe-v2-component-options.js?v=10.1.26",
     "./log.js?v=10.1.26",
     "./food-status-preferences.js?v=10.1.26",
     "./planner-culinary-quality.js?v=10.1.26",
-    "./ui.js?v=10.1.26",
-    "../app.js?v=10.1.26"
+    "./ui.js?v=10.1.26"
   );
 
   function installNoopUi() {
@@ -74,21 +71,61 @@
     if (booted) return;
     installNoopUi();
 
-    // Diese Schicht muss vor den spaeteren Policy-Wrappern installiert werden,
-    // damit der Worker dieselbe Plan-ID-/Rollover-Basis wie die App verwendet.
-    importScripts("./planner-log-rollover.js?v=10.1.26");
-
+    // Match the app's static planner setup order before FoodPolicy and the
+    // DOMContentLoaded policies are installed.
     if (typeof installFoodStatusPreferencePolicy === "function") {
       installFoodStatusPreferencePolicy();
     }
-    // Im Browser liegt Culinary bereits vor app.js und damit vor der
-    // Food-Policy. Der Worker reproduziert exakt diese Wrapper-Reihenfolge.
     if (typeof installPlannerCulinaryQualityRuntime === "function") {
       installPlannerCulinaryQualityRuntime();
     }
+
+    // The app's week cache also wraps save() to invalidate the day-plan cache.
+    // This worker builds weeks directly and must not schedule nested warmups.
+    globalScope.__plannerWeekWorkerRuntime = true;
+    importScripts("./planner-week-cache.js?v=10.1.26&planner-cache=5");
+
+    // The browser's rollover cascade inserts these layers synchronously
+    // before app.js. The worker DOM stub cannot load inserted scripts, so import
+    // the same stack explicitly and in the same order.
+    importScripts(
+      "./planner-log-rollover.js?v=10.1.26",
+      "./planner-log-rollover-cascade.js?v=10.1.26",
+      "./meal-card-unification.js?v=10.1.26",
+      "./planner-log-rollover-review-fixes.js?v=10.1.26",
+      "./planner-random-swap.js?v=10.1.26",
+      "./planner-task-alternatives.js?v=10.1.26",
+      "./planner-missing-ingredient.js?v=10.1.26",
+      "./plan-checks.js?v=10.1.26",
+      "./planned-recipe-details.js?v=10.1.26",
+      "./recipe-inventory-ingredients.js?v=10.1.26",
+      "./catalog-navigation.js?v=10.1.26",
+      "./catalog-performance.js?v=10.1.26",
+      "./app-focus-mode.js?v=10.1.26",
+      "./mobile-beikost-more.js?v=10.1.26",
+      "./flow-dialog-ui.js?v=10.1.26",
+      "./recipe-v2-component-options.js?v=10.1.26"
+    );
+
+    // The app evaluates app.js after its static planner wrappers. Hide window
+    // during import so startBeikostApp() stays disabled in this worker.
+    const workerWindow = globalScope.window;
+    globalScope.window = undefined;
+    importScripts("../app.js?v=10.1.26");
+    globalScope.window = workerWindow;
+
     if (typeof installFoodPolicyRuntime === "function") {
       installFoodPolicyRuntime();
     }
+
+    // The app loads allergen maintenance statically after app.js, before
+    // the Planner-Policies that utils.js adds on DOMContentLoaded.
+    importScripts("./planner-allergen-maintenance.js?v=10.1.26");
+
+    importScripts(
+      "./planner-keep-policy.js?v=10.1.26",
+      "./planner-keep-tracking.js?v=10.1.26"
+    );
 
     importScripts(
       "./planner-meal-eligibility.js?v=10.1.26",
@@ -101,7 +138,6 @@
       "./planner-quality-rotation.js?v=10.1.26",
       "./planner-introduction-policy.js?v=10.1.26",
       "./planner-final-quality.js?v=10.1.26",
-      "./planner-allergen-maintenance.js?v=10.1.26",
       "./handling-readiness.js?v=10.1.26"
     );
 
@@ -140,18 +176,79 @@
     const message = event?.data || {};
     if (message.type !== "build") return;
 
+    const originalToday = globalScope.today;
+    const referenceDate = /^\d{4}-\d{2}-\d{2}$/.test(String(message.today || ""))
+      ? String(message.today)
+      : "";
+    if (referenceDate && typeof originalToday === "function") {
+      globalScope.today = () => referenceDate;
+    }
+
     try {
+      // Policy runtimes may normalize state while they install. The browser
+      // installs them after loading the active user state, so the worker must
+      // expose the request snapshot before its first bootstrap as well.
+      state = message.state;
       ensureBoot();
+      state = message.state;
+      const inputLockChecks = message.diagnostics === true
+        ? Object.entries(state?.planLocks || {}).map(([key, lock]) => ({
+            key,
+            valid: typeof validPlanLock === "function" ? validPlanLock(lock) : null,
+            recipeName: lock?.recipeName || "",
+          }))
+        : null;
+      const firstStart = String(message.starts?.[0] || "");
+      const lockLookupChecks = message.diagnostics === true
+        ? ["breakfast", "lunch", "dinner"].map((meal) => {
+            const key = typeof planLockKey === "function" ? planLockKey(firstStart, meal) : `${firstStart}|${meal}`;
+            const stored = state?.planLocks?.[key] || null;
+            const resolved = typeof lockedMeal === "function" ? lockedMeal(firstStart, meal) : null;
+            return {
+              meal,
+              key,
+              stored: !!stored,
+              storedRecipeName: stored?.recipeName || "",
+              resolved: !!resolved,
+              resolvedRecipeName: resolved?.recipeName || "",
+              resolvedLockedMode: resolved?.lockedMode || "",
+            };
+          })
+        : null;
       const weeks = (message.starts || []).map((start) => ({
         from: String(start || ""),
         count: 7,
         days: buildWeek(message.state, String(start || "")),
       }));
+      const diagnostics = message.diagnostics === true
+        ? {
+            referenceDate,
+            resolvedToday: typeof globalScope.today === "function" ? globalScope.today() : "",
+            inputLocks: inputLockChecks,
+            lockLookups: lockLookupChecks,
+            runtimeFlags: Object.keys(globalScope)
+              .filter((key) =>
+                /^__(?:planner|handling|foodStatus|mealEditor|manualMeal)/.test(key) &&
+                /(Installed|Ready)$/.test(key) &&
+                globalScope[key] === true,
+              )
+              .sort(),
+            firstDayMeals: (weeks[0]?.days?.[0]?.meals || []).map((meal) => ({
+              meal: meal.meal,
+              lockedMode: meal.lockedMode || "",
+              recipeName: meal.recipeName || "",
+              focusId: meal.focusId || "",
+              foodIds: [...(meal.foodIds || [])],
+            })),
+            remainingLockKeys: Object.keys(state?.planLocks || {}),
+          }
+        : undefined;
       globalScope.postMessage({
         type: "result",
         requestId: message.requestId,
         inputRevision: message.inputRevision,
         weeks,
+        ...(diagnostics ? { diagnostics } : {}),
       });
     } catch (error) {
       globalScope.postMessage({
@@ -160,6 +257,8 @@
         inputRevision: message.inputRevision,
         message: String(error?.stack || error?.message || error),
       });
+    } finally {
+      if (typeof originalToday === "function") globalScope.today = originalToday;
     }
   };
 })(self);

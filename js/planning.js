@@ -809,6 +809,131 @@ function enrichKnownFreeMeal(meal, on, ctx) {
   meal.baseFoodIds = [...new Set([...(meal.baseFoodIds || []), extra])];
   return applyPlannedMealAmounts(meal);
 }
+function plannerEnsureMealComponentPlan(meal, on, ctx) {
+  if (!meal?.active || meal.empty || meal.manualAdded || meal.lockedMode ||
+      (meal.sampleFoodIds || []).length || typeof plannerMealComponentPlan !== "function" ||
+      typeof plannerMealComponentAssessment !== "function" ||
+      typeof plannerMealComponentRole !== "function") return meal;
+
+  let plan = plannerMealComponentPlan(currentPhase(), meal.meal);
+  if (!plan) return meal;
+  ctx.componentFoodsByDate ||= new Map();
+  let sameDayFoods = ctx.componentFoodsByDate.get(on) || new Set();
+  let recipe = meal.recipeName
+    ? state.recipes?.find((item) => item.name === meal.recipeName) || recipeByName(meal.recipeName)
+    : null;
+  let assessment = () => plannerMealComponentAssessment(
+    [...new Set([...(meal.foodIds || []), ...(meal.optionalAddons || [])])],
+    state.foods || [],
+    recipe,
+    currentPhase(),
+    meal.meal,
+  );
+  let missing = assessment().missing;
+  if (!missing.length) {
+    for (let id of [...(meal.foodIds || []), ...(meal.optionalAddons || [])]) sameDayFoods.add(id);
+    ctx.componentFoodsByDate.set(on, sameDayFoods);
+    return meal;
+  }
+
+  const requirementByKey = new Map(plan.requirements.map((item) => [item.key, item]));
+  const roleLabels = {
+    base: "Getreide/Stärke",
+    vegetable: "Gemüse",
+    protein: "Eiweißquelle",
+    fat: "Rapsöl",
+    produce: "Obst oder Gemüse",
+  };
+
+  for (let key of missing) {
+    let requirement = requirementByKey.get(key);
+    if (!requirement) continue;
+    if (key === "fat") {
+      let oil = food("rapsoel");
+      let oilAvailable =
+        oil?.active &&
+        (!Array.isArray(oil.meals) || oil.meals.includes(meal.meal)) &&
+        status(oil) !== "Pausiert" &&
+        !isFoodUnavailable(oil.id) &&
+        (typeof automaticFoodEligibility !== "function" ||
+          automaticFoodEligibility(oil, on, state.settings || {}));
+      if (oilAvailable && !meal.foodIds?.includes(oil.id) && !meal.optionalAddons?.includes(oil.id)) {
+        meal.optionalAddons = [...new Set([...(meal.optionalAddons || []), oil.id])];
+      }
+      continue;
+    }
+
+    let currentIds = new Set([...(meal.foodIds || []), ...(meal.optionalAddons || [])]);
+    let candidates = (state.foods || []).filter((item) => {
+      if (!item?.id || currentIds.has(item.id) || sameDayFoods.has(item.id) || item.allergenGroup && !canCombine(item)) return false;
+      if (!requirement.roles.includes(plannerMealComponentRole(item))) return false;
+      if (!eligible(item, meal.meal, on) || !canCombine(item)) return false;
+      if (requirement.roles.includes("base") &&
+          !(typeof plannerFoodCanBeBase === "function"
+            ? plannerFoodCanBeBase(item)
+            : plannerMealComponentRole(item) === "base")) return false;
+      if (requirement.roles.includes("base") &&
+          [...currentIds].some((id) => isStarchyFood(food(id)))) return false;
+      if (combinationPaused([...currentIds, item.id], on)) return false;
+      if (mealContainsMilkProduct([...currentIds]) && isMeatOrFish(item)) return false;
+      return true;
+    });
+    candidates.sort((a, b) =>
+      (ctx?.componentFoodUse?.get(a.id) || 0) - (ctx?.componentFoodUse?.get(b.id) || 0) ||
+      usageCount(a.id) - usageCount(b.id) ||
+      effectivePriority(a, on) - effectivePriority(b, on) ||
+      String(a.id).localeCompare(String(b.id)),
+    );
+    let selected = candidates[0];
+    if (!selected) continue;
+
+    if (meal.recipeName && !Array.isArray(meal.recipeIngredientFoodIds)) {
+      meal.recipeIngredientFoodIds = [...new Set(meal.foodIds || [])];
+    }
+    meal.foodIds = [...new Set([...(meal.foodIds || []), selected.id])];
+    if (meal.recipeName) {
+      meal.additionalFoodIds = [...new Set([...(meal.additionalFoodIds || []), selected.id])];
+      meal.compositionMode = "recipe-plus-food";
+    }
+    if (plannerMealComponentRole(selected) === "base") {
+      meal.baseFoodIds = [...new Set([...(meal.baseFoodIds || []), selected.id])];
+    }
+    meal.foodRoles = {
+      ...(meal.foodRoles || {}),
+      [selected.id]: plannerMealComponentRole(selected) === "base" ? "base" : "component",
+    };
+    ctx.componentFoodUse ||= new Map();
+    ctx.componentFoodUse.set(selected.id, (ctx.componentFoodUse.get(selected.id) || 0) + 1);
+    if (typeof applyPlannedMealAmounts === "function") applyPlannedMealAmounts(meal);
+  }
+
+  let finalAssessment = assessment();
+  if (!finalAssessment.complete) {
+    let missingLabels = finalAssessment.missing.map((key) => roleLabels[key] || key).join(", ");
+    let message = `Bausteinplan noch unvollständig: ${missingLabels} fehlen; aktuell geeignete bekannte Zutaten reichen dafür nicht aus.`;
+    meal.note = [meal.note, message].filter(Boolean).join(" ");
+  }
+  for (let id of [...(meal.foodIds || []), ...(meal.optionalAddons || [])]) sameDayFoods.add(id);
+  ctx.componentFoodsByDate.set(on, sameDayFoods);
+  return meal;
+}
+function plannerEnsurePlanComponents(days, ctx) {
+  for (let day of days || []) {
+    for (let meal of day?.meals || []) {
+      let before = new Set(meal?.foodIds || []);
+      plannerEnsureMealComponentPlan(meal, day.date, ctx);
+      if (!state.settings?.preferInventoryInPlan) continue;
+      for (let id of meal?.foodIds || []) {
+        if (before.has(id) || (meal.inventoryFoodIds || []).includes(id)) continue;
+        let reserved = Number(ctx?.inventoryReserved?.get(id) || 0);
+        if (inventoryPortions(id) <= reserved) continue;
+        meal.inventoryFoodIds = [...new Set([...(meal.inventoryFoodIds || []), id])];
+        ctx?.inventoryReserved?.set(id, reserved + 1);
+      }
+    }
+  }
+  return days;
+}
 function snackRecipeCandidate(on, ctx) {
   let candidates = (typeof viewRenderRecipeStates === "function" ? viewRenderRecipeStates() : recipeStates())
     .filter((r) =>
@@ -1315,6 +1440,7 @@ function buildDaysUnlocked(from, n = 7) {
   let ctx = freshPlanContext();
   let arr = [];
   for (let i = 0; i < n; i++) arr.push(buildDay(addDays(from, i), i, ctx));
+  plannerEnsurePlanComponents(arr, ctx);
   state.planLocks = savedLocks;
   return arr;
 }
@@ -1322,6 +1448,7 @@ function buildDays(from, n = 7, applyAutoLocks = true) {
   let ctx = freshPlanContext();
   let arr = [];
   for (let i = 0; i < n; i++) arr.push(buildDay(addDays(from, i), i, ctx));
+  plannerEnsurePlanComponents(arr, ctx);
   if (applyAutoLocks && ensureAutoLocks(arr)) return buildDays(from, n, false);
   return arr;
 }

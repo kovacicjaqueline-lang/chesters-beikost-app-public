@@ -5,6 +5,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
+const recipeRuntime = require("../js/recipes.js");
 
 const ROOT = path.join(__dirname, "..");
 const dataSource = fs.readFileSync(path.join(ROOT, "data/recipes.js"), "utf8");
@@ -103,6 +104,26 @@ test("recipe preparation audit covers the full 139-recipe runtime catalog", () =
   assert.equal(INCOMPLETE_PREPARATIONS.length, 20);
   assert.equal(TERSE_PREPARATIONS.length, 23);
   assert.equal(new Set([...INCOMPLETE_PREPARATIONS, ...TERSE_PREPARATIONS]).size, 43);
+});
+
+test("alle acht bestehenden Pancake-Rezepte behalten Rapsöl als Zubereitungsfett", () => {
+  const recipes = loadCatalog();
+  const pancakeNames = [
+    "Obst-Hafer-Pancakes",
+    "Birne-Hirse-Pancakes",
+    "Gemüse-Hafer-Pancakes",
+    "Zucchini-Hafer-Pancakes",
+    "Ube-Bananen-Pancakes",
+    "Buchweizen-Bananen-Pancakes",
+    "Bananen-Joghurt-Hafer-Pancakes",
+    "Bananen-Ei-Pancakes",
+  ];
+  const pancakes = pancakeNames.map((name) => recipes.find((recipe) => recipe.name === name));
+
+  assert.equal(pancakes.filter(Boolean).length, 8, "keines der bestehenden Pancake-Rezepte darf verschwinden");
+  assert.ok(pancakes.every((recipe) => recipe.cookingFat === "Rapsöl"));
+  assert.equal(recipes.length, 139, "die bestehende Rezeptanzahl bleibt erhalten");
+  assert.ok(recipeRuntime.recipeDetailIngredientItems(pancakes[7]).some((item) => /Rapsöl zum dünnen Ausbacken/.test(item)));
 });
 
 test("recipe preparation completeness: Herzhafte Hirseschnitten sind vollständig gegart und weich servierbar", () => {

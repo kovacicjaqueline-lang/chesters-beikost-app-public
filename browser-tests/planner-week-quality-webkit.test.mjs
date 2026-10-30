@@ -149,12 +149,22 @@ try {
     ];
 
     window.__beikostTest.setState(current);
+    // Compare fresh planner evaluations; the runtime cache has its own focused tests.
+    window.invalidateDayPlanRuntimeCache?.();
     const snapshot = window.__beikostTest.getState();
     const mainDays = window.buildDays(start, 7, false);
+    const runtimeCacheStats = window.__dayPlanRuntimeCache?.stats?.() || null;
+    const mainRuntimeFlags = Object.keys(window)
+      .filter((key) =>
+        /^__(?:planner|handling|foodStatus|mealEditor|manualMeal)/.test(key) &&
+        /(Installed|Ready)$/.test(key) &&
+        window[key] === true,
+      )
+      .sort();
     const lunchPorridgeAllowed = window.__beikostTest.recipeSuitableForMeal("Obst-Polentabrei", "lunch");
     const lunchPancakesAllowed = window.__beikostTest.recipeSuitableForMeal("Ube-Bananen-Pancakes", "lunch");
 
-    return { start, snapshot, mainDays, lunchPorridgeAllowed, lunchPancakesAllowed };
+    return { start, snapshot, mainDays, runtimeCacheStats, mainRuntimeFlags, lunchPorridgeAllowed, lunchPancakesAllowed };
   });
 
   assert.equal(setup.lunchPorridgeAllowed, false, "Obst-Polentabrei darf nicht automatisch in den Lunch-Slot rutschen");
@@ -219,7 +229,7 @@ try {
     `Sieben-Tage-Plan darf bei vorhandenen Alternativen nicht auf eine Mahlzeit kollabieren: ${JSON.stringify(mainSignatures)}`,
   );
 
-  const workerDays = await page.evaluate(({ start, snapshot }) => new Promise((resolve, reject) => {
+  const workerBuild = await page.evaluate(({ start, snapshot }) => new Promise((resolve, reject) => {
     const worker = new Worker("js/planner-week-worker.js?v=10.1.26");
     const timeout = setTimeout(() => {
       worker.terminate();
@@ -231,7 +241,7 @@ try {
       clearTimeout(timeout);
       worker.terminate();
       if (data.type === "error") reject(new Error(data.message || "Planner-Worker fehlgeschlagen"));
-      else resolve(data.weeks?.[0]?.days || []);
+      else resolve({ days: data.weeks?.[0]?.days || [], diagnostics: data.diagnostics || null });
     };
     worker.onerror = (event) => {
       clearTimeout(timeout);
@@ -243,14 +253,17 @@ try {
       requestId: 1,
       inputRevision: 0,
       starts: [start],
+      today: start,
       state: snapshot,
+      diagnostics: true,
     });
   }), { start: setup.start, snapshot: setup.snapshot });
+  const workerDays = workerBuild.days;
 
   assert.deepEqual(
     normalizedPlan(workerDays),
     normalizedPlan(setup.mainDays),
-    "Hauptthread und 7-Tage-Worker müssen für denselben State denselben Plan liefern",
+    `Hauptthread und 7-Tage-Worker müssen für denselben State denselben Plan liefern; Locks=${JSON.stringify(setup.snapshot.planLocks || {})}; Worker-Diagnose=${JSON.stringify(workerBuild.diagnostics)}; Main-Runtimes=${JSON.stringify(setup.mainRuntimeFlags)}; Runtime-Cache=${JSON.stringify(setup.runtimeCacheStats)}`,
   );
 
   const repairedAutoLock = await page.evaluate(({ start, snapshot }) => {

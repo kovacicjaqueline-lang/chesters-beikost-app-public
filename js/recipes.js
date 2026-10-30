@@ -13,6 +13,7 @@ const RECIPE_CATALOG_ADDITIONS = Object.freeze([
   Object.freeze({
     name: "Bananen-Ei-Pancakes",
     category: "pancakes",
+    cookingFat: "Rapsöl",
     requires: Object.freeze(["Banane", "Ei"]),
     stage: 2,
     batch: "4–6 Mini-Pancakes",
@@ -924,11 +925,12 @@ function recipeCatalogStatusBadge(r) {
 
 function recipeDetailIngredientItems(r) {
   let source = String(r.ingredients || (r.requires || []).join(", ") || "").trim();
-  if (!source) return [];
-  return source
+  let ingredients = source
     .split(/,\s+/)
     .map((item) => item.trim())
     .filter(Boolean);
+  if (r.cookingFat) ingredients.push(`${r.cookingFat} zum dünnen Ausbacken`);
+  return ingredients;
 }
 
 function recipeDetailStructuredFoods(r) {
@@ -1108,6 +1110,7 @@ if (typeof module !== "undefined" && module.exports) {
     RECIPE_CATALOG_ADDITIONS,
     RECIPE_RESEARCH_GUIDANCE,
     RECIPE_NOCKERL_SPLIT,
+    recipeDetailIngredientItems,
     installRecipeCatalogAdditions,
     installRecipeResearchGuidance,
   };

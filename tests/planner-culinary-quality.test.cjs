@@ -73,3 +73,68 @@ test("kuratiertes Chili mit Mais und Süßkartoffel bleibt Rezept, freie Doppelb
   assert.equal(quality.plannerCulinaryAssessment(ids, chiliFoods, "lunch").allowed, false);
   assert.equal(quality.plannerCulinaryAssessment(ids, chiliFoods, "lunch", { recipeBacked: true }).allowed, true);
 });
+
+test("Bausteinprofil folgt den aktiven Phasen-Slots und lässt Snack-Semantik unberührt", () => {
+  const phases = {
+    kennenlernen: { meals: ["lunch"] },
+    aufbau: { meals: ["lunch", "dinner"] },
+    drei: { meals: ["breakfast", "lunch", "dinner"] },
+    familie: { meals: ["breakfast", "lunch", "snack", "dinner"] },
+  };
+
+  assert.equal(quality.plannerMealComponentPlan("kennenlernen", "lunch", phases).count, 4);
+  assert.equal(quality.plannerMealComponentPlan("aufbau", "dinner", phases).count, 3);
+  assert.equal(quality.plannerMealComponentPlan("drei", "breakfast", phases).count, 3);
+  assert.equal(quality.plannerMealComponentPlan("familie", "snack", phases), null);
+  assert.equal(quality.plannerMealComponentPlan("kennenlernen", "dinner", phases), null);
+});
+
+test("Komponentenprüfung verlangt beim Mittagsbrei Stärke, Gemüse, Eiweiß und Fett", () => {
+  const result = quality.plannerMealComponentAssessment(
+    ["polenta", "zucchini", "ei"],
+    foods,
+    { cookingFat: "Rapsöl" },
+    "kennenlernen",
+    "lunch",
+  );
+
+  assert.equal(result.complete, true);
+  assert.deepEqual(result.groups.sort(), ["base", "fat", "protein", "vegetable"]);
+  const missingOil = quality.plannerMealComponentAssessment(
+    ["polenta", "zucchini", "ei"], foods, null, "kennenlernen", "lunch",
+  );
+  assert.deepEqual(missingOil.missing, ["fat"]);
+});
+
+test("volle Milch-Getreide-Mahlzeit bleibt auch im Lunch-Slot ein vollständiges Rezept", () => {
+  const result = quality.plannerMealComponentAssessment(
+    ["hafer"],
+    foods,
+    { milkPorridge: true, milkMeal: "full" },
+    "kennenlernen",
+    "lunch",
+  );
+
+  assert.equal(result.complete, true);
+  assert.deepEqual(result.missing, []);
+});
+
+test("dreiteilige Frühstücke zählen die Zubereitungsfett-Option als eigenen Baustein", () => {
+  const result = quality.plannerMealComponentAssessment(
+    ["hafer", "birne", "ei"], foods, { cookingFat: "Rapsöl" }, "drei", "breakfast",
+  );
+
+  assert.equal(result.complete, true);
+  assert.deepEqual(result.groups.sort(), ["base", "fat", "fruit", "protein"]);
+});
+
+test("fehlende Bausteine sperren ein vorhandenes Rezept nicht von Recipe-first aus", () => {
+  const score = quality.plannerCulinaryRecipeScore(
+    { category: "family" },
+    ["polenta", "zucchini", "ei"],
+    foods,
+    "lunch",
+  );
+
+  assert.ok(score > -1000, "das Rezept bleibt auswählbar; die Planner-Ergänzung füllt erst danach verfügbare Bausteine auf");
+});

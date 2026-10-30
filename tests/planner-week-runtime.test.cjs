@@ -63,12 +63,156 @@ function loadPlanner() {
   context.__seed = state;
   vm.runInContext("state = __seed;", context);
   context.today = () => "2026-09-22";
-  vm.runInContext(`${read("js/planning.js")}\nglobalThis.__buildDays = buildDays;`, context);
+  vm.runInContext(read("js/planning.js"), context);
+  vm.runInContext(`${read("js/planner-culinary-quality.js")}\nglobalThis.__buildDays = buildDays; globalThis.__ensureMealComponentPlan = plannerEnsureMealComponentPlan;`, context);
   context.planQualityIssues = () => [];
   vm.runInContext(`${read("js/planner-quality-rotation.js")}\nglobalThis.__installQuality = installPlannerQualityRotationRuntime;`, context);
   assert.equal(context.__installQuality(), true);
   return { context, state };
 }
+
+test("phasenplan ergänzt eine freie Mittagsmahlzeit und lässt Kostproben sowie manuelle Mahlzeiten unverändert", () => {
+  const { context, state } = loadPlanner();
+  state.settings.phaseSelected = "aufbau";
+  state.foods = state.foods.filter((item) => ["kartoffel", "zucchini", "huhn", "rapsoel"].includes(item.id));
+  const ctx = context.freshPlanContext();
+  const meal = {
+    meal: "lunch", active: true, focusId: "kartoffel", foodIds: ["kartoffel"],
+    baseFoodIds: ["kartoffel"], sampleFoodIds: [], optionalAddons: [],
+  };
+
+  const planned = context.__ensureMealComponentPlan(meal, "2026-09-22", ctx);
+  const assessment = context.plannerMealComponentAssessment(
+    [...planned.foodIds, ...planned.optionalAddons], state.foods, null, "aufbau", "lunch",
+  );
+  assert.equal(assessment.complete, true);
+  assert.ok(planned.foodIds.includes("zucchini"));
+  assert.ok(planned.foodIds.includes("huhn"));
+  assert.ok(planned.optionalAddons.includes("rapsoel"));
+
+  const sample = { meal: "lunch", active: true, foodIds: ["huhn"], sampleFoodIds: ["huhn"] };
+  const manual = { meal: "lunch", active: true, manualAdded: true, foodIds: ["kartoffel"] };
+  assert.equal(context.__ensureMealComponentPlan(sample, "2026-09-22", ctx), sample);
+  assert.equal(context.__ensureMealComponentPlan(manual, "2026-09-22", ctx), manual);
+  assert.deepEqual(clone(sample.foodIds), ["huhn"]);
+  assert.deepEqual(clone(manual.foodIds), ["kartoffel"]);
+
+  state.recipes = [{ name: "Kartoffelgericht", cookingFat: "Rapsöl" }];
+  const recipeMeal = {
+    meal: "lunch", active: true, focusId: "kartoffel", recipeName: "Kartoffelgericht",
+    foodIds: ["kartoffel"], baseFoodIds: ["kartoffel"], sampleFoodIds: [], optionalAddons: [],
+  };
+  const recipePlanned = context.__ensureMealComponentPlan(recipeMeal, "2026-09-23", context.freshPlanContext());
+  assert.equal(recipePlanned.recipeName, "Kartoffelgericht", "Ergänzungen dürfen die Rezeptidentität nicht ersetzen");
+  assert.equal(recipePlanned.compositionMode, "recipe-plus-food");
+  assert.deepEqual(clone(recipePlanned.recipeIngredientFoodIds), ["kartoffel"]);
+  assert.ok(recipePlanned.additionalFoodIds.includes("zucchini"));
+  assert.ok(recipePlanned.additionalFoodIds.includes("huhn"));
+
+  state.shoppingHints.rapsoel = { status: "needed" };
+  state.pantry.rapsoel = false;
+  const unavailableOilMeal = {
+    meal: "lunch",
+    active: true,
+    focusId: "kartoffel",
+    foodIds: ["kartoffel", "zucchini", "huhn"],
+    baseFoodIds: ["kartoffel"],
+    sampleFoodIds: [],
+    optionalAddons: [],
+  };
+  context.__ensureMealComponentPlan(unavailableOilMeal, "2026-09-24", context.freshPlanContext());
+  assert.equal(unavailableOilMeal.optionalAddons.includes("rapsoel"), false);
+  const unavailableOilAssessment = context.plannerMealComponentAssessment(
+    unavailableOilMeal.foodIds,
+    state.foods,
+    null,
+    "aufbau",
+    "lunch",
+  );
+  assert.deepEqual(clone(unavailableOilAssessment.missing), ["fat"]);
+});
+
+test("7-Tage-Worker installiert die statische Allergenpflege vor dynamischen Planner-Policies", () => {
+  const source = read("js/planner-week-worker.js");
+  const weekCacheImport = source.indexOf('"./planner-week-cache.js?v=10.1.26&planner-cache=5"');
+  const rolloverImport = source.indexOf('"./planner-log-rollover.js?v=10.1.26"');
+  const cascadeImport = source.indexOf('"./planner-log-rollover-cascade.js?v=10.1.26"');
+  const appImport = source.indexOf('importScripts("../app.js?v=10.1.26")');
+  const recipeInventoryImport = source.indexOf('"./recipe-inventory-ingredients.js?v=10.1.26"');
+  const recipeV2Import = source.indexOf('"./recipe-v2-component-options.js?v=10.1.26"');
+  const cascadeModules = [
+    '"./meal-card-unification.js?v=10.1.26"',
+    '"./planner-log-rollover-review-fixes.js?v=10.1.26"',
+    '"./planner-random-swap.js?v=10.1.26"',
+    '"./planner-task-alternatives.js?v=10.1.26"',
+    '"./planner-missing-ingredient.js?v=10.1.26"',
+  ].map((path) => source.indexOf(path));
+  const foodPolicyInstall = source.indexOf("installFoodPolicyRuntime();");
+  const maintenanceImports = [...source.matchAll(/importScripts\("\.\/planner-allergen-maintenance\.js\?v=10\.1\.26"\)/g)];
+  const firstMaintenanceImport = maintenanceImports[0]?.index ?? -1;
+  const plannerPolicies = [
+    '"./planner-meal-eligibility.js?v=10.1.26"',
+    '"./planner-milk-policy.js?v=10.1.26"',
+    '"./planner-iron-preference.js?v=10.1.26"',
+    '"./planner-meal-presentation.js?v=10.1.26"',
+    '"./planner-recipe-first.js?v=10.1.26"',
+    '"./planner-proactive-recipe.js?v=10.1.26"',
+    '"./planner-food-role-stability.js?v=10.1.26"',
+    '"./planner-quality-rotation.js?v=10.1.26"',
+    '"./planner-introduction-policy.js?v=10.1.26"',
+    '"./planner-final-quality.js?v=10.1.26"',
+  ].map((path) => source.indexOf(path));
+  const handlingReadinessImport = source.indexOf('"./handling-readiness.js?v=10.1.26"');
+
+  assert.ok(weekCacheImport >= 0 && weekCacheImport < rolloverImport, "Worker muss den Save-Cache vor der Rollover-Schicht installieren");
+  assert.ok(rolloverImport >= 0, "Worker muss die Plan-ID-/Rollover-Basis der App laden");
+  assert.ok(cascadeImport > rolloverImport, "Rollover-Cascade und Tagesplan-Cache liegen vor den späteren Policies");
+  assert.ok(cascadeModules.every((index) => index >= 0), "Worker muss alle synchronen Cascade-Module laden");
+  assert.ok(cascadeModules.every((index, position) => position === 0 || index > cascadeModules[position - 1]), "Cascade-Module bleiben in derselben Reihenfolge wie im Browser");
+  assert.ok(recipeInventoryImport > cascadeModules.at(-1) && recipeV2Import > recipeInventoryImport && appImport > recipeV2Import, "Statische Rezept- und UI-Schichten folgen vor app.js");
+  assert.ok(foodPolicyInstall > appImport, "Food-Policy wird wie in der App während des Bootstraps installiert");
+  assert.ok(plannerPolicies.every((index) => index >= 0), "Worker muss alle Planner-Policies laden");
+  assert.ok(plannerPolicies.every((index, position) => position === 0 || index > plannerPolicies[position - 1]), "Planner-Policies bleiben in Browser-Reihenfolge");
+  assert.equal(maintenanceImports.length, 1, "Der Worker lädt die Allergenpflege genau einmal");
+  assert.ok(firstMaintenanceImport > appImport && firstMaintenanceImport < plannerPolicies[0], "Statische Allergenpflege folgt app.js und liegt vor der dynamischen Planner-Policy-Kette");
+  assert.ok(handlingReadinessImport > plannerPolicies.at(-1), "Handling-Readiness folgt der dynamischen Planner-Wrapper-Kette");
+
+  const maintenanceSource = read("js/planner-allergen-maintenance.js");
+  assert.match(maintenanceSource, /currentScript\.dataset\.plannerAllergenMaintenance\s*=\s*"maintenance-v2"/);
+});
+
+test("volles Milch-Getreide-Rezept bleibt auch im Lunch-Slot unverändert", () => {
+  const { context, state } = loadPlanner();
+  state.settings.phaseSelected = "kennenlernen";
+  state.foods = state.foods.filter((item) =>
+    ["hafer", "naturjoghurt", "rapsoel", "zucchini", "ei"].includes(item.id),
+  );
+  for (const item of state.foods) {
+    item.active = true;
+    item.manualStatus = "Regelmäßig";
+  }
+  state.recipes = [{
+    name: "Milch-Getreide-Brei",
+    milkPorridge: true,
+    milkMeal: "full",
+  }];
+
+  const meal = {
+    meal: "lunch",
+    active: true,
+    focusId: "hafer",
+    recipeName: "Milch-Getreide-Brei",
+    foodIds: ["hafer", "naturjoghurt"],
+    baseFoodIds: ["hafer"],
+    sampleFoodIds: [],
+    optionalAddons: [],
+  };
+  context.__ensureMealComponentPlan(meal, "2026-09-22", context.freshPlanContext());
+
+  assert.deepEqual(clone(meal.foodIds), ["hafer", "naturjoghurt"]);
+  assert.deepEqual(clone(meal.optionalAddons), []);
+  assert.equal(meal.recipeName, "Milch-Getreide-Brei");
+});
 
 test("echter buildDays-Plan erzeugt eine abwechslungsreiche 7-Tage-Woche", () => {
   const { context, state } = loadPlanner();
@@ -170,7 +314,7 @@ test("bekanntes geeignetes Rezept wird vor freiem Paar gewählt und mit allen Zu
   vm.runInContext(read("js/planner-recipe-first.js"), context);
   context.recipeStates = () => [{
     name: "Test-Huhn-Zucchini-Hafer", category: "family",
-    requires: ["Huhn", "Zucchini", "Hafer"], unlocked: true,
+    requires: ["Huhn", "Zucchini", "Hafer"], cookingFat: "Rapsöl", unlocked: true,
     ingredientMissing: [], requirementMissing: [],
   }];
   context.recipeIngredientReady = (name) => ["Huhn", "Zucchini", "Hafer"].includes(name);
@@ -210,7 +354,6 @@ test("Woche neu planen rotiert nur zwischen gleichwertigen Rezepten", () => {
 
 test("freie bekannte Mahlzeit darf eine dritte passende Zutat erhalten, ohne neue FOODS einzuführen", () => {
   const { context, state } = loadPlanner();
-  vm.runInContext(read("js/planner-culinary-quality.js"), context);
   state.deferred["2026-09-22"] = true;
   const ctx = vm.runInContext("freshPlanContext()", context);
   const result = context.enrichKnownFreeMeal({

@@ -172,7 +172,7 @@
     if (message.type !== "build") return;
 
     const originalToday = globalScope.today;
-    const referenceDate = /^\\d{4}-\\d{2}-\\d{2}$/.test(String(message.today || ""))
+    const referenceDate = /^\d{4}-\d{2}-\d{2}$/.test(String(message.today || ""))
       ? String(message.today)
       : "";
     if (referenceDate && typeof originalToday === "function") {

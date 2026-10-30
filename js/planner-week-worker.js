@@ -90,6 +90,10 @@
       installFoodPolicyRuntime();
     }
 
+    // Die App bindet die Allergenpflege nach app.js ein, aber vor den späteren
+    // Planner-Policies. Ihre BuildDay-Wrapper-Reihenfolge muss im Worker gleich sein.
+    importScripts("./planner-allergen-maintenance.js?v=10.1.26");
+
     importScripts(
       "./planner-meal-eligibility.js?v=10.1.26",
       "./planner-milk-policy.js?v=10.1.26",
@@ -101,7 +105,6 @@
       "./planner-quality-rotation.js?v=10.1.26",
       "./planner-introduction-policy.js?v=10.1.26",
       "./planner-final-quality.js?v=10.1.26",
-      "./planner-allergen-maintenance.js?v=10.1.26",
       "./handling-readiness.js?v=10.1.26"
     );
 

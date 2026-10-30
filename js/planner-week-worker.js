@@ -83,15 +83,18 @@
       installPlannerCulinaryQualityRuntime();
     }
 
-    // The app installs the rollover layer and its runtime cache before app.js.
+    // The browser's rollover cascade inserts these layers synchronously
+    // before app.js. The worker DOM stub cannot load inserted scripts, so import
+    // the same stack explicitly and in the same order.
     importScripts(
       "./planner-log-rollover.js?v=10.1.26",
-      "./planner-log-rollover-cascade.js?v=10.1.26"
+      "./planner-log-rollover-cascade.js?v=10.1.26",
+      "./meal-card-unification.js?v=10.1.26",
+      "./planner-log-rollover-review-fixes.js?v=10.1.26",
+      "./planner-random-swap.js?v=10.1.26",
+      "./planner-task-alternatives.js?v=10.1.26",
+      "./planner-missing-ingredient.js?v=10.1.26"
     );
-
-    // The browser loads these availability wrappers before app.js installs
-    // FoodPolicy. Keep recipe readiness identical when a FOOD is unavailable.
-    importScripts("./planner-missing-ingredient.js?v=10.1.26");
 
     if (typeof installFoodPolicyRuntime === "function") {
       installFoodPolicyRuntime();

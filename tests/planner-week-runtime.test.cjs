@@ -110,15 +110,19 @@ test("phasenplan ergänzt eine freie Mittagsmahlzeit und lässt Kostproben sowie
   assert.ok(recipePlanned.additionalFoodIds.includes("huhn"));
 });
 
-test("7-Tage-Worker installiert Allergenpflege in derselben Wrapper-Reihenfolge wie die App", () => {
+test("7-Tage-Worker installiert beide Allergenpflege-Wrapper wie die App", () => {
   const source = read("js/planner-week-worker.js");
+  const firstMaintenanceImport = source.indexOf('importScripts("./planner-allergen-maintenance.js?v=10.1.26")');
+  const policyImport = source.indexOf('"./planner-meal-eligibility.js?v=10.1.26"');
   const finalQualityImport = source.indexOf('"./planner-final-quality.js?v=10.1.26"');
-  const maintenanceImport = source.indexOf('"./planner-allergen-maintenance.js?v=10.1.26"');
+  const secondMaintenanceImport = source.indexOf('"./planner-allergen-maintenance.js?v=10.1.26"', finalQualityImport);
   const handlingReadinessImport = source.indexOf('"./handling-readiness.js?v=10.1.26"');
 
+  assert.ok(firstMaintenanceImport >= 0, "Worker muss den statischen Allergenpflege-Wrapper vor den dynamischen Policies laden");
+  assert.ok(policyImport > firstMaintenanceImport, "Der erste Wrapper liegt vor den späteren Day-Plan-Policies");
   assert.ok(finalQualityImport >= 0, "Worker muss dieselbe Final-Quality-Policy wie die Haupt-App laden");
-  assert.ok(maintenanceImport > finalQualityImport, "Allergenpflege muss nach Final-Quality installiert werden");
-  assert.ok(handlingReadinessImport > maintenanceImport, "Handling-Readiness folgt der Planner-Wrapper-Kette");
+  assert.ok(secondMaintenanceImport > finalQualityImport, "Der zweite Wrapper liegt nach Final-Quality wie in der App");
+  assert.ok(handlingReadinessImport > secondMaintenanceImport, "Handling-Readiness folgt der Planner-Wrapper-Kette");
 });
 
 test("echter buildDays-Plan erzeugt eine abwechslungsreiche 7-Tage-Woche", () => {

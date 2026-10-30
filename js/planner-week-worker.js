@@ -90,6 +90,11 @@
       installFoodPolicyRuntime();
     }
 
+    // Die App lädt die Allergenpflege statisch vor den Planner-Policies und
+    // später nochmals nach Final Quality. Beide Wrapper müssen im Worker
+    // dieselbe Reihenfolge haben.
+    importScripts("./planner-allergen-maintenance.js?v=10.1.26");
+
     importScripts(
       "./planner-meal-eligibility.js?v=10.1.26",
       "./planner-milk-policy.js?v=10.1.26",

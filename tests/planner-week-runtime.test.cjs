@@ -132,7 +132,7 @@ test("phasenplan ergänzt eine freie Mittagsmahlzeit und lässt Kostproben sowie
   assert.deepEqual(clone(unavailableOilAssessment.missing), ["fat"]);
 });
 
-test("7-Tage-Worker installiert die Planner-Wrapper in derselben Reihenfolge wie der Browser", () => {
+test("7-Tage-Worker installiert die statische Allergenpflege vor dynamischen Planner-Policies", () => {
   const source = read("js/planner-week-worker.js");
   const weekCacheImport = source.indexOf('"./planner-week-cache.js?v=10.1.26&planner-cache=5"');
   const rolloverImport = source.indexOf('"./planner-log-rollover.js?v=10.1.26"');
@@ -174,8 +174,8 @@ test("7-Tage-Worker installiert die Planner-Wrapper in derselben Reihenfolge wie
   assert.ok(plannerPolicies.every((index) => index >= 0), "Worker muss alle Planner-Policies laden");
   assert.ok(plannerPolicies.every((index, position) => position === 0 || index > plannerPolicies[position - 1]), "Planner-Policies bleiben in Browser-Reihenfolge");
   assert.equal(maintenanceImports.length, 1, "Der Worker lädt die Allergenpflege genau einmal");
-  assert.ok(firstMaintenanceImport > plannerPolicies.at(-1), "Allergenpflege folgt wie im Browser auf Final Quality");
-  assert.ok(handlingReadinessImport > firstMaintenanceImport, "Handling-Readiness folgt der gesamten Planner-Wrapper-Kette");
+  assert.ok(firstMaintenanceImport > appImport && firstMaintenanceImport < plannerPolicies[0], "Statische Allergenpflege folgt app.js und liegt vor der dynamischen Planner-Policy-Kette");
+  assert.ok(handlingReadinessImport > plannerPolicies.at(-1), "Handling-Readiness folgt der dynamischen Planner-Wrapper-Kette");
 
   const maintenanceSource = read("js/planner-allergen-maintenance.js");
   assert.match(maintenanceSource, /currentScript\.dataset\.plannerAllergenMaintenance\s*=\s*"maintenance-v2"/);

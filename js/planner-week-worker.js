@@ -118,8 +118,10 @@
       installFoodPolicyRuntime();
     }
 
-    // Mirror utils.js: install planner wrappers in browser order, then
-    // allergen maintenance and handling readiness.
+    // The app loads allergen maintenance statically after app.js, before
+    // the Planner-Policies that utils.js adds on DOMContentLoaded.
+    importScripts("./planner-allergen-maintenance.js?v=10.1.26");
+
     importScripts(
       "./planner-meal-eligibility.js?v=10.1.26",
       "./planner-milk-policy.js?v=10.1.26",
@@ -130,10 +132,9 @@
       "./planner-food-role-stability.js?v=10.1.26",
       "./planner-quality-rotation.js?v=10.1.26",
       "./planner-introduction-policy.js?v=10.1.26",
-      "./planner-final-quality.js?v=10.1.26"
+      "./planner-final-quality.js?v=10.1.26",
+      "./handling-readiness.js?v=10.1.26"
     );
-    importScripts("./planner-allergen-maintenance.js?v=10.1.26");
-    importScripts("./handling-readiness.js?v=10.1.26");
 
     globalScope.__plannerPoliciesReady = true;
     booted = true;
@@ -172,16 +173,31 @@
 
     try {
       ensureBoot();
+      state = message.state;
+      const inputLockChecks = message.diagnostics === true
+        ? Object.entries(state?.planLocks || {}).map(([key, lock]) => ({
+            key,
+            valid: typeof validPlanLock === "function" ? validPlanLock(lock) : null,
+            recipeName: lock?.recipeName || "",
+          }))
+        : null;
       const weeks = (message.starts || []).map((start) => ({
         from: String(start || ""),
         count: 7,
         days: buildWeek(message.state, String(start || "")),
       }));
+      const diagnostics = message.diagnostics === true
+        ? {
+            inputLocks: inputLockChecks,
+            remainingLockKeys: Object.keys(state?.planLocks || {}),
+          }
+        : undefined;
       globalScope.postMessage({
         type: "result",
         requestId: message.requestId,
         inputRevision: message.inputRevision,
         weeks,
+        ...(diagnostics ? { diagnostics } : {}),
       });
     } catch (error) {
       globalScope.postMessage({

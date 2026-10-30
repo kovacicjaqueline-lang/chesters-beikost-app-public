@@ -222,7 +222,7 @@ try {
     `Sieben-Tage-Plan darf bei vorhandenen Alternativen nicht auf eine Mahlzeit kollabieren: ${JSON.stringify(mainSignatures)}`,
   );
 
-  const workerDays = await page.evaluate(({ start, snapshot }) => new Promise((resolve, reject) => {
+  const workerBuild = await page.evaluate(({ start, snapshot }) => new Promise((resolve, reject) => {
     const worker = new Worker("js/planner-week-worker.js?v=10.1.26");
     const timeout = setTimeout(() => {
       worker.terminate();
@@ -234,7 +234,7 @@ try {
       clearTimeout(timeout);
       worker.terminate();
       if (data.type === "error") reject(new Error(data.message || "Planner-Worker fehlgeschlagen"));
-      else resolve(data.weeks?.[0]?.days || []);
+      else resolve({ days: data.weeks?.[0]?.days || [], diagnostics: data.diagnostics || null });
     };
     worker.onerror = (event) => {
       clearTimeout(timeout);
@@ -247,13 +247,15 @@ try {
       inputRevision: 0,
       starts: [start],
       state: snapshot,
+      diagnostics: true,
     });
   }), { start: setup.start, snapshot: setup.snapshot });
+  const workerDays = workerBuild.days;
 
   assert.deepEqual(
     normalizedPlan(workerDays),
     normalizedPlan(setup.mainDays),
-    `Hauptthread und 7-Tage-Worker müssen für denselben State denselben Plan liefern; Locks=${JSON.stringify(setup.snapshot.planLocks || {})}; Runtime-Cache=${JSON.stringify(setup.runtimeCacheStats)}`,
+    `Hauptthread und 7-Tage-Worker müssen für denselben State denselben Plan liefern; Locks=${JSON.stringify(setup.snapshot.planLocks || {})}; Worker-Diagnose=${JSON.stringify(workerBuild.diagnostics)}; Runtime-Cache=${JSON.stringify(setup.runtimeCacheStats)}`,
   );
 
   const repairedAutoLock = await page.evaluate(({ start, snapshot }) => {

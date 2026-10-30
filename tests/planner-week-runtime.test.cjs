@@ -63,12 +63,52 @@ function loadPlanner() {
   context.__seed = state;
   vm.runInContext("state = __seed;", context);
   context.today = () => "2026-09-22";
-  vm.runInContext(`${read("js/planning.js")}\nglobalThis.__buildDays = buildDays;`, context);
+  vm.runInContext(read("js/planning.js"), context);
+  vm.runInContext(`${read("js/planner-culinary-quality.js")}\nglobalThis.__buildDays = buildDays; globalThis.__ensureMealComponentPlan = plannerEnsureMealComponentPlan;`, context);
   context.planQualityIssues = () => [];
   vm.runInContext(`${read("js/planner-quality-rotation.js")}\nglobalThis.__installQuality = installPlannerQualityRotationRuntime;`, context);
   assert.equal(context.__installQuality(), true);
   return { context, state };
 }
+
+test("phasenplan ergänzt eine freie Mittagsmahlzeit und lässt Kostproben sowie manuelle Mahlzeiten unverändert", () => {
+  const { context, state } = loadPlanner();
+  state.settings.phaseSelected = "aufbau";
+  state.foods = state.foods.filter((item) => ["kartoffel", "zucchini", "huhn", "rapsoel"].includes(item.id));
+  const ctx = context.freshPlanContext();
+  const meal = {
+    meal: "lunch", active: true, focusId: "kartoffel", foodIds: ["kartoffel"],
+    baseFoodIds: ["kartoffel"], sampleFoodIds: [], optionalAddons: [],
+  };
+
+  const planned = context.__ensureMealComponentPlan(meal, "2026-09-22", ctx);
+  const assessment = context.plannerMealComponentAssessment(
+    [...planned.foodIds, ...planned.optionalAddons], state.foods, null, "aufbau", "lunch",
+  );
+  assert.equal(assessment.complete, true);
+  assert.ok(planned.foodIds.includes("zucchini"));
+  assert.ok(planned.foodIds.includes("huhn"));
+  assert.ok(planned.optionalAddons.includes("rapsoel"));
+
+  const sample = { meal: "lunch", active: true, foodIds: ["huhn"], sampleFoodIds: ["huhn"] };
+  const manual = { meal: "lunch", active: true, manualAdded: true, foodIds: ["kartoffel"] };
+  assert.equal(context.__ensureMealComponentPlan(sample, "2026-09-22", ctx), sample);
+  assert.equal(context.__ensureMealComponentPlan(manual, "2026-09-22", ctx), manual);
+  assert.deepEqual(clone(sample.foodIds), ["huhn"]);
+  assert.deepEqual(clone(manual.foodIds), ["kartoffel"]);
+
+  state.recipes = [{ name: "Kartoffelgericht", cookingFat: "Rapsöl" }];
+  const recipeMeal = {
+    meal: "lunch", active: true, focusId: "kartoffel", recipeName: "Kartoffelgericht",
+    foodIds: ["kartoffel"], baseFoodIds: ["kartoffel"], sampleFoodIds: [], optionalAddons: [],
+  };
+  const recipePlanned = context.__ensureMealComponentPlan(recipeMeal, "2026-09-23", context.freshPlanContext());
+  assert.equal(recipePlanned.recipeName, "Kartoffelgericht", "Ergänzungen dürfen die Rezeptidentität nicht ersetzen");
+  assert.equal(recipePlanned.compositionMode, "recipe-plus-food");
+  assert.deepEqual(clone(recipePlanned.recipeIngredientFoodIds), ["kartoffel"]);
+  assert.ok(recipePlanned.additionalFoodIds.includes("zucchini"));
+  assert.ok(recipePlanned.additionalFoodIds.includes("huhn"));
+});
 
 test("echter buildDays-Plan erzeugt eine abwechslungsreiche 7-Tage-Woche", () => {
   const { context, state } = loadPlanner();
@@ -170,7 +210,7 @@ test("bekanntes geeignetes Rezept wird vor freiem Paar gewählt und mit allen Zu
   vm.runInContext(read("js/planner-recipe-first.js"), context);
   context.recipeStates = () => [{
     name: "Test-Huhn-Zucchini-Hafer", category: "family",
-    requires: ["Huhn", "Zucchini", "Hafer"], unlocked: true,
+    requires: ["Huhn", "Zucchini", "Hafer"], cookingFat: "Rapsöl", unlocked: true,
     ingredientMissing: [], requirementMissing: [],
   }];
   context.recipeIngredientReady = (name) => ["Huhn", "Zucchini", "Hafer"].includes(name);
@@ -210,7 +250,6 @@ test("Woche neu planen rotiert nur zwischen gleichwertigen Rezepten", () => {
 
 test("freie bekannte Mahlzeit darf eine dritte passende Zutat erhalten, ohne neue FOODS einzuführen", () => {
   const { context, state } = loadPlanner();
-  vm.runInContext(read("js/planner-culinary-quality.js"), context);
   state.deferred["2026-09-22"] = true;
   const ctx = vm.runInContext("freshPlanContext()", context);
   const result = context.enrichKnownFreeMeal({

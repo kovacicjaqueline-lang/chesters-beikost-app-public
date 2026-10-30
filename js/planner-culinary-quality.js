@@ -32,6 +32,85 @@ const PLANNER_CULINARY_ACCENT_CATEGORIES = new Set([
   "Kraut/Gewürz",
 ]);
 
+const PLANNER_MEAL_COMPONENT_REQUIREMENTS = Object.freeze({
+  lunch: Object.freeze([
+    Object.freeze({ key: "base", roles: Object.freeze(["base"]) }),
+    Object.freeze({ key: "vegetable", roles: Object.freeze(["vegetable"]) }),
+    Object.freeze({ key: "protein", roles: Object.freeze(["protein"]) }),
+    Object.freeze({ key: "fat", roles: Object.freeze(["fat"]) }),
+  ]),
+  breakfast: Object.freeze([
+    Object.freeze({ key: "base", roles: Object.freeze(["base"]) }),
+    Object.freeze({ key: "produce", roles: Object.freeze(["vegetable", "fruit"]) }),
+    Object.freeze({ key: "protein", roles: Object.freeze(["protein", "dairy"]) }),
+  ]),
+  dinner: Object.freeze([
+    Object.freeze({ key: "base", roles: Object.freeze(["base"]) }),
+    Object.freeze({ key: "vegetable", roles: Object.freeze(["vegetable"]) }),
+    Object.freeze({ key: "protein", roles: Object.freeze(["protein", "dairy"]) }),
+  ]),
+});
+
+function plannerMealComponentPlan(phase, meal, phases = typeof PHASES !== "undefined" ? PHASES : {
+  kennenlernen: { meals: ["lunch"] },
+  aufbau: { meals: ["lunch", "dinner"] },
+  drei: { meals: ["breakfast", "lunch", "dinner"] },
+  familie: { meals: ["breakfast", "lunch", "snack", "dinner"] },
+}) {
+  if (!phases?.[phase]?.meals?.includes(meal)) return null;
+  let requirements = PLANNER_MEAL_COMPONENT_REQUIREMENTS[meal];
+  if (!requirements) return null;
+  return {
+    phase,
+    meal,
+    count: requirements.length,
+    requirements: requirements.map((requirement) => ({
+      key: requirement.key,
+      roles: [...requirement.roles],
+    })),
+  };
+}
+
+function plannerMealComponentRole(item) {
+  if (!item) return "";
+  const category = String(item.category || "");
+  const id = String(item.id || "");
+  if (category === "Fett" || ["butter", "rapsoel", "olivenoel"].includes(id)) return "fat";
+  if (PLANNER_CULINARY_BASE_CATEGORIES.has(category)) return "base";
+  if (["Gemüse", "Blattgemüse"].includes(category)) return "vegetable";
+  if (category === "Obst") return "fruit";
+  if (PLANNER_CULINARY_PROTEIN_CATEGORIES.has(category)) return "protein";
+  if (category === "Milchprodukt") return "dairy";
+  return "";
+}
+
+function plannerMealComponentAssessment(ids, foods = [], recipe = null, phase = "", meal = "") {
+  const plan = plannerMealComponentPlan(phase, meal);
+  if (!plan) return { applicable: false, complete: true, groups: [], missing: [] };
+
+  const byId = new Map((foods || []).map((item) => [item?.id, item]));
+  const groups = new Set((ids || []).map((id) => plannerMealComponentRole(byId.get(id))).filter(Boolean));
+  const cookingFat = Array.isArray(recipe?.cookingFat) ? recipe.cookingFat : [recipe?.cookingFat];
+  if (cookingFat.some(Boolean)) groups.add("fat");
+
+  // Der einmal tägliche Milch-Getreide-Brei ist ein ausdrücklich definierter
+  // vollständiger Rezeptbaustein und bleibt zusätzlich durch MILK-01 begrenzt.
+  if (recipe?.milkPorridge === true && recipe?.milkMeal === "full" && meal !== "lunch") {
+    return { applicable: true, complete: true, groups: [...groups], missing: [], plan };
+  }
+
+  const missing = plan.requirements.filter((requirement) =>
+    !requirement.roles.some((role) => groups.has(role)),
+  );
+  return {
+    applicable: true,
+    complete: missing.length === 0,
+    groups: [...groups],
+    missing: missing.map((requirement) => requirement.key),
+    plan,
+  };
+}
+
 function plannerCulinaryRole(item) {
   if (!item) return "";
   const id = String(item.id || "");
@@ -243,6 +322,12 @@ function plannerCulinaryPairAllowed(focus, candidate, meal, options = {}) {
 }
 
 function plannerCulinaryRecipeScore(recipe, ids, foods = [], meal = "lunch") {
+  const phase = typeof currentPhase === "function"
+    ? currentPhase()
+    : String(typeof state !== "undefined" ? state?.settings?.phaseSelected || "" : "");
+  const componentAssessment = plannerMealComponentAssessment(ids, foods, recipe, phase, meal);
+  if (componentAssessment.applicable && !componentAssessment.complete) return -1000;
+
   const assessment = plannerCulinaryAssessment(ids, foods, meal, { recipeBacked: true });
   if (!assessment.allowed) return -1000;
   const categoryBonus = {
@@ -338,7 +423,11 @@ if (typeof module !== "undefined" && module.exports) {
     PLANNER_CULINARY_BASE_CATEGORIES,
     PLANNER_CULINARY_PRODUCE_CATEGORIES,
     PLANNER_CULINARY_PROTEIN_CATEGORIES,
+    PLANNER_MEAL_COMPONENT_REQUIREMENTS,
     plannerCulinaryRole,
+    plannerMealComponentPlan,
+    plannerMealComponentRole,
+    plannerMealComponentAssessment,
     plannerCulinaryCanonicalIds,
     plannerCulinaryItems,
     plannerCulinaryRecipeVariants,

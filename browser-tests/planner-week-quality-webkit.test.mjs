@@ -149,12 +149,15 @@ try {
     ];
 
     window.__beikostTest.setState(current);
+    // Compare fresh planner evaluations; the runtime cache has its own focused tests.
+    window.invalidateDayPlanRuntimeCache?.();
     const snapshot = window.__beikostTest.getState();
     const mainDays = window.buildDays(start, 7, false);
+    const runtimeCacheStats = window.__dayPlanRuntimeCache?.stats?.() || null;
     const lunchPorridgeAllowed = window.__beikostTest.recipeSuitableForMeal("Obst-Polentabrei", "lunch");
     const lunchPancakesAllowed = window.__beikostTest.recipeSuitableForMeal("Ube-Bananen-Pancakes", "lunch");
 
-    return { start, snapshot, mainDays, lunchPorridgeAllowed, lunchPancakesAllowed };
+    return { start, snapshot, mainDays, runtimeCacheStats, lunchPorridgeAllowed, lunchPancakesAllowed };
   });
 
   assert.equal(setup.lunchPorridgeAllowed, false, "Obst-Polentabrei darf nicht automatisch in den Lunch-Slot rutschen");
@@ -250,7 +253,7 @@ try {
   assert.deepEqual(
     normalizedPlan(workerDays),
     normalizedPlan(setup.mainDays),
-    "Hauptthread und 7-Tage-Worker müssen für denselben State denselben Plan liefern",
+    `Hauptthread und 7-Tage-Worker müssen für denselben State denselben Plan liefern; Locks=${JSON.stringify(setup.snapshot.planLocks || {})}; Runtime-Cache=${JSON.stringify(setup.runtimeCacheStats)}`,
   );
 
   const repairedAutoLock = await page.evaluate(({ start, snapshot }) => {

@@ -118,11 +118,8 @@
       installFoodPolicyRuntime();
     }
 
-    // Die statische App-Ladung installiert den Wrapper vor den dynamischen
-    // Planner-Policies. utils.js erkennt das selbst markierte Script später
-    // wieder und installiert es nicht erneut.
-    importScripts("./planner-allergen-maintenance.js?v=10.1.26");
-
+    // Mirror utils.js: install planner wrappers in browser order, then
+    // allergen maintenance and handling readiness.
     importScripts(
       "./planner-meal-eligibility.js?v=10.1.26",
       "./planner-milk-policy.js?v=10.1.26",
@@ -133,9 +130,10 @@
       "./planner-food-role-stability.js?v=10.1.26",
       "./planner-quality-rotation.js?v=10.1.26",
       "./planner-introduction-policy.js?v=10.1.26",
-      "./planner-final-quality.js?v=10.1.26",
-      "./handling-readiness.js?v=10.1.26"
+      "./planner-final-quality.js?v=10.1.26"
     );
+    importScripts("./planner-allergen-maintenance.js?v=10.1.26");
+    importScripts("./handling-readiness.js?v=10.1.26");
 
     globalScope.__plannerPoliciesReady = true;
     booted = true;

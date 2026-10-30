@@ -110,7 +110,7 @@ test("phasenplan ergänzt eine freie Mittagsmahlzeit und lässt Kostproben sowie
   assert.ok(recipePlanned.additionalFoodIds.includes("huhn"));
 });
 
-test("7-Tage-Worker installiert den Allergenpflege-Wrapper genau einmal vor den Planner-Policies", () => {
+test("7-Tage-Worker installiert die Planner-Wrapper in derselben Reihenfolge wie der Browser", () => {
   const source = read("js/planner-week-worker.js");
   const weekCacheImport = source.indexOf('"./planner-week-cache.js?v=10.1.26&planner-cache=5"');
   const rolloverImport = source.indexOf('"./planner-log-rollover.js?v=10.1.26"');
@@ -128,8 +128,18 @@ test("7-Tage-Worker installiert den Allergenpflege-Wrapper genau einmal vor den 
   const foodPolicyInstall = source.indexOf("installFoodPolicyRuntime();");
   const maintenanceImports = [...source.matchAll(/importScripts\("\.\/planner-allergen-maintenance\.js\?v=10\.1\.26"\)/g)];
   const firstMaintenanceImport = maintenanceImports[0]?.index ?? -1;
-  const policyImport = source.indexOf('"./planner-meal-eligibility.js?v=10.1.26"');
-  const finalQualityImport = source.indexOf('"./planner-final-quality.js?v=10.1.26"');
+  const plannerPolicies = [
+    '"./planner-meal-eligibility.js?v=10.1.26"',
+    '"./planner-milk-policy.js?v=10.1.26"',
+    '"./planner-iron-preference.js?v=10.1.26"',
+    '"./planner-meal-presentation.js?v=10.1.26"',
+    '"./planner-recipe-first.js?v=10.1.26"',
+    '"./planner-proactive-recipe.js?v=10.1.26"',
+    '"./planner-food-role-stability.js?v=10.1.26"',
+    '"./planner-quality-rotation.js?v=10.1.26"',
+    '"./planner-introduction-policy.js?v=10.1.26"',
+    '"./planner-final-quality.js?v=10.1.26"',
+  ].map((path) => source.indexOf(path));
   const handlingReadinessImport = source.indexOf('"./handling-readiness.js?v=10.1.26"');
 
   assert.ok(weekCacheImport >= 0 && weekCacheImport < rolloverImport, "Worker muss den Save-Cache vor der Rollover-Schicht installieren");
@@ -139,11 +149,11 @@ test("7-Tage-Worker installiert den Allergenpflege-Wrapper genau einmal vor den 
   assert.ok(cascadeModules.every((index, position) => position === 0 || index > cascadeModules[position - 1]), "Cascade-Module bleiben in derselben Reihenfolge wie im Browser");
   assert.ok(recipeInventoryImport > cascadeModules.at(-1) && recipeV2Import > recipeInventoryImport && appImport > recipeV2Import, "Statische Rezept- und UI-Schichten folgen vor app.js");
   assert.ok(foodPolicyInstall > appImport, "Food-Policy wird wie in der App während des Bootstraps installiert");
-  assert.equal(maintenanceImports.length, 1, "Das statische Script wird in der App durch sein data-Attribut wiedererkannt und nicht erneut installiert");
-  assert.ok(firstMaintenanceImport >= 0, "Worker muss den statischen Allergenpflege-Wrapper laden");
-  assert.ok(policyImport > firstMaintenanceImport, "Der erste Wrapper liegt vor den späteren Day-Plan-Policies");
-  assert.ok(finalQualityImport >= 0, "Worker muss dieselbe Final-Quality-Policy wie die Haupt-App laden");
-  assert.ok(handlingReadinessImport > finalQualityImport, "Handling-Readiness folgt der Planner-Wrapper-Kette");
+  assert.ok(plannerPolicies.every((index) => index >= 0), "Worker muss alle Planner-Policies laden");
+  assert.ok(plannerPolicies.every((index, position) => position === 0 || index > plannerPolicies[position - 1]), "Planner-Policies bleiben in Browser-Reihenfolge");
+  assert.equal(maintenanceImports.length, 1, "Der Worker lädt die Allergenpflege genau einmal");
+  assert.ok(firstMaintenanceImport > plannerPolicies.at(-1), "Allergenpflege folgt wie im Browser auf Final Quality");
+  assert.ok(handlingReadinessImport > firstMaintenanceImport, "Handling-Readiness folgt der gesamten Planner-Wrapper-Kette");
 
   const maintenanceSource = read("js/planner-allergen-maintenance.js");
   assert.match(maintenanceSource, /currentScript\.dataset\.plannerAllergenMaintenance\s*=\s*"maintenance-v2"/);

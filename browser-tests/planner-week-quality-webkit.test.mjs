@@ -246,6 +246,7 @@ try {
       requestId: 1,
       inputRevision: 0,
       starts: [start],
+      today: start,
       state: snapshot,
       diagnostics: true,
     });

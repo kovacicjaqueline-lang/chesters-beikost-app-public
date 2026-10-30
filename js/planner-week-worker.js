@@ -171,6 +171,14 @@
     const message = event?.data || {};
     if (message.type !== "build") return;
 
+    const originalToday = globalScope.today;
+    const referenceDate = /^\\d{4}-\\d{2}-\\d{2}$/.test(String(message.today || ""))
+      ? String(message.today)
+      : "";
+    if (referenceDate && typeof originalToday === "function") {
+      globalScope.today = () => referenceDate;
+    }
+
     try {
       ensureBoot();
       state = message.state;
@@ -188,6 +196,8 @@
       }));
       const diagnostics = message.diagnostics === true
         ? {
+            referenceDate,
+            resolvedToday: typeof globalScope.today === "function" ? globalScope.today() : "",
             inputLocks: inputLockChecks,
             remainingLockKeys: Object.keys(state?.planLocks || {}),
           }
@@ -206,6 +216,8 @@
         inputRevision: message.inputRevision,
         message: String(error?.stack || error?.message || error),
       });
+    } finally {
+      if (typeof originalToday === "function") globalScope.today = originalToday;
     }
   };
 })(self);

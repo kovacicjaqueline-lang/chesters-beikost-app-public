@@ -205,6 +205,7 @@
         requestId,
         inputRevision: revision,
         starts,
+        today: typeof globalScope.today === "function" ? globalScope.today() : "",
         state: currentState(),
       });
       return true;

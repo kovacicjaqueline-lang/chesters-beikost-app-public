@@ -110,13 +110,15 @@ test("phasenplan ergänzt eine freie Mittagsmahlzeit und lässt Kostproben sowie
   assert.ok(recipePlanned.additionalFoodIds.includes("huhn"));
 });
 
-test("7-Tage-Worker installiert die Allergenpflege vor den dynamischen Planner-Policies", () => {
+test("7-Tage-Worker installiert Allergenpflege in derselben Wrapper-Reihenfolge wie die App", () => {
   const source = read("js/planner-week-worker.js");
-  const maintenanceInstall = source.indexOf('importScripts("./planner-allergen-maintenance.js?v=10.1.26")');
-  const policyImports = source.indexOf('"./planner-meal-eligibility.js?v=10.1.26"');
+  const finalQualityImport = source.indexOf('"./planner-final-quality.js?v=10.1.26"');
+  const maintenanceImport = source.indexOf('"./planner-allergen-maintenance.js?v=10.1.26"');
+  const handlingReadinessImport = source.indexOf('"./handling-readiness.js?v=10.1.26"');
 
-  assert.ok(maintenanceInstall >= 0, "Worker muss dieselbe Allergenpflege wie die Haupt-App laden");
-  assert.ok(policyImports > maintenanceInstall, "Allergenpflege muss vor den späteren Day-Plan-Wrappern installiert werden");
+  assert.ok(finalQualityImport >= 0, "Worker muss dieselbe Final-Quality-Policy wie die Haupt-App laden");
+  assert.ok(maintenanceImport > finalQualityImport, "Allergenpflege muss nach Final-Quality installiert werden");
+  assert.ok(handlingReadinessImport > maintenanceImport, "Handling-Readiness folgt der Planner-Wrapper-Kette");
 });
 
 test("echter buildDays-Plan erzeugt eine abwechslungsreiche 7-Tage-Woche", () => {
